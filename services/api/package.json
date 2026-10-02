@@ -1,0 +1,33 @@
+{
+  "name": "@doan/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "../../dist/api/server.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "db:migrate": "npm run build && node ../../dist/api/scripts/migrate.js",
+    "dev": "node --import tsx --watch src/server.ts",
+    "start": "node ../../dist/api/server.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src test --ext .ts",
+    "test": "node --test test/**/*.test.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1143.0",
+    "@doan/shared": "0.1.0",
+    "@socket.io/postgres-adapter": "^0.5.0",
+    "jose": "^6.2.12",
+    "mediasoup": "^3.26.0",
+    "nodemailer": "^10.0.10",
+    "pg": "^8.23.0",
+    "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/nodemailer": "^8.0.1",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.2"
+  }
+}

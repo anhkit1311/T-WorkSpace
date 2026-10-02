@@ -1,0 +1,184 @@
+.meeting-schedules {
+  margin-top: 36px;
+}
+.meeting-schedules-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.meeting-schedules-head h2 {
+  margin: 0 0 5px;
+  color: var(--text);
+  font-size: var(--type-section, 18px);
+}
+.meeting-schedules-head p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.meeting-schedule-list {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.meeting-schedule-item {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 18px;
+}
+.meeting-schedule-item + .meeting-schedule-item {
+  border-top: 1px solid var(--border);
+}
+.meeting-schedule-date {
+  display: grid;
+  gap: 2px;
+  text-align: center;
+  padding: 7px 5px;
+  border-radius: 8px;
+  background: var(--primary-soft);
+  font-variant-numeric: tabular-nums;
+}
+.meeting-schedule-date strong {
+  font-size: 16px;
+  color: var(--text);
+}
+.meeting-schedule-date span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.meeting-schedule-content {
+  min-width: 0;
+}
+.meeting-schedule-content h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: var(--text);
+}
+.meeting-schedule-content p {
+  margin: 0 0 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.meeting-schedule-content .meeting-schedule-description {
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.meeting-schedule-content > span {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.meeting-schedule-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.meeting-schedule-actions > button:not([class]) {
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  padding: 5px;
+}
+.meeting-schedule-actions > button:not([class]):hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+.meeting-schedule-empty {
+  margin: 0;
+  padding: 24px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.meeting-schedule-form {
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.meeting-schedule-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.meeting-schedule-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+.meeting-schedule-form .meeting-schedule-wide {
+  grid-column: 1 / -1;
+}
+.meeting-schedule-form input,
+.meeting-schedule-form select,
+.meeting-schedule-form textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  padding: 9px 10px;
+  background: var(--surface-raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.meeting-schedule-form textarea {
+  resize: vertical;
+}
+.meeting-schedule-form :is(input, select, textarea):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.meeting-schedule-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  margin-top: 15px;
+}
+.meeting-schedule-form-actions span {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.meeting-schedule-error {
+  margin: 0 0 12px;
+  color: #ef9e9e;
+  font-size: 12px;
+}
+@media (max-width: 720px) {
+  .meeting-schedules-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .meeting-schedule-item {
+    grid-template-columns: 68px minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px;
+  }
+  .meeting-schedule-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+  .meeting-schedule-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .meeting-schedule-form .meeting-schedule-wide {
+    grid-column: auto;
+  }
+}

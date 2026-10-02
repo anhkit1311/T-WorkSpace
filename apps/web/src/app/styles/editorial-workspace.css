@@ -1,0 +1,1324 @@
+/* ==========================================================================
+   Editorial Workspace Design System — Master Stylesheet
+   Matching Login & Landing Page (Minimalist Editorial / Cinematic Aesthetic)
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..700;1,400..700&family=Inter:wght@400;500;600;700&display=swap');
+
+/* --------------------------------------------------------------------------
+   0. Design Tokens & Root Variables
+   -------------------------------------------------------------------------- */
+:root {
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Color Palette matching Login & Landing */
+  --editorial-text: #0f172a;
+  --editorial-text-secondary: hsl(215, 25%, 32%);
+  --editorial-text-muted: rgba(15, 23, 42, 0.55);
+  --editorial-surface-glass: rgba(255, 255, 255, 0.9);
+  --editorial-surface-card: rgba(255, 255, 255, 0.94);
+  --editorial-surface-soft: rgba(15, 23, 42, 0.04);
+  --editorial-border: rgba(255, 255, 255, 0.85);
+  --editorial-border-soft: rgba(15, 23, 42, 0.08);
+  --editorial-border-strong: rgba(15, 23, 42, 0.16);
+
+  --editorial-radius-pill: 9999px;
+  --editorial-radius-card: 26px;
+  --editorial-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+  --editorial-shadow-lg: 0 24px 60px rgba(15, 23, 42, 0.14);
+}
+
+/* --------------------------------------------------------------------------
+   1. Canvas Resets, App Shell & Full-Bleed Video Background Layer
+   -------------------------------------------------------------------------- */
+html,
+body,
+#root {
+  height: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  background-color: #bcc6d2 !important;
+  font-family: var(--font-body) !important;
+  color: var(--editorial-text) !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app-shell.editorial-workspace-shell,
+.app-shell {
+  /* Authenticated surfaces share the reference's cool glass and navy ink. */
+  --editorial-text: #17233e;
+  --editorial-text-secondary: #31415b;
+  --editorial-text-muted: #3e4e66;
+  --editorial-surface-glass: rgba(237, 242, 250, 0.36);
+  --editorial-surface-card: rgba(246, 248, 252, 0.64);
+  --editorial-surface-soft: rgba(255, 255, 255, 0.24);
+  --editorial-message-surface: rgba(250, 250, 253, 0.82);
+  --editorial-control-surface: rgba(255, 255, 255, 0.36);
+  --editorial-surface-popup: rgba(243, 246, 252, 0.92);
+  --editorial-border: rgba(255, 255, 255, 0.36);
+  --editorial-border-soft: rgba(23, 35, 62, 0.1);
+  --editorial-blur: 10px;
+  --editorial-radius-card: 22px;
+  --text: var(--editorial-text);
+  --text-secondary: var(--editorial-text-secondary);
+  --text-muted: var(--editorial-text-muted);
+  --surface: var(--editorial-surface-card);
+  --surface-raised: var(--editorial-surface-popup);
+  --surface-soft: var(--editorial-surface-soft);
+  --bg: transparent;
+  --bg-subtle: var(--editorial-control-surface);
+  --border: var(--editorial-border-soft);
+  --border-strong: rgba(23, 35, 62, 0.25);
+  --primary: #263450;
+  --primary-hover: #17233e;
+  --primary-soft: rgba(38, 52, 80, 0.1);
+  --focus: #263450;
+  color-scheme: light;
+  position: relative !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  font-family: var(--font-body) !important;
+  color: var(--editorial-text) !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.editorial-workspace-video-layer {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  overflow: hidden !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+}
+
+.editorial-workspace-video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+}
+
+.editorial-workspace-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(231, 237, 245, 0.22) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  pointer-events: none !important;
+}
+
+/* ==========================================================================
+   Master Floating Header (Matching Reference Design)
+   ========================================================================== */
+.editorial-master-topbar {
+  position: relative !important;
+  z-index: 10 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  height: 60px !important;
+  padding: 0 28px !important;
+  background: transparent !important;
+  flex-shrink: 0 !important;
+}
+
+.editorial-master-topbar__left {
+  display: flex !important;
+  align-items: center !important;
+}
+
+.editorial-master-topbar__left .brand {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  cursor: pointer !important;
+  user-select: none !important;
+}
+
+.editorial-master-topbar__left .brand-name {
+  font-family: var(--font-display) !important;
+  font-style: normal !important;
+  font-size: 29px !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.02em !important;
+  color: #0f172a !important;
+}
+
+.editorial-master-topbar__left .brand-name sup {
+  font-family: var(--font-body) !important;
+  font-style: normal !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  margin-left: 2px !important;
+  color: rgba(15, 23, 42, 0.6) !important;
+}
+
+.editorial-master-topbar__center {
+  display: flex !important;
+  align-items: center !important;
+  gap: 36px !important;
+}
+
+.topbar-nav-tab {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 6px 12px !important;
+  font-family: var(--font-body) !important;
+  font-size: 14.5px !important;
+  font-weight: 550 !important;
+  color: rgba(15, 23, 42, 0.72) !important;
+  cursor: pointer !important;
+  transition: all 150ms ease !important;
+  border-radius: var(--editorial-radius-pill) !important;
+  outline: none !important;
+}
+
+.topbar-nav-tab:hover {
+  color: #0f172a !important;
+  background: rgba(255, 255, 255, 0.45) !important;
+}
+
+.topbar-nav-tab.is-active {
+  color: #0f172a !important;
+  font-weight: 650 !important;
+}
+
+.editorial-master-topbar__right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  position: relative !important;
+}
+
+.topbar-action-icon-btn {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 9999px !important;
+  background: transparent !important;
+  border: 0 !important;
+  color: #334155 !important;
+  cursor: pointer !important;
+  display: grid !important;
+  place-items: center !important;
+  position: relative !important;
+  transition: all 150ms ease !important;
+  outline: none !important;
+}
+
+.topbar-action-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.5) !important;
+  color: #0f172a !important;
+}
+
+.topbar-bell-btn {
+  position: relative !important;
+}
+
+.topbar-bell-dot {
+  position: absolute !important;
+  top: 7px !important;
+  right: 7px !important;
+  width: 7px !important;
+  height: 7px !important;
+  background: #ef4444 !important;
+  border-radius: 9999px !important;
+  border: 1.5px solid #ffffff !important;
+}
+
+.topbar-avatar-btn {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+  cursor: pointer !important;
+  position: relative !important;
+  border-radius: 9999px !important;
+  display: block !important;
+  outline: none !important;
+}
+
+.topbar-avatar-img {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 9999px !important;
+  object-fit: cover !important;
+  border: 2px solid rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.1) !important;
+  display: block !important;
+}
+
+.topbar-online-dot {
+  position: absolute !important;
+  bottom: 0 !important;
+  right: 0 !important;
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 9999px !important;
+  background: #10b981 !important;
+  border: 2px solid #ffffff !important;
+}
+
+.topbar-account-popover {
+  position: absolute !important;
+  top: calc(100% + 12px) !important;
+  right: 0 !important;
+  z-index: 50 !important;
+  min-width: 240px !important;
+  background: var(--editorial-surface-popup, rgba(243, 246, 252, 0.92)) !important;
+  backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
+  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
+  border-radius: 18px !important;
+  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36)) !important;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12) !important;
+  padding: 12px !important;
+}
+
+/* ==========================================================================
+   Master Workspace Body (Vertical Dock + Stage Viewport)
+   ========================================================================== */
+.editorial-workspace-body {
+  position: relative !important;
+  z-index: 2 !important;
+  display: flex !important;
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  gap: 16px !important;
+  padding: 0 20px 20px 20px !important;
+  overflow: hidden !important;
+}
+
+/* Left Vertical Dock */
+.editorial-dock {
+  width: 76px !important;
+  height: 100% !important;
+  flex-shrink: 0 !important;
+  border-radius: 26px !important;
+  background: var(--editorial-surface-glass) !important;
+  backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
+  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
+  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36)) !important;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  padding: 16px 8px !important;
+  gap: 10px !important;
+  position: relative !important;
+}
+
+.dock-btn {
+  width: 60px !important;
+  height: 62px !important;
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  color: var(--editorial-text-muted, #3e4e66) !important;
+  cursor: pointer !important;
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  padding: 6px 2px !important;
+  outline: none !important;
+}
+
+.dock-btn:hover {
+  color: #0f172a !important;
+}
+
+.dock-btn.is-active {
+  color: #0f172a !important;
+}
+
+.dock-active-pill {
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(255, 255, 255, 0.85) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06) !important;
+  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36)) !important;
+  z-index: 0 !important;
+}
+
+.dock-btn svg {
+  stroke-width: 1.8;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+.dock-label {
+  position: relative !important;
+  z-index: 1 !important;
+  font-size: 11px !important;
+  font-weight: 550 !important;
+  line-height: 1 !important;
+}
+
+.dock-btn.is-active .dock-label {
+  font-weight: 650 !important;
+}
+
+.dock-badge-dot {
+  position: absolute !important;
+  top: 8px !important;
+  right: 14px !important;
+  width: 7px !important;
+  height: 7px !important;
+  background: #ef4444 !important;
+  border-radius: 9999px !important;
+  z-index: 2 !important;
+}
+
+/* Stage Viewport */
+.editorial-stage-viewport {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+.editorial-main-content {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow-y: auto !important;
+}
+
+.editorial-main-content.view-chat {
+  overflow: hidden !important;
+}
+
+.editorial-main-content .view-transition-wrapper {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.app-stage {
+  background: transparent !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  flex: 1 1 0 !important;
+  overflow: hidden !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+.app-content {
+  background: transparent !important;
+  background-color: transparent !important;
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  position: relative !important;
+}
+
+.app-content.view-chat {
+  overflow: hidden !important;
+}
+
+.view-transition-wrapper {
+  background: transparent !important;
+  background-color: transparent !important;
+  min-height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  isolation: auto !important;
+}
+
+/* --------------------------------------------------------------------------
+   2. Sidebar (Minimalist Editorial Navigation with Frosted Glass)
+   -------------------------------------------------------------------------- */
+.notion-reference-shell .app-sidebar,
+.app-sidebar {
+  width: 295px !important;
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
+  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
+  box-shadow: 6px 0 30px rgba(15, 23, 42, 0.05) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  z-index: 10 !important;
+  position: relative !important;
+}
+
+.sidebar-head {
+  padding: 24px 22px 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06) !important;
+}
+
+.sidebar-head .brand {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  text-decoration: none !important;
+}
+
+.sidebar-head .brand-name {
+  font-family: var(--font-display) !important;
+  font-style: normal !important;
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.015em !important;
+  color: #0f172a !important;
+}
+
+.sidebar-head .brand-name sup {
+  font-family: var(--font-body) !important;
+  font-style: normal !important;
+  font-size: 10.5px !important;
+  margin-left: 2px !important;
+  color: rgba(15, 23, 42, 0.6) !important;
+}
+
+.sidebar-head .brand-mark svg {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 8px !important;
+}
+
+/* Search bar in sidebar */
+.notion-sidebar-home {
+  padding: 16px 14px 8px !important;
+}
+
+.notion-sidebar-search {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  padding: 10px 16px !important;
+  border-radius: var(--editorial-radius-pill) !important;
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+  color: rgba(15, 23, 42, 0.6) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 180ms ease !important;
+  outline: none !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+}
+
+.notion-sidebar-search:hover {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.25) !important;
+  color: #0f172a !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+}
+
+.notion-sidebar-search kbd {
+  font-family: var(--font-body) !important;
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  padding: 3px 8px !important;
+  border-radius: var(--editorial-radius-pill) !important;
+  background: rgba(15, 23, 42, 0.06) !important;
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  color: #0f172a !important;
+}
+
+.notion-sidebar-shortcuts {
+  display: none !important;
+}
+
+/* Navigation items in sidebar */
+.sidebar-scroll-region {
+  flex: 1 !important;
+  padding: 12px 12px !important;
+  overflow-y: auto !important;
+}
+
+.nav-group {
+  margin-bottom: 22px !important;
+}
+
+.nav-group__label {
+  font-family: var(--font-body) !important;
+  font-size: 11px !important;
+  font-weight: 650 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  color: rgba(15, 23, 42, 0.45) !important;
+  padding: 6px 14px !important;
+  display: block !important;
+}
+
+.sidebar-nav button {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 10px 16px !important;
+  margin: 3px 0 !important;
+  border-radius: var(--editorial-radius-pill) !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: rgba(15, 23, 42, 0.72) !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  position: relative !important;
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms ease, color 150ms ease !important;
+  outline: none !important;
+}
+
+.sidebar-nav button:hover {
+  background: rgba(15, 23, 42, 0.05) !important;
+  color: #0f172a !important;
+  transform: scale(1.02);
+}
+
+/* Active Navigation Item = Solid Black Pill Button */
+.sidebar-nav button.active {
+  background: #000000 !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18) !important;
+  border-color: #000000 !important;
+}
+
+.sidebar-nav button.active svg,
+.sidebar-nav button.active .nav-brand-mark {
+  color: #ffffff !important;
+  filter: brightness(10);
+}
+
+.sidebar-nav button b {
+  margin-left: auto !important;
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  padding: 2px 8px !important;
+  border-radius: var(--editorial-radius-pill) !important;
+  line-height: 1.3 !important;
+}
+
+.sidebar-nav button.active b {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* Sidebar Footer & User Profile */
+.sidebar-footer.notion-sidebar-footer {
+  padding: 14px 12px 18px !important;
+  border-top: 1px solid rgba(15, 23, 42, 0.06) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+
+.sidebar-user-container {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.sidebar-user.notion-user-bar {
+  flex: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 8px 12px !important;
+  border-radius: var(--editorial-radius-pill) !important;
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  color: #0f172a !important;
+  cursor: pointer !important;
+  transition: all 180ms ease !important;
+  outline: none !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+}
+
+.sidebar-user.notion-user-bar:hover {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.16) !important;
+  transform: translateY(-1px);
+}
+
+.sidebar-profile-copy strong {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  display: block !important;
+  color: #0f172a !important;
+}
+
+.sidebar-profile-copy small {
+  font-size: 11.5px !important;
+  color: var(--editorial-text-muted, #3e4e66) !important;
+  display: block !important;
+}
+
+.notion-tool-btn {
+  width: 36px !important;
+  height: 36px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: var(--editorial-radius-pill) !important;
+  background: rgba(255, 255, 255, 0.85) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  color: rgba(15, 23, 42, 0.7) !important;
+  cursor: pointer !important;
+  transition: all 180ms ease !important;
+  outline: none !important;
+}
+
+.notion-tool-btn:hover {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* User Account Menu Popover */
+.sidebar-account-menu {
+  border-radius: 22px !important;
+  background: var(--editorial-surface-popup, rgba(243, 246, 252, 0.92)) !important;
+  backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
+  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
+  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36)) !important;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16) !important;
+  padding: 16px !important;
+}
+
+.sidebar-account-menu button {
+  border-radius: var(--editorial-radius-pill) !important;
+  padding: 9px 14px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #0f172a !important;
+  transition: all 150ms ease !important;
+}
+
+.sidebar-account-menu button:hover {
+  background: rgba(15, 23, 42, 0.06) !important;
+}
+
+/* Collapsed Sidebar State */
+.app-shell.is-collapsed .app-sidebar {
+  width: 64px !important;
+  min-width: 64px !important;
+}
+
+.app-shell.is-collapsed .sidebar-head {
+  padding: 20px 10px !important;
+  justify-content: center !important;
+}
+
+.app-shell.is-collapsed .nav-item-label,
+.app-shell.is-collapsed .nav-group__label,
+.app-shell.is-collapsed .notion-sidebar-search,
+.app-shell.is-collapsed .sidebar-profile-copy,
+.app-shell.is-collapsed .sidebar-head .brand-name,
+.app-shell.is-collapsed .sidebar-head .icon-button,
+.app-shell.is-collapsed .sidebar-account-menu {
+  display: none !important;
+}
+
+.app-shell.is-collapsed .sidebar-nav button {
+  justify-content: center !important;
+  padding: 10px !important;
+  width: 44px !important;
+  margin-inline: auto !important;
+}
+
+.sidebar-collapsed-dot {
+  position: absolute !important;
+  top: 8px !important;
+  right: 8px !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background: #ef4444 !important;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6) !important;
+}
+
+.mobile-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(15, 23, 42, 0.4) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  z-index: 99 !important;
+  border: none !important;
+  cursor: pointer !important;
+}
+
+@media (max-width: 768px) {
+  .editorial-master-topbar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    grid-template-rows: 44px 36px !important;
+    height: 100px !important;
+    gap: 4px 8px !important;
+    padding: 8px 12px !important;
+  }
+  .editorial-master-topbar__left .brand-name {
+    font-size: 24px !important;
+  }
+  .editorial-master-topbar__right {
+    grid-column: 2;
+    grid-row: 1;
+    gap: 4px !important;
+  }
+  .editorial-master-topbar__center {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    gap: 2px !important;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .topbar-nav-tab {
+    flex: 1 0 auto;
+    min-height: 36px;
+    white-space: nowrap;
+    font-size: 13px !important;
+    padding: 6px 8px !important;
+  }
+  .editorial-workspace-body {
+    flex-direction: column-reverse !important;
+    gap: 8px !important;
+    padding: 0 10px max(8px, env(safe-area-inset-bottom)) !important;
+  }
+  .editorial-dock {
+    flex: 0 0 68px !important;
+    width: 100% !important;
+    height: 68px !important;
+    flex-direction: row !important;
+    justify-content: space-around !important;
+    padding: 6px 4px !important;
+    gap: 0 !important;
+    border-radius: 20px !important;
+  }
+  .editorial-dock .dock-btn {
+    width: 19% !important;
+    max-width: 72px;
+    height: 54px !important;
+  }
+  .editorial-stage-viewport {
+    height: auto !important;
+    min-height: 0;
+  }
+  .editorial-main-content :is(.profile-page, .workspace-admin, .task-page, .meetings-page) {
+    padding: 20px 12px 40px !important;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .editorial-main-content :is(.profile-card, .workspace-admin section) {
+    padding: 20px !important;
+  }
+  .editorial-main-content .workspace-admin {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .editorial-main-content .workspace-admin section {
+    min-width: 0;
+    overflow-x: auto;
+  }
+  .app-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 280px !important;
+    transform: translateX(-100%) !important;
+    transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+    z-index: 100 !important;
+  }
+
+  .app-sidebar.is-mobile-open {
+    transform: translateX(0) !important;
+  }
+}
+
+
+/* --------------------------------------------------------------------------
+   3. Topbar (Glassmorphic Editorial Bar)
+   -------------------------------------------------------------------------- */
+.app-topbar.notion-reference-topbar,
+.app-topbar {
+  background: rgba(255, 255, 255, 0.82) !important;
+  backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
+  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.85) !important;
+  height: 60px !important;
+  padding: 0 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  z-index: 20 !important;
+}
+
+.notion-topbar-path {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.notion-topbar-path button {
+  background: none !important;
+  border: none !important;
+  color: var(--editorial-text-muted, #3e4e66) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: color 150ms ease !important;
+  outline: none !important;
+}
+
+.notion-topbar-path button:hover {
+  color: #0f172a !important;
+}
+
+.notion-topbar-path svg {
+  color: rgba(15, 23, 42, 0.3) !important;
+}
+
+.notion-topbar-path h1,
+.notion-topbar-path strong {
+  font-family: var(--font-display) !important;
+  font-style: normal !important;
+  font-size: 21px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+  color: #0f172a !important;
+  margin: 0 !important;
+}
+
+.notion-topbar-search {
+  display: flex !important;
+  align-items: center !important;
+  gap: 9px !important;
+  padding: 7px 18px !important;
+  border-radius: var(--editorial-radius-pill) !important;
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+  color: rgba(15, 23, 42, 0.65) !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 180ms ease !important;
+  outline: none !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+}
+
+.notion-topbar-search:hover {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.25) !important;
+  color: #0f172a !important;
+  transform: translateY(-1px);
+}
+
+.notion-topbar-search kbd {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  padding: 2px 7px !important;
+  border-radius: var(--editorial-radius-pill) !important;
+  background: rgba(15, 23, 42, 0.06) !important;
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  color: #0f172a !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. Live Chat View (Delegated to features/chat/chat-live.css)
+   -------------------------------------------------------------------------- */
+
+
+/* --------------------------------------------------------------------------
+   5. Video Meetings View (MeetingPage — Cinematic SFU Stage)
+   -------------------------------------------------------------------------- */
+.meetings-page {
+  padding: 32px clamp(20px, 3vw, 48px) 80px !important;
+  max-width: 1400px !important;
+  margin: 0 auto !important;
+}
+
+.meeting-page-title {
+  font-family: var(--font-display) !important;
+  font-style: normal !important;
+  font-size: clamp(2.2rem, 3.5vw, 3rem) !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.015em !important;
+  color: #0f172a !important;
+  margin: 0 0 8px !important;
+}
+
+.meeting-page-description {
+  color: var(--editorial-text-secondary) !important;
+}
+
+.meeting-room-card {
+  border-radius: var(--editorial-radius-card) !important;
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
+  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36)) !important;
+  backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
+  padding: 24px 26px !important;
+  box-shadow: var(--editorial-shadow) !important;
+  transition: all 200ms ease !important;
+}
+
+.meeting-room-card:hover {
+  transform: translateY(-3px) !important;
+  border-color: rgba(15, 23, 42, 0.2) !important;
+  box-shadow: var(--editorial-shadow-lg) !important;
+}
+
+.meeting-room-card.is-selected {
+  border-color: #000000 !important;
+  box-shadow: 0 0 0 2px #000000, var(--editorial-shadow-lg) !important;
+}
+
+.meeting-room-card__title {
+  color: #0f172a !important;
+}
+
+.meeting-room-card__meta {
+  color: var(--editorial-text-muted) !important;
+}
+
+.meeting-lobby-preview-box {
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
+  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36)) !important;
+  border-radius: 28px !important;
+  box-shadow: var(--editorial-shadow-lg) !important;
+}
+
+.meeting-tile,
+.video-tile {
+  border-radius: var(--editorial-radius-card) !important;
+  overflow: hidden !important;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.15) !important;
+  border: 2px solid rgba(255, 255, 255, 0.5) !important;
+}
+
+.meeting-tile.is-speaking,
+.video-tile.is-speaking {
+  border-color: #0f172a !important;
+  box-shadow: 0 0 0 2px #0f172a, 0 16px 36px rgba(15, 23, 42, 0.25) !important;
+}
+
+/* Floating Controls Bar in Meeting */
+.meeting-controls-dock,
+.meeting-controls {
+  border-radius: var(--editorial-radius-pill) !important;
+  background: rgba(0, 0, 0, 0.9) !important;
+  backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
+  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35) !important;
+  padding: 12px 28px !important;
+  color: #ffffff !important;
+}
+
+.meeting-dock-btn,
+.meeting-control-btn {
+  border-radius: var(--editorial-radius-pill) !important;
+  transition: transform 180ms ease !important;
+}
+
+.meeting-dock-btn:hover:not(:disabled),
+.meeting-control-btn:hover:not(:disabled) {
+  transform: scale(1.08) !important;
+}
+
+.meeting-dock-btn.is-leave,
+.meeting-leave-btn {
+  border-radius: var(--editorial-radius-pill) !important;
+  padding: 0 22px !important;
+  height: 42px !important;
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* --------------------------------------------------------------------------
+   6. Task Board View (TaskBoardPage — Tactile Kanban Panels)
+   -------------------------------------------------------------------------- */
+.task-page {
+  padding: 32px clamp(20px, 3vw, 48px) 80px !important;
+  max-width: 1400px !important;
+  margin: 0 auto !important;
+}
+
+.task-page-heading h2 {
+  font-family: var(--font-display) !important;
+  font-style: normal !important;
+  font-size: clamp(2rem, 3.2vw, 2.8rem) !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.015em !important;
+  color: #0f172a !important;
+  margin: 0 0 8px !important;
+}
+
+.task-column,
+.task-lane {
+  border-radius: var(--editorial-radius-card) !important;
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
+  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36)) !important;
+  backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
+  box-shadow: var(--editorial-shadow) !important;
+  padding: 22px !important;
+}
+
+.task-column h3 {
+  font-family: var(--font-display) !important;
+  font-style: normal !important;
+  font-size: 18px !important;
+  font-weight: 500 !important;
+  color: #0f172a !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+.task-card {
+  border-radius: 18px !important;
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  padding: 16px !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease !important;
+}
+
+.task-card:hover {
+  transform: translateY(-2px) !important;
+  border-color: rgba(15, 23, 42, 0.2) !important;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important;
+}
+
+.task-title {
+  color: #0f172a !important;
+}
+
+/* --------------------------------------------------------------------------
+   7. Profile & Admin Views
+   -------------------------------------------------------------------------- */
+.profile-page,
+.workspace-admin {
+  padding: 32px clamp(20px, 3vw, 48px) 80px !important;
+  max-width: 1040px !important;
+  margin: 0 auto !important;
+}
+
+.profile-header h1,
+.workspace-admin h1 {
+  font-family: var(--font-display) !important;
+  font-style: normal !important;
+  font-size: clamp(2.2rem, 3.5vw, 3rem) !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.015em !important;
+  color: #0f172a !important;
+}
+
+.profile-card,
+.workspace-admin section {
+  border-radius: var(--editorial-radius-card) !important;
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
+  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36)) !important;
+  backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
+  padding: 28px !important;
+  box-shadow: var(--editorial-shadow) !important;
+  color: #0f172a !important;
+}
+
+.workspace-admin input:not([type="checkbox"]),
+.workspace-admin select,
+.profile-field-input:not(textarea) {
+  border-radius: var(--editorial-radius-pill) !important;
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
+  border: 1.5px solid rgba(15, 23, 42, 0.12) !important;
+  color: #0f172a !important;
+  outline: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   8. Search Modal & Global Modals
+   -------------------------------------------------------------------------- */
+.modal-backdrop {
+  background: rgba(15, 23, 42, 0.4) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.modal-window,
+.modal,
+.dialog-content {
+  border-radius: 28px !important;
+  background: var(--editorial-surface-popup, rgba(243, 246, 252, 0.92)) !important;
+  backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
+  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
+  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36)) !important;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.18) !important;
+  color: #0f172a !important;
+}
+
+.modal__header h2,
+.modal-window h2,
+.dialog-content h2 {
+  font-family: var(--font-display) !important;
+  font-style: normal !important;
+  font-size: 24px !important;
+  font-weight: 500 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.01em !important;
+}
+
+.modal__header {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+  padding: 24px 28px 18px !important;
+}
+
+.modal__body {
+  padding: 24px 28px !important;
+  color: #0f172a !important;
+}
+
+.modal__footer {
+  border-top: 1px solid rgba(15, 23, 42, 0.08) !important;
+  padding: 18px 28px 24px !important;
+}
+
+/* --------------------------------------------------------------------------
+   9. Primary Action Buttons: Solid Black Pill from Landing & Login
+   -------------------------------------------------------------------------- */
+.editorial-workspace-shell .button--primary,
+.editorial-workspace-shell .button-primary {
+  border-radius: var(--editorial-radius-pill) !important;
+  background-color: #263450 !important;
+  color: #ffffff !important;
+  font-family: var(--font-body) !important;
+  font-weight: 500 !important;
+  border: 1px solid #263450 !important;
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms ease, box-shadow 150ms ease !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15) !important;
+}
+
+.editorial-workspace-shell .button--primary:hover:not(:disabled),
+.editorial-workspace-shell .button-primary:hover:not(:disabled) {
+  transform: scale(1.03) !important;
+  background-color: #172033 !important;
+}
+
+.editorial-workspace-shell .button:active:not(:disabled) {
+  transform: scale(0.98) !important;
+}
+
+.editorial-workspace-shell .button--secondary,
+.editorial-workspace-shell .button-secondary {
+  border-radius: var(--editorial-radius-pill) !important;
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+}
+
+.badge {
+  border-radius: var(--editorial-radius-pill) !important;
+  font-family: var(--font-body) !important;
+}
+
+/* Keep semantic status colors legible on the authenticated light glass. */
+.editorial-workspace-shell .badge--blue {
+  background: #e4edf9;
+  color: #254d78;
+}
+.editorial-workspace-shell .badge--green {
+  background: #e1eee5;
+  color: #256347;
+}
+.editorial-workspace-shell .badge--amber {
+  background: #fff0d1;
+  color: #79520c;
+}
+.editorial-workspace-shell .badge--red {
+  background: #fce3e5;
+  color: #9b283b;
+}
+.editorial-workspace-shell .badge--violet {
+  background: #eee8f6;
+  color: #665183;
+}
+
+/* --------------------------------------------------------------------------
+   10. Keyboard Focus (appearance only; interactions remain unchanged)
+   -------------------------------------------------------------------------- */
+.editorial-workspace-shell :is(input, textarea, select, button, a, [tabindex]):focus-visible {
+  outline: 2px solid #263450 !important;
+  outline-offset: 3px !important;
+}
+
+/* --------------------------------------------------------------------------
+   11. Editorial Custom Scrollbars & Utility Resets
+   -------------------------------------------------------------------------- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.15);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.3);
+}
+
+::selection {
+  background-color: #0f172a;
+  color: #ffffff;
+}
+
+/* Network reconnect banner */
+.network-reconnect-bar {
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
+  border-bottom: 1px solid rgba(239, 68, 68, 0.25) !important;
+  color: #dc2626 !important;
+  backdrop-filter: blur(16px) !important;
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.08) !important;
+  padding: 8px 18px !important;
+}
+
+.network-reconnect-btn {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border-radius: 9999px !important;
+  border: 1px solid #000000 !important;
+  padding: 4px 14px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: transform 150ms ease !important;
+}
+
+.network-reconnect-btn:hover {
+  transform: scale(1.04) !important;
+}

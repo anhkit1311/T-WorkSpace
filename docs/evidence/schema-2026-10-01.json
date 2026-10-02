@@ -1,0 +1,3168 @@
+{
+  "timestamp": "2026-09-30T22:48:32.117Z",
+  "columns": [
+    {
+      "table_name": "api_instances",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "api_instances",
+      "column_name": "media_url",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "api_instances",
+      "column_name": "expires_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "workspace_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "actor_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "action",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "target_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "details",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb"
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "channel_access",
+      "column_name": "channel_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "channel_access",
+      "column_name": "workspace_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "channel_access",
+      "column_name": "user_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "channel_access",
+      "column_name": "role",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "channel_access",
+      "column_name": "type",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "channel_access",
+      "column_name": "can_write",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "channel_memberships",
+      "column_name": "channel_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "channel_memberships",
+      "column_name": "user_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "channel_memberships",
+      "column_name": "joined_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "channel_preferences",
+      "column_name": "user_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "channel_preferences",
+      "column_name": "channel_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "channel_preferences",
+      "column_name": "pinned",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "channel_preferences",
+      "column_name": "muted",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "channel_preferences",
+      "column_name": "last_read_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "channels",
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "channels",
+      "column_name": "workspace_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "channels",
+      "column_name": "created_by",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "channels",
+      "column_name": "name",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "channels",
+      "column_name": "type",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": "'text'::character varying"
+    },
+    {
+      "table_name": "channels",
+      "column_name": "position",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "channels",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "channels",
+      "column_name": "description",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": "''::character varying"
+    },
+    {
+      "table_name": "channels",
+      "column_name": "is_private",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "channels",
+      "column_name": "archived_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "channels",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "email_otps",
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "email_otps",
+      "column_name": "email",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "email_otps",
+      "column_name": "otp_hash",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "email_otps",
+      "column_name": "expires_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "email_otps",
+      "column_name": "attempt_count",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "email_otps",
+      "column_name": "resend_count",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "email_otps",
+      "column_name": "last_sent_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "email_otps",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "meeting_attendees",
+      "column_name": "session_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_attendees",
+      "column_name": "user_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_attendees",
+      "column_name": "role",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'member'::text"
+    },
+    {
+      "table_name": "meeting_attendees",
+      "column_name": "state",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_attendees",
+      "column_name": "raised_hand",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "meeting_attendees",
+      "column_name": "joined_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "meeting_connections",
+      "column_name": "socket_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_connections",
+      "column_name": "session_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_connections",
+      "column_name": "user_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_connections",
+      "column_name": "instance_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_connections",
+      "column_name": "joined_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "meeting_participations",
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_participations",
+      "column_name": "channel_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_participations",
+      "column_name": "user_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_participations",
+      "column_name": "socket_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_participations",
+      "column_name": "joined_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "meeting_participations",
+      "column_name": "left_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_participations",
+      "column_name": "session_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_schedules",
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_schedules",
+      "column_name": "channel_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_schedules",
+      "column_name": "created_by",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_schedules",
+      "column_name": "title",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_schedules",
+      "column_name": "description",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": "''::character varying"
+    },
+    {
+      "table_name": "meeting_schedules",
+      "column_name": "starts_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_schedules",
+      "column_name": "ends_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_schedules",
+      "column_name": "canceled_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_schedules",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "meeting_schedules",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "meeting_sessions",
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_sessions",
+      "column_name": "channel_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_sessions",
+      "column_name": "schedule_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_sessions",
+      "column_name": "host_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_sessions",
+      "column_name": "waiting_enabled",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "meeting_sessions",
+      "column_name": "locked",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "meeting_sessions",
+      "column_name": "started_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "meeting_sessions",
+      "column_name": "ended_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_sessions",
+      "column_name": "media_instance_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "memberships",
+      "column_name": "workspace_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "memberships",
+      "column_name": "user_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "memberships",
+      "column_name": "role",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "memberships",
+      "column_name": "joined_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "message_attachments",
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "message_attachments",
+      "column_name": "channel_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "message_attachments",
+      "column_name": "uploader_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "message_attachments",
+      "column_name": "message_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "message_attachments",
+      "column_name": "file_name",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "message_attachments",
+      "column_name": "mime_type",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "message_attachments",
+      "column_name": "file_size",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "message_attachments",
+      "column_name": "data",
+      "data_type": "bytea",
+      "udt_name": "bytea",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "message_attachments",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "message_attachments",
+      "column_name": "storage_provider",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'db'::text"
+    },
+    {
+      "table_name": "message_attachments",
+      "column_name": "object_key",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "message_bookmarks",
+      "column_name": "message_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "message_bookmarks",
+      "column_name": "user_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "message_bookmarks",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "message_mentions",
+      "column_name": "message_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "message_mentions",
+      "column_name": "user_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "message_pins",
+      "column_name": "message_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "message_pins",
+      "column_name": "pinned_by",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "message_pins",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "message_reactions",
+      "column_name": "message_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "message_reactions",
+      "column_name": "user_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "message_reactions",
+      "column_name": "emoji",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "messages",
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "messages",
+      "column_name": "channel_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "messages",
+      "column_name": "author_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "messages",
+      "column_name": "content",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "messages",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "messages",
+      "column_name": "edited_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "messages",
+      "column_name": "deleted_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "messages",
+      "column_name": "reply_to_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "messages",
+      "column_name": "attachment_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "messages",
+      "column_name": "client_message_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "messages",
+      "column_name": "client_payload_hash",
+      "data_type": "character",
+      "udt_name": "bpchar",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "messages",
+      "column_name": "thread_root_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "user_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "message_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "kind",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "read_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "password_resets",
+      "column_name": "email",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "password_resets",
+      "column_name": "otp_hash",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "password_resets",
+      "column_name": "expires_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "password_resets",
+      "column_name": "attempt_count",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "password_resets",
+      "column_name": "sent_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "refresh_sessions",
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "refresh_sessions",
+      "column_name": "user_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "refresh_sessions",
+      "column_name": "token_hash",
+      "data_type": "character",
+      "udt_name": "bpchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "refresh_sessions",
+      "column_name": "expires_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "refresh_sessions",
+      "column_name": "revoked_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "refresh_sessions",
+      "column_name": "user_agent",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "refresh_sessions",
+      "column_name": "ip_address",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "refresh_sessions",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "refresh_sessions",
+      "column_name": "last_used_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "request_rate_limits",
+      "column_name": "bucket_key",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "request_rate_limits",
+      "column_name": "window_start",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "request_rate_limits",
+      "column_name": "attempts",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "schema_migrations",
+      "column_name": "name",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "schema_migrations",
+      "column_name": "checksum",
+      "data_type": "character",
+      "udt_name": "bpchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "schema_migrations",
+      "column_name": "applied_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "socket_io_attachments",
+      "column_name": "id",
+      "data_type": "bigint",
+      "udt_name": "int8",
+      "is_nullable": "NO",
+      "column_default": "nextval('socket_io_attachments_id_seq'::regclass)"
+    },
+    {
+      "table_name": "socket_io_attachments",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "socket_io_attachments",
+      "column_name": "payload",
+      "data_type": "bytea",
+      "udt_name": "bytea",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "socket_presence",
+      "column_name": "socket_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "socket_presence",
+      "column_name": "user_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "socket_presence",
+      "column_name": "instance_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "socket_presence",
+      "column_name": "expires_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "storage_cleanup",
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "storage_cleanup",
+      "column_name": "object_key",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "storage_cleanup",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "storage_cleanup",
+      "column_name": "attempts",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "storage_cleanup",
+      "column_name": "next_attempt_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "task_activity",
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_activity",
+      "column_name": "task_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_activity",
+      "column_name": "actor_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_activity",
+      "column_name": "action",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_activity",
+      "column_name": "details",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb"
+    },
+    {
+      "table_name": "task_activity",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "task_attachments",
+      "column_name": "task_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_attachments",
+      "column_name": "attachment_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_attachments",
+      "column_name": "attached_by",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_checklist",
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_checklist",
+      "column_name": "task_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_checklist",
+      "column_name": "label",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_checklist",
+      "column_name": "done",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "task_checklist",
+      "column_name": "position",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "task_comments",
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_comments",
+      "column_name": "task_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_comments",
+      "column_name": "author_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_comments",
+      "column_name": "content",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_comments",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "channel_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "created_by",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "client_task_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "title",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "description",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "''::text"
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "status",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'todo'::text"
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "priority",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'normal'::text"
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "due_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "assignee_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "source_message_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "position",
+      "data_type": "bigint",
+      "udt_name": "int8",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "version",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "1"
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "archived_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "thread_reads",
+      "column_name": "user_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "thread_reads",
+      "column_name": "root_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "thread_reads",
+      "column_name": "last_read_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "users",
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "email",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "password_hash",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "display_name",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "users",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "users",
+      "column_name": "google_id",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "auth_provider",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": "'local'::character varying"
+    },
+    {
+      "table_name": "users",
+      "column_name": "email_verified",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "users",
+      "column_name": "avatar_url",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "bio",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": "''::character varying"
+    },
+    {
+      "table_name": "users",
+      "column_name": "cover_url",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "contact_text",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": "''::character varying"
+    },
+    {
+      "table_name": "users",
+      "column_name": "profile_visibility",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": "'workspace'::character varying"
+    },
+    {
+      "table_name": "users",
+      "column_name": "show_activity",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "users",
+      "column_name": "show_contact",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "users",
+      "column_name": "notifications_enabled",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "users",
+      "column_name": "status_text",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": "''::character varying"
+    },
+    {
+      "table_name": "users",
+      "column_name": "pronouns",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": "''::character varying"
+    },
+    {
+      "table_name": "users",
+      "column_name": "location",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": "''::character varying"
+    },
+    {
+      "table_name": "users",
+      "column_name": "interests",
+      "data_type": "ARRAY",
+      "udt_name": "_text",
+      "is_nullable": "NO",
+      "column_default": "'{}'::text[]"
+    },
+    {
+      "table_name": "users",
+      "column_name": "favorite_music",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": "''::character varying"
+    },
+    {
+      "table_name": "workspace_invitations",
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspace_invitations",
+      "column_name": "workspace_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspace_invitations",
+      "column_name": "created_by",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspace_invitations",
+      "column_name": "email",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspace_invitations",
+      "column_name": "token_hash",
+      "data_type": "character",
+      "udt_name": "bpchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspace_invitations",
+      "column_name": "expires_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspace_invitations",
+      "column_name": "accepted_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspace_invitations",
+      "column_name": "accepted_by",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspace_invitations",
+      "column_name": "revoked_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspace_invitations",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "workspace_notification_preferences",
+      "column_name": "workspace_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspace_notification_preferences",
+      "column_name": "user_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspace_notification_preferences",
+      "column_name": "muted",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "name",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "slug",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "owner_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "description",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": "''::character varying"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "archived_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    }
+  ],
+  "constraints": [
+    {
+      "table_name": "api_instances",
+      "name": "api_instances_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "audit_events",
+      "name": "audit_events_actor_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE SET NULL"
+    },
+    {
+      "table_name": "audit_events",
+      "name": "audit_events_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "audit_events",
+      "name": "audit_events_workspace_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "channel_memberships",
+      "name": "channel_memberships_channel_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "channel_memberships",
+      "name": "channel_memberships_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (channel_id, user_id)"
+    },
+    {
+      "table_name": "channel_memberships",
+      "name": "channel_memberships_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "channel_preferences",
+      "name": "channel_preferences_channel_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "channel_preferences",
+      "name": "channel_preferences_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (user_id, channel_id)"
+    },
+    {
+      "table_name": "channel_preferences",
+      "name": "channel_preferences_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "channels",
+      "name": "channels_created_by_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "channels",
+      "name": "channels_name_unique",
+      "type": "u",
+      "definition": "UNIQUE (workspace_id, name)"
+    },
+    {
+      "table_name": "channels",
+      "name": "channels_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "channels",
+      "name": "channels_type_check",
+      "type": "c",
+      "definition": "CHECK (((type)::text = ANY ((ARRAY['text'::character varying, 'voice'::character varying, 'video'::character varying])::text[])))"
+    },
+    {
+      "table_name": "channels",
+      "name": "channels_workspace_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "email_otps",
+      "name": "email_otps_email_normalized",
+      "type": "c",
+      "definition": "CHECK (((email)::text = lower((email)::text)))"
+    },
+    {
+      "table_name": "email_otps",
+      "name": "email_otps_email_unique",
+      "type": "u",
+      "definition": "UNIQUE (email)"
+    },
+    {
+      "table_name": "email_otps",
+      "name": "email_otps_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "meeting_attendees",
+      "name": "meeting_attendees_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (session_id, user_id)"
+    },
+    {
+      "table_name": "meeting_attendees",
+      "name": "meeting_attendees_role_check",
+      "type": "c",
+      "definition": "CHECK ((role = ANY (ARRAY['host'::text, 'cohost'::text, 'member'::text])))"
+    },
+    {
+      "table_name": "meeting_attendees",
+      "name": "meeting_attendees_session_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (session_id) REFERENCES meeting_sessions(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "meeting_attendees",
+      "name": "meeting_attendees_state_check",
+      "type": "c",
+      "definition": "CHECK ((state = ANY (ARRAY['waiting'::text, 'admitted'::text, 'kicked'::text])))"
+    },
+    {
+      "table_name": "meeting_attendees",
+      "name": "meeting_attendees_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "meeting_connections",
+      "name": "meeting_connections_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (socket_id)"
+    },
+    {
+      "table_name": "meeting_connections",
+      "name": "meeting_connections_session_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (session_id) REFERENCES meeting_sessions(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "meeting_connections",
+      "name": "meeting_connections_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "meeting_participations",
+      "name": "meeting_dates_check",
+      "type": "c",
+      "definition": "CHECK (((left_at IS NULL) OR (left_at >= joined_at)))"
+    },
+    {
+      "table_name": "meeting_participations",
+      "name": "meeting_participations_channel_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "meeting_participations",
+      "name": "meeting_participations_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "meeting_participations",
+      "name": "meeting_participations_session_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (session_id) REFERENCES meeting_sessions(id) ON DELETE SET NULL"
+    },
+    {
+      "table_name": "meeting_participations",
+      "name": "meeting_participations_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "meeting_schedules",
+      "name": "meeting_schedules_channel_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "meeting_schedules",
+      "name": "meeting_schedules_created_by_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "meeting_schedules",
+      "name": "meeting_schedules_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "meeting_schedules",
+      "name": "meeting_schedules_time_check",
+      "type": "c",
+      "definition": "CHECK ((ends_at > starts_at))"
+    },
+    {
+      "table_name": "meeting_sessions",
+      "name": "meeting_sessions_channel_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "meeting_sessions",
+      "name": "meeting_sessions_check",
+      "type": "c",
+      "definition": "CHECK (((ended_at IS NULL) OR (ended_at >= started_at)))"
+    },
+    {
+      "table_name": "meeting_sessions",
+      "name": "meeting_sessions_host_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (host_id) REFERENCES users(id)"
+    },
+    {
+      "table_name": "meeting_sessions",
+      "name": "meeting_sessions_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "meeting_sessions",
+      "name": "meeting_sessions_schedule_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (schedule_id) REFERENCES meeting_schedules(id) ON DELETE SET NULL"
+    },
+    {
+      "table_name": "memberships",
+      "name": "memberships_owner_integrity",
+      "type": "t",
+      "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED"
+    },
+    {
+      "table_name": "memberships",
+      "name": "memberships_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (workspace_id, user_id)"
+    },
+    {
+      "table_name": "memberships",
+      "name": "memberships_role_check",
+      "type": "c",
+      "definition": "CHECK (((role)::text = ANY ((ARRAY['owner'::character varying, 'admin'::character varying, 'member'::character varying])::text[])))"
+    },
+    {
+      "table_name": "memberships",
+      "name": "memberships_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "memberships",
+      "name": "memberships_workspace_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "message_attachments",
+      "name": "attachments_storage_check",
+      "type": "c",
+      "definition": "CHECK ((((storage_provider = 'db'::text) AND (data IS NOT NULL) AND (object_key IS NULL)) OR ((storage_provider = 's3'::text) AND (data IS NULL) AND (object_key IS NOT NULL))))"
+    },
+    {
+      "table_name": "message_attachments",
+      "name": "message_attachments_channel_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "message_attachments",
+      "name": "message_attachments_file_size_check",
+      "type": "c",
+      "definition": "CHECK (((file_size >= 1) AND (file_size <= 8000000)))"
+    },
+    {
+      "table_name": "message_attachments",
+      "name": "message_attachments_message_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "message_attachments",
+      "name": "message_attachments_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "message_attachments",
+      "name": "message_attachments_storage_provider_check",
+      "type": "c",
+      "definition": "CHECK ((storage_provider = ANY (ARRAY['db'::text, 's3'::text])))"
+    },
+    {
+      "table_name": "message_attachments",
+      "name": "message_attachments_uploader_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (uploader_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "message_bookmarks",
+      "name": "message_bookmarks_message_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "message_bookmarks",
+      "name": "message_bookmarks_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (message_id, user_id)"
+    },
+    {
+      "table_name": "message_bookmarks",
+      "name": "message_bookmarks_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "message_mentions",
+      "name": "message_mentions_message_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "message_mentions",
+      "name": "message_mentions_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (message_id, user_id)"
+    },
+    {
+      "table_name": "message_mentions",
+      "name": "message_mentions_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "message_pins",
+      "name": "message_pins_message_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "message_pins",
+      "name": "message_pins_pinned_by_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (pinned_by) REFERENCES users(id) ON DELETE SET NULL"
+    },
+    {
+      "table_name": "message_pins",
+      "name": "message_pins_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (message_id)"
+    },
+    {
+      "table_name": "message_reactions",
+      "name": "message_reactions_message_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "message_reactions",
+      "name": "message_reactions_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (message_id, user_id, emoji)"
+    },
+    {
+      "table_name": "message_reactions",
+      "name": "message_reactions_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "messages",
+      "name": "messages_attachment_fk",
+      "type": "f",
+      "definition": "FOREIGN KEY (attachment_id) REFERENCES message_attachments(id) ON DELETE SET NULL"
+    },
+    {
+      "table_name": "messages",
+      "name": "messages_author_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "messages",
+      "name": "messages_channel_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "messages",
+      "name": "messages_content_check",
+      "type": "c",
+      "definition": "CHECK (((char_length(content) >= 1) AND (char_length(content) <= 4000)))"
+    },
+    {
+      "table_name": "messages",
+      "name": "messages_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "messages",
+      "name": "messages_reply_to_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (reply_to_id) REFERENCES messages(id) ON DELETE SET NULL"
+    },
+    {
+      "table_name": "messages",
+      "name": "messages_thread_root_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (thread_root_id) REFERENCES messages(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_kind_check",
+      "type": "c",
+      "definition": "CHECK (((kind)::text = ANY ((ARRAY['mention'::character varying, 'thread'::character varying])::text[])))"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_message_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_user_id_message_id_key",
+      "type": "u",
+      "definition": "UNIQUE (user_id, message_id)"
+    },
+    {
+      "table_name": "password_resets",
+      "name": "password_resets_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (email)"
+    },
+    {
+      "table_name": "refresh_sessions",
+      "name": "refresh_sessions_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "refresh_sessions",
+      "name": "refresh_sessions_token_hash_key",
+      "type": "u",
+      "definition": "UNIQUE (token_hash)"
+    },
+    {
+      "table_name": "refresh_sessions",
+      "name": "refresh_sessions_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "request_rate_limits",
+      "name": "request_rate_limits_attempts_check",
+      "type": "c",
+      "definition": "CHECK ((attempts >= 0))"
+    },
+    {
+      "table_name": "request_rate_limits",
+      "name": "request_rate_limits_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (bucket_key)"
+    },
+    {
+      "table_name": "schema_migrations",
+      "name": "schema_migrations_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (name)"
+    },
+    {
+      "table_name": "socket_io_attachments",
+      "name": "socket_io_attachments_id_key",
+      "type": "u",
+      "definition": "UNIQUE (id)"
+    },
+    {
+      "table_name": "socket_presence",
+      "name": "socket_presence_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (socket_id)"
+    },
+    {
+      "table_name": "socket_presence",
+      "name": "socket_presence_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "storage_cleanup",
+      "name": "storage_cleanup_object_key_key",
+      "type": "u",
+      "definition": "UNIQUE (object_key)"
+    },
+    {
+      "table_name": "storage_cleanup",
+      "name": "storage_cleanup_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "task_activity",
+      "name": "task_activity_actor_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (actor_id) REFERENCES users(id)"
+    },
+    {
+      "table_name": "task_activity",
+      "name": "task_activity_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "task_activity",
+      "name": "task_activity_task_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "task_attachments",
+      "name": "task_attachments_attached_by_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (attached_by) REFERENCES users(id)"
+    },
+    {
+      "table_name": "task_attachments",
+      "name": "task_attachments_attachment_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (attachment_id) REFERENCES message_attachments(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "task_attachments",
+      "name": "task_attachments_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (task_id, attachment_id)"
+    },
+    {
+      "table_name": "task_attachments",
+      "name": "task_attachments_task_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "task_checklist",
+      "name": "task_checklist_label_check",
+      "type": "c",
+      "definition": "CHECK (((length(label) >= 1) AND (length(label) <= 200)))"
+    },
+    {
+      "table_name": "task_checklist",
+      "name": "task_checklist_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "task_checklist",
+      "name": "task_checklist_task_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "task_comments",
+      "name": "task_comments_author_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (author_id) REFERENCES users(id)"
+    },
+    {
+      "table_name": "task_comments",
+      "name": "task_comments_content_check",
+      "type": "c",
+      "definition": "CHECK (((length(content) >= 1) AND (length(content) <= 4000)))"
+    },
+    {
+      "table_name": "task_comments",
+      "name": "task_comments_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "task_comments",
+      "name": "task_comments_task_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "tasks",
+      "name": "tasks_assignee_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (assignee_id) REFERENCES users(id) ON DELETE SET NULL"
+    },
+    {
+      "table_name": "tasks",
+      "name": "tasks_channel_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "tasks",
+      "name": "tasks_created_by_client_task_id_key",
+      "type": "u",
+      "definition": "UNIQUE (created_by, client_task_id)"
+    },
+    {
+      "table_name": "tasks",
+      "name": "tasks_created_by_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (created_by) REFERENCES users(id)"
+    },
+    {
+      "table_name": "tasks",
+      "name": "tasks_description_check",
+      "type": "c",
+      "definition": "CHECK ((length(description) <= 8000))"
+    },
+    {
+      "table_name": "tasks",
+      "name": "tasks_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "tasks",
+      "name": "tasks_priority_check",
+      "type": "c",
+      "definition": "CHECK ((priority = ANY (ARRAY['low'::text, 'normal'::text, 'high'::text, 'urgent'::text])))"
+    },
+    {
+      "table_name": "tasks",
+      "name": "tasks_source_message_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (source_message_id) REFERENCES messages(id) ON DELETE SET NULL"
+    },
+    {
+      "table_name": "tasks",
+      "name": "tasks_status_check",
+      "type": "c",
+      "definition": "CHECK ((status = ANY (ARRAY['todo'::text, 'doing'::text, 'done'::text])))"
+    },
+    {
+      "table_name": "tasks",
+      "name": "tasks_title_check",
+      "type": "c",
+      "definition": "CHECK (((length(title) >= 1) AND (length(title) <= 160)))"
+    },
+    {
+      "table_name": "tasks",
+      "name": "tasks_version_check",
+      "type": "c",
+      "definition": "CHECK ((version > 0))"
+    },
+    {
+      "table_name": "thread_reads",
+      "name": "thread_reads_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (user_id, root_id)"
+    },
+    {
+      "table_name": "thread_reads",
+      "name": "thread_reads_root_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (root_id) REFERENCES messages(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "thread_reads",
+      "name": "thread_reads_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "users",
+      "name": "users_email_normalized",
+      "type": "c",
+      "definition": "CHECK (((email)::text = lower((email)::text)))"
+    },
+    {
+      "table_name": "users",
+      "name": "users_google_id_key",
+      "type": "u",
+      "definition": "UNIQUE (google_id)"
+    },
+    {
+      "table_name": "users",
+      "name": "users_interests_limit",
+      "type": "c",
+      "definition": "CHECK ((cardinality(interests) <= 8))"
+    },
+    {
+      "table_name": "users",
+      "name": "users_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "users",
+      "name": "users_profile_visibility_check",
+      "type": "c",
+      "definition": "CHECK (((profile_visibility)::text = ANY ((ARRAY['workspace'::character varying, 'private'::character varying])::text[])))"
+    },
+    {
+      "table_name": "workspace_invitations",
+      "name": "workspace_invitations_accepted_by_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (accepted_by) REFERENCES users(id) ON DELETE SET NULL"
+    },
+    {
+      "table_name": "workspace_invitations",
+      "name": "workspace_invitations_check",
+      "type": "c",
+      "definition": "CHECK ((expires_at > created_at))"
+    },
+    {
+      "table_name": "workspace_invitations",
+      "name": "workspace_invitations_check1",
+      "type": "c",
+      "definition": "CHECK (((accepted_at IS NULL) OR (revoked_at IS NULL)))"
+    },
+    {
+      "table_name": "workspace_invitations",
+      "name": "workspace_invitations_created_by_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL"
+    },
+    {
+      "table_name": "workspace_invitations",
+      "name": "workspace_invitations_email_check",
+      "type": "c",
+      "definition": "CHECK (((email IS NULL) OR ((email)::text = lower((email)::text))))"
+    },
+    {
+      "table_name": "workspace_invitations",
+      "name": "workspace_invitations_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "workspace_invitations",
+      "name": "workspace_invitations_token_hash_key",
+      "type": "u",
+      "definition": "UNIQUE (token_hash)"
+    },
+    {
+      "table_name": "workspace_invitations",
+      "name": "workspace_invitations_workspace_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "workspace_notification_preferences",
+      "name": "workspace_notification_preferences_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (workspace_id, user_id)"
+    },
+    {
+      "table_name": "workspace_notification_preferences",
+      "name": "workspace_notification_preferences_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "workspace_notification_preferences",
+      "name": "workspace_notification_preferences_workspace_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "workspaces",
+      "name": "workspaces_owner_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "workspaces",
+      "name": "workspaces_owner_integrity",
+      "type": "t",
+      "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED"
+    },
+    {
+      "table_name": "workspaces",
+      "name": "workspaces_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "workspaces",
+      "name": "workspaces_slug_key",
+      "type": "u",
+      "definition": "UNIQUE (slug)"
+    }
+  ],
+  "indexes": [
+    {
+      "table_name": "api_instances",
+      "indexname": "api_instances_pkey",
+      "indexdef": "CREATE UNIQUE INDEX api_instances_pkey ON public.api_instances USING btree (id)"
+    },
+    {
+      "table_name": "audit_events",
+      "indexname": "audit_events_pkey",
+      "indexdef": "CREATE UNIQUE INDEX audit_events_pkey ON public.audit_events USING btree (id)"
+    },
+    {
+      "table_name": "audit_events",
+      "indexname": "audit_workspace_idx",
+      "indexdef": "CREATE INDEX audit_workspace_idx ON public.audit_events USING btree (workspace_id, created_at DESC, id DESC)"
+    },
+    {
+      "table_name": "channel_memberships",
+      "indexname": "channel_memberships_pkey",
+      "indexdef": "CREATE UNIQUE INDEX channel_memberships_pkey ON public.channel_memberships USING btree (channel_id, user_id)"
+    },
+    {
+      "table_name": "channel_memberships",
+      "indexname": "channel_memberships_user_idx",
+      "indexdef": "CREATE INDEX channel_memberships_user_idx ON public.channel_memberships USING btree (user_id, channel_id)"
+    },
+    {
+      "table_name": "channel_preferences",
+      "indexname": "channel_preferences_pkey",
+      "indexdef": "CREATE UNIQUE INDEX channel_preferences_pkey ON public.channel_preferences USING btree (user_id, channel_id)"
+    },
+    {
+      "table_name": "channels",
+      "indexname": "channels_name_unique",
+      "indexdef": "CREATE UNIQUE INDEX channels_name_unique ON public.channels USING btree (workspace_id, name)"
+    },
+    {
+      "table_name": "channels",
+      "indexname": "channels_pkey",
+      "indexdef": "CREATE UNIQUE INDEX channels_pkey ON public.channels USING btree (id)"
+    },
+    {
+      "table_name": "channels",
+      "indexname": "channels_workspace_position_idx",
+      "indexdef": "CREATE INDEX channels_workspace_position_idx ON public.channels USING btree (workspace_id, \"position\")"
+    },
+    {
+      "table_name": "email_otps",
+      "indexname": "email_otps_email_idx",
+      "indexdef": "CREATE INDEX email_otps_email_idx ON public.email_otps USING btree (email)"
+    },
+    {
+      "table_name": "email_otps",
+      "indexname": "email_otps_email_unique",
+      "indexdef": "CREATE UNIQUE INDEX email_otps_email_unique ON public.email_otps USING btree (email)"
+    },
+    {
+      "table_name": "email_otps",
+      "indexname": "email_otps_pkey",
+      "indexdef": "CREATE UNIQUE INDEX email_otps_pkey ON public.email_otps USING btree (id)"
+    },
+    {
+      "table_name": "meeting_attendees",
+      "indexname": "meeting_attendees_pkey",
+      "indexdef": "CREATE UNIQUE INDEX meeting_attendees_pkey ON public.meeting_attendees USING btree (session_id, user_id)"
+    },
+    {
+      "table_name": "meeting_connections",
+      "indexname": "meeting_connections_pkey",
+      "indexdef": "CREATE UNIQUE INDEX meeting_connections_pkey ON public.meeting_connections USING btree (socket_id)"
+    },
+    {
+      "table_name": "meeting_connections",
+      "indexname": "meeting_connections_session_user_idx",
+      "indexdef": "CREATE INDEX meeting_connections_session_user_idx ON public.meeting_connections USING btree (session_id, user_id)"
+    },
+    {
+      "table_name": "meeting_participations",
+      "indexname": "meeting_participations_channel_idx",
+      "indexdef": "CREATE INDEX meeting_participations_channel_idx ON public.meeting_participations USING btree (channel_id, joined_at DESC)"
+    },
+    {
+      "table_name": "meeting_participations",
+      "indexname": "meeting_participations_pkey",
+      "indexdef": "CREATE UNIQUE INDEX meeting_participations_pkey ON public.meeting_participations USING btree (id)"
+    },
+    {
+      "table_name": "meeting_schedules",
+      "indexname": "meeting_schedules_channel_start_idx",
+      "indexdef": "CREATE INDEX meeting_schedules_channel_start_idx ON public.meeting_schedules USING btree (channel_id, starts_at) WHERE (canceled_at IS NULL)"
+    },
+    {
+      "table_name": "meeting_schedules",
+      "indexname": "meeting_schedules_pkey",
+      "indexdef": "CREATE UNIQUE INDEX meeting_schedules_pkey ON public.meeting_schedules USING btree (id)"
+    },
+    {
+      "table_name": "meeting_sessions",
+      "indexname": "meeting_sessions_active_idx",
+      "indexdef": "CREATE UNIQUE INDEX meeting_sessions_active_idx ON public.meeting_sessions USING btree (channel_id) WHERE (ended_at IS NULL)"
+    },
+    {
+      "table_name": "meeting_sessions",
+      "indexname": "meeting_sessions_pkey",
+      "indexdef": "CREATE UNIQUE INDEX meeting_sessions_pkey ON public.meeting_sessions USING btree (id)"
+    },
+    {
+      "table_name": "memberships",
+      "indexname": "memberships_pkey",
+      "indexdef": "CREATE UNIQUE INDEX memberships_pkey ON public.memberships USING btree (workspace_id, user_id)"
+    },
+    {
+      "table_name": "memberships",
+      "indexname": "memberships_single_owner",
+      "indexdef": "CREATE UNIQUE INDEX memberships_single_owner ON public.memberships USING btree (workspace_id) WHERE ((role)::text = 'owner'::text)"
+    },
+    {
+      "table_name": "memberships",
+      "indexname": "memberships_user_id_idx",
+      "indexdef": "CREATE INDEX memberships_user_id_idx ON public.memberships USING btree (user_id)"
+    },
+    {
+      "table_name": "message_attachments",
+      "indexname": "message_attachments_message_unique_idx",
+      "indexdef": "CREATE UNIQUE INDEX message_attachments_message_unique_idx ON public.message_attachments USING btree (message_id) WHERE (message_id IS NOT NULL)"
+    },
+    {
+      "table_name": "message_attachments",
+      "indexname": "message_attachments_pending_idx",
+      "indexdef": "CREATE INDEX message_attachments_pending_idx ON public.message_attachments USING btree (created_at) WHERE (message_id IS NULL)"
+    },
+    {
+      "table_name": "message_attachments",
+      "indexname": "message_attachments_pkey",
+      "indexdef": "CREATE UNIQUE INDEX message_attachments_pkey ON public.message_attachments USING btree (id)"
+    },
+    {
+      "table_name": "message_bookmarks",
+      "indexname": "message_bookmarks_pkey",
+      "indexdef": "CREATE UNIQUE INDEX message_bookmarks_pkey ON public.message_bookmarks USING btree (message_id, user_id)"
+    },
+    {
+      "table_name": "message_mentions",
+      "indexname": "message_mentions_pkey",
+      "indexdef": "CREATE UNIQUE INDEX message_mentions_pkey ON public.message_mentions USING btree (message_id, user_id)"
+    },
+    {
+      "table_name": "message_pins",
+      "indexname": "message_pins_pkey",
+      "indexdef": "CREATE UNIQUE INDEX message_pins_pkey ON public.message_pins USING btree (message_id)"
+    },
+    {
+      "table_name": "message_reactions",
+      "indexname": "message_reactions_pkey",
+      "indexdef": "CREATE UNIQUE INDEX message_reactions_pkey ON public.message_reactions USING btree (message_id, user_id, emoji)"
+    },
+    {
+      "table_name": "messages",
+      "indexname": "messages_attachment_unique_idx",
+      "indexdef": "CREATE UNIQUE INDEX messages_attachment_unique_idx ON public.messages USING btree (attachment_id) WHERE (attachment_id IS NOT NULL)"
+    },
+    {
+      "table_name": "messages",
+      "indexname": "messages_channel_created_idx",
+      "indexdef": "CREATE INDEX messages_channel_created_idx ON public.messages USING btree (channel_id, created_at DESC)"
+    },
+    {
+      "table_name": "messages",
+      "indexname": "messages_channel_timeline_idx",
+      "indexdef": "CREATE INDEX messages_channel_timeline_idx ON public.messages USING btree (channel_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL)"
+    },
+    {
+      "table_name": "messages",
+      "indexname": "messages_delivery_key",
+      "indexdef": "CREATE UNIQUE INDEX messages_delivery_key ON public.messages USING btree (author_id, channel_id, client_message_id) WHERE (client_message_id IS NOT NULL)"
+    },
+    {
+      "table_name": "messages",
+      "indexname": "messages_pkey",
+      "indexdef": "CREATE UNIQUE INDEX messages_pkey ON public.messages USING btree (id)"
+    },
+    {
+      "table_name": "messages",
+      "indexname": "messages_reply_to_idx",
+      "indexdef": "CREATE INDEX messages_reply_to_idx ON public.messages USING btree (reply_to_id)"
+    },
+    {
+      "table_name": "messages",
+      "indexname": "messages_thread_cursor",
+      "indexdef": "CREATE INDEX messages_thread_cursor ON public.messages USING btree (thread_root_id, created_at, id) WHERE (deleted_at IS NULL)"
+    },
+    {
+      "table_name": "notifications",
+      "indexname": "notifications_pkey",
+      "indexdef": "CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id)"
+    },
+    {
+      "table_name": "notifications",
+      "indexname": "notifications_user_cursor",
+      "indexdef": "CREATE INDEX notifications_user_cursor ON public.notifications USING btree (user_id, created_at DESC, id DESC)"
+    },
+    {
+      "table_name": "notifications",
+      "indexname": "notifications_user_id_message_id_key",
+      "indexdef": "CREATE UNIQUE INDEX notifications_user_id_message_id_key ON public.notifications USING btree (user_id, message_id)"
+    },
+    {
+      "table_name": "notifications",
+      "indexname": "notifications_user_unread",
+      "indexdef": "CREATE INDEX notifications_user_unread ON public.notifications USING btree (user_id) WHERE (read_at IS NULL)"
+    },
+    {
+      "table_name": "password_resets",
+      "indexname": "password_resets_pkey",
+      "indexdef": "CREATE UNIQUE INDEX password_resets_pkey ON public.password_resets USING btree (email)"
+    },
+    {
+      "table_name": "refresh_sessions",
+      "indexname": "refresh_sessions_expires_at_idx",
+      "indexdef": "CREATE INDEX refresh_sessions_expires_at_idx ON public.refresh_sessions USING btree (expires_at)"
+    },
+    {
+      "table_name": "refresh_sessions",
+      "indexname": "refresh_sessions_pkey",
+      "indexdef": "CREATE UNIQUE INDEX refresh_sessions_pkey ON public.refresh_sessions USING btree (id)"
+    },
+    {
+      "table_name": "refresh_sessions",
+      "indexname": "refresh_sessions_token_hash_key",
+      "indexdef": "CREATE UNIQUE INDEX refresh_sessions_token_hash_key ON public.refresh_sessions USING btree (token_hash)"
+    },
+    {
+      "table_name": "refresh_sessions",
+      "indexname": "refresh_sessions_user_id_idx",
+      "indexdef": "CREATE INDEX refresh_sessions_user_id_idx ON public.refresh_sessions USING btree (user_id)"
+    },
+    {
+      "table_name": "request_rate_limits",
+      "indexname": "request_rate_limits_pkey",
+      "indexdef": "CREATE UNIQUE INDEX request_rate_limits_pkey ON public.request_rate_limits USING btree (bucket_key)"
+    },
+    {
+      "table_name": "request_rate_limits",
+      "indexname": "request_rate_limits_window_start_idx",
+      "indexdef": "CREATE INDEX request_rate_limits_window_start_idx ON public.request_rate_limits USING btree (window_start)"
+    },
+    {
+      "table_name": "schema_migrations",
+      "indexname": "schema_migrations_pkey",
+      "indexdef": "CREATE UNIQUE INDEX schema_migrations_pkey ON public.schema_migrations USING btree (name)"
+    },
+    {
+      "table_name": "socket_io_attachments",
+      "indexname": "socket_io_attachments_created_idx",
+      "indexdef": "CREATE INDEX socket_io_attachments_created_idx ON public.socket_io_attachments USING btree (created_at)"
+    },
+    {
+      "table_name": "socket_io_attachments",
+      "indexname": "socket_io_attachments_id_key",
+      "indexdef": "CREATE UNIQUE INDEX socket_io_attachments_id_key ON public.socket_io_attachments USING btree (id)"
+    },
+    {
+      "table_name": "socket_presence",
+      "indexname": "socket_presence_pkey",
+      "indexdef": "CREATE UNIQUE INDEX socket_presence_pkey ON public.socket_presence USING btree (socket_id)"
+    },
+    {
+      "table_name": "socket_presence",
+      "indexname": "socket_presence_user_expiry_idx",
+      "indexdef": "CREATE INDEX socket_presence_user_expiry_idx ON public.socket_presence USING btree (user_id, expires_at)"
+    },
+    {
+      "table_name": "storage_cleanup",
+      "indexname": "storage_cleanup_object_key_key",
+      "indexdef": "CREATE UNIQUE INDEX storage_cleanup_object_key_key ON public.storage_cleanup USING btree (object_key)"
+    },
+    {
+      "table_name": "storage_cleanup",
+      "indexname": "storage_cleanup_pkey",
+      "indexdef": "CREATE UNIQUE INDEX storage_cleanup_pkey ON public.storage_cleanup USING btree (id)"
+    },
+    {
+      "table_name": "task_activity",
+      "indexname": "task_activity_pkey",
+      "indexdef": "CREATE UNIQUE INDEX task_activity_pkey ON public.task_activity USING btree (id)"
+    },
+    {
+      "table_name": "task_activity",
+      "indexname": "task_activity_timeline_idx",
+      "indexdef": "CREATE INDEX task_activity_timeline_idx ON public.task_activity USING btree (task_id, created_at DESC, id DESC)"
+    },
+    {
+      "table_name": "task_attachments",
+      "indexname": "task_attachments_pkey",
+      "indexdef": "CREATE UNIQUE INDEX task_attachments_pkey ON public.task_attachments USING btree (task_id, attachment_id)"
+    },
+    {
+      "table_name": "task_checklist",
+      "indexname": "task_checklist_pkey",
+      "indexdef": "CREATE UNIQUE INDEX task_checklist_pkey ON public.task_checklist USING btree (id)"
+    },
+    {
+      "table_name": "task_comments",
+      "indexname": "task_comments_pkey",
+      "indexdef": "CREATE UNIQUE INDEX task_comments_pkey ON public.task_comments USING btree (id)"
+    },
+    {
+      "table_name": "task_comments",
+      "indexname": "task_comments_timeline_idx",
+      "indexdef": "CREATE INDEX task_comments_timeline_idx ON public.task_comments USING btree (task_id, created_at, id)"
+    },
+    {
+      "table_name": "tasks",
+      "indexname": "tasks_assignee_idx",
+      "indexdef": "CREATE INDEX tasks_assignee_idx ON public.tasks USING btree (assignee_id, due_at) WHERE (archived_at IS NULL)"
+    },
+    {
+      "table_name": "tasks",
+      "indexname": "tasks_board_idx",
+      "indexdef": "CREATE INDEX tasks_board_idx ON public.tasks USING btree (channel_id, archived_at, status, \"position\", id)"
+    },
+    {
+      "table_name": "tasks",
+      "indexname": "tasks_created_by_client_task_id_key",
+      "indexdef": "CREATE UNIQUE INDEX tasks_created_by_client_task_id_key ON public.tasks USING btree (created_by, client_task_id)"
+    },
+    {
+      "table_name": "tasks",
+      "indexname": "tasks_pkey",
+      "indexdef": "CREATE UNIQUE INDEX tasks_pkey ON public.tasks USING btree (id)"
+    },
+    {
+      "table_name": "thread_reads",
+      "indexname": "thread_reads_pkey",
+      "indexdef": "CREATE UNIQUE INDEX thread_reads_pkey ON public.thread_reads USING btree (user_id, root_id)"
+    },
+    {
+      "table_name": "users",
+      "indexname": "users_email_unique",
+      "indexdef": "CREATE UNIQUE INDEX users_email_unique ON public.users USING btree (lower((email)::text))"
+    },
+    {
+      "table_name": "users",
+      "indexname": "users_google_id_idx",
+      "indexdef": "CREATE INDEX users_google_id_idx ON public.users USING btree (google_id)"
+    },
+    {
+      "table_name": "users",
+      "indexname": "users_google_id_key",
+      "indexdef": "CREATE UNIQUE INDEX users_google_id_key ON public.users USING btree (google_id)"
+    },
+    {
+      "table_name": "users",
+      "indexname": "users_pkey",
+      "indexdef": "CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)"
+    },
+    {
+      "table_name": "workspace_invitations",
+      "indexname": "invitations_workspace_idx",
+      "indexdef": "CREATE INDEX invitations_workspace_idx ON public.workspace_invitations USING btree (workspace_id, created_at DESC)"
+    },
+    {
+      "table_name": "workspace_invitations",
+      "indexname": "workspace_invitations_pkey",
+      "indexdef": "CREATE UNIQUE INDEX workspace_invitations_pkey ON public.workspace_invitations USING btree (id)"
+    },
+    {
+      "table_name": "workspace_invitations",
+      "indexname": "workspace_invitations_token_hash_key",
+      "indexdef": "CREATE UNIQUE INDEX workspace_invitations_token_hash_key ON public.workspace_invitations USING btree (token_hash)"
+    },
+    {
+      "table_name": "workspace_notification_preferences",
+      "indexname": "workspace_notification_preferences_pkey",
+      "indexdef": "CREATE UNIQUE INDEX workspace_notification_preferences_pkey ON public.workspace_notification_preferences USING btree (workspace_id, user_id)"
+    },
+    {
+      "table_name": "workspaces",
+      "indexname": "workspaces_pkey",
+      "indexdef": "CREATE UNIQUE INDEX workspaces_pkey ON public.workspaces USING btree (id)"
+    },
+    {
+      "table_name": "workspaces",
+      "indexname": "workspaces_slug_key",
+      "indexdef": "CREATE UNIQUE INDEX workspaces_slug_key ON public.workspaces USING btree (slug)"
+    }
+  ],
+  "migrations": [
+    {
+      "name": "001_initial_schema.sql"
+    },
+    {
+      "name": "002_integrity_and_meeting_history.sql"
+    },
+    {
+      "name": "003_restore_workspace_owners.sql"
+    },
+    {
+      "name": "004_auth_google_and_otp.sql"
+    },
+    {
+      "name": "005_email_otps_unique.sql"
+    },
+    {
+      "name": "006_rate_limits.sql"
+    },
+    {
+      "name": "007_conversation_and_profile.sql"
+    },
+    {
+      "name": "008_attachment_integrity.sql"
+    },
+    {
+      "name": "009_password_resets.sql"
+    },
+    {
+      "name": "010_profile_personalization.sql"
+    },
+    {
+      "name": "011_meeting_schedules.sql"
+    },
+    {
+      "name": "012_message_delivery.sql"
+    },
+    {
+      "name": "013_workspace_governance.sql"
+    },
+    {
+      "name": "014_owner_integrity.sql"
+    },
+    {
+      "name": "015_team_conversations.sql"
+    },
+    {
+      "name": "016_kanban.sql"
+    },
+    {
+      "name": "017_task_attachment_cascade.sql"
+    },
+    {
+      "name": "018_meeting_sessions.sql"
+    },
+    {
+      "name": "019_storage_and_realtime.sql"
+    },
+    {
+      "name": "020_object_cleanup.sql"
+    }
+  ]
+}

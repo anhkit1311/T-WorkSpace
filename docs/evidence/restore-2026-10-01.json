@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-09-30T18:11:57.367Z",
+  "node": "v22.19.0",
+  "postgres": "17.11",
+  "migrationCount": 20,
+  "concurrentRunners": [
+    {
+      "applied": 20,
+      "skipped": 0
+    },
+    {
+      "applied": 0,
+      "skipped": 20
+    }
+  ],
+  "restore": {
+    "schemaCount": 20,
+    "messageVerified": true
+  },
+  "scope": "Two newly created QA databases only; no production backup claim"
+}

@@ -1,0 +1,524 @@
+import { useEffect, useState, type FormEvent } from "react";
+import { AnimatePresence } from "motion/react";
+import { useApp } from "../../app/providers/AppContext";
+import { Badge, Button, Field, Modal } from "../../shared/ui/Primitives";
+import { Icon } from "../../shared/ui/Icon";
+import { changePasswordApi } from "../auth/api";
+import "./profile.css";
+
+export function ProfilePage() {
+  const { user, accessToken, updateUser, notify, logout } = useApp();
+  const [displayName, setDisplayName] = useState(user?.displayName || "");
+  const [bio, setBio] = useState(user?.bio || "");
+  const [contactText, setContactText] = useState(user?.contactText || "");
+  const [statusText, setStatusText] = useState(user?.statusText || "");
+  const [pronouns, setPronouns] = useState(user?.pronouns || "");
+  const [location, setLocation] = useState(user?.location || "");
+  const [interestsText, setInterestsText] = useState((user?.interests || []).join(", "));
+  const [favoriteMusic, setFavoriteMusic] = useState(user?.favoriteMusic || "");
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || "");
+  const [coverUrl, setCoverUrl] = useState(user?.coverUrl || "");
+  const [profileVisibility, setProfileVisibility] = useState(
+    user?.profileVisibility || "workspace",
+  );
+  const [showActivity, setShowActivity] = useState(user?.showActivity !== false);
+  const [showContact, setShowContact] = useState(user?.showContact === true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(
+    user?.notificationsEnabled !== false,
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  useEffect(() => {
+    setDisplayName(user?.displayName || "");
+    setBio(user?.bio || "");
+    setContactText(user?.contactText || "");
+    setStatusText(user?.statusText || "");
+    setPronouns(user?.pronouns || "");
+    setLocation(user?.location || "");
+    setInterestsText((user?.interests || []).join(", "));
+    setFavoriteMusic(user?.favoriteMusic || "");
+    setAvatarUrl(user?.avatarUrl || "");
+    setCoverUrl(user?.coverUrl || "");
+    setProfileVisibility(user?.profileVisibility || "workspace");
+    setShowActivity(user?.showActivity !== false);
+    setShowContact(user?.showContact === true);
+    setNotificationsEnabled(user?.notificationsEnabled !== false);
+  }, [user]);
+
+  const chooseImage = (file: File | undefined, kind: "avatar" | "cover") => {
+    if (!file) return;
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 2_000_000) {
+      setError("Chọn ảnh PNG, JPEG hoặc WebP dưới 2 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        if (kind === "avatar") setAvatarUrl(reader.result);
+        else setCoverUrl(reader.result);
+        setError("");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUpdateProfile = async (event: FormEvent) => {
+    event.preventDefault();
+    const trimmed = displayName.trim();
+    if (!trimmed || trimmed.length < 2) {
+      setError("Tên hiển thị cần có ít nhất 2 ký tự.");
+      return;
+    }
+    const interests = Array.from(
+      new Set(
+        interestsText
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+      ),
+    );
+    if (interests.length > 8 || interests.some((item) => item.length > 40)) {
+      setError("Nhập tối đa 8 sở thích, ngăn cách bằng dấu phẩy; mỗi mục tối đa 40 ký tự.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    try {
+      await updateUser({
+        displayName: trimmed,
+        bio: bio.trim(),
+        contactText: contactText.trim(),
+        statusText: statusText.trim(),
+        pronouns: pronouns.trim(),
+        location: location.trim(),
+        interests,
+        favoriteMusic: favoriteMusic.trim(),
+        avatarUrl,
+        coverUrl,
+        profileVisibility,
+        showActivity,
+        showContact,
+        notificationsEnabled,
+      });
+      notify("Thành công", "Đã cập nhật thông tin hồ sơ của bạn.", "success");
+    } catch (cause: unknown) {
+      setError(cause instanceof Error ? cause.message : "Không thể cập nhật hồ sơ.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!accessToken) return;
+    if (newPassword.length < 8 || newPassword.length > 128) {
+      setPasswordError("Mật khẩu mới phải có từ 8 đến 128 ký tự.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Hai lần nhập mật khẩu mới chưa khớp.");
+      return;
+    }
+    setChangingPassword(true);
+    setPasswordError("");
+    try {
+      await changePasswordApi(accessToken, { currentPassword, newPassword });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      await logout();
+    } catch (cause) {
+      setPasswordError(cause instanceof Error ? cause.message : "Không thể đổi mật khẩu.");
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  return (
+    <div className="profile-page">
+      <header className="profile-header">
+        <div>
+          <h1>Hồ sơ cá nhân</h1>
+          <p>Quản lý thông tin tài khoản và bảo mật của bạn.</p>
+        </div>
+      </header>
+
+      {/* Identity preview */}
+      <section className="profile-card profile-hero">
+        <div
+          className="profile-cover"
+          style={
+            coverUrl
+              ? {
+                  backgroundImage: `linear-gradient(180deg, transparent, rgba(8,10,12,.45)), url(${coverUrl})`,
+                }
+              : undefined
+          }
+        >
+          <span>KHÔNG GIAN CỦA BẠN</span>
+          <label className="profile-cover-upload">
+            Đổi ảnh bìa
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={(event) => chooseImage(event.target.files?.[0], "cover")}
+            />
+          </label>
+        </div>
+        <div className="profile-avatar-wrap">
+          <div className="profile-avatar-large">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Ảnh đại diện xem trước" />
+            ) : (
+              <img src="/avatar-fallback.svg" alt="Ảnh đại diện mặc định CollabSpace" />
+            )}
+          </div>
+          <label className="profile-avatar-upload">
+            Đổi ảnh đại diện
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={(event) => chooseImage(event.target.files?.[0], "avatar")}
+            />
+          </label>
+        </div>
+        <div className="profile-identity">
+          <div className="profile-name-row">
+            <h2>{displayName || "Chưa cập nhật thông tin"}</h2>
+            {user?.email && (
+              <Badge tone="blue">
+                <Icon name="check" size={12} /> Đã đăng nhập
+              </Badge>
+            )}
+          </div>
+          <p className="profile-email">{user?.email || "Chưa cập nhật email"}</p>
+          <p className="profile-bio-preview">
+            {bio || "Thêm một lời giới thiệu ngắn để đồng đội hiểu hơn về bạn."}
+          </p>
+          {statusText && <p className="profile-bio-preview">{statusText}</p>}
+          <span className="profile-activity">
+            <i /> {showActivity ? "Hiển thị hoạt động" : "Ẩn hoạt động"}
+          </span>
+          {!user?.displayName && (
+            <p className="profile-incomplete-hint">
+              Thêm tên hiển thị để thành viên khác nhận ra bạn.
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* Edit Profile Form */}
+      <section className="profile-card">
+        <h3 className="profile-section-title">
+          <Icon name="settings" size={16} /> Thông tin cá nhân
+        </h3>
+        <form onSubmit={handleUpdateProfile} className="profile-form">
+          <div className="profile-input-row">
+            <Field
+              label="Tên hiển thị"
+              hint="Tên này sẽ hiển thị với các thành viên khác trong nhóm và cuộc họp."
+              error={error}
+            >
+              <input
+                type="text"
+                className="profile-field-input"
+                value={displayName}
+                maxLength={80}
+                required
+                disabled={saving}
+                onChange={(e) => {
+                  setDisplayName(e.target.value);
+                  if (error) setError("");
+                }}
+                placeholder="Nhập họ và tên hoặc biệt danh của bạn"
+              />
+            </Field>
+
+            <Field label="Địa chỉ Email" hint="Email đăng nhập của tài khoản (không thể thay đổi).">
+              <input
+                type="email"
+                className="profile-field-input"
+                value={user?.email || ""}
+                disabled
+                style={{ opacity: 0.7, cursor: "not-allowed", background: "var(--surface-soft)" }}
+              />
+            </Field>
+          </div>
+
+          <Field label="Giới thiệu ngắn" hint={`${bio.length}/280 ký tự`}>
+            <textarea
+              className="profile-field-input"
+              rows={3}
+              maxLength={280}
+              value={bio}
+              onChange={(event) => setBio(event.target.value)}
+              placeholder="Bạn muốn đồng đội biết điều gì về mình?"
+            />
+          </Field>
+          <div className="profile-input-row">
+            <Field
+              label="Trạng thái của bạn"
+              hint="Một dòng ngắn hiển thị trên hồ sơ, tối đa 100 ký tự."
+            >
+              <input
+                className="profile-field-input"
+                maxLength={100}
+                value={statusText}
+                onChange={(event) => setStatusText(event.target.value)}
+                placeholder="Ví dụ: Đang tập trung làm đồ án"
+              />
+            </Field>
+            <Field label="Đại từ xưng hô" hint="Tùy chọn, tối đa 40 ký tự.">
+              <input
+                className="profile-field-input"
+                maxLength={40}
+                value={pronouns}
+                onChange={(event) => setPronouns(event.target.value)}
+                placeholder="Ví dụ: mình / bạn"
+              />
+            </Field>
+          </div>
+          <div className="profile-input-row">
+            <Field label="Khu vực" hint="Tùy chọn, tối đa 80 ký tự.">
+              <input
+                className="profile-field-input"
+                maxLength={80}
+                value={location}
+                onChange={(event) => setLocation(event.target.value)}
+                placeholder="Ví dụ: TP. Hồ Chí Minh"
+              />
+            </Field>
+            <Field label="Âm nhạc yêu thích" hint="Bài hát, nghệ sĩ hoặc thể loại bạn thích.">
+              <input
+                className="profile-field-input"
+                maxLength={160}
+                value={favoriteMusic}
+                onChange={(event) => setFavoriteMusic(event.target.value)}
+                placeholder="Ví dụ: Lofi khi làm việc"
+              />
+            </Field>
+          </div>
+          <Field label="Sở thích" hint="Tối đa 8 mục, ngăn cách bằng dấu phẩy.">
+            <input
+              className="profile-field-input"
+              value={interestsText}
+              onChange={(event) => setInterestsText(event.target.value)}
+              placeholder="Ví dụ: Thiết kế, đọc sách, chạy bộ"
+            />
+          </Field>
+          <Field
+            label="Liên hệ"
+            hint="Chỉ chia sẻ với thành viên cùng nhóm khi bật hiển thị liên hệ."
+          >
+            <input
+              className="profile-field-input"
+              maxLength={160}
+              value={contactText}
+              onChange={(event) => setContactText(event.target.value)}
+              placeholder="Ví dụ: website hoặc số liên hệ"
+            />
+          </Field>
+
+          <div className="profile-settings-grid">
+            <div className="profile-settings-block">
+              <h3>
+                <Icon name="lock" size={17} /> Quyền riêng tư
+              </h3>
+              <label>
+                Ai xem hồ sơ của bạn
+                <select
+                  value={profileVisibility}
+                  onChange={(event) =>
+                    setProfileVisibility(event.target.value as "workspace" | "private")
+                  }
+                >
+                  <option value="workspace">Thành viên cùng nhóm</option>
+                  <option value="private">Chỉ mình tôi</option>
+                </select>
+              </label>
+              <label className="profile-toggle">
+                <input
+                  type="checkbox"
+                  checked={showActivity}
+                  onChange={(event) => setShowActivity(event.target.checked)}
+                />
+                <span>Hiển thị trạng thái hoạt động</span>
+              </label>
+              <label className="profile-toggle">
+                <input
+                  type="checkbox"
+                  checked={showContact}
+                  onChange={(event) => setShowContact(event.target.checked)}
+                />
+                <span>Hiển thị liên hệ với thành viên cùng nhóm</span>
+              </label>
+              <p>
+                Nhắn tin và gọi trực tiếp chưa có trong hệ thống; trao đổi hiện diễn ra trong kênh
+                nhóm.
+              </p>
+            </div>
+            <div className="profile-settings-block">
+              <h3>
+                <Icon name="bell" size={17} /> Thông báo
+              </h3>
+              <label className="profile-toggle">
+                <input
+                  type="checkbox"
+                  checked={notificationsEnabled}
+                  onChange={(event) => setNotificationsEnabled(event.target.checked)}
+                />
+                <span>Cho phép thông báo mới trong ứng dụng</span>
+              </label>
+              <p>
+                Ghim, tắt tiếng và đánh dấu đã đọc được điều chỉnh riêng ở từng kênh trò chuyện.
+                Thiết bị gọi được chọn ở màn hình trước khi vào phòng.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <Button type="submit" loading={saving} disabled={saving || !displayName.trim()}>
+              Lưu thay đổi
+            </Button>
+          </div>
+        </form>
+      </section>
+
+      {/* Account data returned by the authenticated session */}
+      {user?.authProvider !== "google" && (
+        <section className="profile-card">
+          <h3 className="profile-section-title">
+            <Icon name="lock" size={16} /> Đổi mật khẩu
+          </h3>
+          <p className="profile-password-hint">
+            Sau khi đổi mật khẩu, các phiên đăng nhập sẽ bị thu hồi và bạn cần đăng nhập lại.
+          </p>
+          <form onSubmit={handleChangePassword} className="profile-form profile-password-form">
+            <Field label="Mật khẩu hiện tại">
+              <input
+                className="profile-field-input"
+                type="password"
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(event) => setCurrentPassword(event.target.value)}
+                required
+              />
+            </Field>
+            <Field label="Mật khẩu mới">
+              <input
+                className="profile-field-input"
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                minLength={8}
+                maxLength={128}
+                required
+              />
+            </Field>
+            <Field label="Nhập lại mật khẩu mới">
+              <input
+                className="profile-field-input"
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                required
+              />
+            </Field>
+            {passwordError && (
+              <p className="profile-password-error" role="alert">
+                {passwordError}
+              </p>
+            )}
+            <Button
+              type="submit"
+              loading={changingPassword}
+              disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
+            >
+              Đổi mật khẩu
+            </Button>
+          </form>
+        </section>
+      )}
+
+      {/* Account data returned by the authenticated session */}
+      <section className="profile-card">
+        <h3 className="profile-section-title">
+          <Icon name="lock" size={16} /> Thông tin tài khoản
+        </h3>
+        <div className="profile-meta-list">
+          <div className="profile-meta-item">
+            <span>Mã tài khoản</span>
+            <strong>{user?.id || "—"}</strong>
+          </div>
+          <div className="profile-meta-item">
+            <span>Email đăng nhập</span>
+            <strong>{user?.email || "Chưa có thông tin"}</strong>
+          </div>
+        </div>
+      </section>
+
+      {/* Danger Zone */}
+      <section className="profile-card profile-danger-zone">
+        <h3 className="profile-section-title">Đăng xuất tài khoản</h3>
+        <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: "0 0 16px" }}>
+          Đăng xuất sẽ xóa phiên làm việc hiện tại trên trình duyệt này.
+        </p>
+        <Button variant="danger" icon="logout" onClick={() => setLogoutConfirmOpen(true)}>
+          Đăng xuất khỏi thiết bị
+        </Button>
+      </section>
+
+      {/* Logout Confirmation Modal */}
+      <AnimatePresence>
+        {logoutConfirmOpen && (
+          <Modal
+            title="Xác nhận đăng xuất"
+            eyebrow="TÀI KHOẢN"
+            onClose={() => setLogoutConfirmOpen(false)}
+            footer={
+              <div
+                style={{ display: "flex", justifyContent: "flex-end", gap: "10px", width: "100%" }}
+              >
+                <Button variant="ghost" onClick={() => setLogoutConfirmOpen(false)}>
+                  Hủy bỏ
+                </Button>
+                <Button
+                  variant="danger"
+                  icon="logout"
+                  onClick={() => {
+                    setLogoutConfirmOpen(false);
+                    void logout();
+                  }}
+                >
+                  Đăng xuất ngay
+                </Button>
+              </div>
+            }
+          >
+            <p
+              style={{
+                fontSize: "14px",
+                color: "var(--text-secondary)",
+                margin: 0,
+                lineHeight: 1.5,
+              }}
+            >
+              Bạn có chắc chắn muốn đăng xuất khỏi tài khoản <strong>{user?.displayName}</strong> (
+              {user?.email}) không? Bạn sẽ cần đăng nhập lại để tiếp tục làm việc.
+            </p>
+          </Modal>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

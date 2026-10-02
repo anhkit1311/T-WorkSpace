@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CollabSpace — Không gian cộng tác thời gian thực</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-primary-text: #0f172a;
+      --color-muted-text: hsl(215, 25%, 32%);
+      --color-secondary-text: hsl(215, 20%, 50%);
+      --color-primary-action: #000000;
+      --color-primary-action-text: #ffffff;
+      --color-bg-basis: hsl(201, 100%, 13%);
+      --color-bg-surface: #ffffff;
+      --color-bg-warm: #f8fafc;
+      --color-border-subtle: rgba(15, 23, 42, 0.08);
+      --font-display: 'Playfair Display', Georgia, serif;
+      --font-body: 'Inter', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--color-bg-surface);
+      font-family: var(--font-body);
+      color: var(--color-primary-text);
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    ::selection {
+      background-color: #0f172a;
+      color: #ffffff;
+    }
+
+    /* Sticky Navigation Bar */
+    .nav-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      background-color: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+      transition: all 300ms ease;
+    }
+
+    .nav {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 20px 32px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+    }
+
+    @media (max-width: 768px) {
+      .nav {
+        grid-template-columns: 1fr 1fr;
+        padding: 16px 20px;
+      }
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+    }
+
+    .brand {
+      font-family: var(--font-display);
+      font-size: 30px;
+      font-weight: 400;
+      line-height: 1;
+      color: var(--color-primary-text);
+      text-decoration: none;
+      letter-spacing: -0.5px;
+    }
+
+    .brand sup {
+      font-size: 11px;
+      vertical-align: super;
+      margin-left: 2px;
+      font-family: var(--font-body);
+      font-weight: 500;
+    }
+
+    .nav-center {
+      display: flex;
+      align-items: center;
+      gap: 40px;
+    }
+
+    @media (max-width: 768px) {
+      .nav-center {
+        display: none;
+      }
+    }
+
+    .nav-link {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--color-primary-text);
+      text-decoration: none;
+      transition: opacity 200ms ease;
+    }
+
+    .nav-link:hover {
+      opacity: 0.6;
+    }
+
+    .nav-right {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    /* Pill Action Button */
+    .pill-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9999px;
+      background-color: var(--color-primary-action);
+      color: var(--color-primary-action-text);
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-body);
+      font-weight: 500;
+      white-space: nowrap;
+      text-decoration: none;
+      transition: transform 200ms ease-in-out;
+    }
+
+    .pill-btn:hover {
+      transform: scale(1.03);
+    }
+
+    .pill-btn-sm {
+      padding: 10px 24px;
+      font-size: 14px;
+    }
+
+    .pill-btn-lg {
+      padding: 20px 56px;
+      font-size: 16px;
+      margin-top: 48px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+    }
+
+    /* Hero Section */
+    .hero-wrapper {
+      position: relative;
+      min-height: 100vh;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background-color: var(--color-bg-basis);
+    }
+
+    .video-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    .video-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.22);
+      pointer-events: none;
+    }
+
+    .hero {
+      position: relative;
+      z-index: 10;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      max-width: 1280px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 120px 32px 60px;
+    }
+
+    @media (max-width: 768px) {
+      .hero {
+        padding: 100px 20px 40px;
+      }
+    }
+
+    .heading {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: clamp(42px, 5.5vw, 76px);
+      font-weight: 500;
+      line-height: 1.18;
+      letter-spacing: -0.01em;
+      color: var(--color-primary-text);
+      margin-bottom: 24px;
+      max-width: 1100px;
+      text-shadow: 0 2px 24px rgba(255, 255, 255, 0.4);
+    }
+
+    @media (max-width: 768px) {
+      .heading {
+        font-size: 40px;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+        margin-bottom: 20px;
+      }
+    }
+
+    .heading em {
+      font-style: normal;
+      font-family: inherit;
+      font-weight: inherit;
+    }
+
+    .paragraph {
+      font-size: 18px;
+      font-weight: 400;
+      line-height: 1.625;
+      color: var(--color-muted-text);
+      max-width: 670px;
+      margin: 0 auto;
+      text-shadow: 0 1px 12px rgba(255, 255, 255, 0.5);
+    }
+
+    @media (max-width: 768px) {
+      .paragraph {
+        font-size: 16px;
+        line-height: 1.55;
+      }
+    }
+
+    /* Staggered Entrance Animations */
+    @keyframes fadeRise {
+      from {
+        opacity: 0;
+        transform: translateY(24px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .stagger-h1 {
+      animation: fadeRise 0.8s ease-out 0s both;
+    }
+
+    .stagger-p {
+      animation: fadeRise 0.8s ease-out 0.2s both;
+    }
+
+    .stagger-cta {
+      animation: fadeRise 0.8s ease-out 0.4s both;
+    }
+
+    /* General Sections */
+    .section {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 120px 32px;
+    }
+
+    @media (max-width: 768px) {
+      .section {
+        padding: 80px 20px;
+      }
+    }
+
+    .section-warm {
+      background-color: var(--color-bg-warm);
+      border-top: 1px solid var(--color-border-subtle);
+      border-bottom: 1px solid var(--color-border-subtle);
+    }
+
+    .section-head {
+      text-align: center;
+      max-width: 760px;
+      margin: 0 auto 64px;
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: hsl(215, 25%, 45%);
+      margin-bottom: 16px;
+    }
+
+    .title {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: clamp(38px, 4.5vw, 58px);
+      font-weight: 500;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+      color: var(--color-primary-text);
+      margin-bottom: 18px;
+    }
+
+    .title em {
+      font-style: normal;
+      font-family: inherit;
+      font-weight: inherit;
+    }
+
+    .subtitle {
+      font-size: 17px;
+      line-height: 1.6;
+      color: var(--color-muted-text);
+    }
+
+    /* Residences Grid */
+    .residences-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+    }
+
+    @media (max-width: 1024px) {
+      .residences-grid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+      }
+    }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid var(--color-border-subtle);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.04);
+      transition: transform 300ms ease, box-shadow 300ms ease;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 24px 50px rgba(15, 23, 42, 0.09);
+    }
+
+    .card-media {
+      height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 32px;
+    }
+
+    .card-body {
+      padding: 28px 24px;
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 400;
+      margin-bottom: 10px;
+      letter-spacing: -0.8px;
+    }
+
+    .card-desc {
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--color-muted-text);
+      margin-bottom: 20px;
+    }
+
+    .card-specs {
+      display: flex;
+      justify-content: space-between;
+      padding-top: 16px;
+      border-top: 1px solid var(--color-border-subtle);
+      font-size: 12px;
+      color: var(--color-secondary-text);
+    }
+
+    .card-specs strong {
+      color: var(--color-primary-text);
+    }
+
+    /* Architecture Grid */
+    .arch-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-bottom: 64px;
+    }
+
+    @media (max-width: 900px) {
+      .arch-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .arch-item {
+      background: #ffffff;
+      border: 1px solid var(--color-border-subtle);
+      border-radius: 24px;
+      padding: 36px 28px;
+    }
+
+    .arch-num {
+      font-family: var(--font-display);
+      font-size: 32px;
+      color: var(--color-secondary-text);
+      margin-bottom: 16px;
+    }
+
+    .arch-title {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 400;
+      margin-bottom: 12px;
+      letter-spacing: -0.6px;
+    }
+
+    .arch-desc {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--color-muted-text);
+    }
+
+    /* Metrics Bar */
+    .metrics-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      background: #0f172a;
+      color: #ffffff;
+      border-radius: 24px;
+      padding: 40px 32px;
+      text-align: center;
+      gap: 24px;
+    }
+
+    @media (max-width: 640px) {
+      .metrics-bar {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .metric-val {
+      font-family: var(--font-display);
+      font-size: 52px;
+      font-weight: 400;
+      margin-bottom: 8px;
+    }
+
+    .metric-label {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.65);
+    }
+
+    /* Philosophy Quote */
+    .quote-box {
+      background: #ffffff;
+      border: 1px solid var(--color-border-subtle);
+      border-radius: 32px;
+      padding: 64px 48px;
+      text-align: center;
+      max-width: 960px;
+      margin: 0 auto 64px;
+    }
+
+    .quote-text {
+      font-family: var(--font-display);
+      font-size: clamp(28px, 3.5vw, 44px);
+      font-weight: 400;
+      line-height: 1.25;
+      letter-spacing: -1px;
+      margin-bottom: 24px;
+    }
+
+    .quote-author {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--color-secondary-text);
+    }
+
+    .principles-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 40px;
+    }
+
+    @media (max-width: 768px) {
+      .principles-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .principle-title {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 400;
+      margin: 10px 0;
+    }
+
+    .principle-desc {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--color-muted-text);
+    }
+
+    /* Journal Grid */
+    .journal-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-bottom: 48px;
+    }
+
+    @media (max-width: 900px) {
+      .journal-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .journal-card {
+      border-top: 1px solid var(--color-primary-text);
+      padding-top: 24px;
+    }
+
+    .journal-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--color-secondary-text);
+      margin-bottom: 16px;
+    }
+
+    .journal-title {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 400;
+      margin-bottom: 12px;
+      letter-spacing: -0.6px;
+    }
+
+    .journal-excerpt {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--color-muted-text);
+      margin-bottom: 20px;
+    }
+
+    /* Footer */
+    .footer {
+      border-top: 1px solid var(--color-border-subtle);
+      background: #ffffff;
+      padding: 80px 32px 40px;
+    }
+
+    .footer-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .footer-bottom {
+      display: flex;
+      justify-content: space-between;
+      padding-top: 32px;
+      border-top: 1px solid var(--color-border-subtle);
+      font-size: 12px;
+      color: var(--color-secondary-text);
+    }
+  </style>
+</head>
+<body>
+  <!-- Sticky Navigation Bar -->
+  <header class="nav-bar">
+    <nav class="nav">
+      <div class="nav-left">
+        <a href="#" class="brand">CollabSpace<sup>®</sup></a>
+      </div>
+
+      <div class="nav-center">
+        <a href="#residences" class="nav-link">Không gian</a>
+        <a href="#architecture" class="nav-link">Kiến trúc</a>
+        <a href="#philosophy" class="nav-link">Triết lý</a>
+        <a href="#journal" class="nav-link">Chuyên khảo</a>
+      </div>
+
+      <div class="nav-right">
+        <a href="#residences" class="pill-btn pill-btn-sm">Bắt đầu ngay</a>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Hero Section -->
+  <div class="hero-wrapper">
+    <div class="video-container" aria-hidden="true">
+      <video class="video" autoplay loop muted playsinline preload="auto">
+        <source src="https://designerstephen.github.io/public-assets/videos/serene-art-hero.mp4" type="video/mp4">
+      </video>
+      <div class="video-overlay"></div>
+    </div>
+
+    <main class="hero">
+      <h1 class="heading stagger-h1">
+        Không gian cộng tác thời gian thực
+      </h1>
+
+      <p class="paragraph stagger-p">
+        Nền tảng làm việc nhóm tích hợp trao đổi tức thời và hội nghị truyền hình
+        WebRTC SFU độ trễ thấp. Nơi mọi kết nối hội tụ liền mạch, tĩnh tại và bảo mật.
+      </p>
+
+      <div class="stagger-cta">
+        <a href="#residences" class="pill-btn pill-btn-lg">Khám phá không gian</a>
+      </div>
+    </main>
+  </div>
+
+  <!-- Section 1: Không gian -->
+  <section id="residences" class="section">
+    <div class="section-head">
+      <span class="tag">Hệ sinh thái cộng tác</span>
+      <h2 class="title">Không gian chuyên biệt</h2>
+      <p class="subtitle">Tập trung cao độ với các phân khu chức năng được thiết kế tinh giản, tối ưu hóa trải nghiệm tương tác nhóm mà không gây nhiễu loạn thị giác.</p>
+    </div>
+
+    <div class="residences-grid">
+      <div class="card">
+        <div class="card-media" style="background: linear-gradient(135deg, #1e293b, #0f172a);">📹</div>
+        <div class="card-body">
+          <h3 class="card-title">Phòng Họp Trực Tuyến SFU</h3>
+          <p class="card-desc">Phòng họp hội nghị thời gian thực với công nghệ định tuyến SFU, tối ưu hóa băng thông, chia sẻ màn hình mượt mà và kiểm soát độ trễ dưới 50ms.</p>
+          <div class="card-specs">
+            <span>Hội nghị truyền hình đa điểm</span>
+            <strong>SFU mediasoup · Video 1080p</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-media" style="background: linear-gradient(135deg, #334155, #1e293b);">💬</div>
+        <div class="card-body">
+          <h3 class="card-title">Kênh Thảo Luận Nhóm</h3>
+          <p class="card-desc">Không gian trò chuyện trực tuyến phân kênh theo dự án, lưu trữ toàn vẹn lịch sử tin nhắn và đồng bộ tức thời đến mọi thành viên.</p>
+          <div class="card-specs">
+            <span>Trao đổi tức thời đa kênh</span>
+            <strong>Socket.IO · Đồng bộ tức thời</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-media" style="background: linear-gradient(135deg, #0f172a, #1e1b4b);">📋</div>
+        <div class="card-body">
+          <h3 class="card-title">Bảng Quản Lý Công Việc</h3>
+          <p class="card-desc">Theo dõi tiến độ công việc trực quan, phân công nhiệm vụ linh hoạt và quản lý quyền hạn thành viên chặt chẽ theo vai trò nhóm.</p>
+          <div class="card-specs">
+            <span>Điều phối tiến độ dự án</span>
+            <strong>Kanban · Phân quyền nhóm</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: Kiến trúc công nghệ -->
+  <section id="architecture" class="section-warm">
+    <div class="section">
+      <div class="section-head">
+        <span class="tag">Nền tảng kỹ thuật</span>
+        <h2 class="title">Kiến trúc phân tán SFU</h2>
+        <p class="subtitle">Sự kết hợp giữa công nghệ định tuyến WebRTC tiên tiến và kiến trúc phần mềm chuẩn mực cho đồ án tốt nghiệp kỹ thuật.</p>
+      </div>
+
+      <div class="arch-grid">
+        <div class="arch-item">
+          <div class="arch-num">01</div>
+          <h3 class="arch-title">Lõi Định Tuyến SFU mediasoup</h3>
+          <p class="arch-desc">Hạ tầng máy chủ chọn lọc và chuyển tiếp luồng truyền thông (Selective Forwarding Unit), loại bỏ gánh nặng mã hóa ở client và mở rộng phòng họp linh hoạt.</p>
+        </div>
+        <div class="arch-item">
+          <div class="arch-num">02</div>
+          <h3 class="arch-title">Đo Kiểm & Kiểm Soát QoS Thời Gian Thực</h3>
+          <p class="arch-desc">Thu thập liên tục các thông số mạng RTP từ WebRTC Stats API: độ trễ (RTT), tỉ lệ mất gói (Packet Loss) và biến động gói (Jitter) để tự động điều chỉnh độ phân giải phù hợp.</p>
+        </div>
+        <div class="arch-item">
+          <div class="arch-num">03</div>
+          <h3 class="arch-title">Kiến Trúc Phân Tầng Monorepo</h3>
+          <p class="arch-desc">Cấu trúc mã nguồn module hóa rõ ràng giữa lõi định nghĩa kiểu dữ liệu dùng chung (@doan/shared), dịch vụ Socket.IO (@doan/api) và ứng dụng React (@doan/web).</p>
+        </div>
+      </div>
+
+      <div class="metrics-bar">
+        <div>
+          <div class="metric-val">&lt; 35ms</div>
+          <div class="metric-label">Độ trễ truyền thông SFU trung bình</div>
+        </div>
+        <div>
+          <div class="metric-val">1080p / 60fps</div>
+          <div class="metric-label">Chia sẻ màn hình chất lượng cao</div>
+        </div>
+        <div>
+          <div class="metric-val">100% WebRTC</div>
+          <div class="metric-label">Chuẩn giao thức mở, không cần cài đặt plugin</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: Triết lý thiết kế -->
+  <section id="philosophy" class="section">
+    <div class="quote-box">
+      <p class="quote-text">“Sự tinh tế đỉnh cao không nằm ở việc thêm thắt tính năng, mà ở việc loại bỏ triệt để mọi tiếng ồn và sự xao nhãng.”</p>
+      <span class="quote-author">Triết lý Thiết Kế Hệ Thống CollabSpace · Đồ án tốt nghiệp</span>
+    </div>
+
+    <div class="principles-grid">
+      <div>
+        <div class="tag">01 / TỐI GIẢN GIAO DIỆN</div>
+        <h3 class="principle-title">Thanh lọc không gian</h3>
+        <p class="principle-desc">Loại bỏ hoàn toàn những hiệu ứng rối mắt, đặt người dùng vào trung tâm của cuộc thảo luận và công việc sáng tạo.</p>
+      </div>
+      <div>
+        <div class="tag">02 / TƯƠNG TÁC LIỀN MẠCH</div>
+        <h3 class="principle-title">Chuyển động tự nhiên</h3>
+        <p class="principle-desc">Mọi tương tác từ gửi tin nhắn, bật tắt camera đến cuộn trang đều phản hồi tức thời với độ trễ tối thiểu và quán tính êm dịu.</p>
+      </div>
+      <div>
+        <div class="tag">03 / BỀN BỈ & BẢO MẬT</div>
+        <h3 class="principle-title">Nền tảng vững chắc</h3>
+        <p class="principle-desc">Bảo mật toàn diện với xác thực phiên làm việc an toàn, cơ sở dữ liệu PostgreSQL lưu trữ bền vững và phân quyền chặt chẽ.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Chuyên khảo nghiên cứu -->
+  <section id="journal" class="section-warm">
+    <div class="section">
+      <div class="section-head">
+        <span class="tag">Tài liệu & Báo cáo kỹ thuật</span>
+        <h2 class="title">Chuyên khảo nghiên cứu</h2>
+        <p class="subtitle">Tổng hợp các nội dung nghiên cứu chuyên sâu, giải pháp công nghệ và kết quả đo nghiệm phục vụ đề tài tốt nghiệp.</p>
+      </div>
+
+      <div class="journal-grid">
+        <article class="journal-card">
+          <div class="journal-meta">
+            <span>Chuyên đề 01</span>
+            <span>7 phút đọc</span>
+          </div>
+          <h3 class="journal-title">Nghiên cứu và Triển khai Hạ tầng Hội nghị SFU với mediasoup</h3>
+          <p class="journal-excerpt">Khảo sát kiến trúc truyền thông WebRTC đa điểm, phân tích ưu nhược điểm giữa Mesh P2P, MCU và SFU trong môi trường mạng thực tế.</p>
+        </article>
+
+        <article class="journal-card">
+          <div class="journal-meta">
+            <span>Chuyên đề 02</span>
+            <span>10 phút đọc</span>
+          </div>
+          <h3 class="journal-title">Kiểm Soát Chất Lượng Mạng QoS và Thuật Toán Bù Trừ Độ Trễ</h3>
+          <p class="journal-excerpt">Phương pháp thiết kế mô-đun giám sát chất lượng kết nối thời gian thực, đo lường các chỉ số băng thông và đưa ra cảnh báo mạng tức thời.</p>
+        </article>
+
+        <article class="journal-card">
+          <div class="journal-meta">
+            <span>Chuyên đề 03</span>
+            <span>6 phút đọc</span>
+          </div>
+          <h3 class="journal-title">Ngôn Ngữ Thiết Kế Minimalist Editorial Cho Ứng Dụng Cộng Tác</h3>
+          <p class="journal-excerpt">Ứng dụng nghệ thuật typography Instrument Serif và chuyển động tĩnh tại giúp người dùng đạt trạng thái tập trung sâu khi làm việc nhóm.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-bottom">
+        <span>© 2026 CollabSpace Workspace. Bảo lưu mọi quyền.</span>
+        <span>Realtime Collaborative Architecture · Báo cáo Tốt nghiệp CNTT</span>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

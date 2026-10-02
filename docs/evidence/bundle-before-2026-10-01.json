@@ -1,0 +1,35 @@
+{
+  "timestamp": "2026-09-30T19:19:09.171Z",
+  "stage": "before",
+  "method": "Static ESM dependency graph of production entry; excludes route/dynamic imports. Bytes are build/gzip, not network or CPU measurements.",
+  "entry": "index-BLRkBDCh.js",
+  "files": [
+    {
+      "name": "index-BLRkBDCh.js",
+      "bytes": 80812,
+      "gzipBytes": 23931
+    },
+    {
+      "name": "vendor-react-DGj8QgOs.js",
+      "bytes": 193685,
+      "gzipBytes": 60488
+    },
+    {
+      "name": "vendor-motion-nQZdU_8G.js",
+      "bytes": 137678,
+      "gzipBytes": 45548
+    },
+    {
+      "name": "vendor-socket-BCT6OVBj.js",
+      "bytes": 41616,
+      "gzipBytes": 13040
+    },
+    {
+      "name": "vendor-mediasoup-C1iwMjb0.js",
+      "bytes": 236046,
+      "gzipBytes": 41789
+    }
+  ],
+  "totalBytes": 689837,
+  "gzipBytes": 184796
+}

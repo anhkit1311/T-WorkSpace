@@ -1,0 +1,32 @@
+name: Verify application
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: realtime_workspace
+          POSTGRES_USER: workspace
+          POSTGRES_PASSWORD: workspace
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U workspace -d realtime_workspace"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://workspace:workspace@localhost:5432/realtime_workspace
+      JWT_SECRET: ci-test-only-secret-at-least-32-characters
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run db:migrate
+      - run: npm run test:sfu
+      - run: npm run build

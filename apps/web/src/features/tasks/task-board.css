@@ -1,0 +1,430 @@
+/* ==========================================================================
+   Editorial Task Board Styles (Tactile Luxury Kanban & Task Management)
+   Matching Login & Landing Page (Luminous Frosted Glass & Deep Slate Palette)
+   ========================================================================== */
+
+.task-page {
+  position: relative;
+  padding: 32px clamp(20px, 3vw, 48px) 80px;
+  max-width: 1400px;
+  margin: 0 auto;
+  min-height: 100%;
+  color: #0f172a;
+  overflow-y: auto;
+  font-family: var(--font-body, 'Inter', sans-serif);
+}
+
+/* --------------------------------------------------------------------------
+   Header & Status
+   -------------------------------------------------------------------------- */
+.task-page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.task-page-heading h2 {
+  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
+  font-style: normal;
+  font-size: clamp(2.2rem, 3.5vw, 3rem);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: #0f172a;
+  margin: 0 0 6px;
+}
+
+.task-page-heading p {
+  color: hsl(215, 25%, 32%);
+  font-size: 14.5px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.task-page-heading [role="status"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #059669;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* --------------------------------------------------------------------------
+   Toolbar & Filters
+   -------------------------------------------------------------------------- */
+.task-toolbar,
+.task-filters,
+.task-create {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.task-page label,
+.task-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(15, 23, 42, 0.6);
+}
+
+.task-page input:not([type="checkbox"]),
+.task-page select,
+.task-panel select {
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
+  color: #0f172a;
+  border: 1.5px solid rgba(15, 23, 42, 0.12);
+  border-radius: 9999px;
+  padding: 10px 18px;
+  font-size: 13.5px;
+  font-weight: 500;
+  min-width: 0;
+  max-width: 100%;
+  outline: none !important;
+  transition: all 180ms ease;
+  box-sizing: border-box;
+}
+
+.task-page textarea,
+.task-panel textarea {
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
+  color: #0f172a;
+  border: 1.5px solid rgba(15, 23, 42, 0.12);
+  border-radius: 20px;
+  padding: 12px 18px;
+  font-size: 14px;
+  outline: none !important;
+  transition: all 180ms ease;
+  box-sizing: border-box;
+}
+
+.task-page input:focus,
+.task-page select:focus,
+.task-page textarea:focus,
+.task-panel input:focus,
+.task-panel select:focus,
+.task-panel textarea:focus {
+  border-color: #0f172a;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+  outline: none !important;
+}
+
+.task-page select option {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.task-toolbar button {
+  padding: 10px 20px;
+  border-radius: 9999px;
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: all 180ms ease;
+  outline: none !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.task-toolbar button:hover {
+  background: #ffffff;
+  color: #0f172a;
+  transform: scale(1.02);
+}
+
+.task-create {
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
+  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36));
+  padding: 20px 24px;
+  border-radius: 26px;
+  backdrop-filter: blur(var(--editorial-blur, 16px));
+  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px));
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+}
+
+.task-create label {
+  flex: 1;
+  min-width: 260px;
+}
+
+.task-checkbox,
+.task-checklist-item label {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px;
+  text-transform: none;
+  font-size: 14px;
+  font-weight: 400;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.task-page button {
+  cursor: pointer;
+  outline: none !important;
+}
+
+.task-page button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.task-alert {
+  padding: 14px 20px;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.08);
+  border-radius: 16px;
+  color: #b91c1c;
+  font-size: 13.5px;
+  margin-bottom: 20px;
+}
+
+/* --------------------------------------------------------------------------
+   Kanban Columns Grid
+   -------------------------------------------------------------------------- */
+.task-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+.task-column {
+  min-width: 0;
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
+  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36));
+  border-radius: 26px;
+  padding: 24px;
+  min-height: 400px;
+  backdrop-filter: blur(var(--editorial-blur, 16px));
+  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px));
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+  transition: border-color 200ms ease;
+}
+
+.task-column h3 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
+  font-style: normal;
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: #0f172a;
+  margin: 0 0 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.task-column h3 span {
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-style: normal;
+  color: rgba(15, 23, 42, 0.6);
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(15, 23, 42, 0.06);
+  padding: 3px 12px;
+  border-radius: 9999px;
+}
+
+/* --------------------------------------------------------------------------
+   Task Card
+   -------------------------------------------------------------------------- */
+.task-card {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 18px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 14px;
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+  overflow-wrap: anywhere;
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 180ms ease,
+              border-color 180ms ease,
+              background-color 180ms ease;
+  cursor: grab;
+}
+
+.task-card:hover {
+  transform: translateY(-3px);
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.2);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.09);
+}
+
+.task-card:active {
+  cursor: grabbing;
+  transform: scale(0.98);
+}
+
+.task-title {
+  text-align: left;
+  font-weight: 600;
+  font-size: 14.5px;
+  color: #0f172a;
+  border: 0;
+  background: none;
+  padding: 0;
+  line-height: 1.45;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.task-title:hover {
+  color: #2563eb;
+}
+
+.task-card small,
+.task-card time {
+  font-size: 12px;
+  color: var(--editorial-text-muted, #3e4e66);
+}
+
+.task-card.priority-urgent {
+  border-left: 4px solid #ef4444;
+}
+
+.task-card.priority-high {
+  border-left: 4px solid #f59e0b;
+}
+
+.task-card.priority-normal {
+  border-left: 4px solid #2563eb;
+}
+
+.task-card.priority-low {
+  border-left: 4px solid #10b981;
+}
+
+/* --------------------------------------------------------------------------
+   Task Detail Sliding Drawer Panel
+   -------------------------------------------------------------------------- */
+.task-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: 100dvh;
+  width: min(520px, 100%);
+  background: var(--editorial-surface-popup, rgba(243, 246, 252, 0.92));
+  backdrop-filter: blur(var(--editorial-blur, 16px));
+  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px));
+  border-left: 1px solid rgba(255, 255, 255, 0.95);
+  z-index: 100;
+  padding: 32px 28px;
+  overflow-y: auto;
+  box-shadow: -20px 0 60px rgba(15, 23, 42, 0.15);
+  color: #0f172a;
+}
+
+.task-panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.task-panel h2 {
+  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
+  font-style: normal;
+  font-size: 24px;
+  font-weight: 500;
+  color: #0f172a;
+  margin: 0;
+}
+
+.task-panel form,
+.task-panel fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.task-panel fieldset {
+  border: 0;
+  padding: 0;
+}
+
+.task-panel textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.task-panel time {
+  display: block;
+  color: var(--editorial-text-muted, #3e4e66);
+  font-size: 11.5px;
+}
+
+.task-panel article,
+.task-checklist-item {
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+}
+
+.task-panel article p,
+.task-panel li {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  color: #0f172a;
+  line-height: 1.5;
+}
+
+.task-checklist-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.task-panel ol {
+  padding-left: 20px;
+}
+
+.task-panel li {
+  margin: 10px 0;
+}
+
+@media (max-width: 900px) {
+  .task-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .task-page {
+    padding: 20px 16px 60px;
+  }
+  .task-filters > label,
+  .task-toolbar > label {
+    flex: 1;
+    min-width: 140px;
+  }
+  .task-create button {
+    width: 100%;
+  }
+}

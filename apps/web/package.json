@@ -1,0 +1,30 @@
+{
+  "name": "@doan/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit && vite build",
+    "dev": "vite",
+    "preview": "vite preview --outDir ../../dist/web",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "lint": "eslint src --ext .ts,.tsx",
+    "test": "node --experimental-strip-types --test test/*.test.js"
+  },
+  "dependencies": {
+    "@doan/shared": "0.1.0",
+    "lucide-react": "^1.47.0",
+    "mediasoup-client": "^3.23.2",
+    "motion": "^13.2.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "socket.io-client": "^4.8.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.2",
+    "vite": "^6.2.1"
+  }
+}

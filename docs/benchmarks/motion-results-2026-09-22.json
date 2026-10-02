@@ -1,0 +1,112 @@
+{
+  "measuredAtLocal": "2026-09-22T01:20:43+07:00",
+  "target": {
+    "refreshRateHz": 60,
+    "frameBudgetMs": 16.67,
+    "overBudgetThresholdMs": 19.17
+  },
+  "environment": {
+    "browser": "Codex in-app Chromium",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36",
+    "operatingSystem": "Windows 10 64-bit",
+    "prefersReducedMotion": true,
+    "observedRafCadenceHz": 200,
+    "build": "Vite production preview"
+  },
+  "method": {
+    "fps": "requestAnimationFrame intervals sampled during each scenario",
+    "framesOver60HzBudget": "intervals greater than 19.17 ms (16.67 ms plus 15% tolerance)",
+    "missedFrames": "estimated missed 60 Hz frames for over-budget intervals",
+    "longTasks": "PerformanceObserver entries of type longtask",
+    "baseline": "No valid pre-change trace was captured; no before value is reported."
+  },
+  "desktop": {
+    "viewport": { "width": 1440, "height": 900, "dpr": 1 },
+    "results": [
+      {
+        "scenario": "landing-card-entrance",
+        "durationMs": 800,
+        "frames": 152,
+        "fps": 190,
+        "averageFrameMs": 5.26,
+        "p95FrameMs": 5.1,
+        "maximumFrameMs": 40.1,
+        "framesOver60HzBudget": 1,
+        "missedFrames": 2,
+        "longTasks": 0
+      },
+      {
+        "scenario": "landing-smooth-scroll",
+        "durationMs": 1205,
+        "frames": 238,
+        "fps": 197.51,
+        "averageFrameMs": 5.06,
+        "p95FrameMs": 5.1,
+        "maximumFrameMs": 15,
+        "framesOver60HzBudget": 0,
+        "missedFrames": 0,
+        "longTasks": 0
+      },
+      {
+        "scenario": "landing-to-login",
+        "durationMs": 800,
+        "frames": 156,
+        "fps": 195,
+        "averageFrameMs": 5.13,
+        "p95FrameMs": 5.1,
+        "maximumFrameMs": 15,
+        "framesOver60HzBudget": 0,
+        "missedFrames": 0,
+        "longTasks": 0
+      }
+    ]
+  },
+  "mobile": {
+    "viewport": { "width": 390, "height": 844, "dpr": 1 },
+    "horizontalOverflowPx": 0,
+    "results": [
+      {
+        "scenario": "landing-card-entrance",
+        "durationMs": 800.1,
+        "frames": 156,
+        "fps": 194.98,
+        "averageFrameMs": 5.13,
+        "p95FrameMs": 5.1,
+        "maximumFrameMs": 14.9,
+        "framesOver60HzBudget": 0,
+        "missedFrames": 0,
+        "longTasks": 0
+      },
+      {
+        "scenario": "landing-smooth-scroll",
+        "durationMs": 1205.1,
+        "frames": 240,
+        "fps": 199.15,
+        "averageFrameMs": 5.02,
+        "p95FrameMs": 5.1,
+        "maximumFrameMs": 9.9,
+        "framesOver60HzBudget": 0,
+        "missedFrames": 0,
+        "longTasks": 0
+      },
+      {
+        "scenario": "landing-to-login",
+        "durationMs": 800,
+        "frames": 160,
+        "fps": 200,
+        "averageFrameMs": 5,
+        "p95FrameMs": 5.1,
+        "maximumFrameMs": 5.2,
+        "framesOver60HzBudget": 0,
+        "missedFrames": 0,
+        "longTasks": 0
+      }
+    ]
+  },
+  "limitations": [
+    "The test host reports a roughly 200 Hz requestAnimationFrame cadence, so FPS values should be interpreted with frame-time metrics.",
+    "The host has prefers-reduced-motion enabled. Product page transitions therefore use their reduced-motion path; the card benchmark deliberately runs a representative transform and opacity animation.",
+    "Authenticated chat and multi-party meeting motion was reviewed in code but was not experimentally profiled with real camera devices in this run.",
+    "These measurements describe this environment and do not guarantee 60 FPS on every device."
+  ]
+}

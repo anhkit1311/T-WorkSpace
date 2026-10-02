@@ -1,0 +1,16 @@
+node_modules
+dist
+postgres-data
+.env
+.env.*
+!.env.example
+.git
+.agents
+.codex
+coverage
+*.log
+.review-tools
+.impeccable
+**/.vite-cache
+backups
+*.dump

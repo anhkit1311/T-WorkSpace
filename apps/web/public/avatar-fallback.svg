@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Ảnh đại diện CollabSpace">
+  <defs>
+    <linearGradient id="avatarBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="32" fill="url(#avatarBg)"/>
+  <circle cx="32" cy="24" r="11" fill="#0f172a" fill-opacity="0.85"/>
+  <path d="M14 54c0-9.941 8.059-18 18-18s18 8.059 18 18" fill="#0f172a" fill-opacity="0.85"/>
+</svg>

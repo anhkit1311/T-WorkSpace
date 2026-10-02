@@ -1,0 +1,50 @@
+.meeting-controls {
+  padding: 12px 16px;
+  border: 1px solid var(--border-color, #444);
+  border-radius: 8px;
+  margin: 12px 0;
+  background: var(--bg-secondary, #202124);
+  color: var(--text-primary);
+}
+.meeting-controls summary {
+  cursor: pointer;
+  font-size: 13px;
+}
+.meeting-session-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.meeting-controls button {
+  font-size: 12px;
+  margin: 6px 6px 6px 0;
+  padding: 7px 10px;
+  border: 1px solid var(--border-color, #444);
+  border-radius: 5px;
+  color: inherit;
+  background: var(--bg-primary, #17181a);
+  cursor: pointer;
+}
+.meeting-controls button:disabled {
+  opacity: 0.5;
+}
+.meeting-host-actions {
+  display: flex;
+  flex-wrap: wrap;
+}
+.meeting-controls ul {
+  list-style: none;
+  padding: 0;
+}
+.meeting-controls li {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color, #444);
+  overflow-wrap: anywhere;
+}
+.meeting-controls small {
+  display: block;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.meeting-controls [role="alert"] {
+  color: #e9abab;
+}

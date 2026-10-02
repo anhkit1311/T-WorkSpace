@@ -1,0 +1,189 @@
+/* ==========================================================================
+   Editorial Workspace Admin & Notifications Styles
+   Matching Login & Landing Page (Luminous Frosted Glass & Deep Slate Palette)
+   ========================================================================== */
+
+.workspace-admin {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px clamp(20px, 3vw, 48px) 80px;
+  display: grid;
+  gap: 28px;
+  font-family: var(--font-body, 'Inter', sans-serif);
+  color: #0f172a;
+}
+
+.workspace-admin h1 {
+  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
+  font-style: normal;
+  font-size: clamp(2.2rem, 3.5vw, 3rem);
+  font-weight: 500;
+  color: #0f172a;
+  letter-spacing: -0.015em;
+  margin: 0 0 10px;
+}
+
+.workspace-admin h2 {
+  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
+  font-style: normal;
+  font-size: 21px;
+  font-weight: 500;
+  color: #0f172a;
+  margin: 0 0 14px;
+}
+
+.workspace-admin h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 8px;
+}
+
+.workspace-admin p {
+  color: hsl(215, 25%, 32%);
+  line-height: 1.6;
+  font-size: 14.5px;
+}
+
+.workspace-admin section {
+  padding: 28px;
+  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36));
+  border-radius: 26px;
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
+  backdrop-filter: blur(var(--editorial-blur, 16px));
+  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px));
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+}
+
+.workspace-admin form {
+  display: grid;
+  gap: 16px;
+  margin: 18px 0;
+}
+
+.workspace-admin label {
+  display: grid;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(15, 23, 42, 0.6);
+}
+
+.workspace-admin input:not([type="checkbox"]),
+.workspace-admin textarea,
+.workspace-admin select {
+  width: 100%;
+  min-height: 42px;
+  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
+  border: 1.5px solid rgba(15, 23, 42, 0.12);
+  color: #0f172a;
+  border-radius: 9999px;
+  padding: 10px 18px;
+  font: inherit;
+  font-size: 13.5px;
+  outline: none !important;
+  transition: all 180ms ease;
+  box-sizing: border-box;
+}
+
+.workspace-admin textarea {
+  min-height: 90px;
+  border-radius: 18px;
+  resize: vertical;
+  padding: 14px 18px;
+}
+
+.workspace-admin input:focus,
+.workspace-admin textarea:focus,
+.workspace-admin select:focus {
+  border-color: #0f172a;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+  outline: none !important;
+}
+
+.workspace-admin select option {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.workspace-admin .admin-check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  text-transform: none;
+  font-size: 14px;
+  font-weight: 400;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.admin-actions,
+.admin-invitation-link {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0;
+  align-items: center;
+}
+
+.admin-invitation-link input {
+  flex: 1;
+  min-width: 220px;
+}
+
+.admin-table-scroll {
+  overflow-x: auto;
+  margin-top: 18px;
+}
+
+.workspace-admin table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.workspace-admin td,
+.workspace-admin th {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  font-size: 13.5px;
+}
+
+.workspace-admin th {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--editorial-text-muted, #3e4e66);
+  font-weight: 650;
+}
+
+.workspace-admin td small {
+  display: block;
+  color: var(--editorial-text-muted, #3e4e66);
+  margin-top: 4px;
+  font-size: 11.5px;
+}
+
+.workspace-admin td .button {
+  margin: 4px;
+}
+
+.workspace-admin li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.workspace-admin ol,
+.workspace-admin ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}

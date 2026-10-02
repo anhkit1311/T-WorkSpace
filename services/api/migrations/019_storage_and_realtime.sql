@@ -1,0 +1,11 @@
+ALTER TABLE message_attachments ALTER COLUMN data DROP NOT NULL;
+ALTER TABLE message_attachments ADD COLUMN storage_provider text NOT NULL DEFAULT 'db' CHECK(storage_provider IN ('db','s3'));
+ALTER TABLE message_attachments ADD COLUMN object_key text;
+ALTER TABLE message_attachments ADD CONSTRAINT attachments_storage_check CHECK((storage_provider='db' AND data IS NOT NULL AND object_key IS NULL) OR (storage_provider='s3' AND data IS NULL AND object_key IS NOT NULL));
+CREATE TABLE storage_cleanup(id uuid PRIMARY KEY,object_key text NOT NULL UNIQUE,created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE socket_io_attachments(id bigserial UNIQUE,created_at timestamptz DEFAULT now(),payload bytea);
+CREATE INDEX socket_io_attachments_created_idx ON socket_io_attachments(created_at);
+CREATE TABLE socket_presence(socket_id text PRIMARY KEY,user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,instance_id text NOT NULL,expires_at timestamptz NOT NULL);
+CREATE INDEX socket_presence_user_expiry_idx ON socket_presence(user_id,expires_at);
+CREATE TABLE api_instances(id text PRIMARY KEY,media_url text,expires_at timestamptz NOT NULL);
+ALTER TABLE meeting_sessions ADD COLUMN media_instance_id text;
