@@ -189,3 +189,42 @@
     left: -100px;
   }
 }
+.chat-send-error-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 7px 12px;
+  margin-bottom: 7px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
+}
+.chat-send-error-banner.is-failed {
+  border-color: #e07a7a55;
+  color: #c24141;
+}
+.chat-send-error-banner progress {
+  width: 80px;
+  vertical-align: middle;
+}
+.chat-send-error-banner button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-weight: 600;
+}
+.chat-send-error-banner button:first-of-type {
+  margin-left: auto;
+}
+.chat-send-error-banner button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.member-pill-presence {
+  margin-top: 0;
+  margin-left: auto;
+  font-size: 11px;
+  white-space: nowrap;
+}

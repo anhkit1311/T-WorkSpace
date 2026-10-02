@@ -11,7 +11,6 @@ import {
   RotateCw,
   ShieldCheck,
   User,
-  X,
 } from "lucide-react";
 import { ApiError, requestPasswordResetApi, resetPasswordApi } from "./api";
 import { useApp } from "../../app/providers/AppContext";
@@ -129,14 +128,29 @@ function GoogleSignInButton({
     >
       <div ref={buttonRef} />
       {status === "loading" && (
-        <p style={{ color: "hsl(215, 25%, 45%)", fontSize: "12px", textAlign: "center", padding: "8px 0" }}>
+        <p
+          style={{
+            color: "hsl(215, 25%, 45%)",
+            fontSize: "12px",
+            textAlign: "center",
+            padding: "8px 0",
+          }}
+        >
           Đang nạp Google Sign-In…
         </p>
       )}
       {status === "error" && (
         <button
           type="button"
-          style={{ color: "#0f172a", fontSize: "12px", textDecoration: "underline", padding: "8px 0", background: "none", border: "none", cursor: "pointer" }}
+          style={{
+            color: "#0f172a",
+            fontSize: "12px",
+            textDecoration: "underline",
+            padding: "8px 0",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+          }}
           onClick={() => setRetry((value) => value + 1)}
         >
           Không tải được Google. Thử lại
@@ -373,11 +387,7 @@ export function LoginPage() {
     <main id="main-content" className="editorial-auth-shell">
       {/* Top Bar with Brand & Back */}
       <header className="editorial-auth-nav">
-        <button
-          type="button"
-          onClick={() => setScreen("landing")}
-          className="editorial-auth-brand"
-        >
+        <button type="button" onClick={() => setScreen("landing")} className="editorial-auth-brand">
           CollabSpace<sup>®</sup>
         </button>
 
@@ -408,7 +418,12 @@ export function LoginPage() {
                 <button
                   type="button"
                   className="editorial-sublink"
-                  style={{ display: "inline-flex", alignItems: "center", gap: "6px", marginBottom: "16px" }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    marginBottom: "16px",
+                  }}
                   onClick={() => {
                     setAuthStep("form");
                     setErrors({});
@@ -453,11 +468,7 @@ export function LoginPage() {
                       {errors.email && <div className="editorial-field-error">{errors.email}</div>}
                     </div>
 
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="editorial-submit-btn"
-                    >
+                    <button type="submit" disabled={loading} className="editorial-submit-btn">
                       {loading ? "Đang gửi mã..." : "Gửi mã đặt lại mật khẩu"}
                     </button>
                   </form>
@@ -466,7 +477,10 @@ export function LoginPage() {
                     <div className="editorial-field">
                       <label className="editorial-field-label">Mã xác thực 6 chữ số</label>
                       <div className="editorial-input-wrap">
-                        <KeyRound className="editorial-input-icon" style={{ width: 16, height: 16 }} />
+                        <KeyRound
+                          className="editorial-input-icon"
+                          style={{ width: 16, height: 16 }}
+                        />
                         <input
                           type="text"
                           inputMode="numeric"
@@ -478,7 +492,11 @@ export function LoginPage() {
                           }
                           placeholder="••••••"
                           className="editorial-input"
-                          style={{ textAlign: "center", letterSpacing: "6px", fontFamily: "monospace" }}
+                          style={{
+                            textAlign: "center",
+                            letterSpacing: "6px",
+                            fontFamily: "monospace",
+                          }}
                           autoFocus
                         />
                       </div>
@@ -503,11 +521,7 @@ export function LoginPage() {
                       )}
                     </div>
 
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="editorial-submit-btn"
-                    >
+                    <button type="submit" disabled={loading} className="editorial-submit-btn">
                       {loading ? "Đang cập nhật..." : "Cập nhật mật khẩu"}
                     </button>
 
@@ -532,7 +546,12 @@ export function LoginPage() {
                 <button
                   type="button"
                   className="editorial-sublink"
-                  style={{ display: "inline-flex", alignItems: "center", gap: "6px", marginBottom: "16px" }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    marginBottom: "16px",
+                  }}
                   onClick={() => {
                     setAuthStep("form");
                     setErrors({});
@@ -789,16 +808,8 @@ export function LoginPage() {
                     </div>
                   )}
 
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="editorial-submit-btn"
-                  >
-                    {loading
-                      ? "Đang xử lý..."
-                      : isLogin
-                        ? "Đăng nhập"
-                        : "Tiếp tục tạo tài khoản"}
+                  <button type="submit" disabled={loading} className="editorial-submit-btn">
+                    {loading ? "Đang xử lý..." : isLogin ? "Đăng nhập" : "Tiếp tục tạo tài khoản"}
                   </button>
                 </form>
 

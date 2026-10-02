@@ -10,25 +10,17 @@ import {
 } from "react";
 import { useDraft } from "../../shared/hooks/useDraft";
 import { formatFileSize } from "../../shared/lib/file-size";
-import type {
-  ChannelItem,
-  ChatMessageItem,
-  GroupMemberItem,
-  MemberProfile,
-  WorkspaceItem,
-} from "@doan/shared";
+import type { ChannelItem, ChatMessageItem, GroupMemberItem, WorkspaceItem } from "@doan/shared";
 import {
   createWorkspaceApi,
   getChannelsApi,
   getMessagesApi,
   getWorkspacesApi,
   getWorkspaceMembersApi,
-  rejectMemberApi,
   setChannelPreferenceApi,
   uploadAttachmentApi,
-  getMemberProfileApi,
 } from "./api";
-import { Avatar, Badge, Button } from "../../shared/ui/Primitives";
+import { Avatar, Button } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
 import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
@@ -138,7 +130,6 @@ export function ChatPage() {
   const [channels, setChannels] = useState<ChannelItem[]>([]);
   const [channelId, setChannelId] = useState("");
   const [channelSearch, setChannelSearch] = useState("");
-  const [unreadOnly, setUnreadOnly] = useState(false);
   const [messageSearch, setMessageSearch] = useState("");
   const [searchResults, setSearchResults] = useState<ChatMessageItem[] | null>(null);
   const [searchHighlight, setSearchHighlight] = useState<{
@@ -149,13 +140,11 @@ export function ChatPage() {
   const [editingContent, setEditingContent] = useState("");
   const [attachmentPreview, setAttachmentPreview] = useState("");
   const [members, setMembers] = useState<GroupMemberItem[]>([]);
-  const [memberProfile, setMemberProfile] = useState<MemberProfile | null>(null);
   const [showStickers, setShowStickers] = useState(false);
   const [showInfoPanel, setShowInfoPanel] = useState(true);
   const [filterTab, setFilterTab] = useState<"all" | "unread" | "groups" | "favorites">("all");
   const [showInChannelSearch, setShowInChannelSearch] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [memberProfileError, setMemberProfileError] = useState("");
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
   const [messagesChannelId, setMessagesChannelId] = useState("");
   const [hasMore, setHasMore] = useState(false);
@@ -207,8 +196,6 @@ export function ChatPage() {
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const gifInputRef = useRef<HTMLInputElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const recordingCancelledRef = useRef(false);
@@ -978,27 +965,6 @@ export function ChatPage() {
     });
   }
 
-  async function changePreference(id: string, input: { pinned?: boolean; muted?: boolean }) {
-    if (!accessToken) return;
-    try {
-      const preference = await setChannelPreferenceApi(accessToken, id, input);
-      setChannels((previous) => previous.map((c) => (c.id === id ? { ...c, ...preference } : c)));
-    } catch (reason) {
-      fail(reason);
-    }
-  }
-
-  async function openMemberProfile(id: string) {
-    if (!accessToken) return;
-    setMemberProfileError("");
-    try {
-      setMemberProfile(await getMemberProfileApi(accessToken, id));
-    } catch (reason) {
-      setMemberProfile(null);
-      setMemberProfileError(reason instanceof Error ? reason.message : "Không mở được hồ sơ.");
-    }
-  }
-
   async function saveEdit(id: string) {
     const text = editingContent.trim();
     if (!text) return;
@@ -1083,7 +1049,9 @@ export function ChatPage() {
             className="chat-nav-compose-btn"
             title="Tạo nhóm mới"
             onClick={() => {
-              const summary = document.querySelector(".live-chat-create-group summary") as HTMLElement;
+              const summary = document.querySelector(
+                ".live-chat-create-group summary",
+              ) as HTMLElement;
               summary?.click();
             }}
           >
@@ -1206,8 +1174,11 @@ export function ChatPage() {
                             "Chưa có tin nhắn mới"
                           )}
                         </span>
-                        {Boolean(c.unreadCount) ? (
-                          <span className="chat-unread-badge-circle" aria-label={`${c.unreadCount} tin chưa đọc`}>
+                        {c.unreadCount ? (
+                          <span
+                            className="chat-unread-badge-circle"
+                            aria-label={`${c.unreadCount} tin chưa đọc`}
+                          >
                             {c.unreadCount}
                           </span>
                         ) : c.pinned ? (
@@ -1261,14 +1232,19 @@ export function ChatPage() {
         <header className="chat-main-header">
           <div className="chat-header-identity">
             <div className="chat-header-avatar">
-              <Avatar name={channel?.name || workspace?.name || "Lớp 9A1"} size="md" />
+              <Avatar name={channel?.name || workspace?.name || "Kênh"} size="md" />
             </div>
             <div className="chat-header-title-box">
               <h2 className="chat-header-room-name">
-                {channel ? channel.name : (workspace?.name || "Lớp 9A1")}
+                {channel ? channel.name : workspace?.name || "Kênh"}
               </h2>
               <span className="chat-header-room-subtitle">
-                {members.length || 32} thành viên • {isConnected ? "Hoạt động gần đây" : "Đang kết nối lại…"}
+                {members.length} thành viên •{" "}
+                {isConnected
+                  ? `${members.filter((m) => onlineUserIds.includes(m.userId)).length} đang trực tuyến`
+                  : connectionStatus === "disconnected"
+                    ? "Mất kết nối"
+                    : "Đang kết nối lại…"}
               </span>
             </div>
           </div>
@@ -1481,11 +1457,7 @@ export function ChatPage() {
                       </div>
                     )}
                     <div className="message-item__body">
-                      {!isMine && (
-                        <span className="chat-author-name-tag">
-                          {m.authorName}
-                        </span>
-                      )}
+                      {!isMine && <span className="chat-author-name-tag">{m.authorName}</span>}
                       {m.replyToId && (
                         <div className="chat-reply-quote">
                           <Icon name="arrow-right" size={12} />{" "}
@@ -1519,7 +1491,8 @@ export function ChatPage() {
 
                       {/* Reactions dock matching mockup */}
                       <div className="chat-reactions-dock">
-                        {m.reactions && m.reactions.length > 0 &&
+                        {m.reactions &&
+                          m.reactions.length > 0 &&
                           m.reactions.map((reaction) => (
                             <button
                               type="button"
@@ -1657,6 +1630,63 @@ export function ChatPage() {
               </button>
             </div>
           )}
+          {draftLink && (
+            <div className="chat-compose-preview chat-link-preview">
+              <Icon name="link" size={15} />
+              <span>
+                Liên kết sẽ gửi: <strong>{draftLink.hostname}</strong> ·{" "}
+                {draftLink.pathname === "/" ? draftLink.href : draftLink.pathname}
+              </span>
+            </div>
+          )}
+          {outbox
+            .filter((item) => item.channelId === channelId)
+            .map((draft) => (
+              <div
+                key={draft.clientMessageId}
+                className={`chat-send-error-banner ${draft.status === "failed" ? "is-failed" : ""}`}
+                role={draft.status === "failed" ? "alert" : "status"}
+              >
+                <span>
+                  <strong>{draft.status === "sending" ? "Đang gửi…" : "Gửi lỗi"}</strong> ·{" "}
+                  {draft.content || draft.fileName}
+                  {draft.error && <small> · {draft.error}</small>}
+                  {draft.file && !draft.attachmentId && draft.status === "sending" && (
+                    <span>
+                      {" "}
+                      · Tải tệp {draft.uploadProgress ?? 0}%{" "}
+                      <progress
+                        max={100}
+                        value={draft.uploadProgress ?? 0}
+                        aria-label="Tiến độ tải tệp"
+                      />
+                    </span>
+                  )}
+                </span>
+                {draft.status === "failed" && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOutbox((old) =>
+                        old.filter((item) => item.clientMessageId !== draft.clientMessageId),
+                      )
+                    }
+                  >
+                    Bỏ lần gửi
+                  </button>
+                )}
+                {draft.status === "failed" && (
+                  <button
+                    type="button"
+                    className="chat-retry-send-btn"
+                    disabled={!isConnected || sending}
+                    onClick={() => void deliver(draft)}
+                  >
+                    Thử gửi lại
+                  </button>
+                )}
+              </div>
+            ))}
 
           <form className="chat-floating-dock-form" onSubmit={submit}>
             <button
@@ -1675,11 +1705,7 @@ export function ChatPage() {
               maxLength={4000}
               rows={1}
               disabled={!channel || busy || sending || readOnly || !draftReady}
-              placeholder={
-                !isConnected
-                  ? "Mất kết nối. Đang thử lại…"
-                  : "Nhập tin nhắn…"
-              }
+              placeholder={!isConnected ? "Mất kết nối. Đang thử lại…" : "Nhập tin nhắn…"}
               value={content}
               onKeyDown={handleKeyDown}
               onInput={(event) => {
@@ -1706,14 +1732,34 @@ export function ChatPage() {
             />
 
             <div className="chat-dock-actions-row">
-              <button
-                type="button"
-                className="chat-dock-icon-btn"
-                title="Biểu cảm"
-                onClick={() => setShowStickers((value) => !value)}
-              >
-                <Icon name="smile" size={18} />
-              </button>
+              <div className="chat-sticker-control">
+                <button
+                  type="button"
+                  className="chat-dock-icon-btn"
+                  title="Biểu cảm"
+                  aria-label="Chọn sticker"
+                  aria-expanded={showStickers}
+                  disabled={!channel || sending}
+                  onClick={() => setShowStickers((value) => !value)}
+                >
+                  <Icon name="smile" size={18} />
+                </button>
+                {showStickers && (
+                  <div className="chat-sticker-picker" role="group" aria-label="Chọn sticker">
+                    {stickers.map((sticker) => (
+                      <button
+                        key={sticker.id}
+                        type="button"
+                        title={sticker.label}
+                        onClick={() => void sendSticker(sticker.id)}
+                      >
+                        <span>{sticker.emoji}</span>
+                        <small>{sticker.label}</small>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button
                 type="button"
                 className="chat-dock-icon-btn"
@@ -1778,10 +1824,12 @@ export function ChatPage() {
           <div className="chat-info-scrollable">
             <div className="chat-info-identity-card">
               <div className="chat-info-avatar-large">
-                <Avatar name={channel?.name || workspace?.name || "Lớp 9A1"} size="lg" />
+                <Avatar name={channel?.name || workspace?.name || "Kênh"} size="lg" />
               </div>
-              <h2 className="chat-info-title">{channel ? channel.name : (workspace?.name || "Lớp 9A1")}</h2>
-              <span className="chat-info-member-subtitle">{members.length || 32} thành viên</span>
+              <h2 className="chat-info-title">
+                {channel ? channel.name : workspace?.name || "Kênh"}
+              </h2>
+              <span className="chat-info-member-subtitle">{members.length} thành viên</span>
             </div>
 
             <div className="chat-info-action-row">
@@ -1837,7 +1885,10 @@ export function ChatPage() {
             <div className="chat-info-desc-box">
               <div className="chat-info-desc-content">
                 <strong>Mô tả</strong>
-                <p>Không gian trao đổi học tập và sinh hoạt của {channel ? channel.name : (workspace?.name || "Lớp 9A1")}.</p>
+                <p>
+                  Không gian trao đổi học tập và sinh hoạt của{" "}
+                  {channel ? channel.name : workspace?.name || "Kênh"}.
+                </p>
               </div>
               <Icon name="chevron-right" size={16} />
             </div>
@@ -1853,7 +1904,7 @@ export function ChatPage() {
                   <span>Thành viên</span>
                 </div>
                 <div className="menu-item-right">
-                  <span className="menu-item-badge">{members.length || 32}</span>
+                  <span className="menu-item-badge">{members.length}</span>
                   <Icon name="chevron-right" size={14} />
                 </div>
               </button>
@@ -1865,8 +1916,18 @@ export function ChatPage() {
                       <Avatar name={m.displayName} size="sm" />
                       <div className="member-pill-text">
                         <strong>{m.displayName}</strong>
-                        <small>{m.role === "owner" ? "Chủ nhóm" : m.role === "admin" ? "Quản trị viên" : "Thành viên"}</small>
+                        <small>
+                          {m.role === "owner"
+                            ? "Chủ nhóm"
+                            : m.role === "admin"
+                              ? "Quản trị viên"
+                              : "Thành viên"}
+                        </small>
                       </div>
+                      <span className="chat-profile-presence member-pill-presence">
+                        <i className={onlineUserIds.includes(m.userId) ? "is-online" : ""} />
+                        {onlineUserIds.includes(m.userId) ? "Trực tuyến" : "Ngoại tuyến"}
+                      </span>
                     </div>
                   ))}
                   {isAdmin && (
@@ -1878,7 +1939,9 @@ export function ChatPage() {
                         onChange={(e) => setEmail(e.target.value)}
                         required
                       />
-                      <Button size="sm" type="submit" disabled={busy}>Thêm</Button>
+                      <Button size="sm" type="submit" disabled={busy}>
+                        Thêm
+                      </Button>
                     </form>
                   )}
                 </div>
@@ -1897,21 +1960,16 @@ export function ChatPage() {
                   <span>Tệp tin</span>
                 </div>
                 <div className="menu-item-right">
-                  <span className="menu-item-badge">18</span>
                   <Icon name="chevron-right" size={14} />
                 </div>
               </button>
 
-              <button
-                type="button"
-                className="chat-info-menu-item"
-              >
+              <button type="button" className="chat-info-menu-item">
                 <div className="menu-item-left">
                   <Icon name="image" size={18} />
                   <span>Ảnh & video</span>
                 </div>
                 <div className="menu-item-right">
-                  <span className="menu-item-badge">124</span>
                   <Icon name="chevron-right" size={14} />
                 </div>
               </button>
@@ -1929,21 +1987,16 @@ export function ChatPage() {
                   <span>Tin nhắn ghim</span>
                 </div>
                 <div className="menu-item-right">
-                  <span className="menu-item-badge">3</span>
                   <Icon name="chevron-right" size={14} />
                 </div>
               </button>
 
-              <button
-                type="button"
-                className="chat-info-menu-item"
-              >
+              <button type="button" className="chat-info-menu-item">
                 <div className="menu-item-left">
                   <Icon name="link" size={18} />
                   <span>Liên kết</span>
                 </div>
                 <div className="menu-item-right">
-                  <span className="menu-item-badge">7</span>
                   <Icon name="chevron-right" size={14} />
                 </div>
               </button>

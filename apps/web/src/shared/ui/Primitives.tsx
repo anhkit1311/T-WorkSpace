@@ -3,15 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "../../app/providers/AppContext";
 import { Icon, type IconName } from "./Icon";
 
-export function Brand({
-  compact = false,
-  className = "",
-  onClick,
-}: {
-  compact?: boolean;
-  className?: string;
-  onClick?: () => void;
-}) {
+export function Brand({ className = "", onClick }: { className?: string; onClick?: () => void }) {
   return (
     <div
       className={`brand ${className} ${onClick ? "is-clickable" : ""}`}

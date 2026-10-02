@@ -2,16 +2,17 @@ import { lazy, Suspense, useEffect, useState, type FormEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "../providers/AppContext";
 import { useSocket } from "../providers/SocketContext";
-import type { ViewId } from "../types";
-import { Icon, type IconName } from "../../shared/ui/Icon";
-import { Brand, Button, Field, IconButton, Modal } from "../../shared/ui/Primitives";
+import { Icon } from "../../shared/ui/Icon";
+import { Brand, Button, Field, Modal } from "../../shared/ui/Primitives";
 import { NotionSearchModal } from "../../features/search/NotionSearchModal";
 import { getWorkspacesApi } from "../../features/chat/api";
 import { PageErrorBoundary } from "../../shared/ui/PageErrorBoundary";
 import { usePanelDialog } from "../../shared/hooks/usePanelDialog";
 
 const WorkspaceHomePage = lazy(() =>
-  import("../../features/workspaces/WorkspaceHomePage").then((m) => ({ default: m.WorkspaceHomePage })),
+  import("../../features/workspaces/WorkspaceHomePage").then((m) => ({
+    default: m.WorkspaceHomePage,
+  })),
 );
 const ChatPage = lazy(() =>
   import("../../features/chat/LiveChatPage").then((m) => ({ default: m.ChatPage })),
@@ -23,13 +24,17 @@ const ProfilePage = lazy(() =>
   import("../../features/profile/ProfilePage").then((m) => ({ default: m.ProfilePage })),
 );
 const WorkspaceAdminPage = lazy(() =>
-  import("../../features/workspaces/WorkspaceAdminPage").then((m) => ({ default: m.WorkspaceAdminPage })),
+  import("../../features/workspaces/WorkspaceAdminPage").then((m) => ({
+    default: m.WorkspaceAdminPage,
+  })),
 );
 const InvitationPage = lazy(() =>
   import("../../features/workspaces/InvitationPage").then((m) => ({ default: m.InvitationPage })),
 );
 const NotificationsPage = lazy(() =>
-  import("../../features/notifications/NotificationsPage").then((m) => ({ default: m.NotificationsPage })),
+  import("../../features/notifications/NotificationsPage").then((m) => ({
+    default: m.NotificationsPage,
+  })),
 );
 const TaskBoardPage = lazy(() =>
   import("../../features/tasks/TaskBoardPage").then((m) => ({ default: m.TaskBoardPage })),
@@ -45,47 +50,12 @@ function ViewFallback() {
   );
 }
 
-const navGroups: Array<{
-  label: string;
-  items: Array<{ id: ViewId; label: string; icon: IconName }>;
-}> = [
-  {
-    label: "Không gian làm việc",
-    items: [
-      { id: "overview", label: "Tổng quan", icon: "home" },
-      { id: "chat", label: "Tin nhắn nhóm", icon: "messages" },
-      { id: "meetings", label: "Hội nghị SFU", icon: "video" },
-      { id: "tasks", label: "Bảng công việc", icon: "tasks" },
-    ],
-  },
-  {
-    label: "Hệ thống & Cá nhân",
-    items: [
-      { id: "notifications", label: "Thông báo", icon: "bell" },
-      { id: "admin", label: "Quản trị nhóm", icon: "settings" },
-      { id: "profile", label: "Hồ sơ cá nhân", icon: "profile" },
-    ],
-  },
-];
-
-const viewTitles: Record<ViewId, string> = {
-  overview: "Tổng quan không gian",
-  chat: "Tin nhắn nhóm",
-  meetings: "Hội nghị truyền hình SFU",
-  profile: "Hồ sơ cá nhân",
-  admin: "Quản trị nhóm làm việc",
-  invitation: "Lời mời tham gia nhóm",
-  notifications: "Trung tâm thông báo",
-  tasks: "Bảng quản lý công việc",
-};
-
 export function AppShell() {
   const {
     activeView,
     route,
     setActiveView,
     sidebarCollapsed,
-    setSidebarCollapsed,
     mobileNavOpen,
     setMobileNavOpen,
     notify,
@@ -124,16 +94,8 @@ export function AppShell() {
   }, [accessToken, socket, activeView]);
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [hoveredNav, setHoveredNav] = useState<string | null>(null);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [editName, setEditName] = useState("");
-  const isNotionHome = activeView === "overview";
-
-  const changeSidebar = (collapsed: boolean) => {
-    setProfileOpen(false);
-    setHoveredNav(null);
-    setSidebarCollapsed(collapsed);
-  };
 
   const displayName = user?.displayName?.trim() || "Chưa cập nhật hồ sơ";
   const userEmail = user?.email || "";
@@ -240,8 +202,6 @@ export function AppShell() {
         <div className="editorial-master-topbar__left">
           <Brand onClick={() => setActiveView("overview")} />
         </div>
-
-
 
         <div className="editorial-master-topbar__right">
           <button
@@ -416,7 +376,7 @@ export function AppShell() {
             type="button"
             className={`dock-btn ${activeView === "admin" || activeView === "profile" ? "is-active" : ""}`}
             onClick={() => {
-              canManage ? setActiveView("admin") : setActiveView("profile");
+              setActiveView(canManage ? "admin" : "profile");
               setMobileNavOpen(false);
             }}
             title="Cài đặt hệ thống"
