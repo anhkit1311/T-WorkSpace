@@ -1,0 +1,294 @@
+/* ==========================================================================
+   Unified surfaces — one glass language for every workspace page.
+   Loaded after editorial-workspace.css; pages previously mixed glass cards with headings and
+   filters painted straight onto the moving landscape, which hurt legibility and consistency.
+   ========================================================================== */
+
+.view-reveal {
+  display: contents;
+}
+
+/* --------------------------------------------------------------------------
+   Page heroes: the same frosted header as the home greeting
+   -------------------------------------------------------------------------- */
+.editorial-workspace-shell
+  :is(.page-hero, .task-page-heading, .profile-header, .workspace-admin > header) {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  margin: 0 0 24px !important;
+  padding: clamp(22px, 3vw, 32px) clamp(22px, 3vw, 36px) !important;
+  border: 1px solid var(--editorial-border) !important;
+  border-radius: 28px !important;
+  background: var(--editorial-surface-card) !important;
+  backdrop-filter: blur(var(--editorial-blur));
+  -webkit-backdrop-filter: blur(var(--editorial-blur));
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.1) !important;
+}
+
+.editorial-workspace-shell :is(.page-hero, .workspace-admin > header) > :is(h1, p) {
+  flex-basis: 100%;
+}
+
+.editorial-workspace-shell .workspace-admin > header > :is(h1, p) {
+  margin: 0 !important;
+}
+
+.editorial-workspace-shell .page-hero h1 {
+  margin: 0 0 6px !important;
+}
+
+.editorial-workspace-shell .page-hero p {
+  margin: 0 !important;
+}
+
+/* Section headings and filter rows that sit directly on the landscape get a quiet glass strip. */
+.editorial-workspace-shell
+  :is(.home-priorities__header, .workspace-home__section-head, .task-toolbar, .task-filters) {
+  padding: 16px 22px !important;
+  border: 1px solid var(--editorial-border);
+  border-radius: 22px;
+  background: var(--editorial-surface-soft);
+  backdrop-filter: blur(var(--editorial-blur));
+  -webkit-backdrop-filter: blur(var(--editorial-blur));
+}
+
+.editorial-workspace-shell :is(.home-priorities__header, .workspace-home__section-head) {
+  align-items: center !important;
+}
+
+/* --------------------------------------------------------------------------
+   Loading, error and empty states
+   -------------------------------------------------------------------------- */
+.editorial-workspace-shell .page-suspense-fallback,
+.editorial-workspace-shell .page-load-error,
+.state-card {
+  margin: 32px auto;
+  max-width: 720px;
+  padding: 32px;
+  border: 1px solid var(--editorial-border);
+  border-radius: 28px;
+  background: var(--editorial-surface-card);
+  backdrop-filter: blur(var(--editorial-blur));
+  -webkit-backdrop-filter: blur(var(--editorial-blur));
+  box-shadow: var(--editorial-shadow);
+}
+
+.editorial-workspace-shell .page-suspense-line,
+.editorial-workspace-shell .page-suspense-card {
+  background: rgba(23, 35, 62, 0.08);
+}
+
+.editorial-workspace-shell .page-load-error,
+.state-card {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  color: var(--editorial-text);
+}
+
+.editorial-workspace-shell .page-load-error h2,
+.state-card h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.editorial-workspace-shell .page-load-error p,
+.state-card p {
+  margin: 0;
+  max-width: 46ch;
+  color: var(--editorial-text-secondary);
+  line-height: 1.55;
+}
+
+.state-card__icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: var(--editorial-control-surface);
+  color: var(--editorial-text-secondary);
+}
+
+.state-card--compact {
+  margin: 0;
+  max-width: none;
+  padding: 40px 24px;
+}
+
+.loading-note {
+  margin: auto;
+  padding: 32px 0;
+  text-align: center;
+  color: var(--editorial-text-muted);
+}
+
+.inline-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  border: 1px solid rgba(185, 28, 28, 0.22);
+  border-radius: 16px;
+  background: rgba(254, 242, 242, 0.86);
+  color: #9b1c1c;
+  font-size: 13.5px;
+}
+
+.inline-alert--flush {
+  border-width: 0 0 1px;
+  border-radius: 0;
+}
+
+.inline-alert--spaced {
+  margin-bottom: 24px;
+}
+
+/* --------------------------------------------------------------------------
+   Modal helpers (replaces inline layout styles)
+   -------------------------------------------------------------------------- */
+.modal-footer-split {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.modal-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+}
+
+.modal-footer-split .modal-footer-actions {
+  width: auto;
+}
+
+.modal-lead {
+  margin: 0 0 16px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.identity-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-subtle);
+}
+
+.identity-summary__avatar {
+  flex-shrink: 0;
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 12px !important;
+  font-size: 1.1rem !important;
+}
+
+.identity-summary__text {
+  min-width: 0;
+}
+
+.identity-summary__text strong {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.identity-summary__text small {
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.editorial-workspace-shell input:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* --------------------------------------------------------------------------
+   Accent consistency: the workspace primary is navy, never pure black.
+   -------------------------------------------------------------------------- */
+.meeting-room-card.is-selected {
+  border-color: var(--primary) !important;
+  box-shadow:
+    0 0 0 2px var(--primary),
+    var(--editorial-shadow-lg) !important;
+}
+
+.network-reconnect-btn {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+
+.editorial-workspace-shell ::selection {
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+/* Interactive glass cards share one lift curve. */
+.editorial-workspace-shell :is(.workspace-group-card, .home-priority-card, .meeting-room-card) {
+  transition:
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 200ms ease !important;
+}
+
+@media (max-width: 640px) {
+  .editorial-workspace-shell
+    :is(.page-hero, .task-page-heading, .profile-header, .workspace-admin > header) {
+    border-radius: 22px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-backdrop__veil {
+    transition: none;
+  }
+}
+
+.editorial-tag--stacked {
+  display: block;
+  margin-bottom: 4px;
+}
+
+button.chat-pinned-banner {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+/* Page containers fill the stage; some shrank to content width inside the flex viewport. */
+.editorial-main-content
+  :is(.workspace-home, .meetings-page, .task-page, .profile-page, .workspace-admin) {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Playfair Display defaults to old-style figures, so "0" read as the letter "o" in headings. */
+.editorial-workspace-shell,
+.editorial-shell {
+  font-variant-numeric: lining-nums;
+}
+
+.editorial-workspace-shell .meeting-section-header {
+  padding: 12px 18px;
+  border: 1px solid var(--editorial-border);
+  border-radius: 18px;
+  background: var(--editorial-surface-soft);
+  backdrop-filter: blur(var(--editorial-blur));
+  -webkit-backdrop-filter: blur(var(--editorial-blur));
+}

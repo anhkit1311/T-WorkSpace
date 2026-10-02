@@ -8,6 +8,8 @@ export default defineConfig({
   cacheDir: ".vite-cache",
   build: {
     outDir: "../../dist/web",
+    // vendor-three (~130 kB gzip) is fetched only after first paint by the ambient backdrop.
+    chunkSizeWarningLimit: 560,
     emptyOutDir: true,
     rollupOptions: {
       output: {
@@ -20,6 +22,14 @@ export default defineConfig({
             id.includes("node_modules/engine.io-client")
           ) {
             return "vendor-socket";
+          }
+          // three.js is only reached through the lazy ambient scene, so its chunk stays deferred.
+          if (id.includes("node_modules/three")) {
+            return "vendor-three";
+          }
+          // ScrollTrigger stays with the landing chunk; only the core is shared app-wide.
+          if (id.includes("node_modules/gsap") && !/ScrollTrigger|Observer/.test(id)) {
+            return "vendor-gsap";
           }
           if (id.includes("node_modules/motion") || id.includes("node_modules/framer-motion")) {
             return "vendor-motion";

@@ -1,15 +1,19 @@
 import { lazy, Suspense, useEffect } from "react";
 import { useApp } from "./providers/AppContext";
+import { useMeeting } from "./providers/MeetingContext";
 import { AnimatePresence, motion } from "motion/react";
+import { AmbientBackdrop } from "../shared/motion/AmbientBackdrop";
+import type { AmbientMood } from "../shared/motion/ambient-scene";
+import { DURATION, EASE_OUT } from "../shared/motion/tokens";
 import "./styles/screen-motion.css";
 
 const LandingPage = lazy(() =>
   import("../features/landing/LandingPage").then((m) => ({ default: m.LandingPage })),
 );
-const LoginPage = lazy(() => import("../features/auth/LoginPage").then((m) => ({ default: m.LoginPage })));
-const AppShell = lazy(() =>
-  import("./layout/AppShell").then((m) => ({ default: m.AppShell })),
+const LoginPage = lazy(() =>
+  import("../features/auth/LoginPage").then((m) => ({ default: m.LoginPage })),
 );
+const AppShell = lazy(() => import("./layout/AppShell").then((m) => ({ default: m.AppShell })));
 
 function ScreenFallback() {
   return (
@@ -22,29 +26,24 @@ function ScreenFallback() {
 }
 
 export function App() {
-  const { screen } = useApp();
+  const { screen, activeView } = useApp();
+  const { inCall } = useMeeting();
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [screen]);
+  const mood: AmbientMood = screen === "app" ? activeView : screen;
   return (
     <>
       <a className="skip-link" href="#main-content">
         Đi đến nội dung chính
       </a>
+      {/* One persistent backdrop (video + three.js atmosphere); Motion owns only the foreground. */}
+      <AmbientBackdrop
+        mood={mood}
+        tone={screen === "app" ? "workspace" : "public"}
+        active={!(screen === "app" && inCall)}
+      />
       <div className={`screen-stage ${screen !== "app" ? "screen-stage--public" : ""}`}>
-        {/* Keep the landscape alive across public screens; Motion owns only the foreground. */}
-        {screen !== "app" && (
-          <div className="public-screen-backdrop" aria-hidden="true">
-            <video
-              src="https://designerstephen.github.io/public-assets/videos/serene-art-hero.mp4"
-              autoPlay
-              loop
-              muted
-              playsInline
-              preload="auto"
-            />
-          </div>
-        )}
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={screen}
@@ -53,11 +52,11 @@ export function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{
               opacity: 0,
-              transition: { duration: 0.12, ease: "easeOut" },
+              transition: { duration: DURATION.exit, ease: "easeOut" },
             }}
             transition={{
-              duration: screen === "login" ? 0.32 : 0.18,
-              ease: [0.16, 1, 0.3, 1],
+              duration: screen === "login" ? 0.32 : DURATION.enter,
+              ease: EASE_OUT,
             }}
           >
             <Suspense fallback={<ScreenFallback />}>

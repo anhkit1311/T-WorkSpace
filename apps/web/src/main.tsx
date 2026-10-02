@@ -7,6 +7,7 @@ import { SocketProvider } from "./app/providers/SocketContext";
 import { MeetingProvider } from "./app/providers/MeetingContext";
 import "./app/styles/styles.css";
 import "./app/styles/editorial-workspace.css";
+import "./app/styles/unified-surfaces.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

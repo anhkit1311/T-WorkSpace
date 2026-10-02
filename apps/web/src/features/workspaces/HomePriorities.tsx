@@ -47,19 +47,24 @@ export function HomePriorities() {
     <section className="home-priorities" aria-label="Việc cần quan tâm">
       <header className="home-priorities__header">
         <div>
-          <span className="editorial-tag" style={{ display: "block", marginBottom: "4px" }}>
-            Nhiệm vụ & Sự kiện
-          </span>
+          <span className="editorial-tag editorial-tag--stacked">Nhiệm vụ & Sự kiện</span>
           <h2>Tiếp tục công việc</h2>
         </div>
         <span className="home-priorities__subtitle">Những việc dành cho bạn</span>
       </header>
       {error && (
         <p role="alert" className="home-priorities-error">
-          {error} <button type="button" onClick={() => setRevision((old) => old + 1)}>Thử lại</button>
+          {error}{" "}
+          <button type="button" onClick={() => setRevision((old) => old + 1)}>
+            Thử lại
+          </button>
         </p>
       )}
-      {!summary && !error && <p role="status" className="home-priorities-loading">Đang tải công việc và lịch họp…</p>}
+      {!summary && !error && (
+        <p role="status" className="home-priorities-loading">
+          Đang tải công việc và lịch họp…
+        </p>
+      )}
       {summary && (
         <div className="home-priority-grid">
           <article className="home-priority-card">
@@ -84,12 +89,16 @@ export function HomePriorities() {
                     >
                       <strong className="home-priority-item-title">{task.title}</strong>
                       <div className="home-priority-meta-row">
-                        <span className="home-priority-pill home-priority-pill--channel">#{task.channelName}</span>
+                        <span className="home-priority-pill home-priority-pill--channel">
+                          #{task.channelName}
+                        </span>
                         <span className={`home-priority-pill home-priority-pill--${task.status}`}>
                           {task.status === "doing" ? "Đang làm" : "Cần làm"}
                         </span>
                         {task.dueAt && (
-                          <span className={`home-priority-pill ${Date.parse(task.dueAt) < Date.now() ? "home-priority-pill--overdue" : "home-priority-pill--due"}`}>
+                          <span
+                            className={`home-priority-pill ${Date.parse(task.dueAt) < Date.now() ? "home-priority-pill--overdue" : "home-priority-pill--due"}`}
+                          >
                             {Date.parse(task.dueAt) < Date.now() ? "Quá hạn: " : "Hạn: "}
                             {new Date(task.dueAt).toLocaleDateString("vi-VN")}
                           </span>

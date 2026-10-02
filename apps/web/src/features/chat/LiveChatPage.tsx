@@ -128,6 +128,7 @@ export function ChatPage() {
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
   const [workspaceId, setWorkspaceId] = useState("");
   const [channels, setChannels] = useState<ChannelItem[]>([]);
+  const [meetingRoomId, setMeetingRoomId] = useState("");
   const [channelId, setChannelId] = useState("");
   const [channelSearch, setChannelSearch] = useState("");
   const [messageSearch, setMessageSearch] = useState("");
@@ -142,7 +143,7 @@ export function ChatPage() {
   const [members, setMembers] = useState<GroupMemberItem[]>([]);
   const [showStickers, setShowStickers] = useState(false);
   const [showInfoPanel, setShowInfoPanel] = useState(true);
-  const [filterTab, setFilterTab] = useState<"all" | "unread" | "groups" | "favorites">("all");
+  const [filterTab, setFilterTab] = useState<"all" | "unread" | "favorites">("all");
   const [showInChannelSearch, setShowInChannelSearch] = useState(false);
   const [recording, setRecording] = useState(false);
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
@@ -347,6 +348,7 @@ export function ChatPage() {
 
   useEffect(() => {
     setChannels([]);
+    setMeetingRoomId("");
     setChannelId("");
     setMembers([]);
     setMessages([]);
@@ -361,6 +363,7 @@ export function ChatPage() {
         if (!active || routeRef.current.view !== "chat") return;
         const text = items.filter((c) => c.type === "text");
         setChannels(text);
+        setMeetingRoomId(items.find((c) => c.type !== "text")?.id ?? "");
         const target = routeRef.current;
         if (target.workspaceId === workspaceId && target.channelId) {
           const allowed = text.some((item) => item.id === target.channelId);
@@ -1037,6 +1040,10 @@ export function ChatPage() {
   const visibleMessages = searchResults ?? messages;
   const draftLink = firstLink(content);
   const pinnedMessage = messages.find((m) => m.pinned);
+  const openMeetingRoom = () =>
+    workspaceId
+      ? openChannel(workspaceId, meetingRoomId || undefined, true)
+      : setActiveView("meetings");
 
   return (
     <section className="live-chat" aria-label="Tin nhắn nhóm">
@@ -1092,15 +1099,6 @@ export function ChatPage() {
           >
             Chưa đọc
             {totalUnread > 0 && <span className="filter-badge-red">{totalUnread}</span>}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={filterTab === "groups"}
-            className={`chat-filter-pill ${filterTab === "groups" ? "is-active" : ""}`}
-            onClick={() => setFilterTab("groups")}
-          >
-            Nhóm
           </button>
           <button
             type="button"
@@ -1262,18 +1260,9 @@ export function ChatPage() {
             <button
               type="button"
               className="chat-header-icon-btn"
-              title="Gọi nhóm"
-              aria-label="Gọi thoại"
-              onClick={() => setActiveView("meetings")}
-            >
-              <Icon name="phone" size={17} />
-            </button>
-            <button
-              type="button"
-              className="chat-header-icon-btn"
               title="Phòng họp video SFU"
               aria-label="Cuộc họp video"
-              onClick={() => setActiveView("meetings")}
+              onClick={openMeetingRoom}
             >
               <Icon name="video" size={17} />
             </button>
@@ -1289,30 +1278,27 @@ export function ChatPage() {
           </div>
         </header>
 
-        {/* Pinned Message Banner matching mockup */}
-        <div
-          className="chat-pinned-banner"
-          onClick={() => {
-            setMessageSearch("");
-            setSavedMode("pins");
-          }}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="chat-pinned-banner-left">
-            <div className="chat-pinned-pin-icon-circle">
-              <Icon name="pin" size={15} />
+        {pinnedMessage && (
+          <button
+            type="button"
+            className="chat-pinned-banner"
+            onClick={() => {
+              setMessageSearch("");
+              setSavedMode("pins");
+            }}
+          >
+            <div className="chat-pinned-banner-left">
+              <div className="chat-pinned-pin-icon-circle">
+                <Icon name="pin" size={15} />
+              </div>
+              <div className="chat-pinned-text">
+                <strong>Tin nhắn ghim</strong>
+                <span>{pinnedMessage.content || "Tệp đính kèm"}</span>
+              </div>
             </div>
-            <div className="chat-pinned-text">
-              <strong>Tin nhắn ghim</strong>
-              <span>
-                {pinnedMessage?.content ||
-                  "Lịch kiểm tra giữa kỳ và các tài liệu ôn tập quan trọng."}
-              </span>
-            </div>
-          </div>
-          <Icon name="chevron-right" size={16} />
-        </div>
+            <Icon name="chevron-right" size={16} />
+          </button>
+        )}
 
         {channel && (showInChannelSearch || messageSearch) && (
           <div className="chat-message-search">
@@ -1340,19 +1326,7 @@ export function ChatPage() {
         )}
 
         {error && (
-          <div
-            style={{
-              padding: "10px 24px",
-              background: "rgba(239, 68, 68, 0.1)",
-              borderBottom: "1px solid rgba(239, 68, 68, 0.2)",
-              color: "#ef4444",
-              fontSize: "13px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-            role="alert"
-          >
+          <div className="inline-alert inline-alert--flush" role="alert">
             <span>{error}</span>
             <Button size="sm" variant="ghost" onClick={() => setRevision((n) => n + 1)}>
               Tải lại
@@ -1381,10 +1355,7 @@ export function ChatPage() {
             </div>
           )}
           {loading || messagesLoading || (channelId && messagesChannelId !== channelId) ? (
-            <p
-              role="status"
-              style={{ textAlign: "center", color: "var(--editorial-text-muted)", margin: "auto" }}
-            >
+            <p role="status" className="loading-note">
               Đang tải cuộc trò chuyện…
             </p>
           ) : !workspace ? (
@@ -1689,15 +1660,6 @@ export function ChatPage() {
             ))}
 
           <form className="chat-floating-dock-form" onSubmit={submit}>
-            <button
-              type="button"
-              className="chat-dock-circle-btn"
-              title="Đính kèm tệp"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Icon name="plus" size={18} />
-            </button>
-
             <textarea
               id="chat-message"
               ref={composerRef}
@@ -1836,20 +1798,8 @@ export function ChatPage() {
               <button
                 type="button"
                 className="chat-info-circle-action"
-                title="Gọi nhóm"
-                onClick={() => setActiveView("meetings")}
-              >
-                <div className="circle-action-icon">
-                  <Icon name="phone" size={18} />
-                </div>
-                <span>Gọi nhóm</span>
-              </button>
-
-              <button
-                type="button"
-                className="chat-info-circle-action"
                 title="Cuộc họp video"
-                onClick={() => setActiveView("meetings")}
+                onClick={openMeetingRoom}
               >
                 <div className="circle-action-icon">
                   <Icon name="video" size={18} />
@@ -1873,7 +1823,10 @@ export function ChatPage() {
                 type="button"
                 className="chat-info-circle-action"
                 title="Tìm kiếm"
-                onClick={() => document.getElementById("message-search")?.focus()}
+                onClick={() => {
+                  setShowInChannelSearch(true);
+                  requestAnimationFrame(() => document.getElementById("message-search")?.focus());
+                }}
               >
                 <div className="circle-action-icon">
                   <Icon name="search" size={18} />
@@ -1882,16 +1835,14 @@ export function ChatPage() {
               </button>
             </div>
 
-            <div className="chat-info-desc-box">
-              <div className="chat-info-desc-content">
-                <strong>Mô tả</strong>
-                <p>
-                  Không gian trao đổi học tập và sinh hoạt của{" "}
-                  {channel ? channel.name : workspace?.name || "Kênh"}.
-                </p>
+            {channel?.description?.trim() && (
+              <div className="chat-info-desc-box">
+                <div className="chat-info-desc-content">
+                  <strong>Mô tả</strong>
+                  <p>{channel.description}</p>
+                </div>
               </div>
-              <Icon name="chevron-right" size={16} />
-            </div>
+            )}
 
             <div className="chat-info-menu-list">
               <button
@@ -1956,18 +1907,8 @@ export function ChatPage() {
                 }}
               >
                 <div className="menu-item-left">
-                  <Icon name="file" size={18} />
-                  <span>Tệp tin</span>
-                </div>
-                <div className="menu-item-right">
-                  <Icon name="chevron-right" size={14} />
-                </div>
-              </button>
-
-              <button type="button" className="chat-info-menu-item">
-                <div className="menu-item-left">
-                  <Icon name="image" size={18} />
-                  <span>Ảnh & video</span>
+                  <Icon name="bookmark" size={18} />
+                  <span>Tin đã đánh dấu</span>
                 </div>
                 <div className="menu-item-right">
                   <Icon name="chevron-right" size={14} />
@@ -1985,16 +1926,6 @@ export function ChatPage() {
                 <div className="menu-item-left">
                   <Icon name="pin" size={18} />
                   <span>Tin nhắn ghim</span>
-                </div>
-                <div className="menu-item-right">
-                  <Icon name="chevron-right" size={14} />
-                </div>
-              </button>
-
-              <button type="button" className="chat-info-menu-item">
-                <div className="menu-item-left">
-                  <Icon name="link" size={18} />
-                  <span>Liên kết</span>
                 </div>
                 <div className="menu-item-right">
                   <Icon name="chevron-right" size={14} />

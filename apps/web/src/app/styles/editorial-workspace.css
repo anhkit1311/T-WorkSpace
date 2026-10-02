@@ -3,14 +3,14 @@
    Matching Login & Landing Page (Minimalist Editorial / Cinematic Aesthetic)
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..700;1,400..700&family=Inter:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..700;1,400..700&family=Inter:wght@400;500;600;700&display=swap");
 
 /* --------------------------------------------------------------------------
    0. Design Tokens & Root Variables
    -------------------------------------------------------------------------- */
 :root {
-  --font-display: 'Playfair Display', Georgia, serif;
-  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
 
   /* Color Palette matching Login & Landing */
   --editorial-text: #0f172a;
@@ -89,32 +89,6 @@ body,
   color: var(--editorial-text) !important;
   display: flex !important;
   flex-direction: column !important;
-}
-
-.editorial-workspace-video-layer {
-  position: fixed !important;
-  inset: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  overflow: hidden !important;
-  z-index: 0 !important;
-  pointer-events: none !important;
-}
-
-.editorial-workspace-video {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
-  object-position: center !important;
-}
-
-.editorial-workspace-overlay {
-  position: absolute !important;
-  inset: 0 !important;
-  background: rgba(231, 237, 245, 0.22) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  pointer-events: none !important;
 }
 
 /* ==========================================================================
@@ -361,7 +335,9 @@ body,
 .dock-label {
   position: relative !important;
   z-index: 1 !important;
-  font-size: 11px !important;
+  white-space: nowrap !important;
+  letter-spacing: -0.01em !important;
+  font-size: 10.5px !important;
   font-weight: 550 !important;
   line-height: 1 !important;
 }
@@ -585,7 +561,10 @@ body,
   text-align: left !important;
   cursor: pointer !important;
   position: relative !important;
-  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms ease, color 150ms ease !important;
+  transition:
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 150ms ease,
+    color 150ms ease !important;
   outline: none !important;
 }
 
@@ -816,9 +795,17 @@ body,
     border-radius: 20px !important;
   }
   .editorial-dock .dock-btn {
-    width: 19% !important;
+    flex: 1 1 0 !important;
+    width: auto !important;
+    min-width: 0 !important;
     max-width: 72px;
     height: 54px !important;
+  }
+  .editorial-dock .dock-label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .editorial-stage-viewport {
     height: auto !important;
@@ -855,7 +842,6 @@ body,
     transform: translateX(0) !important;
   }
 }
-
 
 /* --------------------------------------------------------------------------
    3. Topbar (Glassmorphic Editorial Bar)
@@ -948,7 +934,6 @@ body,
    4. Live Chat View (Delegated to features/chat/chat-live.css)
    -------------------------------------------------------------------------- */
 
-
 /* --------------------------------------------------------------------------
    5. Video Meetings View (MeetingPage — Cinematic SFU Stage)
    -------------------------------------------------------------------------- */
@@ -990,7 +975,9 @@ body,
 
 .meeting-room-card.is-selected {
   border-color: #000000 !important;
-  box-shadow: 0 0 0 2px #000000, var(--editorial-shadow-lg) !important;
+  box-shadow:
+    0 0 0 2px #000000,
+    var(--editorial-shadow-lg) !important;
 }
 
 .meeting-room-card__title {
@@ -1019,7 +1006,9 @@ body,
 .meeting-tile.is-speaking,
 .video-tile.is-speaking {
   border-color: #0f172a !important;
-  box-shadow: 0 0 0 2px #0f172a, 0 16px 36px rgba(15, 23, 42, 0.25) !important;
+  box-shadow:
+    0 0 0 2px #0f172a,
+    0 16px 36px rgba(15, 23, 42, 0.25) !important;
 }
 
 /* Floating Controls Bar in Meeting */
@@ -1101,7 +1090,10 @@ body,
   padding: 16px !important;
   color: #0f172a !important;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
-  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease !important;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease !important;
 }
 
 .task-card:hover {
@@ -1213,7 +1205,10 @@ body,
   font-family: var(--font-body) !important;
   font-weight: 500 !important;
   border: 1px solid #263450 !important;
-  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms ease, box-shadow 150ms ease !important;
+  transition:
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 150ms ease,
+    box-shadow 150ms ease !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15) !important;
 }
 

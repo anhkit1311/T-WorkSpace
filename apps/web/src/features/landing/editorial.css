@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..700;1,400..700&family=Inter:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..700;1,400..700&family=Inter:wght@400;500;600;700&display=swap");
 
 /* ==========================================================================
    Minimalist Editorial / Cinematic Design System (Vietnamese Typographic Harmony)
@@ -14,8 +14,8 @@
   --color-bg-surface: #ffffff;
   --color-bg-warm: #f8fafc;
   --color-border-subtle: rgba(15, 23, 42, 0.08);
-  --font-display: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
-  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: "Playfair Display", "Cormorant Garamond", Georgia, serif;
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
 }
 
 html {
@@ -65,7 +65,11 @@ html {
   left: 0;
   right: 0;
   z-index: 50;
-  transition: background-color 300ms ease, backdrop-filter 300ms ease, box-shadow 300ms ease, border-color 300ms ease;
+  transition:
+    background-color 300ms ease,
+    backdrop-filter 300ms ease,
+    box-shadow 300ms ease,
+    border-color 300ms ease;
   border-bottom: 1px solid transparent;
 }
 
@@ -147,7 +151,9 @@ html {
   font-weight: 500;
   color: var(--color-primary-text);
   text-decoration: none;
-  transition: opacity 200ms ease, color 200ms ease;
+  transition:
+    opacity 200ms ease,
+    color 200ms ease;
   background: none;
   border: none;
   padding: 0;
@@ -184,7 +190,10 @@ html {
   font-weight: 500;
   white-space: nowrap;
   text-decoration: none;
-  transition: transform 200ms ease-in-out, opacity 150ms ease, background-color 150ms ease;
+  transition:
+    transform 200ms ease-in-out,
+    opacity 150ms ease,
+    background-color 150ms ease;
 }
 
 .editorial-pill-btn:hover {
@@ -292,28 +301,37 @@ html {
   }
 }
 
-/* Staggered entrance animations */
-@keyframes fadeRise {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Hero entrance is a GSAP timeline; each word is masked so it can rise into place. */
+.hero-word {
+  display: inline-block;
+  overflow: hidden;
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
+  vertical-align: top;
 }
 
-.editorial-stagger-h1 {
-  animation: fadeRise 0.8s ease-out 0s both;
+.hero-word > span {
+  display: inline-block;
+  will-change: transform;
 }
 
-.editorial-stagger-p {
-  animation: fadeRise 0.8s ease-out 0.2s both;
+.hero-word + .hero-word {
+  margin-left: 0.25em;
 }
 
-.editorial-stagger-cta {
-  animation: fadeRise 0.8s ease-out 0.4s both;
+.editorial-hero {
+  isolation: isolate;
+}
+
+/* Soft veil keeps the copy legible over the brightest parts of the landscape. */
+.editorial-hero::before {
+  content: "";
+  position: absolute;
+  inset: 18% 8% 14%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(255 255 255 / 42%), transparent);
+  pointer-events: none;
 }
 
 /* ==========================================================================
@@ -425,8 +443,9 @@ html {
   border-radius: 24px;
   overflow: hidden;
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.04);
-  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 300ms ease;
-  cursor: pointer;
+  transition:
+    transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 300ms ease;
 }
 
 .editorial-residence-card:hover {
@@ -451,6 +470,30 @@ html {
 
 .editorial-residence-card:hover .editorial-residence-img {
   transform: scale(1.06);
+}
+
+.editorial-residence-img {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgb(255 255 255 / 35%);
+}
+
+.editorial-residence-img svg {
+  width: 48px;
+  height: 48px;
+}
+
+.editorial-residence-img--meetings {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+
+.editorial-residence-img--chat {
+  background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+}
+
+.editorial-residence-img--tasks {
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
 }
 
 .editorial-residence-badge {
@@ -532,7 +575,9 @@ html {
   padding: 36px 28px;
   display: flex;
   flex-direction: column;
-  transition: transform 250ms ease, box-shadow 250ms ease;
+  transition:
+    transform 250ms ease,
+    box-shadow 250ms ease;
 }
 
 .editorial-arch-item:hover {
@@ -679,73 +724,16 @@ html {
   margin: 0;
 }
 
-/* ==========================================================================
-   Section 4: Journal Articles
-   ========================================================================== */
-
-.editorial-journal-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 32px;
-  margin-bottom: 48px;
-}
-
-@media (max-width: 900px) {
-  .editorial-journal-grid {
-    grid-template-columns: 1fr;
-    gap: 32px;
-  }
-}
-
-.editorial-journal-card {
-  display: flex;
-  flex-direction: column;
-  border-top: 1px solid var(--color-primary-text);
-  padding-top: 24px;
-  cursor: pointer;
-  transition: opacity 200ms ease;
-}
-
-.editorial-journal-card:hover {
-  opacity: 0.75;
-}
-
-.editorial-journal-meta {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+.editorial-metrics-note {
+  margin: 16px 0 0;
+  text-align: center;
+  font-size: 12.5px;
   color: var(--color-secondary-text);
-  margin-bottom: 16px;
 }
 
-.editorial-journal-title {
-  font-family: var(--font-display);
-  font-size: 26px;
-  font-weight: 400;
-  line-height: 1.2;
-  letter-spacing: -0.6px;
-  color: var(--color-primary-text);
-  margin: 0 0 12px;
-}
-
-.editorial-journal-excerpt {
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--color-muted-text);
-  margin: 0 0 20px;
-  flex: 1;
-}
-
-.editorial-journal-read {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-primary-text);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.editorial-closing-cta {
+  margin-top: 64px;
+  text-align: center;
 }
 
 /* ==========================================================================
@@ -788,4 +776,44 @@ html {
   color: var(--color-secondary-text);
   flex-wrap: wrap;
   gap: 16px;
+}
+
+.editorial-footer-brand {
+  display: inline-block;
+  margin-bottom: 12px;
+}
+
+.editorial-footer-lead {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: hsl(215, 25%, 40%);
+}
+
+.editorial-footer-columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 48px;
+}
+
+.editorial-footer-heading {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.editorial-footer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.editorial-footer-list--muted {
+  color: hsl(215, 25%, 40%);
 }

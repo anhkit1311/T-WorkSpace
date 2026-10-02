@@ -7,7 +7,7 @@ import { useApp } from "../../app/providers/AppContext";
 import { Badge, Button, Field, Modal } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
 import "./workspace-home.css";
-import {HomePriorities} from './HomePriorities';
+import { HomePriorities } from "./HomePriorities";
 
 type Group = WorkspaceItem & { channels: ChannelItem[] };
 
@@ -132,12 +132,7 @@ export function WorkspaceHomePage() {
   };
 
   return (
-    <motion.div
-      className="workspace-home"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.18, ease: "easeOut" }}
-    >
+    <div className="workspace-home">
       {/* Hero Greeting Section */}
       <section className="workspace-home__hero">
         <div className="workspace-home__greeting">
@@ -212,23 +207,10 @@ export function WorkspaceHomePage() {
         </div>
       </section>
 
-      <HomePriorities/>
+      <HomePriorities />
       {/* Error Alert */}
       {error && (
-        <div
-          role="alert"
-          style={{
-            padding: "14px 18px",
-            marginBottom: "24px",
-            background: "rgba(239, 68, 68, 0.1)",
-            border: "1px solid rgba(239, 68, 68, 0.25)",
-            borderRadius: "12px",
-            color: "#ef4444",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
+        <div role="alert" className="inline-alert inline-alert--spaced">
           <span>{error}</span>
           <Button size="sm" variant="ghost" onClick={() => void loadWorkspaces()}>
             Thử lại
@@ -241,14 +223,17 @@ export function WorkspaceHomePage() {
         <div className="workspace-home__section-head">
           <div className="workspace-home__section-title">
             <div>
-              <span className="editorial-tag" style={{ display: "block", marginBottom: "4px" }}>
-                Hệ sinh thái làm việc
-              </span>
+              <span className="editorial-tag editorial-tag--stacked">Hệ sinh thái làm việc</span>
               <h2>Nhóm làm việc của bạn</h2>
             </div>
             {!loading && <span className="workspace-home__count-badge">{groups.length} nhóm</span>}
           </div>
-          <Button size="sm" variant="secondary" icon="plus" onClick={() => setCreateModalOpen(true)}>
+          <Button
+            size="sm"
+            variant="secondary"
+            icon="plus"
+            onClick={() => setCreateModalOpen(true)}
+          >
             Tạo nhóm
           </Button>
         </div>
@@ -415,30 +400,36 @@ export function WorkspaceHomePage() {
             if (!leaving) setLeavingGroup(null);
           }}
         >
-          <p>
+          <p className="modal-lead">
             Bạn sẽ mất quyền đọc nội dung và mọi kênh riêng tư trong {leavingGroup.name}. Muốn tham
             gia lại, bạn cần lời mời mới.
           </p>
-          <Button
-            disabled={leaving}
-            loading={leaving}
-            onClick={() => {
-              if (!accessToken) return;
-              setLeaving(true);
-              void governanceApi(accessToken, `workspaces/${leavingGroup.id}/leave`, "POST", {})
-                .then(() => {
-                  setGroups((items) => items.filter((item) => item.id !== leavingGroup.id));
-                  setLeavingGroup(null);
-                  notify("Đã rời nhóm");
-                })
-                .catch((reason) => {
-                  setError(reason instanceof Error ? reason.message : "Không thể rời nhóm.");
-                })
-                .finally(() => setLeaving(false));
-            }}
-          >
-            Rời nhóm
-          </Button>
+          <div className="modal-footer-actions">
+            <Button variant="ghost" disabled={leaving} onClick={() => setLeavingGroup(null)}>
+              Hủy
+            </Button>
+            <Button
+              variant="danger"
+              disabled={leaving}
+              loading={leaving}
+              onClick={() => {
+                if (!accessToken) return;
+                setLeaving(true);
+                void governanceApi(accessToken, `workspaces/${leavingGroup.id}/leave`, "POST", {})
+                  .then(() => {
+                    setGroups((items) => items.filter((item) => item.id !== leavingGroup.id));
+                    setLeavingGroup(null);
+                    notify("Đã rời nhóm");
+                  })
+                  .catch((reason) => {
+                    setError(reason instanceof Error ? reason.message : "Không thể rời nhóm.");
+                  })
+                  .finally(() => setLeaving(false));
+              }}
+            >
+              Rời nhóm
+            </Button>
+          </div>
         </Modal>
       )}
       <AnimatePresence>
@@ -453,14 +444,7 @@ export function WorkspaceHomePage() {
               }
             }}
             footer={
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: "10px",
-                  width: "100%",
-                }}
-              >
+              <div className="modal-footer-actions">
                 <Button
                   variant="ghost"
                   disabled={creating}
@@ -483,14 +467,7 @@ export function WorkspaceHomePage() {
             }
           >
             <form id="create-workspace-form" onSubmit={handleCreateWorkspace}>
-              <p
-                style={{
-                  fontSize: "13px",
-                  color: "var(--text-secondary)",
-                  lineHeight: 1.5,
-                  margin: "0 0 16px",
-                }}
-              >
+              <p className="modal-lead">
                 Nhóm làm việc là nơi bạn và các thành viên cùng trao đổi tin nhắn thời gian thực và
                 tham gia hội nghị truyền hình SFU bảo mật. Bạn sẽ tự động là{" "}
                 <strong>Quản trị viên (Admin)</strong> của nhóm này.
@@ -522,6 +499,6 @@ export function WorkspaceHomePage() {
           </Modal>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }

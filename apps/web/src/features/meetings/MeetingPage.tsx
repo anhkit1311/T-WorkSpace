@@ -666,26 +666,17 @@ export function MeetingPage() {
   return (
     <div className="meetings-page">
       {navigationError && (
-        <section role="alert">
-          <h2>Không thể mở phòng họp</h2>
+        <section className="state-card" role="alert">
+          <h3>Không thể mở phòng họp</h3>
           <p>{navigationError}</p>
-          <button onClick={() => setActiveView("overview")}>Về trang chủ</button>
+          <Button variant="secondary" size="sm" onClick={() => setActiveView("overview")}>
+            Về trang chủ
+          </Button>
         </section>
       )}
       {/* Global Error Notice */}
       {error && (
-        <div
-          role="alert"
-          style={{
-            padding: "12px 18px",
-            marginBottom: "20px",
-            background: "rgba(239, 68, 68, 0.1)",
-            border: "1px solid rgba(239, 68, 68, 0.25)",
-            borderRadius: "8px",
-            color: "#ef4444",
-            fontSize: "13px",
-          }}
-        >
+        <div role="alert" className="inline-alert inline-alert--spaced">
           {error}
         </div>
       )}
@@ -705,45 +696,28 @@ export function MeetingPage() {
               Kết nối cuộc họp đã bị ngắt. Thiết bị đã được tắt; chọn “Tham gia” để kết nối lại.
             </div>
           )}
-          <div style={{ marginBottom: "24px" }}>
+          <header className="page-hero">
             <h1 className="meeting-page-title">Cuộc họp video</h1>
             <p className="meeting-page-description">
               Chọn phòng trong nhóm của bạn và kiểm tra thiết bị trước khi tham gia.
             </p>
-          </div>
+          </header>
 
           {loading ? (
-            <p style={{ color: "var(--text-muted)", padding: "32px 0" }}>
+            <p role="status" className="loading-note">
               Đang tải danh sách phòng họp…
             </p>
           ) : rooms.length === 0 ? (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "60px 24px",
-                background: "var(--surface)",
-                border: "1px dashed var(--border)",
-                borderRadius: "10px",
-              }}
-            >
-              <Icon
-                name="video"
-                size={36}
-                style={{ color: "var(--text-muted)", marginBottom: "12px" }}
-              />
-              <h3 style={{ fontSize: "16px", fontWeight: 650, margin: "0 0 8px" }}>
-                Chưa có phòng họp nào
-              </h3>
-              <p style={{ fontSize: "14px", color: "var(--text-secondary)", margin: 0 }}>
+            <div className="state-card state-card--compact">
+              <span className="state-card__icon">
+                <Icon name="video" size={26} />
+              </span>
+              <h3>Chưa có phòng họp nào</h3>
+              <p>
                 Bạn chưa có phòng họp nào trong các nhóm hiện tại. Hãy tạo nhóm hoặc nhờ Quản trị
                 viên thêm bạn vào nhóm.
               </p>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setActiveView("overview")}
-                style={{ marginTop: "16px" }}
-              >
+              <Button variant="secondary" size="sm" onClick={() => setActiveView("overview")}>
                 Xem nhóm làm việc
               </Button>
             </div>
