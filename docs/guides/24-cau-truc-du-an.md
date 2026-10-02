@@ -107,3 +107,9 @@ Một số API client trong feature chat vẫn cung cấp hàm đọc workspace/
 Typecheck, lint, unit tests và production build qua. `npm run test:sfu` qua 9 bài, không fail/skip: chat, nhiều API instance, quyền/quản trị, meeting sessions, storage, Kanban và worker recovery. Những bài SFU này không thay thế kiểm chứng RTP thật trên trình duyệt.
 
 Đã kiểm tra đường dẫn import và liên kết tài liệu, không phát hiện tham chiếu hỏng. Đã xóa 76 file build ở vị trí cũ sau khi xác nhận có bản thay thế trong cấu trúc mới, rồi chạy lại tests thành công. `npm run db:migrate` xác nhận cả 20 migration đã được áp dụng, không thay đổi checksum.
+
+## Quản lý phiên bản — 03/10/2026
+
+Dự án dùng git từ commit baseline `f0a29f2`; mọi thay đổi sau đó đi qua commit thay vì zip trong `backups/`. `backups/` và `postgres-data/` chỉ còn ở máy local (đã nằm trong `.gitignore`). `postgres-data/` vẫn là bind mount của `infra/docker-compose.yml`, không di chuyển.
+
+`.gitattributes` cố định LF cho mọi file văn bản, khớp với Prettier. Đã xóa hai bản sao `editorial.html`/`observe.html` ở thư mục gốc (giống hệt bản trong `apps/web/public/`) và hai file `*.backup.tsx` không còn được import; nội dung cũ vẫn có trong lịch sử git.
