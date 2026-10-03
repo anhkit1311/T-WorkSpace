@@ -14,6 +14,7 @@ import {
   getWorkspaceMembersApi,
 } from "../chat/api";
 import { Icon, type IconName } from "../../shared/ui/Icon";
+import { isSelectPickerEvent } from "../../shared/lib/select-picker";
 import "./search-enhancements.css";
 
 interface Props {
@@ -211,7 +212,7 @@ export function NotionSearchModal({
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape" && !isSelectPickerEvent(event)) onClose();
       if (event.key !== "Tab" || !dialogRef.current) return;
       const controls = [
         ...dialogRef.current.querySelectorAll<HTMLElement>(

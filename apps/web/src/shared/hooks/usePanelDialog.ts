@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { isSelectPickerEvent } from "../lib/select-picker";
 // Panels behave as dialogs: trap focus, Escape closes, restore prior inert/focus state.
 export function usePanelDialog(onClose: () => void, enabled = true, excludeSibling?: string) {
   const ref = useRef<HTMLElement>(null),
@@ -31,6 +32,7 @@ export function usePanelDialog(onClose: () => void, enabled = true, excludeSibli
     (items()[0] ?? panel).focus();
     const key = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        if (isSelectPickerEvent(event)) return;
         event.preventDefault();
         close.current();
         return;

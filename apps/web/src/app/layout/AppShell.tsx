@@ -8,6 +8,11 @@ import { NotionSearchModal } from "../../features/search/NotionSearchModal";
 import { getWorkspacesApi } from "../../features/chat/api";
 import { PageErrorBoundary } from "../../shared/ui/PageErrorBoundary";
 import { usePanelDialog } from "../../shared/hooks/usePanelDialog";
+import { governanceApi } from "../../features/workspaces/api";
+import { ViewReveal } from "../../shared/motion/ViewReveal";
+import { viewTransition } from "../../shared/motion/tokens";
+import type { IconName } from "../../shared/ui/Icon";
+import type { ViewId } from "../types";
 
 const WorkspaceHomePage = lazy(() =>
   import("../../features/workspaces/WorkspaceHomePage").then((m) => ({
@@ -49,6 +54,15 @@ function ViewFallback() {
     </div>
   );
 }
+
+const dockItems: { id: ViewId; label: string; icon: IconName; also?: ViewId[] }[] = [
+  { id: "overview", label: "Trang chủ", icon: "home" },
+  { id: "chat", label: "Tin nhắn", icon: "message" },
+  { id: "meetings", label: "Cuộc họp", icon: "video" },
+  { id: "tasks", label: "Công việc", icon: "tasks" },
+  { id: "notifications", label: "Thông báo", icon: "bell" },
+  { id: "admin", label: "Cài đặt", icon: "settings", also: ["profile"] },
+];
 
 export function AppShell() {
   const {
@@ -92,6 +106,25 @@ export function AppShell() {
       socket?.off("access_revoked", refresh);
     };
   }, [accessToken, socket, activeView]);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  useEffect(() => {
+    if (!accessToken) return;
+    let active = true;
+    const refresh = () =>
+      void governanceApi<{ unreadCount: number }>(accessToken, "notifications?unread=true")
+        .then((page) => {
+          if (active) setUnreadNotifications(page.unreadCount);
+        })
+        .catch(() => {});
+    refresh();
+    socket?.on("notifications_changed", refresh);
+    socket?.on("connect", refresh);
+    return () => {
+      active = false;
+      socket?.off("notifications_changed", refresh);
+      socket?.off("connect", refresh);
+    };
+  }, [accessToken, socket]);
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
@@ -148,10 +181,12 @@ export function AppShell() {
   const renderPage = () => {
     if (route.invalid)
       return (
-        <section role="alert">
+        <section className="page-load-error" role="alert">
           <h2>Đường dẫn không hợp lệ</h2>
           <p>Trang hoặc mã tài nguyên trong liên kết không tồn tại.</p>
-          <button onClick={() => setActiveView("overview")}>Về trang chủ</button>
+          <Button icon="home" onClick={() => setActiveView("overview")}>
+            Về trang chủ
+          </Button>
         </section>
       );
     let Component;
@@ -167,7 +202,9 @@ export function AppShell() {
 
     return (
       <PageErrorBoundary key={activeView}>
-        <Suspense fallback={<ViewFallback />}>{Component}</Suspense>
+        <Suspense fallback={<ViewFallback />}>
+          <ViewReveal>{Component}</ViewReveal>
+        </Suspense>
       </PageErrorBoundary>
     );
   };
@@ -176,19 +213,6 @@ export function AppShell() {
     <div
       className={`app-shell editorial-workspace-shell ${sidebarCollapsed ? "is-collapsed" : ""}`}
     >
-      <div className="editorial-workspace-video-layer" aria-hidden="true">
-        <video
-          className="editorial-workspace-video"
-          src="https://designerstephen.github.io/public-assets/videos/serene-art-hero.mp4"
-          poster="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=2000&q=80"
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="auto"
-        />
-        <div className="editorial-workspace-overlay" />
-      </div>
       {mobileNavOpen && (
         <button
           aria-label="Đóng thanh điều hướng"
@@ -217,11 +241,24 @@ export function AppShell() {
             type="button"
             className="topbar-action-icon-btn topbar-bell-btn"
             title="Thông báo"
-            aria-label="Thông báo"
+            aria-label={
+              unreadNotifications ? `Thông báo (${unreadNotifications} chưa đọc)` : "Thông báo"
+            }
             onClick={() => setActiveView("notifications")}
           >
             <Icon name="bell" size={17} />
-            <span className="topbar-bell-dot" aria-hidden="true" />
+            <AnimatePresence>
+              {unreadNotifications > 0 && (
+                <motion.span
+                  className="topbar-bell-dot"
+                  aria-hidden="true"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  exit={{ scale: 0 }}
+                  transition={{ type: "spring", stiffness: 520, damping: 26 }}
+                />
+              )}
+            </AnimatePresence>
           </button>
           <button
             type="button"
@@ -291,106 +328,38 @@ export function AppShell() {
           className={`editorial-dock ${mobileNavOpen ? "is-mobile-open" : ""}`}
           aria-label="Điều hướng chính"
         >
-          <button
-            type="button"
-            className={`dock-btn ${activeView === "overview" ? "is-active" : ""}`}
-            onClick={() => {
-              setActiveView("overview");
-              setMobileNavOpen(false);
-            }}
-            title="Trang chủ"
-          >
-            {activeView === "overview" && (
-              <motion.span
-                layoutId="dock-active-pill"
-                className="dock-active-pill"
-                transition={{ type: "spring", stiffness: 450, damping: 32 }}
-              />
-            )}
-            <Icon name="home" size={20} />
-            <span className="dock-label">Trang chủ</span>
-          </button>
-
-          <button
-            type="button"
-            className={`dock-btn ${activeView === "chat" ? "is-active" : ""}`}
-            onClick={() => {
-              setActiveView("chat");
-              setMobileNavOpen(false);
-            }}
-            title="Tin nhắn"
-          >
-            {activeView === "chat" && (
-              <motion.span
-                layoutId="dock-active-pill"
-                className="dock-active-pill"
-                transition={{ type: "spring", stiffness: 450, damping: 32 }}
-              />
-            )}
-            <Icon name="message" size={20} />
-            <span className="dock-label">Tin nhắn</span>
-            {unreadCount > 0 && <span className="dock-badge-dot" />}
-          </button>
-
-          <button
-            type="button"
-            className={`dock-btn ${activeView === "meetings" ? "is-active" : ""}`}
-            onClick={() => {
-              setActiveView("meetings");
-              setMobileNavOpen(false);
-            }}
-            title="Danh bạ / Hội nghị"
-          >
-            {activeView === "meetings" && (
-              <motion.span
-                layoutId="dock-active-pill"
-                className="dock-active-pill"
-                transition={{ type: "spring", stiffness: 450, damping: 32 }}
-              />
-            )}
-            <Icon name="users" size={20} />
-            <span className="dock-label">Danh bạ</span>
-          </button>
-
-          <button
-            type="button"
-            className={`dock-btn ${activeView === "tasks" ? "is-active" : ""}`}
-            onClick={() => {
-              setActiveView("tasks");
-              setMobileNavOpen(false);
-            }}
-            title="Tệp tin / Nhiệm vụ"
-          >
-            {activeView === "tasks" && (
-              <motion.span
-                layoutId="dock-active-pill"
-                className="dock-active-pill"
-                transition={{ type: "spring", stiffness: 450, damping: 32 }}
-              />
-            )}
-            <Icon name="file" size={20} />
-            <span className="dock-label">Tệp tin</span>
-          </button>
-
-          <button
-            type="button"
-            className={`dock-btn ${activeView === "admin" || activeView === "profile" ? "is-active" : ""}`}
-            onClick={() => {
-              setActiveView(canManage ? "admin" : "profile");
-              setMobileNavOpen(false);
-            }}
-            title="Cài đặt hệ thống"
-          >
-            {(activeView === "admin" || activeView === "profile") && (
-              <motion.span
-                layoutId="dock-active-pill"
-                className="dock-active-pill"
-                transition={{ type: "spring", stiffness: 450, damping: 32 }}
-              />
-            )}
-            <Icon name="settings" size={20} />
-            <span className="dock-label">Cài đặt</span>
-          </button>
+          {dockItems.map((item) => {
+            const selected = activeView === item.id || Boolean(item.also?.includes(activeView));
+            const target = item.id === "admin" && !canManage ? "profile" : item.id;
+            return (
+              <motion.button
+                key={item.id}
+                type="button"
+                className={`dock-btn ${selected ? "is-active" : ""}`}
+                aria-current={selected ? "page" : undefined}
+                whileTap={{ scale: 0.94 }}
+                onClick={() => {
+                  setActiveView(target);
+                  setMobileNavOpen(false);
+                }}
+                title={item.label}
+              >
+                {selected && (
+                  <motion.span
+                    layoutId="dock-active-pill"
+                    className="dock-active-pill"
+                    transition={{ type: "spring", stiffness: 450, damping: 32 }}
+                  />
+                )}
+                <Icon name={item.icon} size={20} />
+                <span className="dock-label">{item.label}</span>
+                {item.id === "chat" && unreadCount > 0 && <span className="dock-badge-dot" />}
+                {item.id === "notifications" && unreadNotifications > 0 && (
+                  <span className="dock-badge-dot" />
+                )}
+              </motion.button>
+            );
+          })}
         </aside>
 
         {/* Content Viewport */}
@@ -425,10 +394,9 @@ export function AppShell() {
               <motion.div
                 key={activeView}
                 className="view-transition-wrapper"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0, transition: { duration: 0.08, ease: "easeOut" } }}
-                transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                initial={viewTransition.initial}
+                animate={viewTransition.animate}
+                exit={viewTransition.exit}
               >
                 {renderPage()}
               </motion.div>
@@ -463,14 +431,7 @@ export function AppShell() {
             eyebrow="TÀI KHOẢN"
             onClose={() => setEditProfileOpen(false)}
             footer={
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  width: "100%",
-                }}
-              >
+              <div className="modal-footer-split">
                 <Button
                   variant="danger"
                   type="button"
@@ -482,7 +443,7 @@ export function AppShell() {
                 >
                   Đăng xuất
                 </Button>
-                <div style={{ display: "flex", gap: "8px" }}>
+                <div className="modal-footer-actions">
                   <Button variant="ghost" type="button" onClick={() => setEditProfileOpen(false)}>
                     Hủy
                   </Button>
@@ -494,28 +455,8 @@ export function AppShell() {
             }
           >
             <form id="edit-profile-form" onSubmit={submitEditProfile}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "14px",
-                  padding: "12px 14px",
-                  background: "var(--bg-subtle, #f5f5f7)",
-                  borderRadius: "10px",
-                  marginBottom: "18px",
-                  border: "1px solid var(--border)",
-                }}
-              >
-                <span
-                  className="notion-profile-square"
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    fontSize: "1.1rem",
-                    borderRadius: "8px",
-                    flexShrink: 0,
-                  }}
-                >
+              <div className="identity-summary">
+                <span className="notion-profile-square identity-summary__avatar">
                   {editName
                     .trim()
                     .split(/\s+/)
@@ -523,13 +464,9 @@ export function AppShell() {
                     .map((p) => p[0]?.toUpperCase())
                     .join("") || initials}
                 </span>
-                <div style={{ overflow: "hidden" }}>
-                  <strong style={{ display: "block", fontSize: "0.95rem" }}>
-                    {editName.trim() || displayName}
-                  </strong>
-                  <small style={{ color: "var(--muted, #868e96)", wordBreak: "break-all" }}>
-                    {userEmail}
-                  </small>
+                <div className="identity-summary__text">
+                  <strong>{editName.trim() || displayName}</strong>
+                  <small>{userEmail}</small>
                 </div>
               </div>
 
@@ -547,13 +484,7 @@ export function AppShell() {
               </Field>
 
               <Field label="Địa chỉ Email" hint="Tài khoản email dùng để đăng nhập hệ thống">
-                <input
-                  type="email"
-                  value={userEmail}
-                  disabled
-                  readOnly
-                  style={{ opacity: 0.7, cursor: "not-allowed" }}
-                />
+                <input type="email" value={userEmail} disabled readOnly />
               </Field>
             </form>
           </Modal>
