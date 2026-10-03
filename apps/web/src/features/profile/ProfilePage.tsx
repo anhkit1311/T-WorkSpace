@@ -178,7 +178,7 @@ export function ProfilePage() {
             {avatarUrl ? (
               <img src={avatarUrl} alt="Ảnh đại diện xem trước" />
             ) : (
-              <img src="/avatar-fallback.svg" alt="Ảnh đại diện mặc định CollabSpace" />
+              <img src="/avatar-fallback.svg" alt="Ảnh đại diện mặc định nexo" />
             )}
           </div>
           <label className="profile-avatar-upload">

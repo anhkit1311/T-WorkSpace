@@ -1,4 +1,4 @@
-# CollabSpace — nền tảng cộng tác thời gian thực
+# nexo — nền tảng cộng tác thời gian thực
 
 [Cấu trúc mã nguồn](docs/guides/24-cau-truc-du-an.md) · [Mục lục tài liệu](docs/README.md)
 

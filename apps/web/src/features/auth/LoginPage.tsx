@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { ApiError, requestPasswordResetApi, resetPasswordApi } from "./api";
 import { useApp } from "../../app/providers/AppContext";
+import { NexoLogo } from "../../shared/ui/NexoLogo";
 import "./editorial-auth.css";
 
 declare global {
@@ -388,7 +389,7 @@ export function LoginPage() {
       {/* Top Bar with Brand & Back */}
       <header className="editorial-auth-nav">
         <button type="button" onClick={() => setScreen("landing")} className="editorial-auth-brand">
-          CollabSpace<sup>®</sup>
+          <NexoLogo />
         </button>
 
         <button

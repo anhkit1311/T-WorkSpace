@@ -33,7 +33,7 @@ DATABASE_URL=postgres://workspace:workspace@localhost:5432/realtime_workspace
 
 # Gửi mã xác thực qua Resend hoặc SMTP
 RESEND_API_KEY=replace-with-real-provider-key
-SMTP_FROM="CollabSpace <no-reply@example.com>"
+SMTP_FROM="nexo <no-reply@example.com>"
 
 # Cấu hình Mediasoup SFU
 # Khi test trên cùng 1 máy: dùng 127.0.0.1

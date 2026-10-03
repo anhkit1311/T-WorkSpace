@@ -1,4 +1,4 @@
-# Bàn giao CollabSpace — 01/10/2026
+# Bàn giao nexo — 01/10/2026
 
 ## Chức năng hiện có
 

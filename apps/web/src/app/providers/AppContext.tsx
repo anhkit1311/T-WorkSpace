@@ -207,7 +207,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setAccessToken(result.accessToken);
     setScreen("app");
     // Preserve the destination after OTP verification.
-    notify("Xác thực thành công", `Chào mừng ${result.user.displayName} đến với CollabSpace!`);
+    notify("Xác thực thành công", `Chào mừng ${result.user.displayName} đến với nexo!`);
   };
 
   const handleResendOtp = async (email: string) => {
@@ -241,7 +241,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setChatNavigation(null);
       setScreen("landing");
       setActiveView("overview");
-      notify("Đã đăng xuất", "Hẹn gặp lại bạn tại CollabSpace.", "info");
+      notify("Đã đăng xuất", "Hẹn gặp lại bạn tại nexo.", "info");
     }
   };
 

@@ -2,12 +2,13 @@ import { useEffect, useId, useRef, type ButtonHTMLAttributes, type ReactNode } f
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "../../app/providers/AppContext";
 import { Icon, type IconName } from "./Icon";
+import { NexoLogo } from "./NexoLogo";
 
 export function Brand({ className = "", onClick }: { className?: string; onClick?: () => void }) {
   return (
     <div
       className={`brand ${className} ${onClick ? "is-clickable" : ""}`}
-      aria-label="CollabSpace"
+      aria-label="nexo"
       onClick={onClick}
       onKeyDown={
         onClick
@@ -23,7 +24,7 @@ export function Brand({ className = "", onClick }: { className?: string; onClick
       tabIndex={onClick ? 0 : undefined}
     >
       <span className="brand-name">
-        CollabSpace<sup>®</sup>
+        <NexoLogo />
       </span>
     </div>
   );

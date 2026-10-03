@@ -27,7 +27,11 @@ export const config = {
   smtpSecure: process.env.SMTP_SECURE === "true",
   smtpUser: process.env.SMTP_USER,
   smtpPass: process.env.SMTP_PASS,
-  smtpFrom: process.env.SMTP_FROM ?? "CollabSpace <no-reply@collabspace.vn>",
+  // Keep a configured/verified sender address; only normalize the old brand's display name.
+  smtpFrom: (process.env.SMTP_FROM ?? "nexo <no-reply@collabspace.vn>").replace(
+    /^Colla[bp]Space(?=\s*<)/i,
+    "nexo",
+  ),
   resendApiKey: process.env.RESEND_API_KEY,
   otpExpirationMinutes: readPositiveInteger("OTP_EXPIRATION_MINUTES", 10),
   otpMaxAttempts: readPositiveInteger("OTP_MAX_ATTEMPTS", 5),

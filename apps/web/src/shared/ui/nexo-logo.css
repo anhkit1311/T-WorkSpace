@@ -1,0 +1,28 @@
+.nexo-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2em;
+  color: inherit;
+  vertical-align: middle;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.nexo-mark {
+  display: block;
+  width: 1.12em;
+  height: 1.12em;
+  flex: 0 0 auto;
+}
+
+.nexo-wordmark {
+  font-family: var(--font-display, "Playfair Display", Georgia, serif);
+  font-weight: 500;
+  font-style: normal;
+  letter-spacing: -0.045em;
+}
+
+.brand-name .nexo-lockup,
+.brand-name .nexo-wordmark {
+  color: inherit;
+}

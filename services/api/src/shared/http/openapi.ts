@@ -277,7 +277,7 @@ add(
 export const openapi = {
   openapi: "3.0.3",
   info: {
-    title: "CollabSpace REST API",
+    title: "nexo REST API",
     version: "0.2.0",
     description:
       "Policies/payload details: docs/14–17. Generic response objects are intentional; this catalog is not a generated SDK.",

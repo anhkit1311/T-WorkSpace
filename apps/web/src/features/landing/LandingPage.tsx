@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { ArrowUpRight, Video, MessageSquare, CheckSquare } from "lucide-react";
 import { useApp } from "../../app/providers/AppContext";
+import { NexoLogo } from "../../shared/ui/NexoLogo";
 import "./editorial.css";
 
 const spacesList = [
@@ -128,7 +129,7 @@ export function LandingPage() {
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
               className="editorial-brand"
             >
-              CollabSpace<sup>®</sup>
+              <NexoLogo />
             </button>
           </div>
 
@@ -361,7 +362,7 @@ export function LandingPage() {
             mọi tiếng ồn và sự xao nhãng.”
           </p>
           <span className="editorial-quote-author">
-            Triết lý Thiết Kế Hệ Thống CollabSpace · Đồ án tốt nghiệp
+            Triết lý Thiết Kế Hệ Thống nexo · Đồ án tốt nghiệp
           </span>
         </motion.div>
 
@@ -491,7 +492,7 @@ export function LandingPage() {
                 className="editorial-brand"
                 style={{ display: "inline-block", marginBottom: "12px" }}
               >
-                CollabSpace<sup>®</sup>
+                <NexoLogo />
               </span>
               <p
                 style={{
@@ -595,14 +596,14 @@ export function LandingPage() {
                 >
                   <li>Đồ án tốt nghiệp Công nghệ Thông tin</li>
                   <li>WebRTC SFU · mediasoup · Socket.IO · React</li>
-                  <li>© 2026 CollabSpace Workspace</li>
+                  <li>© 2026 nexo Workspace</li>
                 </ul>
               </div>
             </div>
           </div>
 
           <div className="editorial-footer-bottom">
-            <span>© 2026 CollabSpace Workspace. Bảo lưu mọi quyền.</span>
+            <span>© 2026 nexo Workspace. Bảo lưu mọi quyền.</span>
             <span>Realtime Collaborative Architecture · Báo cáo Tốt nghiệp CNTT</span>
           </div>
         </div>

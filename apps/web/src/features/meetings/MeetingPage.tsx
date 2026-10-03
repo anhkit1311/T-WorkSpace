@@ -40,7 +40,7 @@ function downloadCalendarEvent(item: MeetingScheduleItem) {
   const calendar = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//CollabSpace//Meeting Schedule//VI",
+    "PRODID:-//nexo//Meeting Schedule//VI",
     "BEGIN:VEVENT",
     `UID:${item.id}@collabspace`,
     `DTSTAMP:${stamp(new Date().toISOString())}`,
@@ -48,7 +48,7 @@ function downloadCalendarEvent(item: MeetingScheduleItem) {
     `DTEND:${stamp(item.endsAt)}`,
     `SUMMARY:${escape(item.title)}`,
     `DESCRIPTION:${escape(item.description)}`,
-    `LOCATION:${escape(`${item.workspaceName} - ${item.roomName} (CollabSpace)`)}`,
+    `LOCATION:${escape(`${item.workspaceName} - ${item.roomName} (nexo)`)}`,
     "END:VEVENT",
     "END:VCALENDAR",
     "",

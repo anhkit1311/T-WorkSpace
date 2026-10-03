@@ -628,7 +628,7 @@ export function NotionSearchModal({
                   <span>Đóng</span>
                 </span>
               </div>
-              <span className="notion-search-brand">CollabSpace Quick Search</span>
+              <span className="notion-search-brand">nexo Quick Search</span>
             </div>
           </motion.div>
         </motion.div>

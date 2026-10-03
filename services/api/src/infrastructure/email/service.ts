@@ -40,9 +40,9 @@ function escapeHtml(value: string): string {
 }
 
 export async function sendWorkspaceInvitation(to: string, link: string): Promise<void> {
-  const subject = "[CollabSpace] Lời mời tham gia nhóm làm việc";
-  const textBody = `Bạn được mời tham gia nhóm làm việc trên CollabSpace. Đăng nhập hoặc đăng ký bằng email này rồi mở liên kết để nhận lời mời:\n${link}\nLời mời hết hạn sau 7 ngày. Nếu bạn không muốn tham gia, hãy bỏ qua email này.`;
-  const html = `<p>Bạn được mời tham gia nhóm trên CollabSpace.</p><p><a href="${escapeHtml(link)}">Mở lời mời</a></p><p>Đăng nhập hoặc đăng ký bằng email này. Liên kết có hiệu lực 7 ngày.</p>`;
+  const subject = "[nexo] Lời mời tham gia nhóm làm việc";
+  const textBody = `Bạn được mời tham gia nhóm làm việc trên nexo. Đăng nhập hoặc đăng ký bằng email này rồi mở liên kết để nhận lời mời:\n${link}\nLời mời hết hạn sau 7 ngày. Nếu bạn không muốn tham gia, hãy bỏ qua email này.`;
+  const html = `<p>Bạn được mời tham gia nhóm trên nexo.</p><p><a href="${escapeHtml(link)}">Mở lời mời</a></p><p>Đăng nhập hoặc đăng ký bằng email này. Liên kết có hiệu lực 7 ngày.</p>`;
   if (config.resendApiKey) {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -70,8 +70,8 @@ export async function sendOtpEmail({
   purpose = "verification",
 }: SendOtpEmailOptions): Promise<void> {
   const resetting = purpose === "password-reset";
-  const subject = `[CollabSpace] ${otp} là mã ${resetting ? "đặt lại mật khẩu" : "xác thực tài khoản"} của bạn`;
-  const textBody = `Xin chào ${displayName},\n\nMã ${resetting ? "đặt lại mật khẩu" : "xác thực OTP"} của bạn là: ${otp}\n\nMã này có hiệu lực trong ${config.otpExpirationMinutes} phút. Vui lòng không chia sẻ mã này cho bất kỳ ai. Nếu bạn không yêu cầu, hãy bỏ qua email này.\n\nTrân trọng,\nĐội ngũ CollabSpace`;
+  const subject = `[nexo] ${otp} là mã ${resetting ? "đặt lại mật khẩu" : "xác thực tài khoản"} của bạn`;
+  const textBody = `Xin chào ${displayName},\n\nMã ${resetting ? "đặt lại mật khẩu" : "xác thực OTP"} của bạn là: ${otp}\n\nMã này có hiệu lực trong ${config.otpExpirationMinutes} phút. Vui lòng không chia sẻ mã này cho bất kỳ ai. Nếu bạn không yêu cầu, hãy bỏ qua email này.\n\nTrân trọng,\nĐội ngũ nexo`;
 
   const htmlBody = `
 <!DOCTYPE html>
@@ -81,8 +81,8 @@ export async function sendOtpEmail({
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f5f7; margin: 0; padding: 24px; color: #1e293b; }
     .card { max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 32px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
-    .logo { font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
-    .logo span { color: #3b82f6; }
+    .logo { font-family: Georgia, serif; font-size: 28px; font-weight: 500; color: #0f172a; margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
+
     h2 { font-size: 22px; font-weight: 700; color: #0f172a; margin-top: 0; margin-bottom: 12px; }
     p { font-size: 15px; line-height: 1.6; color: #475569; margin: 8px 0; }
     .otp-box { background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 8px; padding: 18px; text-align: center; margin: 24px 0; }
@@ -93,17 +93,17 @@ export async function sendOtpEmail({
 </head>
 <body>
   <div class="card">
-    <div class="logo">Collab<span>Space</span></div>
+    <div class="logo">nexo</div>
     <h2>${resetting ? "Đặt lại mật khẩu" : "Xác thực tài khoản của bạn"}</h2>
     <p>Xin chào <strong>${escapeHtml(displayName)}</strong>,</p>
-    <p>${resetting ? "Dùng mã dưới đây để đặt lại mật khẩu CollabSpace của bạn:" : "Cảm ơn bạn đã đăng ký tài khoản trên nền tảng không gian làm việc cộng tác CollabSpace. Vui lòng sử dụng mã xác thực OTP bên dưới để kích hoạt tài khoản:"}</p>
+    <p>${resetting ? "Dùng mã dưới đây để đặt lại mật khẩu nexo của bạn:" : "Cảm ơn bạn đã đăng ký tài khoản trên nền tảng không gian làm việc cộng tác nexo. Vui lòng sử dụng mã xác thực OTP bên dưới để kích hoạt tài khoản:"}</p>
     <div class="otp-box">
       <div class="otp-code">${otp}</div>
       <div class="expiry">Mã có hiệu lực trong vòng ${config.otpExpirationMinutes} phút</div>
     </div>
     <p>Nếu bạn không thực hiện đăng ký tài khoản này, vui lòng bỏ qua email.</p>
     <div class="footer">
-      Email này được gửi tự động từ hệ thống CollabSpace. Vui lòng không trả lời trực tiếp email này.
+      Email này được gửi tự động từ hệ thống nexo. Vui lòng không trả lời trực tiếp email này.
     </div>
   </div>
 </body>

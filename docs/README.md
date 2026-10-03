@@ -1,4 +1,6 @@
-# Tài liệu đồ án CollabSpace
+# Tài liệu đồ án nexo
+
+[Nhận diện nexo](guides/25-nhan-dien-nexo.md)
 
 Đọc theo thứ tự: phân tích → kiến trúc → module nghiệp vụ → cài đặt/vận hành → đo kiểm → bàn giao.
 
