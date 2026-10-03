@@ -16,5 +16,7 @@ postgres-data/
 redis-data/
 .impeccable/
 .review-tools/
+.claude/
+.aws/
 .DS_Store
 Thumbs.db

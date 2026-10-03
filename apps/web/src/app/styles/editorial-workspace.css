@@ -246,7 +246,10 @@ body,
   top: calc(100% + 12px) !important;
   right: 0 !important;
   z-index: 50 !important;
-  min-width: 240px !important;
+  width: 288px !important;
+  min-width: 0 !important;
+  max-width: calc(100vw - 32px) !important;
+  box-sizing: border-box !important;
   background: var(--editorial-surface-popup, rgba(243, 246, 252, 0.92)) !important;
   backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
   -webkit-backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
@@ -681,20 +684,92 @@ body,
   -webkit-backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
   border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36)) !important;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16) !important;
-  padding: 16px !important;
+  padding: 10px !important;
+  color: var(--editorial-text) !important;
+  font-family: var(--font-body) !important;
 }
 
-.sidebar-account-menu button {
-  border-radius: var(--editorial-radius-pill) !important;
-  padding: 9px 14px !important;
-  font-size: 13px !important;
+.sidebar-account-header {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+}
+
+.sidebar-account-header .notion-profile-square {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: var(--primary-soft);
+  border: 1px solid var(--editorial-border-soft);
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sidebar-account-header :is(strong, small) {
+  display: block;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+.sidebar-account-header strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sidebar-account-header small {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--editorial-text-secondary);
+}
+
+.sidebar-account-menu hr {
+  margin: 8px 10px;
+  border: 0;
+  border-top: 1px solid var(--editorial-border-soft);
+}
+
+.sidebar-account-menu > button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 12px !important;
+  padding: 10px 12px !important;
+  font-family: inherit;
+  font-size: 14px !important;
   font-weight: 500 !important;
-  color: #0f172a !important;
-  transition: all 150ms ease !important;
+  line-height: 1.5;
+  color: var(--editorial-text) !important;
+  transition: background-color 150ms ease, color 150ms ease !important;
 }
 
-.sidebar-account-menu button:hover {
-  background: rgba(15, 23, 42, 0.06) !important;
+.sidebar-account-menu > button svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.sidebar-account-menu > button:is(:hover, :focus-visible) {
+  background: var(--primary-soft) !important;
+}
+
+.sidebar-account-menu > button:last-child {
+  color: #9b283b !important;
+}
+
+.sidebar-account-menu > button:last-child:hover {
+  background: rgba(155, 40, 59, 0.08) !important;
 }
 
 /* Collapsed Sidebar State */

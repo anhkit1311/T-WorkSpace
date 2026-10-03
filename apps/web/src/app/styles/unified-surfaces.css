@@ -271,6 +271,107 @@ button.chat-pinned-banner {
   text-align: left;
 }
 
+/* Keep the existing native selects, values, form semantics and change handlers.
+   Opt into the browser's styleable top-layer picker instead of the Windows popup.
+   Browsers without base-select retain their fully functional native picker.
+   https://developer.chrome.com/blog/a-customizable-select */
+@supports (appearance: base-select) {
+  .editorial-workspace-shell select:not([multiple]):not([size]),
+  .editorial-workspace-shell select:not([multiple]):not([size])::picker(select) {
+    appearance: base-select;
+  }
+
+  .editorial-workspace-shell select:not([multiple]):not([size]) {
+    min-width: 0;
+    max-width: 100%;
+    min-height: 40px;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-body);
+    line-height: 1.5;
+    background: var(--editorial-control-surface) !important;
+    border: 1px solid var(--editorial-border-soft) !important;
+    border-radius: 12px !important;
+    color: var(--editorial-text) !important;
+    cursor: pointer;
+    transition: background-color 150ms ease, border-color 150ms ease;
+  }
+
+  .editorial-workspace-shell select:not([multiple]):not([size]):is(:hover, :open) {
+    background: var(--editorial-surface-card) !important;
+    border-color: var(--border-strong) !important;
+  }
+
+  .editorial-workspace-shell select::picker-icon {
+    flex-shrink: 0;
+    color: var(--editorial-text-secondary);
+  }
+
+  .editorial-workspace-shell select:not([multiple]):not([size])::picker(select) {
+    margin-block: 6px;
+    padding: 6px;
+    max-height: min(320px, 60dvh);
+    max-width: calc(100vw - 24px);
+    overflow: auto;
+    box-sizing: border-box;
+    border: 1px solid var(--editorial-border);
+    border-radius: 16px;
+    background: var(--editorial-surface-popup);
+    color: var(--editorial-text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+    backdrop-filter: blur(var(--editorial-blur));
+    -webkit-backdrop-filter: blur(var(--editorial-blur));
+    box-shadow: 0 16px 40px rgba(23, 35, 62, 0.18);
+  }
+
+  .editorial-workspace-shell select option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--editorial-text);
+    line-height: 1.5;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+
+  .editorial-workspace-shell select option:checked {
+    background: var(--primary);
+    color: #ffffff;
+    font-weight: 500;
+  }
+
+  .editorial-workspace-shell select option:not(:checked):is(:hover, :focus) {
+    background: var(--primary-soft);
+  }
+
+  .editorial-workspace-shell select:disabled,
+  .editorial-workspace-shell select option:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .editorial-workspace-shell select option[hidden] {
+    display: none;
+  }
+
+  @media (max-width: 640px) {
+    .editorial-workspace-shell select:not([multiple]):not([size]) {
+      min-height: 44px;
+    }
+  }
+}
+
 /* Page containers fill the stage; some shrank to content width inside the flex viewport. */
 .editorial-main-content
   :is(.workspace-home, .meetings-page, .task-page, .profile-page, .workspace-admin) {

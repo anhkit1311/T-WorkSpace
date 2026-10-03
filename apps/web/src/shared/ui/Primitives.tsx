@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, type ButtonHTMLAttributes, type ReactNode } f
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "../../app/providers/AppContext";
 import { Icon, type IconName } from "./Icon";
+import { isSelectPickerEvent } from "../lib/select-picker";
 
 export function Brand({ className = "", onClick }: { className?: string; onClick?: () => void }) {
   return (
@@ -168,6 +169,7 @@ export function Modal({
     });
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        if (isSelectPickerEvent(event)) return;
         event.preventDefault();
         onCloseRef.current();
       }
