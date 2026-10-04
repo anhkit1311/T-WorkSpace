@@ -247,3 +247,16 @@ Before delivering any UI code, verify:
 - [ ] Responsive: 375px, 768px, 1024px, 1440px
 - [ ] No content hidden behind fixed navbars
 - [ ] No horizontal scroll on mobile
+
+
+## Khóa giao diện — đợt sửa UX 04–05/10/2026
+
+Yêu cầu trực tiếp của chủ dự án ưu tiên hơn các đề xuất tái thiết kế: giữ bố cục, thứ tự, màu navy + glass, Playfair/Inter, bo góc, pill, video + Three.js, topbar + dock và chữ/icon đang hoạt động. Chỉ bổ sung hành vi, trạng thái tương tác, accessibility và reduced motion. Không áp dụng các đề xuất đổi màu/bố cục/cỡ chữ chỉ để khớp luật chung.
+
+- Bảng token trên thuộc scope workspace `.editorial-workspace-shell`: muted `#3e4e66`, surface card `rgba(246,248,252,.64)`. Scope public `:root` vẫn có muted `rgba(15,23,42,.55)`, surface card `rgba(255,255,255,.94)`; đây là hai scope, không thay một giá trị bằng giá trị còn lại.
+- Ngoại lệ được giữ theo bản đã chốt: CTA landing đen, Playfair italic; các trạng thái xanh và semantic sẵn có trong workspace, cỡ chữ/bo góc/margin hiện tại. Việc chuẩn hóa lại cần chủ dự án duyệt.
+- Font tải tại index.html; Plus Jakarta Sans vẫn còn dùng bởi token legacy `--font-ui`, chưa loại bỏ.
+- `shared/ui/interaction.css` chỉ chứa focus/hit target/loading/Toast/reduced motion. Motion sở hữu transform/opacity của modal/toast; CSS chỉ xoay spinner, không điều khiển cùng transform. GSAP/Three.js giữ ownership sẵn có; video và scene dừng khi họp/giảm chuyển động.
+- Không thêm thư viện. Ngân sách 60fps là mục tiêu, chưa phải kết quả đo.
+
+Bằng chứng và giới hạn: [ui-review-2026-10-04](../../docs/ui-review-2026-10-04/README.md).
