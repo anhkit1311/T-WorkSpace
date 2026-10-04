@@ -207,7 +207,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
               "info",
             );
         })
-        .catch(() => {});
+        .catch(() => { /* Do not send a toast when the mute preference is unknown. Unread data remains in the inbox and reconnect retries. */ });
     });
 
     return () => {

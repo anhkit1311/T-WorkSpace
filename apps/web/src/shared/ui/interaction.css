@@ -1,0 +1,21 @@
+/* Interaction states only. The approved static colors, sizes and layout are untouched. */
+@keyframes spin { to { transform: rotate(360deg); } }
+.button-spinner, .editorial-otp-resending { animation: spin .8s linear infinite; }
+:root :is(button,a,input,textarea,select,summary,[tabindex]):focus-visible {
+  outline: 2px solid #263450 !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 3px #fff !important;
+}
+.toast-viewport .toast { position:relative; align-items:center; color:#17233e; background:rgba(246,248,252,.94); border-color:rgba(255,255,255,.65); backdrop-filter:blur(16px); }
+.toast-viewport .toast p { color:#3e4e66; }
+.toast .toast-close { position:absolute; top:6px; right:6px; }
+.toast > div { padding-right:24px; }
+.toast-viewport.toast-viewport--raised { bottom:auto; top:calc(76px + env(safe-area-inset-top)); }
+.editorial-google-signin.is-disabled { opacity:.5; pointer-events:none; }
+.editorial-toggle-btn::after { content:""; position:absolute; inset:50% auto auto 50%; width:40px; height:40px; transform:translate(-50%,-50%); }
+.editorial-sublink, .editorial-nav-link, .chat-header-icon-btn, .icon-button { position:relative; }
+.editorial-sublink::after, .editorial-nav-link::after { content:""; position:absolute; inset:50% 0 auto; min-height:40px; transform:translateY(-50%); }
+.chat-header-icon-btn::after, .icon-button::after { content:""; position:absolute; width:40px; height:40px; left:50%; top:50%; transform:translate(-50%,-50%); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior:auto !important; }
+}

@@ -6,6 +6,7 @@ import { AmbientBackdrop } from "../shared/motion/AmbientBackdrop";
 import type { AmbientMood } from "../shared/motion/ambient-scene";
 import { DURATION, EASE_OUT } from "../shared/motion/tokens";
 import "./styles/screen-motion.css";
+import { ToastViewport } from "../shared/ui/Primitives";
 
 const LandingPage = lazy(() =>
   import("../features/landing/LandingPage").then((m) => ({ default: m.LandingPage })),
@@ -67,6 +68,7 @@ export function App() {
           </motion.div>
         </AnimatePresence>
       </div>
+      <ToastViewport />
     </>
   );
 }

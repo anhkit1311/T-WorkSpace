@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { AuthResponse, AuthUser, GoogleAuthInput, RegisterResponse } from "@doan/shared";
@@ -47,7 +48,8 @@ interface AppContextValue {
   mobileNavOpen: boolean;
   setMobileNavOpen: (value: boolean) => void;
   toasts: ToastMessage[];
-  notify: (title: string, description?: string, tone?: ToastMessage["tone"]) => void;
+  notify: (title: string, description?: string, tone?: ToastMessage["tone"], action?: ToastMessage["action"]) => void;
+  dismissToast: (id: number) => void;
   user: AuthUser | null;
   accessToken: string | null;
   isAuthChecking: boolean;
@@ -68,14 +70,15 @@ interface AppContextValue {
   loginWithGoogle: (
     input: GoogleAuthInput,
   ) => Promise<{ requireOtp?: boolean; email?: string } | void>;
-  logout: () => Promise<void>;
+  logout: (reason?: "password-changed") => Promise<void>;
   updateUser: (user: Partial<AuthUser>) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [screen, setScreen] = useState<PublicScreen>("landing");
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [screen, setScreen] = useState<PublicScreen>(() => /^\/(login|register)\/?$/.test(window.location.pathname) ? "login" : "landing");
   const [route, setRoute] = useState(() => readAppRoute(new URL(window.location.href)));
   const activeView = route.view;
   const navigate = useCallback((target: AppRoute, replace = false) => {
@@ -87,19 +90,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
   const setActiveView = (view: ViewId) => navigate({ view });
   useEffect(() => {
-    const onPop = () => setRoute(readAppRoute(new URL(window.location.href)));
+    const onPop = () => {
+      setRoute(readAppRoute(new URL(window.location.href)));
+      const path = window.location.pathname;
+      if (/^\/(login|register)\/?$/.test(path)) { setAuthMode(path.startsWith("/register") ? "register" : "login"); setScreen("login"); }
+      else if (path === "/") setScreen("landing");
+      else if(path.startsWith("/app/")) setScreen(user ? "app" : "login");
+    };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, []);
+  }, [user]);
   const [chatNavigation, setChatNavigation] = useState<AppContextValue["chatNavigation"]>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const toastId = useRef(0);
+  const dismissToast = (id: number) => setToasts(items => items.filter(item => item.id !== id));
 
-  const [user, setUser] = useState<AuthUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
-  const [authMode, setAuthMode] = useState<AuthMode>("login");
+  const [authMode, setAuthMode] = useState<AuthMode>(() => window.location.pathname.startsWith("/register") ? "register" : "login");
+  useEffect(() => {
+    if (isAuthChecking) return;
+    const path = window.location.pathname;
+    // Retain an incoming protected deep link while authentication is required.
+    if(screen === "login" && path.startsWith("/app/")) return;
+    const destination = screen === "landing" ? "/" : screen === "login" ? `/${authMode}` : appRouteUrl(route);
+    if (`${path}${window.location.search}${window.location.hash}` !== destination)
+      window.history[screen === "app" ? "replaceState" : "pushState"]({},"",destination);
+  },[screen,authMode,isAuthChecking,route]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = "dark";
@@ -133,10 +152,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const notify = (title: string, description?: string, tone: ToastMessage["tone"] = "success") => {
-    const id = Date.now();
-    setToasts((items) => [...items, { id, title, description, tone }]);
-    window.setTimeout(() => setToasts((items) => items.filter((item) => item.id !== id)), 3600);
+  const notify = (title: string, description?: string, tone: ToastMessage["tone"] = "success", action?: ToastMessage["action"]) => {
+    // Preserve the owner's previous request to hide login welcome banners.
+    if (["Chào mừng trở lại", "Xác thực thành công", "Đăng nhập Google thành công"].includes(title)) return;
+    const id = ++toastId.current;
+    setToasts((items) => [...items, { id, title, description, tone, action }].slice(-3));
   };
 
   useEffect(() => {
@@ -229,7 +249,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     notify("Đăng nhập Google thành công", `Chào mừng ${authRes.user.displayName} đã trở lại!`);
   };
 
-  const handleLogout = async () => {
+  const handleLogout = async (reason?: "password-changed") => {
     try {
       await logoutApi();
     } catch {
@@ -241,7 +261,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setChatNavigation(null);
       setScreen("landing");
       setActiveView("overview");
-      notify("Đã đăng xuất", "Hẹn gặp lại bạn tại nexo.", "info");
+      if(reason === "password-changed") notify("Đã đổi mật khẩu", "Vui lòng đăng nhập lại.", "info");
+      else notify("Đã đăng xuất", "Hẹn gặp lại bạn tại nexo.", "info");
     }
   };
 
@@ -282,6 +303,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setMobileNavOpen,
       toasts,
       notify,
+      dismissToast,
       user,
       accessToken,
       isAuthChecking,

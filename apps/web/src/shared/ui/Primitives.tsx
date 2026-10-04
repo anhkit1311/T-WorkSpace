@@ -1,9 +1,11 @@
-import { useEffect, useId, useRef, type ButtonHTMLAttributes, type ReactNode } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import {useEffect,useId,useRef,useLayoutEffect,Children,cloneElement,isValidElement,type ButtonHTMLAttributes,type ReactNode} from "react";
+import {motion,AnimatePresence,useIsPresent} from "motion/react";
 import { useApp } from "../../app/providers/AppContext";
 import { Icon, type IconName } from "./Icon";
 import { NexoLogo } from "./NexoLogo";
 import { isSelectPickerEvent } from "../lib/select-picker";
+import { toastDuration } from "../lib/interaction";
+import "./interaction.css";
 
 export function Brand({ className = "", onClick }: { className?: string; onClick?: () => void }) {
   return (
@@ -48,11 +50,24 @@ export function Button({
   className = "",
   ...props
 }: ButtonProps) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const widthRef = useRef<number | undefined>(undefined);
+  useLayoutEffect(() => {
+    if (loading || !buttonRef.current) return;
+    const rememberWidth = () => { widthRef.current = buttonRef.current?.getBoundingClientRect().width; };
+    rememberWidth();
+    const observer = new ResizeObserver(rememberWidth);
+    observer.observe(buttonRef.current);
+    return () => observer.disconnect();
+  }, [loading]);
   return (
     <button
       className={`button button--${variant} button--${size} ${loading ? "button--loading" : ""} ${className}`}
       disabled={disabled || loading}
       {...props}
+      ref={buttonRef}
+      aria-busy={loading || undefined}
+      style={loading && widthRef.current ? { ...props.style, width: widthRef.current } : props.style}
     >
       {loading ? (
         <svg
@@ -64,7 +79,6 @@ export function Button({
           style={{
             width: size === "sm" ? 14 : 16,
             height: size === "sm" ? 14 : 16,
-            animation: "spin 0.8s linear infinite",
             flexShrink: 0,
           }}
         >
@@ -146,24 +160,28 @@ export function Modal({
   children,
   footer,
   onClose,
+  initialFocus,
 }: {
   title: string;
   eyebrow?: string;
   children: ReactNode;
   footer?: ReactNode;
   onClose: () => void;
+  initialFocus?: string;
 }) {
   const dialogRef = useRef<HTMLElement>(null);
   const onCloseRef = useRef(onClose);
   const titleId = useId();
+  const isPresent = useIsPresent();
   onCloseRef.current = onClose;
   useEffect(() => {
+    if (!isPresent) return;
     const originalOverflow = document.body.style.overflow;
     const previouslyFocused =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     document.body.style.overflow = "hidden";
     const focusFrame = window.requestAnimationFrame(() => {
-      const first = dialogRef.current?.querySelector<HTMLElement>(
+      const first = (initialFocus ? dialogRef.current?.querySelector<HTMLElement>(initialFocus) : null) ?? dialogRef.current?.querySelector<HTMLElement>(
         "button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [href]",
       );
       (first ?? dialogRef.current)?.focus();
@@ -202,11 +220,13 @@ export function Modal({
       document.removeEventListener("keydown", handleKey);
       if (previouslyFocused?.isConnected) previouslyFocused.focus();
     };
-  }, []);
+  }, [isPresent]);
 
   return (
     <motion.div
       className="modal-backdrop"
+      inert={!isPresent}
+      style={isPresent ? undefined : {pointerEvents:"none"}}
       role="presentation"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -251,44 +271,94 @@ export function Field({
   hint?: string;
   error?: string;
 }) {
+  const generatedId = useId();
+  let controlIndex = 0;
+  let firstId: string | undefined;
+  const messageId = `${generatedId}-message`;
+  // Keep the incumbent label/span/control DOM: CSS depends on its exact shape.
+  const attach = (nodes: ReactNode): ReactNode => Children.map(nodes, (node) => {
+    if (!isValidElement<Record<string, unknown>>(node)) return node;
+    if (typeof node.type === "string" && ["input", "textarea", "select"].includes(node.type)) {
+      const id = String(node.props.id || `${generatedId}-${controlIndex++}`);
+      firstId ??= id;
+      const describedBy = [node.props["aria-describedby"], error || hint ? messageId : null].filter(Boolean).join(" ");
+      return cloneElement(node, {
+        id,
+        name: node.props.name || id,
+        autoComplete: node.props.autoComplete || (node.props.type === "email" ? "email" : node.props.type === "password" ? "new-password" : "off"),
+        "aria-invalid": error ? true : node.props["aria-invalid"],
+        "aria-labelledby": node.props["aria-label"] ? node.props["aria-labelledby"] : node.props["aria-labelledby"] || `${generatedId}-label`,
+        "aria-describedby": describedBy || undefined,
+      });
+    }
+    return node.props.children ? cloneElement(node, { children: attach(node.props.children as ReactNode) }) : node;
+  });
+  const controls = attach(children);
   return (
-    <label className="field">
-      <span>{label}</span>
-      {children}
+    <label className="field" htmlFor={firstId}>
+      <span id={`${generatedId}-label`}>{label}</span>
+      {controls}
       {error ? (
-        <small className="field__error">{error}</small>
+        <small className="field__error" id={messageId} role="alert">{error}</small>
       ) : hint ? (
-        <small>{hint}</small>
+        <small id={messageId}>{hint}</small>
       ) : null}
     </label>
   );
 }
 
 export function ToastViewport() {
-  const { toasts } = useApp();
+  const { toasts, dismissToast, route } = useApp();
   return (
-    <div className="toast-viewport" aria-live="polite" aria-atomic="true">
+    <div className={`toast-viewport ${route.view === "chat" || route.view === "meetings" ? "toast-viewport--raised" : ""}`}>
       <AnimatePresence>
         {toasts.map((toast) => (
-          <motion.article
-            layout="position"
-            className={`toast toast--${toast.tone}`}
-            key={toast.id}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 16 }}
-            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <span className="toast__icon">
-              <Icon name={toast.tone === "warning" ? "info" : "check"} size={16} />
-            </span>
-            <div>
-              <strong>{toast.title}</strong>
-              {toast.description && <p>{toast.description}</p>}
-            </div>
-          </motion.article>
+          <TimedToast key={toast.id} toast={toast} dismiss={() => dismissToast(toast.id)} />
         ))}
       </AnimatePresence>
     </div>
   );
+}
+
+function TimedToast({ toast, dismiss }: {toast: ReturnType<typeof useApp>["toasts"][number]; dismiss: () => void}) {
+  const remaining = useRef(toastDuration(toast.tone));
+  const started = useRef(0);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const hovered = useRef(false);
+  const focused = useRef(false);
+  const dismissRef = useRef(dismiss);
+  dismissRef.current = dismiss;
+  const pause = () => {
+    if (timer.current === undefined) return;
+    clearTimeout(timer.current);
+    timer.current = undefined;
+    remaining.current = Math.max(0, remaining.current - (performance.now() - started.current));
+  };
+  const resume = () => {
+    if (timer.current !== undefined || hovered.current || focused.current) return;
+    started.current = performance.now();
+    timer.current = setTimeout(() => dismissRef.current(), remaining.current);
+  };
+  useEffect(() => { resume(); return pause; }, []);
+  return <motion.article layout="position" className={`toast toast--${toast.tone}`}
+    role={toast.tone === "warning" ? "alert" : "status"} aria-atomic="true"
+    initial={{opacity:0,x:20}} animate={{opacity:1,x:0,scale:1}} exit={{opacity:0,x:16}}
+    transition={{duration:0.18,ease:[0.22,1,0.36,1]}}
+    onMouseEnter={() => {hovered.current=true; pause();}} onMouseLeave={() => {hovered.current=false; resume();}}
+    onFocusCapture={() => {focused.current=true; pause();}}
+    onBlurCapture={e => {if(!e.currentTarget.contains(e.relatedTarget)){focused.current=false;resume();}}}>
+    <span className="toast__icon"><Icon name={toast.tone === "warning" ? "warning" : toast.tone === "success" ? "check" : "info"} size={16} /></span>
+    <div><strong>{toast.title}</strong>{toast.description && <p>{toast.description}</p>}</div>
+    {toast.action && <Button size="sm" variant="ghost" onClick={toast.action.onClick}>{toast.action.label}</Button>}
+    <IconButton className="toast-close" icon="x" label="Đóng thông báo" onClick={dismiss} />
+  </motion.article>;
+}
+
+export function ConfirmDialog({title,description,confirmLabel,onConfirm,onClose,loading=false}: {
+  title:string; description:string; confirmLabel:string; onConfirm:()=>void; onClose:()=>void; loading?:boolean;
+}) {
+  return <Modal title={title} onClose={() => {if(!loading)onClose();}} initialFocus="[data-cancel]"
+    footer={<><Button variant="ghost" data-cancel disabled={loading} onClick={onClose}>Hủy</Button><Button variant="danger" loading={loading} onClick={onConfirm}>{confirmLabel}</Button></>}>
+    <p>{description}</p>
+  </Modal>;
 }

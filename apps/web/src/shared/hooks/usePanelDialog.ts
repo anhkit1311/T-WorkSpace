@@ -31,6 +31,8 @@ export function usePanelDialog(onClose: () => void, enabled = true, excludeSibli
       ].filter((item) => item.offsetParent !== null);
     (items()[0] ?? panel).focus();
     const key = (event: KeyboardEvent) => {
+      // A nested confirmation owns focus/Tab/Escape until it closes.
+      if (event.target instanceof Element && event.target.closest(".modal")) return;
       if (event.key === "Escape") {
         if (isSelectPickerEvent(event)) return;
         event.preventDefault();

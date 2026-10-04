@@ -27,6 +27,7 @@ import {
   Headset,
   House,
   Info,
+  TriangleAlert,
   LayoutDashboard,
   LayoutGrid,
   Link2,
@@ -109,6 +110,7 @@ export type IconName =
   | "help-circle"
   | "home"
   | "info"
+  | "warning"
   | "link"
   | "lock"
   | "logout"
@@ -186,6 +188,7 @@ const icons = {
   "help-circle": CircleHelp,
   home: House,
   info: Info,
+  warning: TriangleAlert,
   link: Link2,
   lock: LockKeyhole,
   logout: LogOut,

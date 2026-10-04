@@ -9,4 +9,5 @@ export interface ToastMessage {
   title: string;
   description?: string;
   tone?: "success" | "info" | "warning";
+  action?: {label: string; onClick: () => void};
 }
