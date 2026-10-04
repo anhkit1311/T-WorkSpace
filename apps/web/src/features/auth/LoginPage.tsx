@@ -16,6 +16,7 @@ import { ApiError, requestPasswordResetApi, resetPasswordApi } from "./api";
 import { useApp } from "../../app/providers/AppContext";
 import { NexoLogo } from "../../shared/ui/NexoLogo";
 import "./editorial-auth.css";
+import { focusFirstInvalid, withPending } from "../../shared/lib/interaction";
 
 declare global {
   interface Window {
@@ -122,20 +123,16 @@ function GoogleSignInButton({
 
   return (
     <div
-      style={{ display: "flex", justifyContent: "center", width: "100%" }}
-      className={disabled ? "opacity-50 pointer-events-none" : ""}
+      
+      className={(`editorial-google-signin ${disabled ? "is-disabled" : ""}`) + " editorial-auth-style-1"}
+      inert={disabled}
       aria-busy={status === "loading"}
       aria-disabled={disabled}
     >
       <div ref={buttonRef} />
       {status === "loading" && (
         <p
-          style={{
-            color: "hsl(215, 25%, 45%)",
-            fontSize: "12px",
-            textAlign: "center",
-            padding: "8px 0",
-          }}
+          className="editorial-auth-style-2"
         >
           Đang nạp Google Sign-In…
         </p>
@@ -143,15 +140,7 @@ function GoogleSignInButton({
       {status === "error" && (
         <button
           type="button"
-          style={{
-            color: "#0f172a",
-            fontSize: "12px",
-            textDecoration: "underline",
-            padding: "8px 0",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-          }}
+          className="editorial-auth-style-3"
           onClick={() => setRetry((value) => value + 1)}
         >
           Không tải được Google. Thử lại
@@ -245,7 +234,7 @@ export function LoginPage() {
     event.preventDefault();
     const next: typeof errors = {};
 
-    if (!isLogin && (!displayName.trim() || displayName.trim().length < 2)) {
+    if (!isLogin && (displayName.trim().length < 2 || displayName.trim().length > 80)) {
       next.displayName = "Tên hiển thị cần từ 2 đến 80 ký tự.";
     }
     if (!/^\S+@\S+\.\S+$/.test(email)) {
@@ -256,7 +245,7 @@ export function LoginPage() {
     }
 
     setErrors(next);
-    if (Object.keys(next).length > 0) return;
+    if (Object.keys(next).length > 0) { focusFirstInvalid(event.currentTarget); return; }
 
     setLoading(true);
     try {
@@ -299,6 +288,7 @@ export function LoginPage() {
     if (e) e.preventDefault();
     if (otpCode.length !== 6) {
       setErrors({ otp: "Mã OTP phải có đúng 6 chữ số." });
+      if (e) focusFirstInvalid(e.currentTarget);
       return;
     }
     setLoading(true);
@@ -316,8 +306,7 @@ export function LoginPage() {
 
   const handleResendOtpCode = async () => {
     if (cooldown > 0 || resending || !otpEmail) return;
-    setResending(true);
-    try {
+    await withPending(async () => { try {
       const res = await resendOtp(otpEmail);
       setCooldown(res.cooldownSeconds || 60);
       setErrors({});
@@ -325,15 +314,14 @@ export function LoginPage() {
       const message =
         err instanceof Error ? err.message : "Không thể gửi lại mã OTP. Vui lòng thử lại sau.";
       setErrors({ general: message });
-    } finally {
-      setLoading(false);
-    }
+    } }, setResending);
   };
 
   const handleResetRequest = async (event: FormEvent) => {
     event.preventDefault();
     if (!/^\S+@\S+\.\S+$/.test(resetEmail.trim())) {
       setErrors({ email: "Vui lòng nhập email hợp lệ." });
+      focusFirstInvalid(event.currentTarget);
       return;
     }
     setLoading(true);
@@ -359,7 +347,7 @@ export function LoginPage() {
     if (resetPasswordValue.length < 8 || resetPasswordValue.length > 128)
       next.password = "Mật khẩu phải có từ 8 đến 128 ký tự.";
     setErrors(next);
-    if (Object.keys(next).length) return;
+    if (Object.keys(next).length) { focusFirstInvalid(event.currentTarget); return; }
     setLoading(true);
     try {
       const result = await resetPasswordApi({
@@ -385,7 +373,12 @@ export function LoginPage() {
   };
 
   return (
-    <main id="main-content" className="editorial-auth-shell">
+    <main id="main-content" className="editorial-auth-shell" onInputCapture={event => {
+      if (event.target instanceof HTMLInputElement && event.target.name) {
+        const name = event.target.name;
+        setErrors(previous => ({...previous,[name]:undefined,general:undefined}));
+      }
+    }}>
       {/* Top Bar with Brand & Back */}
       <header className="editorial-auth-nav">
         <button type="button" onClick={() => setScreen("landing")} className="editorial-auth-brand">
@@ -398,7 +391,7 @@ export function LoginPage() {
           className="editorial-auth-back-btn"
           aria-label="Quay lại"
         >
-          <ArrowLeft style={{ width: 14, height: 14 }} />
+          <ArrowLeft className="editorial-auth-style-4" />
           <span>Về trang chủ</span>
         </button>
       </header>
@@ -418,19 +411,14 @@ export function LoginPage() {
               <div>
                 <button
                   type="button"
-                  className="editorial-sublink"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    marginBottom: "16px",
-                  }}
+                  className="editorial-sublink editorial-auth-style-5"
+                  
                   onClick={() => {
                     setAuthStep("form");
                     setErrors({});
                   }}
                 >
-                  <ArrowLeft style={{ width: 14, height: 14 }} />
+                  <ArrowLeft className="editorial-auth-style-4" />
                   <span>Quay lại đăng nhập</span>
                 </button>
 
@@ -453,34 +441,35 @@ export function LoginPage() {
                 {authStep === "reset-request" ? (
                   <form onSubmit={handleResetRequest} noValidate>
                     <div className="editorial-field">
-                      <label className="editorial-field-label">Email tài khoản</label>
+                      <label className="editorial-field-label" htmlFor="reset-email">Email tài khoản</label>
                       <div className="editorial-input-wrap">
-                        <Mail className="editorial-input-icon" style={{ width: 16, height: 16 }} />
+                        <Mail className="editorial-input-icon editorial-auth-style-6"  />
                         <input
                           type="email"
                           autoComplete="email"
                           value={resetEmail}
+                          id="reset-email" name="email" aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "reset-email-error" : undefined}
                           onChange={(e) => setResetEmail(e.target.value)}
                           placeholder="tenban@congty.com"
                           className="editorial-input"
                           autoFocus
                         />
                       </div>
-                      {errors.email && <div className="editorial-field-error">{errors.email}</div>}
+                      {errors.email && <div className="editorial-field-error" id="reset-email-error" role="alert">{errors.email}</div>}
                     </div>
 
-                    <button type="submit" disabled={loading} className="editorial-submit-btn">
+                    <button type="submit" disabled={loading} aria-busy={loading || undefined} className="editorial-submit-btn">
                       {loading ? "Đang gửi mã..." : "Gửi mã đặt lại mật khẩu"}
                     </button>
                   </form>
                 ) : (
                   <form onSubmit={handleResetConfirm} noValidate>
                     <div className="editorial-field">
-                      <label className="editorial-field-label">Mã xác thực 6 chữ số</label>
+                      <label className="editorial-field-label" htmlFor="reset-code">Mã xác thực 6 chữ số</label>
                       <div className="editorial-input-wrap">
                         <KeyRound
-                          className="editorial-input-icon"
-                          style={{ width: 16, height: 16 }}
+                          className="editorial-input-icon editorial-auth-style-6"
+                          
                         />
                         <input
                           type="text"
@@ -488,45 +477,43 @@ export function LoginPage() {
                           autoComplete="one-time-code"
                           maxLength={6}
                           value={resetCode}
+                          id="reset-code" name="otp" aria-invalid={Boolean(errors.otp)} aria-describedby={errors.otp ? "reset-code-error" : undefined}
                           onChange={(e) =>
                             setResetCode(e.target.value.replace(/\D/g, "").slice(0, 6))
                           }
                           placeholder="••••••"
-                          className="editorial-input"
-                          style={{
-                            textAlign: "center",
-                            letterSpacing: "6px",
-                            fontFamily: "monospace",
-                          }}
+                          className="editorial-input editorial-auth-style-7"
+                          
                           autoFocus
                         />
                       </div>
-                      {errors.otp && <div className="editorial-field-error">{errors.otp}</div>}
+                      {errors.otp && <div className="editorial-field-error" id="reset-code-error" role="alert">{errors.otp}</div>}
                     </div>
 
                     <div className="editorial-field">
-                      <label className="editorial-field-label">Mật khẩu mới (8–128 ký tự)</label>
+                      <label className="editorial-field-label" htmlFor="reset-password">Mật khẩu mới (8–128 ký tự)</label>
                       <div className="editorial-input-wrap">
-                        <Lock className="editorial-input-icon" style={{ width: 16, height: 16 }} />
+                        <Lock className="editorial-input-icon editorial-auth-style-6"  />
                         <input
                           type="password"
                           autoComplete="new-password"
                           value={resetPasswordValue}
+                          id="reset-password" name="password" aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? "reset-password-error" : undefined}
                           onChange={(e) => setResetPasswordValue(e.target.value)}
                           placeholder="Nhập mật khẩu mới..."
                           className="editorial-input"
                         />
                       </div>
                       {errors.password && (
-                        <div className="editorial-field-error">{errors.password}</div>
+                        <div className="editorial-field-error" id="reset-password-error" role="alert">{errors.password}</div>
                       )}
                     </div>
 
-                    <button type="submit" disabled={loading} className="editorial-submit-btn">
+                    <button type="submit" disabled={loading} aria-busy={loading || undefined} className="editorial-submit-btn">
                       {loading ? "Đang cập nhật..." : "Cập nhật mật khẩu"}
                     </button>
 
-                    <div style={{ textAlign: "center", marginTop: "16px" }}>
+                    <div className="editorial-auth-style-8">
                       <button
                         type="button"
                         className="editorial-sublink"
@@ -546,19 +533,14 @@ export function LoginPage() {
               <div>
                 <button
                   type="button"
-                  className="editorial-sublink"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    marginBottom: "16px",
-                  }}
+                  className="editorial-sublink editorial-auth-style-5"
+                  
                   onClick={() => {
                     setAuthStep("form");
                     setErrors({});
                   }}
                 >
-                  <ArrowLeft style={{ width: 14, height: 14 }} />
+                  <ArrowLeft className="editorial-auth-style-4" />
                   <span>Quay lại</span>
                 </button>
 
@@ -571,7 +553,7 @@ export function LoginPage() {
                 </p>
 
                 <div className="editorial-otp-target-pill">
-                  <Mail style={{ width: 16, height: 16 }} />
+                  <Mail className="editorial-auth-style-6" />
                   <span>{otpEmail}</span>
                 </div>
 
@@ -583,7 +565,7 @@ export function LoginPage() {
 
                 <form onSubmit={handleVerifyOtpSubmit} noValidate>
                   <div className="editorial-field">
-                    <label className="editorial-field-label" style={{ textAlign: "center" }}>
+                    <label className="editorial-field-label editorial-auth-style-9" htmlFor="auth-code" >
                       Nhập mã OTP 6 chữ số
                     </label>
                     <input
@@ -592,6 +574,7 @@ export function LoginPage() {
                       pattern="[0-9]*"
                       maxLength={6}
                       value={otpCode}
+                      id="auth-code" name="otp" autoComplete="one-time-code" aria-invalid={Boolean(errors.otp)} aria-describedby={errors.otp ? "auth-code-error" : undefined}
                       onChange={(e) => {
                         const val = e.target.value.replace(/\D/g, "").slice(0, 6);
                         setOtpCode(val);
@@ -607,7 +590,7 @@ export function LoginPage() {
                       className="editorial-otp-input"
                     />
                     {errors.otp && (
-                      <div className="editorial-field-error" style={{ textAlign: "center" }}>
+                      <div className="editorial-field-error editorial-auth-style-9" id="auth-code-error" role="alert" >
                         {errors.otp}
                       </div>
                     )}
@@ -616,6 +599,7 @@ export function LoginPage() {
                   <button
                     type="submit"
                     disabled={otpCode.length !== 6 || loading}
+                    aria-busy={loading || undefined}
                     className="editorial-submit-btn"
                   >
                     {loading ? (
@@ -623,21 +607,14 @@ export function LoginPage() {
                     ) : (
                       <>
                         <span>Xác nhận & Vào không gian</span>
-                        <Check style={{ width: 16, height: 16 }} />
+                        <Check className="editorial-auth-style-6" />
                       </>
                     )}
                   </button>
                 </form>
 
                 <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginTop: "20px",
-                    paddingTop: "16px",
-                    borderTop: "1px solid rgba(15, 23, 42, 0.08)",
-                  }}
+                  className="editorial-auth-style-10"
                 >
                   <button
                     type="button"
@@ -654,15 +631,12 @@ export function LoginPage() {
                     type="button"
                     disabled={cooldown > 0 || resending}
                     onClick={handleResendOtpCode}
-                    className="editorial-sublink"
-                    style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                    className="editorial-sublink editorial-auth-style-11"
+                    
                   >
                     <RotateCw
-                      style={{
-                        width: 12,
-                        height: 12,
-                        animation: resending ? "spin 1s linear infinite" : undefined,
-                      }}
+                      className={(resending ? "editorial-otp-resending" : undefined) + " editorial-auth-style-12"}
+                      
                     />
                     <span>
                       {resending
@@ -718,7 +692,7 @@ export function LoginPage() {
                 )}
 
                 {/* Google Sign In Button */}
-                <div style={{ marginBottom: "16px" }}>
+                <div className="editorial-auth-style-13">
                   <GoogleSignInButton onCredential={handleGoogleCredential} disabled={loading} />
                 </div>
 
@@ -729,12 +703,13 @@ export function LoginPage() {
                 <form onSubmit={submit} noValidate>
                   {!isLogin && (
                     <div className="editorial-field">
-                      <label className="editorial-field-label">Họ và tên hiển thị</label>
+                      <label className="editorial-field-label" htmlFor="auth-name">Họ và tên hiển thị</label>
                       <div className="editorial-input-wrap">
-                        <User className="editorial-input-icon" style={{ width: 16, height: 16 }} />
+                        <User className="editorial-input-icon editorial-auth-style-6"  />
                         <input
                           type="text"
                           value={displayName}
+                          id="auth-name" name="displayName" autoComplete="name" aria-invalid={Boolean(errors.displayName)} aria-describedby={errors.displayName ? "auth-name-error" : undefined}
                           onChange={(e) => setDisplayName(e.target.value)}
                           placeholder="Ví dụ: Nguyễn Văn A"
                           className="editorial-input"
@@ -742,35 +717,37 @@ export function LoginPage() {
                         />
                       </div>
                       {errors.displayName && (
-                        <div className="editorial-field-error">{errors.displayName}</div>
+                        <div className="editorial-field-error" id="auth-name-error" role="alert">{errors.displayName}</div>
                       )}
                     </div>
                   )}
 
                   <div className="editorial-field">
-                    <label className="editorial-field-label">Email tài khoản</label>
+                    <label className="editorial-field-label" htmlFor="auth-email">Email tài khoản</label>
                     <div className="editorial-input-wrap">
-                      <Mail className="editorial-input-icon" style={{ width: 16, height: 16 }} />
+                      <Mail className="editorial-input-icon editorial-auth-style-6"  />
                       <input
                         type="email"
                         autoComplete="email"
                         value={email}
+                        id="auth-email" name="email" aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "auth-email-error" : undefined}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="tenban@congty.com"
                         className="editorial-input"
                       />
                     </div>
-                    {errors.email && <div className="editorial-field-error">{errors.email}</div>}
+                    {errors.email && <div className="editorial-field-error" id="auth-email-error" role="alert">{errors.email}</div>}
                   </div>
 
                   <div className="editorial-field">
-                    <label className="editorial-field-label">Mật khẩu</label>
+                    <label className="editorial-field-label" htmlFor="auth-password">Mật khẩu</label>
                     <div className="editorial-input-wrap">
-                      <Lock className="editorial-input-icon" style={{ width: 16, height: 16 }} />
+                      <Lock className="editorial-input-icon editorial-auth-style-6"  />
                       <input
                         type={showPassword ? "text" : "password"}
                         autoComplete={isLogin ? "current-password" : "new-password"}
                         value={password}
+                        id="auth-password" name="password" aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? "auth-password-error" : undefined}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Tối thiểu 8 ký tự"
                         className="editorial-input"
@@ -782,14 +759,14 @@ export function LoginPage() {
                         className="editorial-toggle-btn"
                       >
                         {showPassword ? (
-                          <EyeOff style={{ width: 16, height: 16 }} />
+                          <EyeOff className="editorial-auth-style-6" />
                         ) : (
-                          <Eye style={{ width: 16, height: 16 }} />
+                          <Eye className="editorial-auth-style-6" />
                         )}
                       </button>
                     </div>
                     {errors.password && (
-                      <div className="editorial-field-error">{errors.password}</div>
+                      <div className="editorial-field-error" id="auth-password-error" role="alert">{errors.password}</div>
                     )}
                   </div>
 
@@ -809,25 +786,15 @@ export function LoginPage() {
                     </div>
                   )}
 
-                  <button type="submit" disabled={loading} className="editorial-submit-btn">
+                  <button type="submit" disabled={loading} aria-busy={loading || undefined} className="editorial-submit-btn">
                     {loading ? "Đang xử lý..." : isLogin ? "Đăng nhập" : "Tiếp tục tạo tài khoản"}
                   </button>
                 </form>
 
                 <div
-                  style={{
-                    marginTop: "24px",
-                    paddingTop: "16px",
-                    borderTop: "1px solid rgba(15, 23, 42, 0.08)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px",
-                    fontSize: "12px",
-                    color: "hsl(215, 25%, 45%)",
-                  }}
+                  className="editorial-auth-style-14"
                 >
-                  <ShieldCheck style={{ width: 14, height: 14 }} />
+                  <ShieldCheck className="editorial-auth-style-4" />
                   <span>Bảo mật phiên đăng nhập qua JWT & HttpOnly Session Cookie</span>
                 </div>
               </div>
