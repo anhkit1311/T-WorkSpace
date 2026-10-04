@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import type { AmbientMood, AmbientScene } from "./ambient-scene";
-import { prefersReducedMotion } from "./tokens";
+import { useMotionSafe, useSceneCovered } from "./MotionProvider";
 
 const VIDEO_SRC = "https://designerstephen.github.io/public-assets/videos/serene-art-hero.mp4";
 // TODO(asset): owner must supply licensed local WebM/MP4 + a matching poster.
@@ -16,6 +16,7 @@ export const ambientBridge = {
   pulse() {
     liveScene?.pulse();
   },
+  debugState() { return liveScene?.debugState(); },
 };
 
 interface AmbientBackdropProps {
@@ -33,14 +34,16 @@ interface AmbientBackdropProps {
 export function AmbientBackdrop({ mood, tone, active = true }: AmbientBackdropProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [reduced, setReduced] = useState(prefersReducedMotion);
+  const { reduced } = useMotionSafe();
+  const covered = useSceneCovered();
+  const drawing = active && !covered;
   const saveData = Boolean((navigator as Navigator & {connection?:{saveData?:boolean}}).connection?.saveData);
   const sceneRef = useRef<AmbientScene | null>(null);
   const moodRef = useRef(mood);
   const activeRef = useRef(active);
   const [webgl, setWebgl] = useState(true);
   moodRef.current = mood;
-  activeRef.current = active;
+  activeRef.current = drawing;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -71,29 +74,23 @@ export function AmbientBackdrop({ mood, tone, active = true }: AmbientBackdropPr
   }, [reduced]);
 
   useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const change = () => setReduced(media.matches);
-    media.addEventListener("change", change);
-    return () => media.removeEventListener("change", change);
-  }, []);
-  useEffect(() => {
     const sync = () => {
       if (!videoRef.current) return;
-      if (reduced || saveData || !active || document.hidden) videoRef.current.pause();
+      if (reduced || saveData || !drawing || document.hidden) videoRef.current.pause();
       else void videoRef.current.play().catch(() => { /* Autoplay denied: retain the loaded first frame. */ });
     };
     sync();
     document.addEventListener("visibilitychange",sync);
     return () => document.removeEventListener("visibilitychange",sync);
-  },[active,reduced,saveData]);
+  },[drawing,reduced,saveData]);
 
   useEffect(() => {
     sceneRef.current?.setMood(mood);
   }, [mood]);
 
   useEffect(() => {
-    sceneRef.current?.setActive(active);
-  }, [active]);
+    sceneRef.current?.setActive(drawing);
+  }, [drawing]);
 
   return (
     <div className={`ambient-backdrop ambient-backdrop--${tone}`} aria-hidden="true">
@@ -101,7 +98,7 @@ export function AmbientBackdrop({ mood, tone, active = true }: AmbientBackdropPr
         ref={videoRef}
         className="ambient-backdrop__video"
         src={VIDEO_SRC}
-        autoPlay={!reduced && !saveData && active}
+        autoPlay={!reduced && !saveData && drawing}
         loop
         muted
         playsInline

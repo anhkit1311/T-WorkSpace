@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { gsap } from "gsap";
-import { DURATION, GSAP_EASE_OUT, prefersReducedMotion } from "./tokens";
+import { DURATION, GSAP_EASE_OUT } from "./tokens";
+import { useMotionSafe } from "./MotionProvider";
 
 const MAX_TARGETS = 8;
 
@@ -12,10 +13,11 @@ const MAX_TARGETS = 8;
  */
 export function ViewReveal({ children }: { children: ReactNode }) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const { reduced } = useMotionSafe();
 
   useLayoutEffect(() => {
     const host = hostRef.current;
-    if (!host?.firstElementChild || prefersReducedMotion()) return;
+    if (!host?.firstElementChild || reduced) return;
     const blocks = (parent: Element) =>
       Array.from(parent.children).filter(
         (node): node is HTMLElement =>
@@ -31,7 +33,8 @@ export function ViewReveal({ children }: { children: ReactNode }) {
     targets = targets.slice(0, MAX_TARGETS);
     if (!targets.length) return;
 
-    const ctx = gsap.context(() => {
+    const media = gsap.matchMedia();
+    media.add({ full: "(prefers-reduced-motion: no-preference)", reduced: "(prefers-reduced-motion: reduce)" }, () => {
       gsap.fromTo(
         targets,
         { autoAlpha: 0, y: 16 },
@@ -45,8 +48,8 @@ export function ViewReveal({ children }: { children: ReactNode }) {
         },
       );
     }, host);
-    return () => ctx.revert();
-  }, []);
+    return () => media.revert();
+  }, [reduced]);
 
   return (
     <div ref={hostRef} className="view-reveal">

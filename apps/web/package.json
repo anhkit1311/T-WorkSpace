@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "motion:css": "node --experimental-strip-types scripts/generate-motion-css.mjs",
     "build": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit && vite build",
     "dev": "vite",
     "preview": "vite preview --outDir ../../dist/web",

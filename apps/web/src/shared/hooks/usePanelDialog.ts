@@ -1,13 +1,15 @@
 import { useEffect, useRef } from "react";
 import { isSelectPickerEvent } from "../lib/select-picker";
+import { useIsPresent } from "motion/react";
 // Panels behave as dialogs: trap focus, Escape closes, restore prior inert/focus state.
 export function usePanelDialog(onClose: () => void, enabled = true, excludeSibling?: string) {
+  const present = useIsPresent();
   const ref = useRef<HTMLElement>(null),
     close = useRef(onClose);
   close.current = onClose;
   useEffect(() => {
     const panel = ref.current;
-    if (!enabled || !panel) return;
+    if (!enabled || !present || !panel) return;
     const previous = document.activeElement as HTMLElement | null;
     const siblings: { element: HTMLElement; inert: boolean }[] = [];
     let current: HTMLElement = panel;
@@ -63,6 +65,6 @@ export function usePanelDialog(onClose: () => void, enabled = true, excludeSibli
       for (const item of siblings) item.element.inert = item.inert;
       if (previous?.isConnected) previous.focus();
     };
-  }, [enabled, excludeSibling]);
+  }, [enabled, present, excludeSibling]);
   return ref;
 }

@@ -1,11 +1,15 @@
 import {useEffect,useRef,useState} from "react";
 import "./motion-debug.css";
+import { setMotionPreview, useMotionSafe } from "./MotionProvider";
+import { ambientBridge } from "./AmbientBackdrop";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 type Sample={fps:number;frames:number;longTasks:number;maxTask:number;cls:number;blurNodes:number;blurDepth:number};
 const empty:Sample={fps:0,frames:0,longTasks:0,maxTask:0,cls:0,blurNodes:0,blurDepth:0};
 
 /** Diagnostic only, dynamically imported behind DEV + ?motion-debug=1. Never a production loop. */
 export default function MotionDebug(){
+  const safe = useMotionSafe();
   const [sample,setSample]=useState(empty);
   const [epoch,setEpoch]=useState(0);
   const current=useRef({...empty});
@@ -59,7 +63,10 @@ export default function MotionDebug(){
     <output>FPS rAF: {sample.fps} · frames: {sample.frames}</output>
     <output>Long tasks: {sample.longTasks} · max: {sample.maxTask.toFixed(1)}ms · CLS: {sample.cls.toFixed(4)}</output>
     <output>Blur DOM: {sample.blurNodes} · depth: {sample.blurDepth}</output>
+    <output>Motion: {safe.reduced ? "reduced" : "full"} · canvases: {document.querySelectorAll("canvas").length} · triggers: {ScrollTrigger.getAll().length}</output>
+    <output>Scene: {ambientBridge.debugState()?.running ? "running" : "paused"} · renders: {ambientBridge.debugState()?.renders ?? 0} · quality: {ambientBridge.debugState()?.quality ?? "—"}</output>
     <button type="button" onClick={()=>setEpoch(n=>n+1)}>Đo lại</button>
+    <div><button onClick={()=>setMotionPreview("system")}>Theo máy</button><button onClick={()=>setMotionPreview("reduced")}>Giảm</button><button onClick={()=>setMotionPreview("full")}>Đầy đủ</button></div>
     <small>rAF không phải GPU FPS; blur là cây DOM, không phải layer compositor.</small>
   </aside>;
 }
