@@ -1,10 +1,11 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { AnimatePresence } from "motion/react";
 import { useApp } from "../../app/providers/AppContext";
 import { Badge, Button, Field, Modal } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
 import { changePasswordApi } from "../auth/api";
 import "./profile.css";
+import { focusFirstInvalid, shouldResetProfile } from "../../shared/lib/interaction";
 
 export function ProfilePage() {
   const { user, accessToken, updateUser, notify, logout } = useApp();
@@ -28,14 +29,24 @@ export function ProfilePage() {
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [errorField, setErrorField] = useState("displayName");
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [passwordErrorField, setPasswordErrorField] = useState("newPassword");
   const [changingPassword, setChangingPassword] = useState(false);
+  const formValues = JSON.stringify([displayName,bio,contactText,statusText,pronouns,location,interestsText,favoriteMusic,avatarUrl,coverUrl,profileVisibility,showActivity,showContact,notificationsEnabled]);
+  const savedValues = useRef(formValues);
+  const previousUserId = useRef(user?.id);
+  const dirtyRef = useRef(false);
+  dirtyRef.current = formValues !== savedValues.current;
 
   useEffect(() => {
+    if (!shouldResetProfile(previousUserId.current,user?.id,dirtyRef.current)) return;
+    previousUserId.current = user?.id;
+    savedValues.current = JSON.stringify([user?.displayName || "",user?.bio || "",user?.contactText || "",user?.statusText || "",user?.pronouns || "",user?.location || "",(user?.interests || []).join(", "),user?.favoriteMusic || "",user?.avatarUrl || "",user?.coverUrl || "",user?.profileVisibility || "workspace",user?.showActivity !== false,user?.showContact === true,user?.notificationsEnabled !== false]);
     setDisplayName(user?.displayName || "");
     setBio(user?.bio || "");
     setContactText(user?.contactText || "");
@@ -55,6 +66,7 @@ export function ProfilePage() {
   const chooseImage = (file: File | undefined, kind: "avatar" | "cover") => {
     if (!file) return;
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 2_000_000) {
+      setErrorField(kind);
       setError("Chọn ảnh PNG, JPEG hoặc WebP dưới 2 MB.");
       return;
     }
@@ -73,7 +85,9 @@ export function ProfilePage() {
     event.preventDefault();
     const trimmed = displayName.trim();
     if (!trimmed || trimmed.length < 2) {
+      setErrorField("displayName");
       setError("Tên hiển thị cần có ít nhất 2 ký tự.");
+      focusFirstInvalid(event.currentTarget);
       return;
     }
     const interests = Array.from(
@@ -85,7 +99,9 @@ export function ProfilePage() {
       ),
     );
     if (interests.length > 8 || interests.some((item) => item.length > 40)) {
+      setErrorField("interests");
       setError("Nhập tối đa 8 sở thích, ngăn cách bằng dấu phẩy; mỗi mục tối đa 40 ký tự.");
+      focusFirstInvalid(event.currentTarget);
       return;
     }
 
@@ -108,8 +124,10 @@ export function ProfilePage() {
         showContact,
         notificationsEnabled,
       });
+      savedValues.current = formValues;
       notify("Thành công", "Đã cập nhật thông tin hồ sơ của bạn.", "success");
     } catch (cause: unknown) {
+      setErrorField("profile");
       setError(cause instanceof Error ? cause.message : "Không thể cập nhật hồ sơ.");
     } finally {
       setSaving(false);
@@ -120,11 +138,15 @@ export function ProfilePage() {
     event.preventDefault();
     if (!accessToken) return;
     if (newPassword.length < 8 || newPassword.length > 128) {
+      setPasswordErrorField("newPassword");
       setPasswordError("Mật khẩu mới phải có từ 8 đến 128 ký tự.");
+      focusFirstInvalid(event.currentTarget);
       return;
     }
     if (newPassword !== confirmPassword) {
+      setPasswordErrorField("confirmPassword");
       setPasswordError("Hai lần nhập mật khẩu mới chưa khớp.");
+      focusFirstInvalid(event.currentTarget);
       return;
     }
     setChangingPassword(true);
@@ -134,8 +156,9 @@ export function ProfilePage() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      await logout();
+      await logout("password-changed");
     } catch (cause) {
+      setPasswordErrorField("currentPassword");
       setPasswordError(cause instanceof Error ? cause.message : "Không thể đổi mật khẩu.");
     } finally {
       setChangingPassword(false);
@@ -167,11 +190,16 @@ export function ProfilePage() {
           <label className="profile-cover-upload">
             Đổi ảnh bìa
             <input
+              id="profile-cover"
+              name="cover"
+              aria-invalid={Boolean(error && errorField === "cover") || undefined}
+              aria-describedby={error && errorField === "cover" ? "profile-cover-error" : undefined}
               type="file"
               accept="image/png,image/jpeg,image/webp"
               onChange={(event) => chooseImage(event.target.files?.[0], "cover")}
             />
           </label>
+          {error && errorField === "cover" && <p className="field__error" role="alert" id="profile-cover-error">{error}</p>}
         </div>
         <div className="profile-avatar-wrap">
           <div className="profile-avatar-large">
@@ -184,11 +212,16 @@ export function ProfilePage() {
           <label className="profile-avatar-upload">
             Đổi ảnh đại diện
             <input
+              id="profile-avatar"
+              name="avatar"
+              aria-invalid={Boolean(error && errorField === "avatar") || undefined}
+              aria-describedby={error && errorField === "avatar" ? "profile-avatar-error" : undefined}
               type="file"
               accept="image/png,image/jpeg,image/webp"
               onChange={(event) => chooseImage(event.target.files?.[0], "avatar")}
             />
           </label>
+          {error && errorField === "avatar" && <p className="field__error" role="alert" id="profile-avatar-error">{error}</p>}
         </div>
         <div className="profile-identity">
           <div className="profile-name-row">
@@ -220,12 +253,13 @@ export function ProfilePage() {
         <h3 className="profile-section-title">
           <Icon name="settings" size={16} /> Thông tin cá nhân
         </h3>
-        <form onSubmit={handleUpdateProfile} className="profile-form">
+        <form onSubmit={handleUpdateProfile} className="profile-form" onInputCapture={() => setError("")}>
+          {error && errorField === "profile" && <p className="field__error" role="alert">{error}</p>}
           <div className="profile-input-row">
             <Field
               label="Tên hiển thị"
               hint="Tên này sẽ hiển thị với các thành viên khác trong nhóm và cuộc họp."
-              error={error}
+              error={errorField === "displayName" ? error : undefined}
             >
               <input
                 type="text"
@@ -306,7 +340,7 @@ export function ProfilePage() {
               />
             </Field>
           </div>
-          <Field label="Sở thích" hint="Tối đa 8 mục, ngăn cách bằng dấu phẩy.">
+          <Field label="Sở thích" hint="Tối đa 8 mục, ngăn cách bằng dấu phẩy." error={errorField === "interests" ? error : undefined}>
             <input
               className="profile-field-input"
               value={interestsText}
@@ -401,13 +435,14 @@ export function ProfilePage() {
           <p className="profile-password-hint">
             Sau khi đổi mật khẩu, các phiên đăng nhập sẽ bị thu hồi và bạn cần đăng nhập lại.
           </p>
-          <form onSubmit={handleChangePassword} className="profile-form profile-password-form">
+          <form onSubmit={handleChangePassword} className="profile-form profile-password-form" onInputCapture={() => setPasswordError("")}>
             <Field label="Mật khẩu hiện tại">
               <input
                 className="profile-field-input"
                 type="password"
                 autoComplete="current-password"
                 value={currentPassword}
+                name="currentPassword" aria-invalid={Boolean(passwordError && passwordErrorField === "currentPassword")} aria-describedby={passwordError ? "profile-password-error" : undefined}
                 onChange={(event) => setCurrentPassword(event.target.value)}
                 required
               />
@@ -418,6 +453,7 @@ export function ProfilePage() {
                 type="password"
                 autoComplete="new-password"
                 value={newPassword}
+                name="newPassword" aria-invalid={Boolean(passwordError && passwordErrorField === "newPassword")} aria-describedby={passwordError ? "profile-password-error" : undefined}
                 onChange={(event) => setNewPassword(event.target.value)}
                 minLength={8}
                 maxLength={128}
@@ -430,12 +466,13 @@ export function ProfilePage() {
                 type="password"
                 autoComplete="new-password"
                 value={confirmPassword}
+                name="confirmPassword" aria-invalid={Boolean(passwordError && passwordErrorField === "confirmPassword")} aria-describedby={passwordError ? "profile-password-error" : undefined}
                 onChange={(event) => setConfirmPassword(event.target.value)}
                 required
               />
             </Field>
             {passwordError && (
-              <p className="profile-password-error" role="alert">
+              <p className="profile-password-error" id="profile-password-error" role="alert">
                 {passwordError}
               </p>
             )}

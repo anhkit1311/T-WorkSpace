@@ -8,6 +8,8 @@ import { Badge, Button, Field, Modal } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
 import "./workspace-home.css";
 import { HomePriorities } from "./HomePriorities";
+import { CreateWorkspaceModal, workspaceNameError } from "./CreateWorkspaceModal";
+import { focusFirstInvalid } from "../../shared/lib/interaction";
 
 type Group = WorkspaceItem & { channels: ChannelItem[] };
 
@@ -82,8 +84,10 @@ export function WorkspaceHomePage() {
   const handleCreateWorkspace = async (event: FormEvent) => {
     event.preventDefault();
     const trimmed = newWorkspaceName.trim();
-    if (!trimmed || trimmed.length < 2) {
-      setCreateError("Tên nhóm cần có ít nhất 2 ký tự.");
+    const validation = workspaceNameError(trimmed);
+    if (validation) {
+      setCreateError(validation);
+      focusFirstInvalid(event.currentTarget.closest(".modal") ?? event.currentTarget);
       return;
     }
     if (!accessToken) return;
@@ -393,9 +397,10 @@ export function WorkspaceHomePage() {
       </section>
 
       {/* Modal Tạo Nhóm Mới */}
-      {leavingGroup && (
+      <AnimatePresence>{leavingGroup && (
         <Modal
           title="Rời nhóm"
+          initialFocus="[data-cancel]"
           onClose={() => {
             if (!leaving) setLeavingGroup(null);
           }}
@@ -405,7 +410,7 @@ export function WorkspaceHomePage() {
             gia lại, bạn cần lời mời mới.
           </p>
           <div className="modal-footer-actions">
-            <Button variant="ghost" disabled={leaving} onClick={() => setLeavingGroup(null)}>
+            <Button variant="ghost" data-cancel disabled={leaving} onClick={() => setLeavingGroup(null)}>
               Hủy
             </Button>
             <Button
@@ -431,10 +436,10 @@ export function WorkspaceHomePage() {
             </Button>
           </div>
         </Modal>
-      )}
+      )}</AnimatePresence>
       <AnimatePresence>
         {createModalOpen && (
-          <Modal
+          <CreateWorkspaceModal
             title="Tạo nhóm làm việc mới"
             eyebrow="TẠO WORKSPACE"
             onClose={() => {
@@ -496,7 +501,7 @@ export function WorkspaceHomePage() {
                 </div>
               </Field>
             </form>
-          </Modal>
+          </CreateWorkspaceModal>
         )}
       </AnimatePresence>
     </div>

@@ -115,7 +115,7 @@ export function AppShell() {
         .then((page) => {
           if (active) setUnreadNotifications(page.unreadCount);
         })
-        .catch(() => {});
+        .catch(() => { /* The bell badge is advisory; reconnect/event refresh retries. The full inbox has a visible error state. */ });
     refresh();
     socket?.on("notifications_changed", refresh);
     socket?.on("connect", refresh);

@@ -73,7 +73,7 @@ export function NotificationsPage() {
           );
         }
       })
-      .catch(() => {});
+      .catch(reason => { if(active) setError(reason instanceof Error ? reason.message : "Không tải được nhóm."); });
     return () => {
       active = false;
       socket?.off("notifications_changed", refresh);

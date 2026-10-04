@@ -101,7 +101,7 @@ export function ThreadPanel({
                 ]
               : data.messages,
           }));
-          void governanceApi(accessToken, `threads/${rootId}/read`, "POST", {}).catch(() => {});
+          void governanceApi(accessToken, `threads/${rootId}/read`, "POST", {}).catch(() => { /* Read markers are retried when the thread is opened again; keep the successfully loaded conversation. */ });
         })
         .catch((reason) => {
           if (active) {

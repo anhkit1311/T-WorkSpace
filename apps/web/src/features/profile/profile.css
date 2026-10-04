@@ -104,7 +104,7 @@
   font-size: 12px;
   font-weight: 550;
   white-space: nowrap;
-  transition: all 180ms ease;
+  transition: transform 180ms ease, opacity 180ms ease;
   outline: none !important;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
 }
@@ -241,7 +241,7 @@
   color: #0f172a;
   font-size: 14px;
   outline: none !important;
-  transition: all 180ms ease;
+  transition: transform 180ms ease, opacity 180ms ease;
   box-sizing: border-box;
 }
 

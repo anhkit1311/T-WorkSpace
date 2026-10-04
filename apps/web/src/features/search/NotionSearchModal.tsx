@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { prefersReducedMotion } from "../../shared/motion/tokens";
 import type {
   GlobalMessageSearchItem,
   WorkspaceItem,
@@ -168,7 +169,7 @@ export function NotionSearchModal({
       .then((items) => {
         if (active) setWorkspaces(items);
       })
-      .catch(() => {});
+      .catch(reason => {if(active)setError(reason instanceof Error ? reason.message : "Không tải được nhóm tìm kiếm.");});
     return () => {
       active = false;
     };
@@ -191,7 +192,7 @@ export function NotionSearchModal({
           setMembers(people);
         }
       })
-      .catch(() => {});
+      .catch(reason => {if(active)setError(reason instanceof Error ? reason.message : "Không tải được bộ lọc tìm kiếm.");});
     return () => {
       active = false;
     };
@@ -234,7 +235,7 @@ export function NotionSearchModal({
 
   useEffect(() => {
     const el = rowRefs.current.get(selectedIndex);
-    el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    el?.scrollIntoView({ block: "nearest", behavior: prefersReducedMotion() ? "auto" : "smooth" });
   }, [selectedIndex]);
 
   const selectIndex = (index: number) => {
@@ -290,6 +291,9 @@ export function NotionSearchModal({
                   ref={inputRef}
                   type="text"
                   value={query}
+                  role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="global-search-results"
+                  aria-activedescendant={visibleResults.length + matchingPages.length > selectedIndex ? `global-search-option-${selectedIndex}` : undefined}
+                  name="globalSearch" autoComplete="off"
                   onChange={(event) => {
                     setQuery(event.target.value);
                     setResults([]);
@@ -350,9 +354,9 @@ export function NotionSearchModal({
               {filtersOpen && (
                 <motion.div
                   className="notion-search-filters-pane"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
                 >
                   <div className="notion-search-filters-header">
@@ -453,7 +457,8 @@ export function NotionSearchModal({
             </AnimatePresence>
 
             {/* Scrollable Results Body */}
-            <div className="notion-search-body" aria-live="polite">
+            <span className="sr-only" role="status" aria-live="polite">{loading ? "Đang tìm…" : `${visibleResults.length + matchingPages.length} kết quả`}</span>
+            <div className="notion-search-body" id="global-search-results" role="listbox" aria-label="Kết quả tìm kiếm">
               {/* Message Search Results */}
               {term.length >= 2 && (
                 <div className="notion-search-group">
@@ -491,6 +496,7 @@ export function NotionSearchModal({
                       return (
                         <button
                           key={message.id}
+                          role="option" id={`global-search-option-${index}`} aria-selected={isSelected}
                           ref={(el) => {
                             if (el) rowRefs.current.set(index, el);
                             else rowRefs.current.delete(index);
@@ -576,6 +582,7 @@ export function NotionSearchModal({
                       return (
                         <button
                           key={page.id}
+                          role="option" id={`global-search-option-${globalIndex}`} aria-selected={isSelected}
                           ref={(el) => {
                             if (el) rowRefs.current.set(globalIndex, el);
                             else rowRefs.current.delete(globalIndex);

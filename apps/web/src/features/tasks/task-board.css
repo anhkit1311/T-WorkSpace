@@ -97,7 +97,7 @@
   min-width: 0;
   max-width: 100%;
   outline: none !important;
-  transition: all 180ms ease;
+  transition: transform 180ms ease, opacity 180ms ease;
   box-sizing: border-box;
 }
 
@@ -110,7 +110,7 @@
   padding: 12px 18px;
   font-size: 14px;
   outline: none !important;
-  transition: all 180ms ease;
+  transition: transform 180ms ease, opacity 180ms ease;
   box-sizing: border-box;
 }
 
@@ -428,3 +428,6 @@
     width: 100%;
   }
 }
+.task-column, .task-card { position:relative; }
+.task-column.is-drop-target::after { content:""; position:absolute; inset:0; border:2px solid var(--primary,#263450); border-radius:inherit; pointer-events:none; }
+.task-card.is-insert-before::before { content:""; position:absolute; top:-5px; left:0; right:0; height:2px; background:var(--primary,#263450); pointer-events:none; }
