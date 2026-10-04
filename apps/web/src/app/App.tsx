@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { AmbientBackdrop } from "../shared/motion/AmbientBackdrop";
 import type { AmbientMood } from "../shared/motion/ambient-scene";
 import { DURATION, EASE_OUT } from "../shared/motion/tokens";
+import { useMotionSafe } from "../shared/motion/MotionProvider";
 import "./styles/screen-motion.css";
 import { ToastViewport } from "../shared/ui/Primitives";
 
@@ -30,6 +31,7 @@ function ScreenFallback() {
 }
 
 export function App() {
+  const safe = useMotionSafe();
   const { screen, activeView } = useApp();
   const { inCall } = useMeeting();
   useEffect(() => {
@@ -52,14 +54,14 @@ export function App() {
           <motion.div
             key={screen}
             className={`screen-transition screen-transition--${screen}`}
-            initial={{ opacity: 0, y: screen === "login" ? 12 : 0 }}
+            initial={safe.reduced ? false : { opacity: 0, y: screen === "login" ? 12 : 0 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{
-              opacity: 0,
-              transition: { duration: DURATION.exit, ease: "easeOut" },
+              opacity: safe.reduced ? 1 : 0,
+              transition: { duration: safe.duration(DURATION.exit), ease: EASE_OUT },
             }}
             transition={{
-              duration: screen === "login" ? 0.32 : DURATION.enter,
+              duration: safe.duration(screen === "login" ? 0.32 : DURATION.enter),
               ease: EASE_OUT,
             }}
           >

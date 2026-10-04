@@ -311,7 +311,7 @@ html {
 
 .hero-word > span {
   display: inline-block;
-  will-change: transform;
+
 }
 
 .hero-word + .hero-word {

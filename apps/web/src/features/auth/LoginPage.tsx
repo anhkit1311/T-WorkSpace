@@ -17,6 +17,7 @@ import { useApp } from "../../app/providers/AppContext";
 import { NexoLogo } from "../../shared/ui/NexoLogo";
 import "./editorial-auth.css";
 import { focusFirstInvalid, withPending } from "../../shared/lib/interaction";
+import { useMotionSafe } from "../../shared/motion/MotionProvider";
 
 declare global {
   interface Window {
@@ -151,6 +152,7 @@ function GoogleSignInButton({
 }
 
 export function LoginPage() {
+  const safe = useMotionSafe();
   const {
     setScreen,
     notify,
@@ -401,10 +403,10 @@ export function LoginPage() {
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={authStep === "form" ? authMode : authStep}
-            initial={{ opacity: 0, y: 12 }}
+            initial={safe.reduced ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8, transition: { duration: 0.15 } }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ opacity: safe.reduced ? 1 : 0, y: safe.reduced ? 0 : -8, transition: { duration: safe.duration(0.15) } }}
+            transition={{ duration: safe.duration(0.22), ease: [0.16, 1, 0.3, 1] }}
           >
             {/* Step: Password Reset */}
             {authStep === "reset-request" || authStep === "reset-confirm" ? (

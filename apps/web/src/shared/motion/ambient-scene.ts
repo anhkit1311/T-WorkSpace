@@ -14,6 +14,7 @@ import {
 } from "three";
 import { gsap } from "gsap";
 import { DURATION, GSAP_EASE_INOUT, GSAP_EASE_OUT } from "./tokens";
+import { nextQualitySample } from "./quality";
 
 /*
  * Atmospheric layer drawn over the landscape video: drifting light motes plus a slow valley mist.
@@ -165,6 +166,10 @@ export class AmbientScene {
   private active = true;
   private elapsed = 0;
   private disposed = false;
+  private slowMs = 0;
+  private qualityReduced = false;
+  private renders = 0;
+  debugState() { return { running: this.running, renders: this.renders, quality: this.qualityReduced ? "adaptive-half" : "base" }; }
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -283,7 +288,7 @@ export class AmbientScene {
 
   /** Short forward drift of the motes, synchronised with the DOM fade between tabs. */
   pulse() {
-    if (this.disposed || this.reducedMotion) return;
+    if (this.disposed || this.reducedMotion || !this.active || document.hidden) return;
     const warps = [this.mist.material.uniforms.uWarp, this.motes.material.uniforms.uWarp];
     gsap.killTweensOf(warps);
     gsap
@@ -294,8 +299,8 @@ export class AmbientScene {
 
   /** 0..1 scroll progress for public pages; the camera rises gently with the page. */
   setScroll(progress: number) {
+    if (this.reducedMotion) return;
     this.rig.scroll = Math.min(1, Math.max(0, progress));
-    if (this.reducedMotion) this.renderFrame();
   }
 
   /** Stops drawing (e.g. while a call decodes video) without tearing down GPU resources. */
@@ -363,7 +368,7 @@ export class AmbientScene {
   }
 
   private readonly handlePointer = (event: PointerEvent) => {
-    if (!this.pointerTo || event.pointerType === "touch") return;
+    if (!this.active || document.hidden || !this.pointerTo || event.pointerType === "touch") return;
     this.pointerTo.x((event.clientX / window.innerWidth) * 2 - 1);
     this.pointerTo.y(-((event.clientY / window.innerHeight) * 2 - 1));
   };
@@ -371,6 +376,14 @@ export class AmbientScene {
   private readonly handleVisibility = () => this.syncLoop();
 
   private readonly tick = (_time: number, deltaMs: number) => {
+    if (!this.qualityReduced) {
+      const sample = nextQualitySample(this.slowMs, deltaMs);
+      this.slowMs = sample.slowMs;
+      if (sample.downgrade) {
+        this.motes.geometry.setDrawRange(0, Math.floor(this.motes.geometry.attributes.position.count / 2));
+        this.qualityReduced = true;
+      }
+    }
     // Clamp long frames (tab restore, GC) so motion never jumps.
     this.elapsed += Math.min(deltaMs, 50) / 1000;
     this.renderFrame();
@@ -391,6 +404,7 @@ export class AmbientScene {
   }
 
   private stopLoop() {
+    this.slowMs = 0;
     if (!this.running) return;
     gsap.ticker.remove(this.tick);
     this.running = false;
@@ -398,6 +412,7 @@ export class AmbientScene {
 
   private renderFrame() {
     if (this.disposed) return;
+    this.renders++;
     const { rig } = this;
     this.camera.position.x = rig.baseX + rig.pointerX * 0.45;
     this.camera.position.y = rig.baseY + rig.pointerY * 0.3 + rig.scroll * 1.6;

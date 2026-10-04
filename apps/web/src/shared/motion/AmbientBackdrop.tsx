@@ -67,6 +67,7 @@ export function AmbientBackdrop({ mood, tone, active = true }: AmbientBackdropPr
     return () => {
       cancelled = true;
       gsap.killTweensOf(canvas);
+      gsap.set(canvas, { clearProps: "opacity,visibility" });
       if (liveScene === sceneRef.current) liveScene = null;
       sceneRef.current?.dispose();
       sceneRef.current = null;

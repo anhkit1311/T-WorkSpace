@@ -49,7 +49,7 @@
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: transform 150ms ease, opacity 150ms ease, background-color 150ms ease, border-color 150ms ease, color 150ms ease;
   outline: none !important;
 }
 
@@ -156,7 +156,7 @@
   background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
   font-size: 12px;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: transform 150ms ease, opacity 150ms ease, background-color 150ms ease, border-color 150ms ease, color 150ms ease;
   outline: none !important;
 }
 

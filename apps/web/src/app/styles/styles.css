@@ -314,11 +314,15 @@ svg {
     color var(--duration-fast) var(--ease-out);
 }
 .button:hover:not(:disabled) {
+}
+.button:hover:not(:disabled):not([data-motion-control]) {
   transform: translateY(-1px);
 }
 .button:active:not(:disabled) {
-  transform: scale(0.975);
   transition-duration: var(--duration-instant);
+}
+.button:active:not(:disabled):not([data-motion-control]) {
+  transform: scale(0.975);
 }
 .button--primary {
   background: var(--primary);
@@ -411,11 +415,16 @@ svg {
 .icon-button.is-active {
   color: var(--primary);
   background: var(--primary-soft);
+}
+.icon-button:hover:not(:disabled):not([data-motion-control]),
+.icon-button.is-active:not([data-motion-control]) {
   transform: translateY(-1px);
 }
 .icon-button:active:not(:disabled) {
-  transform: scale(0.94);
   transition-duration: var(--duration-instant);
+}
+.icon-button:active:not(:disabled):not([data-motion-control]) {
+  transform: scale(0.94);
 }
 @media (pointer: coarse) {
   .icon-button::before {
@@ -588,7 +597,7 @@ svg {
   background: var(--backdrop);
   backdrop-filter: blur(8px) saturate(160%);
   -webkit-backdrop-filter: blur(8px) saturate(160%);
-  will-change: opacity;
+
 }
 .modal {
   width: min(520px, 100%);
@@ -600,7 +609,7 @@ svg {
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
     var(--shadow-lg);
-  will-change: transform, opacity;
+
   transform: translateZ(0);
 }
 [data-theme="dark"] .modal {
@@ -700,7 +709,7 @@ svg {
   border-radius: var(--radius-full);
   background: var(--slate-300);
   transition: background var(--motion-duration-micro) var(--motion-ease-out);
-  will-change: background;
+
 }
 .toggle-row > i::before {
   content: "";
@@ -711,7 +720,7 @@ svg {
   background: white;
   box-shadow: var(--shadow-sm);
   transition: transform var(--motion-duration-micro) var(--motion-ease-spring);
-  will-change: transform;
+
   transform: translateZ(0);
 }
 .toggle-row input:checked + i {
@@ -739,7 +748,7 @@ svg {
   border-radius: var(--radius-lg);
   background: var(--surface-raised);
   box-shadow: var(--shadow-lg);
-  will-change: transform, opacity;
+
   transform: translateZ(0);
 }
 .toast__icon {
@@ -946,7 +955,7 @@ svg {
     background var(--motion-duration-micro) var(--motion-ease-out),
     border-color var(--motion-duration-micro) var(--motion-ease-out),
     box-shadow var(--motion-duration-micro) var(--motion-ease-spring);
-  will-change: transform;
+
   transform: translateZ(0);
 }
 .feature-card:hover {
@@ -1188,7 +1197,7 @@ svg {
     transform var(--motion-duration-micro) var(--motion-ease-spring),
     box-shadow var(--motion-duration-micro) var(--motion-ease-spring),
     border-color var(--motion-duration-micro) var(--motion-ease-out);
-  will-change: transform;
+
   transform: translateZ(0);
 }
 .pricing-card:hover {
@@ -1720,16 +1729,7 @@ svg {
   font-size: 11px;
 }
 
-@keyframes revealUp {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 16px, 0);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
+
 .reveal {
   animation: revealUp var(--motion-duration-page) var(--motion-ease-out) both;
 }
@@ -1864,7 +1864,7 @@ svg {
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
     var(--shadow-lg);
-  will-change: transform, opacity;
+
   transform: translateZ(0);
 }
 .workspace-menu > span {
@@ -2215,7 +2215,7 @@ svg {
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
     var(--shadow-lg);
-  will-change: transform, opacity;
+
   transform: translateZ(0);
 }
 .quick-menu {
@@ -2405,15 +2405,7 @@ svg {
   background: var(--surface-soft);
   animation: suspenseShimmer 1.4s ease-in-out infinite;
 }
-@keyframes suspenseShimmer {
-  0%,
-  100% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 0.9;
-  }
-}
+
 .network-reconnect-bar {
   display: flex;
   align-items: center;
@@ -2456,17 +2448,7 @@ svg {
   background: currentColor;
   animation: pulseDot 1.5s infinite;
 }
-@keyframes pulseDot {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.3;
-    transform: scale(0.75);
-  }
-}
+
 .network-reconnect-btn {
   background: transparent;
   border: 1px solid currentColor;
@@ -2521,7 +2503,7 @@ svg {
     transform var(--motion-duration-micro) var(--motion-ease-spring),
     box-shadow var(--motion-duration-micro) var(--motion-ease-spring),
     border-color var(--motion-duration-micro) var(--motion-ease-out);
-  will-change: transform;
+
   transform: translateZ(0);
 }
 .panel:hover {
@@ -2580,7 +2562,7 @@ svg {
     transform var(--motion-duration-micro) var(--motion-ease-spring),
     box-shadow var(--motion-duration-micro) var(--motion-ease-spring),
     border-color var(--motion-duration-micro) var(--motion-ease-out);
-  will-change: transform;
+
   transform: translateZ(0);
 }
 .metric-card:hover {

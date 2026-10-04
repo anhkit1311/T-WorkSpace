@@ -1,5 +1,5 @@
 /* Interaction states only. The approved static colors, sizes and layout are untouched. */
-@keyframes spin { to { transform: rotate(360deg); } }
+
 .button-spinner, .editorial-otp-resending { animation: spin .8s linear infinite; }
 :root :is(button,a,input,textarea,select,summary,[tabindex]):focus-visible {
   outline: 2px solid #263450 !important;
@@ -16,6 +16,4 @@
 .editorial-sublink, .editorial-nav-link, .chat-header-icon-btn, .icon-button { position:relative; }
 .editorial-sublink::after, .editorial-nav-link::after { content:""; position:absolute; inset:50% 0 auto; min-height:40px; transform:translateY(-50%); }
 .chat-header-icon-btn::after, .icon-button::after { content:""; position:absolute; width:40px; height:40px; left:50%; top:50%; transform:translate(-50%,-50%); }
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior:auto !important; }
-}
+/* Reduced-motion policy is centralized in shared/motion/motion.css. */

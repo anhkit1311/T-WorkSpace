@@ -174,16 +174,22 @@
   font-size: 14px;
   white-space: nowrap;
   transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms ease, box-shadow 150ms ease;
-  will-change: transform;
+
 }
 
 .workspace-home__quick-actions .button:hover:not(:disabled),
 .workspace-home .button:hover:not(:disabled) {
+}
+.workspace-home__quick-actions .button:hover:not(:disabled):not([data-motion-control]),
+.workspace-home .button:hover:not(:disabled):not([data-motion-control]) {
   transform: scale(1.03);
 }
 
 .workspace-home__quick-actions .button:active:not(:disabled),
 .workspace-home .button:active:not(:disabled) {
+}
+.workspace-home__quick-actions .button:active:not(:disabled):not([data-motion-control]),
+.workspace-home .button:active:not(:disabled):not([data-motion-control]) {
   transform: scale(0.98);
 }
 
@@ -252,7 +258,7 @@
   display: flex;
   flex-direction: column;
   transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), border-color 200ms ease, box-shadow 200ms ease;
-  will-change: transform;
+
 }
 
 .workspace-group-card:hover {
@@ -389,7 +395,7 @@
   color: #0f172a !important;
   cursor: pointer !important;
   text-align: left !important;
-  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1) !important, opacity 180ms cubic-bezier(0.16, 1, 0.3, 1) !important, background-color 180ms cubic-bezier(0.16, 1, 0.3, 1) !important, border-color 180ms cubic-bezier(0.16, 1, 0.3, 1) !important, color 180ms cubic-bezier(0.16, 1, 0.3, 1) !important;
   outline: none !important;
   width: 100% !important;
   box-sizing: border-box !important;

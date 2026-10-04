@@ -76,7 +76,7 @@
   font-size: 14.5px !important;
   font-family: var(--font-body) !important;
   outline: none !important;
-  transition: all 180ms ease !important;
+  transition: transform 180ms ease !important, opacity 180ms ease !important, background-color 180ms ease !important, border-color 180ms ease !important, color 180ms ease !important;
 }
 
 .notion-search-input::placeholder {
@@ -102,7 +102,7 @@
   place-items: center !important;
   color: #475569 !important;
   cursor: pointer !important;
-  transition: all 150ms ease !important;
+  transition: transform 150ms ease !important, opacity 150ms ease !important, background-color 150ms ease !important, border-color 150ms ease !important, color 150ms ease !important;
 }
 
 .notion-search-clear-btn:hover {
@@ -137,7 +137,7 @@
   font-size: 13.5px !important;
   font-weight: 500 !important;
   cursor: pointer !important;
-  transition: all 150ms ease !important;
+  transition: transform 150ms ease !important, opacity 150ms ease !important, background-color 150ms ease !important, border-color 150ms ease !important, color 150ms ease !important;
   outline: none !important;
   flex-shrink: 0 !important;
 }
@@ -173,7 +173,7 @@
   display: grid !important;
   place-items: center !important;
   cursor: pointer !important;
-  transition: all 150ms ease !important;
+  transition: transform 150ms ease !important, opacity 150ms ease !important, background-color 150ms ease !important, border-color 150ms ease !important, color 150ms ease !important;
   outline: none !important;
   flex-shrink: 0 !important;
 }
@@ -216,7 +216,7 @@
   cursor: pointer !important;
   padding: 2px 6px !important;
   border-radius: 6px !important;
-  transition: all 150ms ease !important;
+  transition: transform 150ms ease !important, opacity 150ms ease !important, background-color 150ms ease !important, border-color 150ms ease !important, color 150ms ease !important;
 }
 
 .notion-search-reset-filters-btn:hover {
@@ -252,7 +252,7 @@
   color: #0f172a !important;
   font-size: 12.5px !important;
   outline: none !important;
-  transition: all 150ms ease !important;
+  transition: transform 150ms ease !important, opacity 150ms ease !important, background-color 150ms ease !important, border-color 150ms ease !important, color 150ms ease !important;
 }
 
 .search-filter-field select:focus,
@@ -338,11 +338,7 @@
   animation: search-spin 600ms linear infinite;
 }
 
-@keyframes search-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
+
 
 /* 6. Quick Navigation Row */
 .notion-search-pages-list {
@@ -361,7 +357,7 @@
   color: #0f172a !important;
   cursor: pointer !important;
   text-align: left !important;
-  transition: all 140ms ease !important;
+  transition: transform 140ms ease !important, opacity 140ms ease !important, background-color 140ms ease !important, border-color 140ms ease !important, color 140ms ease !important;
   outline: none !important;
 }
 
@@ -384,7 +380,7 @@
   place-items: center !important;
   color: #0f172a !important;
   flex-shrink: 0 !important;
-  transition: all 140ms ease !important;
+  transition: transform 140ms ease !important, opacity 140ms ease !important, background-color 140ms ease !important, border-color 140ms ease !important, color 140ms ease !important;
 }
 
 .notion-search-page-info {
@@ -418,7 +414,7 @@
   font-size: 12px !important;
   font-weight: 500 !important;
   color: #94a3b8 !important;
-  transition: all 140ms ease !important;
+  transition: transform 140ms ease !important, opacity 140ms ease !important, background-color 140ms ease !important, border-color 140ms ease !important, color 140ms ease !important;
 }
 
 /* Row Selected State (Spotlight Active Item) */
@@ -552,7 +548,7 @@
   font-size: 13px !important;
   font-weight: 500 !important;
   cursor: pointer !important;
-  transition: all 150ms ease !important;
+  transition: transform 150ms ease !important, opacity 150ms ease !important, background-color 150ms ease !important, border-color 150ms ease !important, color 150ms ease !important;
 }
 
 .notion-search-more-btn:hover:not(:disabled) {

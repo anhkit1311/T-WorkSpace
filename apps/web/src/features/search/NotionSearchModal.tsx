@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { prefersReducedMotion } from "../../shared/motion/tokens";
+import { useMotionSafe, useSceneCover } from "../../shared/motion/MotionProvider";
 import type {
   GlobalMessageSearchItem,
   WorkspaceItem,
@@ -62,6 +63,8 @@ export function NotionSearchModal({
   onSelectView,
   onSelectMessage,
 }: Props) {
+  const safe = useMotionSafe();
+  useSceneCover(isOpen);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GlobalMessageSearchItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -269,7 +272,7 @@ export function NotionSearchModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.18 }}
+          transition={{ duration: safe.duration(0.16) }}
         >
           <motion.div
             ref={dialogRef}
@@ -278,10 +281,10 @@ export function NotionSearchModal({
             aria-modal="true"
             aria-label="Tìm kiếm toàn bộ tin nhắn và trang"
             onClick={(event) => event.stopPropagation()}
-            initial={{ opacity: 0, scale: 0.96, y: -16 }}
+            initial={safe.reduced ? false : { opacity: 0, scale: 0.96, y: -16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: -12 }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ opacity: safe.reduced ? 1 : 0, scale: safe.reduced ? 1 : 0.96, y: safe.reduced ? 0 : -12 }}
+            transition={{ duration: safe.duration(0.22), ease: [0.16, 1, 0.3, 1] }}
           >
             {/* Search Header Bar */}
             <div className="notion-search-head">
@@ -357,7 +360,7 @@ export function NotionSearchModal({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: safe.duration(0.2) }}
                 >
                   <div className="notion-search-filters-header">
                     <span className="notion-search-filters-title">BỘ LỌC TÌM KIẾM NÂNG CAO</span>

@@ -10,6 +10,8 @@ import "./workspace-home.css";
 import { HomePriorities } from "./HomePriorities";
 import { CreateWorkspaceModal, workspaceNameError } from "./CreateWorkspaceModal";
 import { focusFirstInvalid } from "../../shared/lib/interaction";
+import { CountUp } from "../../shared/motion/AnimatedCount";
+import { ambientBridge } from "../../shared/motion/AmbientBackdrop";
 
 type Group = WorkspaceItem & { channels: ChannelItem[] };
 
@@ -103,6 +105,7 @@ export function WorkspaceHomePage() {
         setError("Đã tạo nhóm nhưng chưa tải được danh sách kênh. Hãy thử tải lại.");
       }
       setGroups((prev) => [{ ...created, channels: initialChannels }, ...prev]);
+      ambientBridge.pulse();
       notify("Thành công", `Đã tạo nhóm "${created.name}".`, "success");
       setCreateModalOpen(false);
       setNewWorkspaceName("");
@@ -154,9 +157,7 @@ export function WorkspaceHomePage() {
           <div className="workspace-home__metrics-strip" aria-label="Thống kê tóm tắt">
             <div className="workspace-metric-chip" title="Số nhóm làm việc bạn đang tham gia">
               <span className="workspace-metric-chip__indicator workspace-metric-chip__indicator--blue" />
-              <strong className="workspace-metric-chip__count">
-                {loading ? "…" : stats.totalGroups}
-              </strong>
+              {loading ? <strong className="workspace-metric-chip__count">…</strong> : <CountUp className="workspace-metric-chip__count" value={stats.totalGroups} />}
               <span className="workspace-metric-chip__text">nhóm làm việc</span>
             </div>
             <span className="workspace-metric-chip__sep" aria-hidden="true">
@@ -164,9 +165,7 @@ export function WorkspaceHomePage() {
             </span>
             <div className="workspace-metric-chip" title="Tổng số kênh trao đổi và thảo luận">
               <span className="workspace-metric-chip__indicator workspace-metric-chip__indicator--violet" />
-              <strong className="workspace-metric-chip__count">
-                {loading ? "…" : stats.totalChannels}
-              </strong>
+              {loading ? <strong className="workspace-metric-chip__count">…</strong> : <CountUp className="workspace-metric-chip__count" value={stats.totalChannels} />}
               <span className="workspace-metric-chip__text">kênh trao đổi</span>
             </div>
             <span className="workspace-metric-chip__sep" aria-hidden="true">
@@ -174,9 +173,7 @@ export function WorkspaceHomePage() {
             </span>
             <div className="workspace-metric-chip" title="Phòng họp video SFU trực tuyến">
               <span className="workspace-metric-chip__indicator workspace-metric-chip__indicator--emerald" />
-              <strong className="workspace-metric-chip__count">
-                {loading ? "…" : stats.videoRooms}
-              </strong>
+              {loading ? <strong className="workspace-metric-chip__count">…</strong> : <CountUp className="workspace-metric-chip__count" value={stats.videoRooms} />}
               <span className="workspace-metric-chip__text">phòng họp khả dụng</span>
             </div>
             {stats.adminGroups > 0 && (
@@ -189,9 +186,7 @@ export function WorkspaceHomePage() {
                   title="Nhóm bạn giữ quyền Quản trị viên hoặc Chủ nhóm"
                 >
                   <span className="workspace-metric-chip__indicator workspace-metric-chip__indicator--amber" />
-                  <strong className="workspace-metric-chip__count">
-                    {loading ? "…" : stats.adminGroups}
-                  </strong>
+                  {loading ? <strong className="workspace-metric-chip__count">…</strong> : <CountUp className="workspace-metric-chip__count" value={stats.adminGroups} />}
                   <span className="workspace-metric-chip__text">vai trò quản trị</span>
                 </div>
               </>

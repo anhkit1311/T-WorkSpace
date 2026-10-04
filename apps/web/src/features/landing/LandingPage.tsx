@@ -7,6 +7,7 @@ import { useApp } from "../../app/providers/AppContext";
 import { NexoLogo } from "../../shared/ui/NexoLogo";
 import { ambientBridge } from "../../shared/motion/AmbientBackdrop";
 import { EASE_OUT, GSAP_EASE_OUT, prefersReducedMotion } from "../../shared/motion/tokens";
+import { useMotionSafe } from "../../shared/motion/MotionProvider";
 import "./editorial.css";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -99,6 +100,8 @@ const reveal = {
 };
 
 export function LandingPage() {
+  const safe = useMotionSafe();
+  const revealSafe = safe.reduced ? { ...reveal, initial: false as const } : reveal;
   const { openAuth, enterWorkspace, user } = useApp();
   const [isScrolled, setIsScrolled] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -114,9 +117,9 @@ export function LandingPage() {
   useLayoutEffect(() => {
     const hero = heroRef.current;
     if (!hero) return;
-    const reduced = prefersReducedMotion();
-    const ctx = gsap.context(() => {
-      if (!reduced) {
+    const media = gsap.matchMedia();
+    media.add({ full: "(prefers-reduced-motion: no-preference)", reduced: "(prefers-reduced-motion: reduce)" }, () => {
+      if (!safe.reduced) {
         gsap
           .timeline({ defaults: { ease: GSAP_EASE_OUT } })
           .from(".hero-word > span", { yPercent: 110, duration: 1.1, stagger: 0.07 })
@@ -129,7 +132,7 @@ export function LandingPage() {
           scrollTrigger: { trigger: hero, start: "top top", end: "bottom top", scrub: 0.6 },
         });
       }
-      ScrollTrigger.create({
+      if (!safe.reduced) ScrollTrigger.create({
         trigger: hero,
         start: "top top",
         end: "bottom top",
@@ -137,10 +140,10 @@ export function LandingPage() {
       });
     }, hero);
     return () => {
-      ctx.revert();
+      media.revert();
       ambientBridge.setScroll(0);
     };
-  }, []);
+  }, [safe.reduced]);
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
@@ -159,7 +162,7 @@ export function LandingPage() {
           <div className="editorial-nav-left">
             <button
               type="button"
-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              onClick={() => window.scrollTo({ top: 0, behavior: safe.reduced ? "auto" : "smooth" })}
               className="editorial-brand"
             >
               <NexoLogo />
@@ -221,8 +224,8 @@ export function LandingPage() {
       <section id="residences" className="editorial-section">
         <motion.div
           className="editorial-section-head"
-          {...reveal}
-          transition={{ duration: 0.8, ease: EASE_OUT }}
+          {...revealSafe}
+          transition={{ duration: safe.duration(0.8), ease: EASE_OUT }}
         >
           <span className="editorial-tag">Hệ sinh thái cộng tác</span>
           <h2 className="editorial-title">Không gian chuyên biệt</h2>
@@ -239,10 +242,10 @@ export function LandingPage() {
               <motion.article
                 key={space.id}
                 className="editorial-residence-card"
-                initial={{ opacity: 0, y: 36 }}
+                initial={safe.reduced ? false : { opacity: 0, y: 36 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.15 }}
-                transition={{ duration: 0.75, delay: idx * 0.12, ease: EASE_OUT }}
+                transition={{ duration: safe.duration(0.75), delay: safe.duration(idx * 0.12), ease: EASE_OUT }}
               >
                 <div className="editorial-residence-media">
                   <div className={`editorial-residence-img editorial-residence-img--${space.id}`}>
@@ -269,8 +272,8 @@ export function LandingPage() {
         <div className="editorial-section-inner">
           <motion.div
             className="editorial-section-head"
-            {...reveal}
-            transition={{ duration: 0.8, ease: EASE_OUT }}
+            {...revealSafe}
+            transition={{ duration: safe.duration(0.8), ease: EASE_OUT }}
           >
             <span className="editorial-tag">Nền tảng kỹ thuật</span>
             <h2 className="editorial-title">Kiến trúc phân tán SFU</h2>
@@ -285,10 +288,10 @@ export function LandingPage() {
               <motion.div
                 key={pillar.num}
                 className="editorial-arch-item"
-                initial={{ opacity: 0, y: 36 }}
+                initial={safe.reduced ? false : { opacity: 0, y: 36 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.2 }}
-                transition={{ duration: 0.75, delay: idx * 0.12, ease: EASE_OUT }}
+                transition={{ duration: safe.duration(0.75), delay: safe.duration(idx * 0.12), ease: EASE_OUT }}
               >
                 <span className="editorial-arch-num">{pillar.num}</span>
                 <h3 className="editorial-arch-title">{pillar.title}</h3>
@@ -299,10 +302,10 @@ export function LandingPage() {
 
           <motion.div
             className="editorial-metrics-bar"
-            initial={{ opacity: 0, scale: 0.98 }}
+            initial={safe.reduced ? false : { opacity: 0, scale: 0.98 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true, amount: 0.25 }}
-            transition={{ duration: 0.8, ease: EASE_OUT }}
+            transition={{ duration: safe.duration(0.8), ease: EASE_OUT }}
           >
             {measuredMetrics.map((metric) => (
               <div key={metric.value}>
@@ -321,8 +324,8 @@ export function LandingPage() {
       <section id="philosophy" className="editorial-section">
         <motion.div
           className="editorial-quote-box"
-          {...reveal}
-          transition={{ duration: 0.85, ease: EASE_OUT }}
+          {...revealSafe}
+          transition={{ duration: safe.duration(0.85), ease: EASE_OUT }}
         >
           <p className="editorial-quote-text">
             “Sự tinh tế đỉnh cao không nằm ở việc thêm thắt tính năng, mà ở việc loại bỏ triệt để
@@ -338,10 +341,10 @@ export function LandingPage() {
             <motion.div
               key={principle.tag}
               className="editorial-principle-card"
-              initial={{ opacity: 0, y: 28 }}
+              initial={safe.reduced ? false : { opacity: 0, y: 28 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.7, delay: 0.1 + idx * 0.1, ease: EASE_OUT }}
+              transition={{ duration: safe.duration(0.7), delay: safe.duration(0.1 + idx * 0.1), ease: EASE_OUT }}
             >
               <div className="editorial-principle-tag">{principle.tag}</div>
               <h3 className="editorial-principle-heading">{principle.heading}</h3>

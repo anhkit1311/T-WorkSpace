@@ -9,6 +9,8 @@ import "./team-conversations.css";
 import { AttachmentView } from "./ChatAttachment";
 import { useDraft } from "../../shared/hooks/useDraft";
 import { usePanelDialog } from "../../shared/hooks/usePanelDialog";
+import { motion, useIsPresent } from "motion/react";
+import { useMotionSafe } from "../../shared/motion/MotionProvider";
 
 export interface ChannelMember {
   userId: string;
@@ -34,6 +36,8 @@ export function ThreadPanel({
   onClose: () => void;
   members: ChannelMember[];
 }) {
+  const safe = useMotionSafe();
+  const present = useIsPresent();
   const { accessToken, user } = useApp();
   const panelRef = usePanelDialog(onClose);
   const { socket, sendMessage, isConnected } = useSocket();
@@ -200,7 +204,10 @@ export function ThreadPanel({
     }
   };
   return (
-    <aside
+    <motion.aside
+      {...safe.panel}
+      inert={!present}
+      style={present ? undefined : {pointerEvents:"none"}}
       ref={panelRef}
       role="dialog"
       aria-modal="true"
@@ -331,6 +338,6 @@ export function ThreadPanel({
           </form>
         </>
       )}
-    </aside>
+    </motion.aside>
   );
 }

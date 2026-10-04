@@ -254,11 +254,7 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .ambient-backdrop__veil {
-    transition: none;
-  }
-}
+/* Reduced-motion policy is centralized in shared/motion/motion.css. */
 
 .editorial-tag--stacked {
   display: block;
