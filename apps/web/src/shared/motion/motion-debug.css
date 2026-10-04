@@ -1,0 +1,2 @@
+.motion-debug { position:fixed; z-index:9999; right:12px; bottom:12px; max-width:min(380px,calc(100vw - 24px)); padding:12px; border:1px solid #263450; border-radius:12px; background:#f6f8fc; color:#17233e; font:12px/1.5 Inter,sans-serif; display:grid; gap:4px; }
+.motion-debug button { justify-self:start; padding:5px 12px; border:1px solid #263450; border-radius:9999px; color:inherit; background:transparent; cursor:pointer; }
