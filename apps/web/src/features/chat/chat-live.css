@@ -1355,6 +1355,40 @@
   }
 }
 
+/* "Xuống tin mới nhất": floats over the bottom of the message list without moving it.
+   Centred with auto margins because the Button press motion owns `transform`. */
+.chat-jump-latest-anchor {
+  position: relative;
+  flex-shrink: 0;
+  height: 0;
+  z-index: 3;
+}
+
+.chat-jump-latest {
+  position: absolute !important;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  width: max-content;
+  margin: 0 auto;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14) !important;
+}
+
+.chat-jump-latest__count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 9999px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 /* --------------------------------------------------------------------------
    Short viewports (WCAG 1.4.10 reflow, e.g. 1280x800 at 200% zoom = 640x400).
    The fixed chrome leaves the conversation almost no height, so the workspace

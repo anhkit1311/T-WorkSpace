@@ -29,6 +29,7 @@ import "./chat-media.css";
 import { AttachmentView } from "./ChatAttachment";
 import { ThreadPanel, type ChannelMember } from "./ThreadPanel";
 import { governanceApi } from "../workspaces/api";
+import { isAtLatest, jumpToLatestLabel } from "./jump-latest";
 
 const stickers = [
   { id: "cheer", emoji: "🎉", label: "Ăn mừng" },
@@ -203,6 +204,10 @@ export function ChatPage() {
   const recordingTimerRef = useRef<number | null>(null);
   const routeRef = useRef(route);
   routeRef.current = route;
+  // "Xuống tin mới nhất": shown in a message-context window or when scrolled far up.
+  const [scrolledAway, setScrolledAway] = useState(false);
+  const [newWhileAway, setNewWhileAway] = useState(0);
+  const jumpPendingRef = useRef(false);
   const [navigationError, setNavigationError] = useState("");
   useEffect(() => {
     if (outboxReady)
@@ -404,6 +409,8 @@ export function ChatPage() {
     setMessages([]);
     setMessagesChannelId(channelId);
     followNewMessagesRef.current = true;
+    setNewWhileAway(0);
+    setScrolledAway(false);
     setHasMore(false);
     setLoadingOlder(false);
     setMessageSearch("");
@@ -516,9 +523,13 @@ export function ChatPage() {
         }
         if (message.authorId !== user?.id) {
           const container = chatContainerRef.current;
+          const inContext = Boolean(routeRef.current.messageId);
           followNewMessagesRef.current =
-            !container ||
-            container.scrollHeight - container.scrollTop - container.clientHeight < 140;
+            !inContext &&
+            (!container ||
+              container.scrollHeight - container.scrollTop - container.clientHeight < 140);
+          // Reading older messages or a context window: count instead of jumping.
+          if (!followNewMessagesRef.current) setNewWhileAway((count) => count + 1);
         } else {
           followNewMessagesRef.current = true;
         }
@@ -696,6 +707,62 @@ export function ChatPage() {
     followNewMessagesRef.current = false;
   }, [messages]);
 
+  // After leaving a context window, land on the bottom of the latest page once it renders.
+  useEffect(() => {
+    if (!jumpPendingRef.current || searchResults) return;
+    jumpPendingRef.current = false;
+    const container = chatContainerRef.current;
+    if (container) container.scrollTop = container.scrollHeight;
+  }, [searchResults, messages]);
+
+  const trackLatest = () => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+    const atLatest = isAtLatest({
+      inContext: false,
+      distanceFromBottom: container.scrollHeight - container.scrollTop - container.clientHeight,
+    });
+    setScrolledAway(!atLatest);
+    if (atLatest && !routeRef.current.messageId) setNewWhileAway(0);
+  };
+
+  const jumpToLatest = () => {
+    const current = routeRef.current;
+    if (current.messageId) navigate({ ...current, messageId: undefined });
+    setSearchResults(null);
+    setSearchHighlight(null);
+    setNewWhileAway(0);
+    setScrolledAway(false);
+    followNewMessagesRef.current = true;
+    const container = chatContainerRef.current;
+    // Already on the live list: nothing re-renders, so scroll now. A context window
+    // scrolls once the live list replaces it (see the effect above).
+    if (!searchResults && container) container.scrollTop = container.scrollHeight;
+    else jumpPendingRef.current = true;
+    if (!accessToken || !channelId) return;
+    const target = channelId;
+    void getMessagesApi(accessToken, target, 50)
+      .then((latest) => {
+        if (routeRef.current.channelId !== target) return;
+        setMessages((previous) => {
+          const ids = new Set(previous.map((item) => item.id));
+          const append = latest.filter((item) => !ids.has(item.id));
+          // Only a real append re-renders the list, so only then wait to scroll.
+          if (append.length) jumpPendingRef.current = true;
+          return append.length
+            ? [...previous, ...append].sort(
+                (a, b) =>
+                  new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() ||
+                  a.id.localeCompare(b.id),
+              )
+            : previous;
+        });
+      })
+      .catch(fail);
+  };
+  const inContextWindow = Boolean(route.messageId && searchResults);
+  const showJumpToLatest = inContextWindow || (!searchResults && scrolledAway);
+
   async function loadOlderMessages() {
     if (!accessToken || !channelId || loadingOlder || !hasMore || !messages.length) return;
     const oldest = messages[0];
@@ -776,6 +843,8 @@ export function ChatPage() {
       fileName: attachmentFile?.name,
       status: "sending",
     };
+    // A message sent from a context window belongs at the latest end; show it there.
+    if (routeRef.current.messageId) jumpToLatest();
     setOutbox((previous) => [...previous, draft]);
     setContent("");
     setMentionedUserIds([]);
@@ -1341,6 +1410,7 @@ export function ChatPage() {
           role="log"
           aria-label="Lịch sử tin nhắn"
           aria-live="polite"
+          onScroll={trackLatest}
         >
           {!searchResults && messagesChannelId === channelId && hasMore && messages.length > 0 && (
             <div className="chat-load-more-wrap">
@@ -1546,6 +1616,32 @@ export function ChatPage() {
             })
           )}
           <div ref={end} />
+        </div>
+
+        {/* Zero-height anchor: the jump button floats over the bottom of the list. */}
+        <div className="chat-jump-latest-anchor">
+          {showJumpToLatest && (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              icon="chevron-down"
+              className="chat-jump-latest"
+              aria-label={jumpToLatestLabel(newWhileAway)}
+              onClick={() => {
+                jumpToLatest();
+                // The button unmounts at the bottom; keep focus where the user continues.
+                composerRef.current?.focus({ preventScroll: true });
+              }}
+            >
+              Xuống tin mới nhất
+              {newWhileAway > 0 && (
+                <span className="chat-jump-latest__count" aria-hidden="true">
+                  {newWhileAway > 99 ? "99+" : newWhileAway}
+                </span>
+              )}
+            </Button>
+          )}
         </div>
 
         {/* Typing indicator */}
