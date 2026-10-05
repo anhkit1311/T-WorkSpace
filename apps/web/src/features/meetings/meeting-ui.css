@@ -514,7 +514,31 @@
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
   margin: 20px auto 0;
   width: max-content;
+  /* Keep the controls reachable inside the .ws-body scroller; at the end of the
+     scroll the dock rests in its normal place under the stage. */
+  position: sticky;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   z-index: 40;
+}
+
+/* With the side panel open, centre the dock under the video column (panel 340px + 16px gap)
+   so it does not float over the panel; `safe` falls back to start when it cannot fit. */
+.meeting-stage-layout.has-panel + .meeting-controls-dock {
+  margin-right: 356px;
+  margin-left: 0;
+  align-self: safe center;
+}
+@media (max-width: 768px) {
+  /* The panel stacks under the stage here, so the dock centres on the full width again. */
+  .meeting-stage-layout.has-panel + .meeting-controls-dock {
+    margin: 20px auto 0;
+    align-self: auto;
+  }
+}
+
+/* Focus scrolling must not leave a field or button hidden behind the floating dock. */
+.ws-body--meetings:has(.meeting-controls-dock) {
+  scroll-padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
 }
 
 .meeting-dock-btn {
