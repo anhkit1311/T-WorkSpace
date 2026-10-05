@@ -13,6 +13,7 @@ import {
   User,
 } from "lucide-react";
 import { ApiError, requestPasswordResetApi, resetPasswordApi } from "./api";
+import { authErrorField } from "./auth-error-field";
 import { useApp } from "../../app/providers/AppContext";
 import { NexoLogo } from "../../shared/ui/NexoLogo";
 import "./editorial-auth.css";
@@ -293,6 +294,7 @@ export function LoginPage() {
       if (e) focusFirstInvalid(e.currentTarget);
       return;
     }
+    const form = e?.currentTarget ?? null;
     setLoading(true);
     setErrors({});
     try {
@@ -300,7 +302,11 @@ export function LoginPage() {
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Mã xác thực không đúng hoặc đã hết hạn.";
-      setErrors({ otp: message, general: message });
+      // One message, one alert: code errors sit on the field, the rest in the banner.
+      if (authErrorField(err) === "otp") {
+        setErrors({ otp: message });
+        focusFirstInvalid(form);
+      } else setErrors({ general: message });
     } finally {
       setLoading(false);
     }
@@ -350,6 +356,7 @@ export function LoginPage() {
       next.password = "Mật khẩu phải có từ 8 đến 128 ký tự.";
     setErrors(next);
     if (Object.keys(next).length) { focusFirstInvalid(event.currentTarget); return; }
+    const form = event.currentTarget;
     setLoading(true);
     try {
       const result = await resetPasswordApi({
@@ -366,9 +373,10 @@ export function LoginPage() {
       setErrors({});
       notify("Đã đổi mật khẩu", result.message, "info");
     } catch (error) {
-      setErrors({
-        general: error instanceof Error ? error.message : "Không thể đặt lại mật khẩu.",
-      });
+      const message = error instanceof Error ? error.message : "Không thể đặt lại mật khẩu.";
+      const field = authErrorField(error);
+      setErrors({ [field]: message });
+      if (field !== "general") focusFirstInvalid(form);
     } finally {
       setLoading(false);
     }
