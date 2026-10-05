@@ -2,7 +2,10 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import type { ConsumerOptions, ProducerInfo, QosMetrics, TransportOptions } from "@doan/shared";
 import type { MediasoupClientService } from "../../features/meetings/webrtc/mediasoup-service";
 import {
+  isScreenPickerCancel,
+  mapMediaError,
   mediaConstraints,
+  mediaErrorTitle,
   publishSelectedTracks,
   type JoinMediaOptions,
 } from "../../features/meetings/webrtc/local-media";
@@ -736,6 +739,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
     togglingRef.current.add(source);
     const epoch = joinEpochRef.current;
     let captured: MediaStream | null = null;
+    let turningOn = true;
     try {
       const producer = ms.getProducer(source);
       let stream = streamsRef.current[0];
@@ -744,6 +748,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
         ?.getTracks()
         .find((item) => item.kind === kind && item.readyState === "live");
       const enabled = track?.enabled && !producer?.paused;
+      turningOn = !enabled;
       if (!track) {
         const constraints = mediaConstraints({
           ...devicesRef.current,
@@ -754,7 +759,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
         if (epoch !== joinEpochRef.current || !socket?.connected)
           throw new Error("Cuộc họp đã kết thúc.");
         track = captured.getTracks()[0];
-        if (!track) throw new Error("Không tìm thấy thiết bị.");
+        if (!track) throw new DOMException("Không tìm thấy thiết bị.", "NotFoundError");
         stream ??= new MediaStream();
         stream.addTrack(track);
         streamsRef.current = [stream, ...streamsRef.current.slice(1)];
@@ -778,11 +783,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
       );
     } catch (error) {
       captured?.getTracks().forEach((item) => item.stop());
-      notify(
-        "Không thể đổi thiết bị",
-        error instanceof Error ? error.message : "Hãy kiểm tra quyền thiết bị.",
-        "warning",
-      );
+      notify(mediaErrorTitle(source, turningOn), mapMediaError(error), "warning");
     } finally {
       togglingRef.current.delete(source);
     }
@@ -830,12 +831,8 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       captured?.getTracks().forEach((track) => track.stop());
       ms.closeProducer("screen");
-      if (epoch === joinEpochRef.current)
-        notify(
-          "Chia sẻ màn hình",
-          error instanceof Error ? error.message : "Không mở được màn hình.",
-          "warning",
-        );
+      if (epoch === joinEpochRef.current && !isScreenPickerCancel(error))
+        notify(mediaErrorTitle("screen"), mapMediaError(error), "warning");
     } finally {
       togglingRef.current.delete("screen");
     }

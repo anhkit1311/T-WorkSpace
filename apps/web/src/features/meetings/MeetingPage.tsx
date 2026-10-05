@@ -11,6 +11,7 @@ import {
 import { useApp } from "../../app/providers/AppContext";
 import { useMeeting } from "../../app/providers/MeetingContext";
 import { MeetingControls } from "./MeetingControls";
+import { mapMediaError } from "./webrtc/local-media";
 import { useSocket } from "../../app/providers/SocketContext";
 import { Badge, Button } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
@@ -472,11 +473,8 @@ export function MeetingPage() {
           stream.getTracks().forEach((t) => t.stop());
         }
       })
-      .catch(() => {
-        if (active)
-          setPreviewError(
-            "Không truy cập được camera hoặc micro. Hãy kiểm tra quyền thiết bị rồi thử lại.",
-          );
+      .catch((reason) => {
+        if (active) setPreviewError(mapMediaError(reason));
       })
       .finally(() => {
         if (active) setPreviewLoading(false);
