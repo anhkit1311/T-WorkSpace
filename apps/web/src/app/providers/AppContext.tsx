@@ -21,6 +21,11 @@ import {
 import type { AuthMode, PublicScreen, ToastMessage, ViewId } from "../types";
 import { appEntryRoute, appRouteUrl, readAppRoute, type AppRoute } from "../navigation";
 import { clearAccountDrafts } from "../../shared/lib/drafts";
+import { readSessionHint, shouldTryRestore, writeSessionHint } from "../session-hint";
+
+// One restore request per page load, shared by StrictMode's double-mounted effect.
+let restoreRequest: ReturnType<typeof refreshSessionApi> | null = null;
+const restoreSessionOnce = () => (restoreRequest ??= refreshSessionApi());
 
 interface AppContextValue {
   screen: PublicScreen;
@@ -93,6 +98,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const enterApp = useCallback(() => {
     setRoute(appEntryRoute(new URL(window.location.href)));
     setScreen("app");
+    writeSessionHint(true);
   }, []);
   useEffect(() => {
     const onPop = () => {
@@ -135,8 +141,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
     const checkSession = async () => {
+      // Never signed in here and not opening an app link: a refresh could only 401.
+      if (!shouldTryRestore(window.location.pathname, readSessionHint())) {
+        if (mounted) setIsAuthChecking(false);
+        return;
+      }
       try {
-        const result = await refreshSessionApi();
+        const result = await restoreSessionOnce();
         if (mounted) {
           setUser(result.user);
           setAccessToken(result.accessToken);
@@ -144,6 +155,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       } catch {
         // Chưa đăng nhập hoặc phiên đã hết hạn
+        writeSessionHint(false);
         if (mounted && window.location.pathname.startsWith("/app/")) setScreen("login");
       } finally {
         if (mounted) {
@@ -180,6 +192,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             }
           })
           .catch(() => {
+            writeSessionHint(false);
             if (active) {
               setAccessToken(null);
               setUser(null);
@@ -260,6 +273,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch {
       // Bỏ qua lỗi mạng khi logout
     } finally {
+      writeSessionHint(false);
       if (user) await clearAccountDrafts(user.id);
       setUser(null);
       setAccessToken(null);
