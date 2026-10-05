@@ -3,6 +3,7 @@ import type { MeetingState } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import { useMeeting } from "../../app/providers/MeetingContext";
 import "./meeting-controls.css";
+import { hostActionToast } from "./host-action-toast";
 export function MeetingControls({
   roomId,
   waiting,
@@ -16,7 +17,7 @@ export function MeetingControls({
   onCancel: () => void;
   onCount?: (count: number) => void;
 }) {
-  const { user } = useApp();
+  const { user, notify } = useApp();
   const { controlSocket: socket } = useMeeting();
   const [state, setState] = useState<MeetingState | null>(null),
     [error, setError] = useState(""),
@@ -62,6 +63,8 @@ export function MeetingControls({
     canManage = isHost || me?.role === "cohost";
   const action = async (name: string, targetUserId?: string, enabled?: boolean) => {
     if (!socket || busy) return;
+    // Resolve the name before the request: a kicked participant leaves the state.
+    const targetName = state?.participants.find((p) => p.userId === targetUserId)?.displayName;
     setBusy(true);
     setError("");
     try {
@@ -70,6 +73,8 @@ export function MeetingControls({
         .emitWithAck("meeting_action", { roomId, action: name, targetUserId, enabled });
       if (!data.success) throw new Error(data.error);
       setEndConfirm(false);
+      const done = hostActionToast(name, targetName, enabled);
+      if (done) notify(done, undefined, "info");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Không điều hành được cuộc họp.");
     } finally {
