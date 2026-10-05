@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "../providers/AppContext";
 import { useSocket } from "../providers/SocketContext";
@@ -6,6 +6,7 @@ import { useMeeting } from "../providers/MeetingContext";
 import { Icon } from "../../shared/ui/Icon";
 import { Brand, Button, Field, Modal } from "../../shared/ui/Primitives";
 import { NotionSearchModal } from "../../features/search/NotionSearchModal";
+import { LogoutConfirmDialog } from "../../features/auth/LogoutConfirmDialog";
 import { getWorkspacesApi } from "../../features/chat/api";
 import { PageErrorBoundary } from "../../shared/ui/PageErrorBoundary";
 import { usePanelDialog } from "../../shared/hooks/usePanelDialog";
@@ -136,6 +137,8 @@ export function AppShell() {
     };
   }, [accessToken, socket]);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const avatarButtonRef = useRef<HTMLButtonElement>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [editName, setEditName] = useState("");
@@ -289,6 +292,7 @@ export function AppShell() {
             </AnimatePresence>
           </button>
           <button
+            ref={avatarButtonRef}
             type="button"
             className="topbar-avatar-btn"
             title={`Tài khoản: ${displayName}`}
@@ -339,7 +343,13 @@ export function AppShell() {
                 >
                   <Icon name="settings" size={15} /> Cài đặt nhanh
                 </button>
-                <button type="button" onClick={() => void logout()}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    setLogoutConfirmOpen(true);
+                  }}
+                >
                   <Icon name="logout" size={15} /> Đăng xuất
                 </button>
               </motion.div>
@@ -347,6 +357,17 @@ export function AppShell() {
           </AnimatePresence>
         </div>
       </header>
+      <AnimatePresence>
+        {logoutConfirmOpen && (
+          <LogoutConfirmDialog
+            onClose={() => {
+              setLogoutConfirmOpen(false);
+              // The menu item that opened the dialog is gone; return to the avatar button.
+              requestAnimationFrame(() => avatarButtonRef.current?.focus());
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Main Workspace Body: Left Dock + Stage */}
       <div className="editorial-workspace-body">

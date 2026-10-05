@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { AnimatePresence } from "motion/react";
 import { useApp } from "../../app/providers/AppContext";
-import { Badge, Button, Field, Modal } from "../../shared/ui/Primitives";
+import { Badge, Button, Field } from "../../shared/ui/Primitives";
+import { LogoutConfirmDialog } from "../auth/LogoutConfirmDialog";
 import { Icon } from "../../shared/ui/Icon";
 import { changePasswordApi } from "../auth/api";
 import "./profile.css";
@@ -515,46 +516,9 @@ export function ProfilePage() {
         </Button>
       </section>
 
-      {/* Logout Confirmation Modal */}
+      {/* Logout Confirmation (shared with the account menu) */}
       <AnimatePresence>
-        {logoutConfirmOpen && (
-          <Modal
-            title="Xác nhận đăng xuất"
-            eyebrow="TÀI KHOẢN"
-            onClose={() => setLogoutConfirmOpen(false)}
-            footer={
-              <div
-                style={{ display: "flex", justifyContent: "flex-end", gap: "10px", width: "100%" }}
-              >
-                <Button variant="ghost" onClick={() => setLogoutConfirmOpen(false)}>
-                  Hủy bỏ
-                </Button>
-                <Button
-                  variant="danger"
-                  icon="logout"
-                  onClick={() => {
-                    setLogoutConfirmOpen(false);
-                    void logout();
-                  }}
-                >
-                  Đăng xuất ngay
-                </Button>
-              </div>
-            }
-          >
-            <p
-              style={{
-                fontSize: "14px",
-                color: "var(--text-secondary)",
-                margin: 0,
-                lineHeight: 1.5,
-              }}
-            >
-              Bạn có chắc chắn muốn đăng xuất khỏi tài khoản <strong>{user?.displayName}</strong> (
-              {user?.email}) không? Bạn sẽ cần đăng nhập lại để tiếp tục làm việc.
-            </p>
-          </Modal>
-        )}
+        {logoutConfirmOpen && <LogoutConfirmDialog onClose={() => setLogoutConfirmOpen(false)} />}
       </AnimatePresence>
     </div>
   );
