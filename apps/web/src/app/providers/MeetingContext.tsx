@@ -10,6 +10,7 @@ import {
   type JoinMediaOptions,
 } from "../../features/meetings/webrtc/local-media";
 import { useApp } from "./AppContext";
+import { callDropMessage } from "../../features/meetings/call-drop";
 import { useSocket } from "./SocketContext";
 import { io, type Socket } from "socket.io-client";
 import { mediaOperation } from "../../features/meetings/webrtc/operation";
@@ -107,9 +108,11 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
   }, [localStream, localScreenStream]);
   useEffect(() => {
     if (!socket) return;
+    /** Ends the call bound to this socket; true when there was a call in a room. */
     const cleanup = () => {
       if (activeSocketRef.current !== socket || (!roomIdRef.current && !mediasoupRef.current))
-        return;
+        return false;
+      const hadRoom = Boolean(roomIdRef.current);
       if (roomIdRef.current) setInterruptedRoomId(roomIdRef.current);
       streamsRef.current.forEach((stream) => stream.getTracks().forEach((track) => track.stop()));
       mediasoupRef.current?.close();
@@ -124,8 +127,15 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
       setSharing(false);
       joinAbortRef.current?.abort();
       joinEpochRef.current += 1;
+      return hadRoom;
     };
-    socket.on("disconnect", cleanup);
+    // The return banner only renders on the meetings view; say why the call ended wherever
+    // the user is. A logout clears the token first and already warned about leaving.
+    const dropped = (reason: string) => {
+      if (cleanup() && tokenRef.current)
+        notify("Cuộc họp bị ngắt", callDropMessage(reason), "warning");
+    };
+    socket.on("disconnect", dropped);
     const closed = (data: { roomId: string; reason: string }) => {
       if (data.roomId !== roomIdRef.current) return;
       cleanup();
@@ -146,10 +156,10 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
     socket.on("meeting_closed", closed);
     socket.on("meeting_mute", muted);
     return () => {
-      socket.off("disconnect", cleanup);
+      socket.off("disconnect", dropped);
       socket.off("meeting_closed", closed);
       socket.off("meeting_mute", muted);
-      cleanup();
+      dropped("replaced");
     };
   }, [socket]);
 
