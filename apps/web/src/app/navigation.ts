@@ -25,8 +25,11 @@ const views = new Set([
 ]);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const publicAuthPath = /^\/(login|register)\/?$/;
+
 export function readAppRoute(url: URL): AppRoute {
-  if (url.pathname === "/") return { view: "overview" };
+  // Public screens are not app routes; they must never mark the app route invalid.
+  if (url.pathname === "/" || publicAuthPath.test(url.pathname)) return { view: "overview" };
   const view = url.pathname.replace(/^\/app\//, "");
   if (!url.pathname.startsWith("/app/") || !views.has(view))
     return { view: "overview", invalid: true };
@@ -50,6 +53,11 @@ export function readAppRoute(url: URL): AppRoute {
   if (route.view === "invitation")
     route.invitationToken = new URLSearchParams(url.hash.slice(1)).get("token") ?? undefined;
   return route;
+}
+
+/** Route to show when entering the app: keep an /app/ deep link, otherwise start at overview. */
+export function appEntryRoute(url: URL): AppRoute {
+  return url.pathname.startsWith("/app/") ? readAppRoute(url) : { view: "overview" };
 }
 
 export function appRouteUrl(route: AppRoute): string {

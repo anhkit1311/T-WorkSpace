@@ -19,7 +19,7 @@ import {
   verifyOtpApi,
 } from "../../features/auth/api";
 import type { AuthMode, PublicScreen, ToastMessage, ViewId } from "../types";
-import { appRouteUrl, readAppRoute, type AppRoute } from "../navigation";
+import { appEntryRoute, appRouteUrl, readAppRoute, type AppRoute } from "../navigation";
 import { clearAccountDrafts } from "../../shared/lib/drafts";
 
 interface AppContextValue {
@@ -89,6 +89,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setMobileNavOpen(false);
   }, []);
   const setActiveView = (view: ViewId) => navigate({ view });
+  // Re-read the route whenever auth lands in the app; the initial route may come from /login.
+  const enterApp = useCallback(() => {
+    setRoute(appEntryRoute(new URL(window.location.href)));
+    setScreen("app");
+  }, []);
   useEffect(() => {
     const onPop = () => {
       setRoute(readAppRoute(new URL(window.location.href)));
@@ -135,7 +140,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (mounted) {
           setUser(result.user);
           setAccessToken(result.accessToken);
-          setScreen("app");
+          enterApp();
         }
       } catch {
         // Chưa đăng nhập hoặc phiên đã hết hạn
@@ -150,7 +155,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [enterApp]);
 
   const notify = (title: string, description?: string, tone: ToastMessage["tone"] = "success", action?: ToastMessage["action"]) => {
     // Preserve the owner's previous request to hide login welcome banners.
@@ -208,7 +213,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const result = await loginApi(input);
     setUser(result.user);
     setAccessToken(result.accessToken);
-    setScreen("app");
+    enterApp();
     // Preserve an incoming channel/meeting link through authentication.
     notify("Chào mừng trở lại", `Đăng nhập thành công với ${result.user.displayName}.`);
   };
@@ -225,7 +230,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const result = await verifyOtpApi(input);
     setUser(result.user);
     setAccessToken(result.accessToken);
-    setScreen("app");
+    enterApp();
     // Preserve the destination after OTP verification.
     notify("Xác thực thành công", `Chào mừng ${result.user.displayName} đến với nexo!`);
   };
@@ -244,7 +249,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const authRes = result as AuthResponse;
     setUser(authRes.user);
     setAccessToken(authRes.accessToken);
-    setScreen("app");
+    enterApp();
     // Preserve the destination after Google authentication.
     notify("Đăng nhập Google thành công", `Chào mừng ${authRes.user.displayName} đã trở lại!`);
   };
