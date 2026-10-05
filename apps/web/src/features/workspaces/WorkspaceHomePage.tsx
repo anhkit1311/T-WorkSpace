@@ -481,7 +481,6 @@ export function WorkspaceHomePage() {
                   <Icon name="users" size={16} className="editorial-input-icon" />
                   <input
                     type="text"
-                    autoFocus
                     required
                     maxLength={80}
                     placeholder="Nhập tên nhóm làm việc…"

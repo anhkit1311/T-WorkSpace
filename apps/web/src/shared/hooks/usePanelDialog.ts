@@ -31,7 +31,7 @@ export function usePanelDialog(onClose: () => void, enabled = true, excludeSibli
           'button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select:not(:disabled),a[href],[tabindex="0"]',
         ),
       ].filter((item) => item.offsetParent !== null);
-    (items()[0] ?? panel).focus();
+    (items()[0] ?? panel).focus({preventScroll: true});
     const key = (event: KeyboardEvent) => {
       // A nested confirmation owns focus/Tab/Escape until it closes.
       if (event.target instanceof Element && event.target.closest(".modal")) return;
@@ -63,7 +63,7 @@ export function usePanelDialog(onClose: () => void, enabled = true, excludeSibli
     return () => {
       document.removeEventListener("keydown", key);
       for (const item of siblings) item.element.inert = item.inert;
-      if (previous?.isConnected) previous.focus();
+      if (previous?.isConnected) previous.focus({preventScroll: true});
     };
   }, [enabled, present, excludeSibling]);
   return ref;

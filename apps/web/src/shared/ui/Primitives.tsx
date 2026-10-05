@@ -184,7 +184,7 @@ export function Modal({
       const first = (initialFocus ? dialogRef.current?.querySelector<HTMLElement>(initialFocus) : null) ?? dialogRef.current?.querySelector<HTMLElement>(
         "button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [href]",
       );
-      (first ?? dialogRef.current)?.focus();
+      (first ?? dialogRef.current)?.focus({preventScroll: true});
     });
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -218,7 +218,7 @@ export function Modal({
       window.cancelAnimationFrame(focusFrame);
       document.body.style.overflow = originalOverflow;
       document.removeEventListener("keydown", handleKey);
-      if (previouslyFocused?.isConnected) previouslyFocused.focus();
+      if (previouslyFocused?.isConnected) previouslyFocused.focus({preventScroll: true});
     };
   }, [isPresent]);
 

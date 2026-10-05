@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { AmbientBackdrop } from "../shared/motion/AmbientBackdrop";
 import type { AmbientMood } from "../shared/motion/ambient-scene";
 import { DURATION, EASE_OUT } from "../shared/motion/tokens";
-import { useMotionSafe } from "../shared/motion/MotionProvider";
+import { useMotionSafe, motionDebugEnabled } from "../shared/motion/MotionProvider";
 import "./styles/screen-motion.css";
 import { ToastViewport } from "../shared/ui/Primitives";
 
@@ -17,7 +17,7 @@ const LoginPage = lazy(() =>
 );
 const AppShell = lazy(() => import("./layout/AppShell").then((m) => ({ default: m.AppShell })));
 // DEV diagnostics are entirely absent from the production dependency graph.
-const MotionDebug = import.meta.env.DEV && new URLSearchParams(window.location.search).has("motion-debug")
+const MotionDebug = motionDebugEnabled
   ? lazy(() => import("../shared/motion/MotionDebug")) : null;
 
 function ScreenFallback() {

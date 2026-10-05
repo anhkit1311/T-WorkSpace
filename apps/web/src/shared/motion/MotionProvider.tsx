@@ -3,6 +3,8 @@ import { MotionConfig } from "motion/react";
 import { getMotionPreset } from "./tokens";
 
 type Preview = "system" | "full" | "reduced";
+export const motionDebugEnabled = import.meta.env.DEV && typeof window !== "undefined"
+  && new URLSearchParams(window.location.search).has("motion-debug");
 let preview: Preview = "system";
 const subscribers = new Set<() => void>();
 const media = () => typeof window === "undefined" ? null : window.matchMedia("(prefers-reduced-motion: reduce)");

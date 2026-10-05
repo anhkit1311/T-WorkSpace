@@ -38,3 +38,20 @@ export function useStatePop(value: unknown) {
   }, [value, reduced, animate, ref]);
   return ref;
 }
+
+/** The current send glyph moves; its button and composer retain their existing geometry. */
+export function useSendFeedback(sending: boolean) {
+  const [ref, animate] = useAnimate<HTMLButtonElement>();
+  const previous = useRef(sending);
+  const { reduced } = useMotionSafe();
+  useEffect(() => {
+    if (ref.current && reduced) void animate("svg", {x:0,y:0,opacity:1}, {duration:0});
+    if (sending && !previous.current && ref.current && !reduced) {
+      const animation = animate("svg", {x:[0,5,0],y:[0,-5,0],opacity:[1,0,1]}, {duration:DURATION.page,ease:EASE.out});
+      previous.current = sending;
+      return () => { animation.stop(); if(ref.current) void animate("svg", {x:0,y:0,opacity:1}, {duration:0}); };
+    }
+    previous.current = sending;
+  }, [sending, reduced, ref, animate]);
+  return ref;
+}

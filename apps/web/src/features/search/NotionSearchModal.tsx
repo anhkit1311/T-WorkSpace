@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useIsPresent, type HTMLMotionProps } from "motion/react";
 import { prefersReducedMotion } from "../../shared/motion/tokens";
 import { useMotionSafe, useSceneCover } from "../../shared/motion/MotionProvider";
 import type {
@@ -28,6 +28,13 @@ interface Props {
 }
 
 const termKey = (value: string) => value.trim();
+
+// The fading surface must release input immediately so fast reopen clicks reach the trigger.
+function SearchBackdrop(props: HTMLMotionProps<"div">) {
+  const present = useIsPresent();
+  return <motion.div {...props} inert={!present} aria-hidden={!present || undefined}
+    style={{...props.style, pointerEvents: present ? undefined : "none"}} />;
+}
 
 const pages: { id: ViewId; title: string; desc: string; icon: IconName }[] = [
   {
@@ -131,11 +138,11 @@ export function NotionSearchModal({
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const frame = window.requestAnimationFrame(() => inputRef.current?.focus());
+    const frame = window.requestAnimationFrame(() => inputRef.current?.focus({preventScroll: true}));
     return () => {
       window.cancelAnimationFrame(frame);
       document.body.style.overflow = previousOverflow;
-      if (previousFocus?.isConnected) previousFocus.focus();
+      if (previousFocus?.isConnected) previousFocus.focus({preventScroll: true});
     };
   }, [isOpen]);
 
@@ -266,7 +273,7 @@ export function NotionSearchModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
+        <SearchBackdrop
           className="notion-search-backdrop"
           onClick={onClose}
           initial={{ opacity: 0 }}
@@ -642,7 +649,7 @@ export function NotionSearchModal({
               <span className="notion-search-brand">nexo Quick Search</span>
             </div>
           </motion.div>
-        </motion.div>
+        </SearchBackdrop>
       )}
     </AnimatePresence>
   );
