@@ -1354,3 +1354,57 @@
     display: none !important;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Short viewports (WCAG 1.4.10 reflow, e.g. 1280x800 at 200% zoom = 640x400).
+   The fixed chrome leaves the conversation almost no height, so the workspace
+   stage scrolls instead of squeezing .chat-messages to zero. column-reverse makes
+   it open at the conversation end; `order` keeps the header visually on top, and
+   the header then scrolls away above the chat. The composer stays pinned.
+   -------------------------------------------------------------------------- */
+@media (max-height: 560px), (max-height: 760px) and (max-width: 768px) {
+  .ws-stage:has(> .ws-body--chat) {
+    flex-direction: column-reverse;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Focused header controls must land above the pinned composer. */
+    scroll-padding-bottom: 80px;
+  }
+  .ws-stage:has(> .ws-body--chat) > .ws-header {
+    order: 1;
+  }
+  .ws-stage > .ws-body--chat {
+    flex: 1 0 auto;
+    overflow: clip;
+  }
+  .ws-body--chat > .live-chat {
+    flex: 1 0 auto !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: clip !important;
+  }
+  .ws-body--chat .live-chat-main {
+    height: auto !important;
+    overflow: clip !important;
+  }
+  .ws-body--chat .chat-main-header {
+    padding: 8px 16px !important;
+  }
+  .ws-body--chat .chat-messages {
+    flex: 1 0 0 !important;
+    min-height: max(220px, 40vh) !important;
+  }
+  .ws-body--chat .live-chat-compose-container {
+    position: sticky !important;
+    bottom: 0;
+    z-index: 2;
+    padding: 6px 14px 8px !important;
+  }
+  /* Messages scroll under the pinned composer here; use the popup surface so
+     their text never shows through the input. */
+  .ws-body--chat .chat-floating-dock-form {
+    background: var(--editorial-surface-popup, rgba(243, 246, 252, 0.92)) !important;
+    backdrop-filter: blur(var(--editorial-blur, 16px)) saturate(110%) !important;
+    -webkit-backdrop-filter: blur(var(--editorial-blur, 16px)) saturate(110%) !important;
+  }
+}
