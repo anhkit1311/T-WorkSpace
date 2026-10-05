@@ -1355,6 +1355,18 @@
   }
 }
 
+/* Composer focus: the standard ring goes around the rounded pill instead of a rectangle
+   around the bare textarea inside it. Buttons in the pill keep their own ring. */
+.live-chat .chat-floating-dock-form .chat-dock-textarea:is(:focus, :focus-visible) {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.chat-floating-dock-form:has(.chat-dock-textarea:focus) {
+  outline: 2px solid #263450 !important;
+  outline-offset: 3px !important;
+}
+
 /* Hit areas for the small message tools (WCAG 2.5.8): an invisible ::after 32px tall
    (44px for coarse pointers). Sideways it reaches only the middle of the 4px gap, so
    neighbours never overlap; the row ends reach further out. Visible size, spacing and
