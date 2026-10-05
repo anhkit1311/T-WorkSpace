@@ -471,6 +471,23 @@
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
+/* Raised-hand badge: same dark pill as the name label, top-left (the pin sits top-right). */
+.participant-hand {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  background: rgba(8, 12, 20, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  color: #fbbf24;
+}
+
 .shared-screen {
   position: relative;
   width: 100%;
