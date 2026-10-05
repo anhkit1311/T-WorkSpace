@@ -1355,6 +1355,65 @@
   }
 }
 
+/* Hit areas for the small message tools (WCAG 2.5.8): an invisible ::after 32px tall
+   (44px for coarse pointers). Sideways it reaches only the middle of the 4px gap, so
+   neighbours never overlap; the row ends reach further out. Visible size, spacing and
+   position are unchanged. */
+.chat-message-actions button,
+.chat-reactions-dock > .chat-reaction-chip,
+.chat-reaction-add-btn {
+  position: relative !important;
+}
+
+.chat-message-actions button::after,
+.chat-reactions-dock > .chat-reaction-chip::after,
+.chat-reaction-add-btn::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -2px;
+  right: -2px;
+  height: 32px;
+  transform: translateY(-50%);
+}
+
+/* These buttons have a 1px border and offsets start at the padding edge. */
+.chat-message-actions button::after {
+  left: -3px;
+  right: -3px;
+}
+
+.chat-message-actions button:first-child::after,
+.chat-reactions-dock > .chat-reaction-chip:first-child::after,
+.chat-reactions-dock > .chat-reaction-picker-anchor:first-child .chat-reaction-add-btn::after {
+  left: -8px;
+}
+
+.chat-message-actions button:last-child::after,
+.chat-reaction-add-btn::after {
+  right: -8px;
+}
+
+@media (pointer: coarse) {
+  .chat-message-actions button::after {
+    height: 44px;
+  }
+  /* The thread-reply pill sits ~9px above this row; taller would steal its taps. */
+  .chat-reactions-dock > .chat-reaction-chip::after,
+  .chat-reaction-add-btn::after {
+    height: 34px;
+  }
+  .chat-message-actions button:first-child::after,
+  .chat-reactions-dock > .chat-reaction-chip:first-child::after,
+  .chat-reactions-dock > .chat-reaction-picker-anchor:first-child .chat-reaction-add-btn::after {
+    left: -12px;
+  }
+  .chat-message-actions button:last-child::after,
+  .chat-reaction-add-btn::after {
+    right: -12px;
+  }
+}
+
 /* "Xuống tin mới nhất": floats over the bottom of the message list without moving it.
    Centred with auto margins because the Button press motion owns `transform`. */
 .chat-jump-latest-anchor {
