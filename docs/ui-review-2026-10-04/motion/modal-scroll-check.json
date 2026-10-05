@@ -1,0 +1,13 @@
+{
+  "before": {
+    "main": 0
+  },
+  "opened": {
+    "inputFocused": "INPUT",
+    "main": 128.8000030517578
+  },
+  "closed": {
+    "focus": "Tạo nhóm mới",
+    "main": 128.8000030517578
+  }
+}
