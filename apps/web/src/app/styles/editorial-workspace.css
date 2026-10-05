@@ -1391,3 +1391,58 @@ body,
 .network-reconnect-btn:hover {
   transform: scale(1.04) !important;
 }
+
+/* --------------------------------------------------------------------------
+   Topbar "in a call" chip: shown only while a call runs off the meetings view.
+   -------------------------------------------------------------------------- */
+.topbar-meeting-chip {
+  height: 36px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  padding: 0 12px !important;
+  border-radius: 9999px !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+  color: #334155 !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  transition: background-color 150ms ease, color 150ms ease !important;
+}
+
+.topbar-meeting-chip:hover {
+  background: rgba(255, 255, 255, 0.78) !important;
+  color: #0f172a !important;
+}
+
+.topbar-meeting-chip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.22);
+  flex-shrink: 0;
+}
+
+.topbar-meeting-chip__icon {
+  display: none;
+}
+
+.topbar-meeting-chip__mic {
+  color: #ef4444;
+}
+
+@media (max-width: 768px) {
+  .topbar-meeting-chip {
+    padding: 0 10px !important;
+    gap: 6px !important;
+  }
+  .topbar-meeting-chip__label {
+    display: none;
+  }
+  .topbar-meeting-chip__icon {
+    display: block;
+  }
+}

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState, type FormEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "../providers/AppContext";
 import { useSocket } from "../providers/SocketContext";
+import { useMeeting } from "../providers/MeetingContext";
 import { Icon } from "../../shared/ui/Icon";
 import { Brand, Button, Field, Modal } from "../../shared/ui/Primitives";
 import { NotionSearchModal } from "../../features/search/NotionSearchModal";
@@ -78,8 +79,17 @@ export function AppShell() {
     updateUser,
     accessToken,
     openChatSearchResult,
+    openChannel,
   } = useApp();
   const { connectionStatus, reconnect, unreadCount, socket } = useSocket();
+  const meeting = useMeeting();
+  // The call keeps running off the meetings view; remember its workspace for the way back.
+  const [meetingWorkspaceId, setMeetingWorkspaceId] = useState("");
+  useEffect(() => {
+    if (!meeting.inCall) setMeetingWorkspaceId("");
+    else if (activeView === "meetings" && route.workspaceId) setMeetingWorkspaceId(route.workspaceId);
+  }, [meeting.inCall, activeView, route.workspaceId]);
+  const showMeetingChip = meeting.inCall && activeView !== "meetings";
   const mobileNavRef = usePanelDialog(
     () => setMobileNavOpen(false),
     mobileNavOpen,
@@ -228,6 +238,24 @@ export function AppShell() {
         </div>
 
         <div className="editorial-master-topbar__right">
+          {showMeetingChip && (
+            <button
+              type="button"
+              className="topbar-meeting-chip"
+              title="Quay lại cuộc họp"
+              aria-label={`Quay lại cuộc họp đang diễn ra${meeting.mic ? "" : " (micro đang tắt)"}`}
+              onClick={() =>
+                meetingWorkspaceId
+                  ? openChannel(meetingWorkspaceId, meeting.roomId, true)
+                  : setActiveView("meetings")
+              }
+            >
+              <span className="topbar-meeting-chip__dot" aria-hidden="true" />
+              <Icon name="video" size={15} className="topbar-meeting-chip__icon" />
+              <span className="topbar-meeting-chip__label">Đang họp</span>
+              {!meeting.mic && <Icon name="mic-off" size={14} className="topbar-meeting-chip__mic" />}
+            </button>
+          )}
           <button
             type="button"
             className="topbar-action-icon-btn"
