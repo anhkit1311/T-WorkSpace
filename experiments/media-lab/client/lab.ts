@@ -266,6 +266,14 @@ async function runSfu() {
   });
   const local = await captureLocal();
   const service = new MediasoupClientService();
+  // Listen before joining: a producer created while our transports are still being set up
+  // would otherwise be missed (it is neither in the join snapshot nor seen as an event).
+  const pendingProducers: string[] = [];
+  let consumeReady: ((producerId: string) => void) | null = null;
+  socket.on("new_producer", (producer: { producerId: string }) => {
+    if (consumeReady) consumeReady(producer.producerId);
+    else pendingProducers.push(producer.producerId);
+  });
   const joined = await ack<{
     routerRtpCapabilities: unknown;
     existingProducers: { producerId: string }[];
@@ -300,7 +308,10 @@ async function runSfu() {
       dtlsParameters,
     });
   });
+  const consumed = new Set<string>();
   const consume = async (producerId: string) => {
+    if (consumed.has(producerId)) return;
+    consumed.add(producerId);
     const response = await ack<{ params: never }>(socket, "consume", {
       roomId,
       producerId,
@@ -326,14 +337,20 @@ async function runSfu() {
     for (const consumerId of consumers)
       await ack(socket, "consumer_layer", { roomId, consumerId, spatialLayer });
   };
-  socket.on("new_producer", (producer: { producerId: string }) => {
-    void consume(producer.producerId).catch((error) => log(`consume ${String(error)}`));
-  });
   // Diagnostic: simulcast=0 publishes the camera as a single-encoding "screen" source.
   const videoSource = params.get("simulcast") === "0" ? "screen" : "webcam";
   for (const track of local.getTracks())
     await service.produce(track, track.kind === "audio" ? "mic" : videoSource);
-  for (const producer of joined.existingProducers) await consume(producer.producerId);
+  const consumeLogged = (producerId: string) =>
+    void consume(producerId).catch((error) => log(`consume ${String(error)}`));
+  consumeReady = consumeLogged;
+  pendingProducers.splice(0).forEach(consumeLogged);
+  // Same as MeetingContext: re-snapshot once transports exist to catch concurrent joiners.
+  const latest = await ack<{ existingProducers: { producerId: string }[] }>(socket, "join_meeting", {
+    roomId,
+  });
+  for (const producer of [...joined.existingProducers, ...latest.existingProducers])
+    await consume(producer.producerId);
   state.joinedAt = performance.now() - started;
   state.ready = true;
   log(`sfu joined as ${peerName}`);
