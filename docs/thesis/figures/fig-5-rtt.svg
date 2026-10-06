@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360" font-family="Inter, Segoe UI, Arial, sans-serif" role="img" aria-label="RTT theo số người">
+<rect width="640" height="360" fill="#fcfcfb"/>
+<text x="64" y="22" font-size="14" font-weight="600" fill="#0b0b0b">RTT theo số người</text>
+<text x="64" y="38" font-size="11" fill="#52514e">ms · thang logarit</text>
+<line x1="64" x2="500" y1="312" y2="312" stroke="#e6e5e0" stroke-width="1"/><text x="56" y="316" font-size="11" text-anchor="end" fill="#52514e">0,1</text>
+<line x1="64" x2="500" y1="258.4" y2="258.4" stroke="#e6e5e0" stroke-width="1"/><text x="56" y="262.4" font-size="11" text-anchor="end" fill="#52514e">1</text>
+<line x1="64" x2="500" y1="204.79999999999998" y2="204.79999999999998" stroke="#e6e5e0" stroke-width="1"/><text x="56" y="208.79999999999998" font-size="11" text-anchor="end" fill="#52514e">10</text>
+<line x1="64" x2="500" y1="151.2" y2="151.2" stroke="#e6e5e0" stroke-width="1"/><text x="56" y="155.2" font-size="11" text-anchor="end" fill="#52514e">100</text>
+<line x1="64" x2="500" y1="97.6" y2="97.6" stroke="#e6e5e0" stroke-width="1"/><text x="56" y="101.6" font-size="11" text-anchor="end" fill="#52514e">1.000</text>
+<line x1="64" x2="500" y1="44" y2="44" stroke="#e6e5e0" stroke-width="1"/><text x="56" y="48" font-size="11" text-anchor="end" fill="#52514e">10.000</text>
+<text x="64" y="330" font-size="11" text-anchor="middle" fill="#52514e">2</text>
+<text x="209.33333333333331" y="330" font-size="11" text-anchor="middle" fill="#52514e">4</text>
+<text x="354.66666666666663" y="330" font-size="11" text-anchor="middle" fill="#52514e">6</text>
+<text x="500" y="330" font-size="11" text-anchor="middle" fill="#52514e">8</text>
+<text x="282" y="350" font-size="11" text-anchor="middle" fill="#52514e">Số người trong phòng (N)</text>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="64,259.3502619090791 209.33333333333331,257.9390307935612 354.66666666666663,91.62318044773446 500,60.93691582267931"/><circle cx="64" cy="259.3502619090791" r="4.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><circle cx="209.33333333333331" cy="257.9390307935612" r="4.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><circle cx="354.66666666666663" cy="91.62318044773446" r="4.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><circle cx="500" cy="60.93691582267931" r="4.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<polyline fill="none" stroke="#eb6834" stroke-width="2" stroke-linejoin="round" points="64,290.6704155351788 209.33333333333331,302.56150851461547 354.66666666666663,278.04609078093415"/><rect x="59.5" y="286.1704155351788" width="9" height="9" rx="1.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><rect x="204.83333333333331" y="298.06150851461547" width="9" height="9" rx="1.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><rect x="350.16666666666663" y="273.54609078093415" width="9" height="9" rx="1.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<text x="510" y="64.93691582267931" font-size="11" fill="#0b0b0b">Mesh P2P</text>
+<text x="364.66666666666663" y="282.04609078093415" font-size="11" fill="#0b0b0b">SFU + simulcast</text>
+</svg>
