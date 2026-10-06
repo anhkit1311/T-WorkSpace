@@ -1,207 +1,148 @@
 /* ==========================================================================
-   Workspace Home Page — Minimalist Editorial / Cinematic Aesthetic
-   Matching Login & Landing Page (Luminous Frosted Glass & Deep Slate Palette)
+   Workspace Home Page — Warm Ivory & Floating Dock Layout
+   Matching Reference Mobile Aesthetic (Warm Ivory #FAF9F6, Near-Black #1C1B19)
    ========================================================================== */
 
 .workspace-home {
-  padding: 32px clamp(20px, 3vw, 48px) 80px;
-  max-width: 1360px;
-  margin: 0 auto;
+  padding: 0;
+  margin: 0;
+  max-width: none;
   width: 100%;
+  flex: 1 1 0;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
-  font-family: var(--font-body, 'Inter', sans-serif);
-  color: #0f172a;
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif);
+  color: var(--nexo-text-primary, #1C1B19);
 }
 
 /* --------------------------------------------------------------------------
-   Editorial Tag Eyebrow
+   Eyebrow / Small Label (No uppercase, no letter-spacing, ~14px, 500, warm gray)
    -------------------------------------------------------------------------- */
 .editorial-tag {
-  font-family: var(--font-body, 'Inter', sans-serif);
-  font-size: 11px;
-  font-weight: 650;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--editorial-text-muted, #3e4e66);
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif);
+  font-size: var(--nexo-fs-eyebrow, 14px);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--nexo-text-muted, #8A8780);
 }
 
 /* --------------------------------------------------------------------------
-   Hero Greeting Section (Frosted Glass Card matching Login)
+   Single Unified Card Content Pane (Inside .editorial-workspace-body)
+   -------------------------------------------------------------------------- */
+.workspace-home__unified-card {
+  width: 100%;
+  flex: 1 1 0;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --------------------------------------------------------------------------
+   Zone 1: Hero Greeting Section (Inside Unified Card)
    -------------------------------------------------------------------------- */
 .workspace-home__hero {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 32px;
-  padding: clamp(32px, 4vw, 48px);
-  margin-bottom: 36px;
-  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36));
-  border-radius: 28px;
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
-  backdrop-filter: blur(var(--editorial-blur, 16px));
-  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px));
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.1);
+  gap: 28px;
+  padding: clamp(28px, 3.2vw, 40px) clamp(28px, 3.2vw, 44px) clamp(28px, 3.2vw, 36px);
+  margin: 0;
+  border: 0;
+  border-bottom: 1.5px solid var(--nexo-border-beige, #E6E2DA);
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
   position: relative;
-  overflow: hidden;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
   flex-wrap: wrap;
 }
 
 .workspace-home__greeting {
   flex: 1;
   min-width: 280px;
-  max-width: 760px;
+  max-width: 780px;
 }
 
 .workspace-home__date-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11.5px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(15, 23, 42, 0.7);
-  background: rgba(15, 23, 42, 0.05);
-  padding: 6px 16px;
-  border-radius: 9999px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
   margin-bottom: 14px;
 }
 
 .workspace-home__greeting h1 {
-  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif);
   font-style: normal;
-  font-size: clamp(2.2rem, 3.6vw, 3.2rem);
-  font-weight: 500;
-  letter-spacing: -0.015em;
-  color: #0f172a;
+  font-size: var(--nexo-fs-hero, clamp(44px, 4.2vw, 48px));
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--nexo-text-primary, #1C1B19);
   margin: 0 0 12px;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 
 .workspace-home__greeting p {
-  font-size: 15px;
-  color: hsl(215, 25%, 32%);
-  margin: 0 0 24px;
-  line-height: 1.6;
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif);
+  font-size: var(--nexo-fs-desc, 15px);
+  font-weight: 400;
+  color: var(--nexo-text-muted, #8A8780);
+  margin: 0;
+  line-height: 1.4;
 }
 
 /* --------------------------------------------------------------------------
-   Tactile Metrics Strip
-   -------------------------------------------------------------------------- */
-.workspace-home__metrics-strip {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 8px 20px;
-  border-radius: 9999px;
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
-}
-
-.workspace-metric-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 13px;
-  color: #0f172a;
-}
-
-.workspace-metric-chip__indicator {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.workspace-metric-chip__indicator--blue {
-  background: #2563eb;
-  box-shadow: 0 0 8px rgba(37, 99, 235, 0.4);
-}
-
-.workspace-metric-chip__indicator--violet {
-  background: #8b5cf6;
-  box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
-}
-
-.workspace-metric-chip__indicator--emerald {
-  background: #10b981;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
-}
-
-.workspace-metric-chip__indicator--amber {
-  background: #f59e0b;
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
-}
-
-.workspace-metric-chip__count {
-  font-weight: 700;
-  color: #0f172a;
-  font-size: 13.5px;
-  letter-spacing: -0.01em;
-}
-
-.workspace-metric-chip__text {
-  font-weight: 500;
-  color: rgba(15, 23, 42, 0.65);
-}
-
-.workspace-metric-chip__sep {
-  color: rgba(15, 23, 42, 0.15);
-  font-size: 12px;
-  user-select: none;
-}
-
-/* --------------------------------------------------------------------------
-   Quick Action Buttons (Solid Black Pill from Login & Landing)
+   Quick Action Buttons (Inheriting shared Button primary & secondary styles)
    -------------------------------------------------------------------------- */
 .workspace-home__quick-actions {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   flex-wrap: wrap;
   flex-shrink: 0;
 }
 
-.workspace-home__quick-actions .button,
-.workspace-home .button {
-  border-radius: 9999px !important;
-  padding: 10px 24px;
-  font-weight: 500;
-  font-size: 14px;
-  white-space: nowrap;
-  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms ease, box-shadow 150ms ease;
-
-}
-
-.workspace-home__quick-actions .button:hover:not(:disabled),
-.workspace-home .button:hover:not(:disabled) {
-}
-.workspace-home__quick-actions .button:hover:not(:disabled):not([data-motion-control]),
-.workspace-home .button:hover:not(:disabled):not([data-motion-control]) {
-  transform: scale(1.03);
-}
-
-.workspace-home__quick-actions .button:active:not(:disabled),
-.workspace-home .button:active:not(:disabled) {
-}
-.workspace-home__quick-actions .button:active:not(:disabled):not([data-motion-control]),
-.workspace-home .button:active:not(:disabled):not([data-motion-control]) {
-  transform: scale(0.98);
-}
-
 /* --------------------------------------------------------------------------
-   Section Headers
+   Zone 3: Workspace Groups Section (Inside Unified Card)
    -------------------------------------------------------------------------- */
+.workspace-home .inline-alert {
+  margin: 20px clamp(28px, 3.2vw, 44px) 0;
+}
+
+.workspace-home__groups-section {
+  padding: clamp(28px, 3vw, 34px) clamp(28px, 3.2vw, 44px) clamp(32px, 3.5vw, 42px);
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
 .workspace-home__section-head {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
+  padding: 0;
   margin-bottom: 22px;
+  border-bottom: 0;
 }
 
 .workspace-home__section-title {
@@ -211,70 +152,73 @@
 }
 
 .workspace-home__section-title h2 {
-  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif);
   font-style: normal;
-  font-size: clamp(1.6rem, 2.2vw, 2.1rem);
+  font-size: var(--nexo-fs-section, clamp(28px, 2.8vw, 32px));
   font-weight: 700;
-  color: #0f172a;
-  letter-spacing: -0.015em;
+  color: var(--nexo-text-primary, #1C1B19);
+  letter-spacing: -0.02em;
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.15;
 }
 
 .workspace-home__count-badge {
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 600;
-  padding: 4px 14px;
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
-  color: #0f172a;
+  padding: 5px 14px;
+  background: var(--nexo-bg-ivory, #FAF9F6);
+  color: var(--nexo-text-primary, #1C1B19);
   border-radius: 9999px;
-  border: 1px solid rgba(15, 23, 42, 0.1);
+  border: 1px solid var(--nexo-border-beige, #E6E2DA);
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
   line-height: 1;
   margin-bottom: 2px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 /* --------------------------------------------------------------------------
-   Workspace Group Cards (Frosted Glass Panel)
+   Workspace Groups (Divided Sections Inside Unified Card — No Separate Boxes)
    -------------------------------------------------------------------------- */
 .workspace-groups-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
-  gap: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .workspace-group-card {
-  background: rgba(255, 255, 255, 0.72) !important;
-  border: 1px solid rgba(255, 255, 255, 0.85) !important;
-  border-radius: 26px !important;
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.95) !important;
-  backdrop-filter: blur(28px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
-  overflow: hidden;
+  background: transparent !important;
+  border: 0 !important;
+  border-top: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: visible;
   display: flex;
   flex-direction: column;
-  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), border-color 200ms ease, box-shadow 200ms ease;
+  padding: 24px 0 !important;
+  transition: background-color 180ms ease;
+}
 
+.workspace-group-card:last-child {
+  padding-bottom: 0 !important;
 }
 
 .workspace-group-card:hover {
-  border-color: rgba(255, 255, 255, 0.95) !important;
-  transform: translateY(-3px);
-  box-shadow: 0 26px 60px rgba(15, 23, 42, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.95) !important;
+  border-color: var(--nexo-border-beige, #E6E2DA) !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .workspace-group-card__header {
-  padding: 20px 24px !important;
+  padding: 0 0 16px 0 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   gap: 16px !important;
-  background: rgba(255, 255, 255, 0.3) !important;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06) !important;
+  background: transparent !important;
+  border-bottom: 0 !important;
   flex-wrap: wrap !important;
 }
 
@@ -289,7 +233,7 @@
   width: 46px;
   height: 46px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+  background: var(--nexo-text-primary, #1C1B19);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -298,7 +242,7 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
 }
 
 .workspace-group-card__info {
@@ -316,16 +260,17 @@
 }
 
 .workspace-group-card__name {
-  font-size: 17px;
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif);
+  font-size: var(--nexo-fs-col-title, 17.5px);
   font-weight: 600;
-  color: #0f172a;
+  color: var(--nexo-text-primary, #1C1B19);
   letter-spacing: -0.01em;
   margin: 0;
 }
 
 .workspace-group-card__meta {
-  font-size: 12.5px;
-  color: var(--editorial-text-muted, #3e4e66);
+  font-size: 14px;
+  color: var(--nexo-text-muted, #8A8780);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -339,73 +284,83 @@
 
 .workspace-group-card__actions .button {
   border-radius: 9999px !important;
-  font-size: 12.5px !important;
-  padding: 6px 16px !important;
+  font-size: var(--nexo-fs-button, 16px) !important;
+  font-weight: 600 !important;
+  padding: 8px 18px !important;
   transition: transform 150ms ease, background-color 150ms ease, box-shadow 150ms ease !important;
 }
 
 /* --------------------------------------------------------------------------
-   Channels Section inside Workspace Card
+   Channels Section inside Workspace Group Row
    -------------------------------------------------------------------------- */
 .workspace-group-card__body {
-  padding: 18px 24px 22px !important;
+  padding: 14px 0 0 60px !important;
+  border-top: 1px dashed rgba(28, 27, 25, 0.1) !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 10px !important;
 }
 
 .workspace-channels-label {
-  font-size: 11.5px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.08em !important;
-  text-transform: uppercase !important;
-  color: #64748b !important;
+  font-size: var(--nexo-fs-eyebrow, 14px) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  color: var(--nexo-text-muted, #8A8780) !important;
   margin-bottom: 2px !important;
   display: block !important;
 }
 
 .workspace-channels-empty {
-  font-size: 13px !important;
-  color: #64748b !important;
-  padding: 14px 18px !important;
-  border-radius: 14px !important;
-  background: rgba(15, 23, 42, 0.03) !important;
-  border: 1px dashed rgba(15, 23, 42, 0.12) !important;
+  font-size: var(--nexo-fs-desc, 15px) !important;
+  font-weight: 400 !important;
+  line-height: 1.4 !important;
+  color: var(--nexo-text-muted, #8A8780) !important;
+  padding: 8px 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+}
+
+.workspace-empty-state p {
+  font-size: var(--nexo-fs-desc, 15px);
+  font-weight: 400;
+  color: var(--nexo-text-muted, #8A8780);
+  line-height: 1.4;
 }
 
 .workspace-channels-grid {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
-  gap: 8px 10px !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
 }
 
 .workspace-channel-btn {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: flex-start !important;
-  justify-content: space-between !important;
-  gap: 6px !important;
-  padding: 9px 12px !important;
-  border-radius: 14px !important;
-  background: rgba(255, 255, 255, 0.8) !important;
-  border: 1px solid rgba(255, 255, 255, 0.95) !important;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  color: #0f172a !important;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  min-height: var(--nexo-touch-min, 44px) !important;
+  padding: 8px 14px !important;
+  border-radius: 9999px !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
   cursor: pointer !important;
   text-align: left !important;
-  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1) !important, opacity 180ms cubic-bezier(0.16, 1, 0.3, 1) !important, background-color 180ms cubic-bezier(0.16, 1, 0.3, 1) !important, border-color 180ms cubic-bezier(0.16, 1, 0.3, 1) !important, color 180ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: transform 150ms ease !important, background-color 150ms ease !important, border-color 150ms ease !important;
   outline: none !important;
-  width: 100% !important;
+  width: auto !important;
   box-sizing: border-box !important;
 }
 
 .workspace-channel-btn:hover {
-  background: #ffffff !important;
-  transform: translateY(-2px) !important;
-  border-color: rgba(15, 23, 42, 0.15) !important;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08) !important;
+  background: var(--nexo-bg-subtle, #EEECE7) !important;
+  transform: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
 }
 
 .workspace-channel-btn:active {
@@ -423,14 +378,14 @@
 .workspace-channel-btn__icon {
   display: grid !important;
   place-items: center !important;
-  color: #475569 !important;
+  color: var(--nexo-text-muted, #8A8780) !important;
   flex-shrink: 0 !important;
 }
 
 .workspace-channel-btn__name {
-  font-size: 13px !important;
+  font-size: 14px !important;
   font-weight: 600 !important;
-  color: #0f172a !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
@@ -438,14 +393,13 @@
 }
 
 .workspace-channel-btn__tag {
-  font-size: 10.5px !important;
-  font-weight: 550 !important;
-  color: #64748b !important;
-  padding: 2px 7px !important;
+  font-size: 11.5px !important;
+  font-weight: 500 !important;
+  color: var(--nexo-text-muted, #8A8780) !important;
+  padding: 2px 8px !important;
   border-radius: 6px !important;
-  background: rgba(15, 23, 42, 0.05) !important;
+  background: rgba(28, 27, 25, 0.05) !important;
   line-height: 1.2 !important;
-  letter-spacing: 0.01em !important;
 }
 
 /* Video channel variant */
@@ -475,9 +429,6 @@
 }
 
 @media (max-width: 900px) {
-  .workspace-home__hero {
-    padding: 24px;
-  }
   .workspace-home__greeting {
     min-width: 0;
   }
@@ -486,14 +437,30 @@
     min-width: 0;
     flex-shrink: 1;
   }
-  .workspace-home__quick-actions .button {
-    flex: 1 1 100%;
-  }
   .workspace-group-card__header,
   .workspace-group-card__actions {
     flex-wrap: wrap;
   }
   .workspace-groups-list {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .workspace-home {
+    padding: 0;
+  }
+  .workspace-home__unified-card {
+    padding: 0 !important;
+  }
+  .workspace-home__hero,
+  .workspace-home__groups-section {
+    padding: 24px 20px !important;
+  }
+  .workspace-home .inline-alert {
+    margin: 16px 20px 0;
+  }
+  .workspace-home__quick-actions .button {
+    flex: 1 1 100%;
   }
 }

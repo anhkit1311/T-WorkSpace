@@ -8,24 +8,73 @@
    0. Design Tokens & Root Variables
    -------------------------------------------------------------------------- */
 :root {
-  --font-display: "Playfair Display", Georgia, serif;
-  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
+  --font-brand: "Playfair Display", Georgia, serif;
+  --font-display: var(--font-sans);
+  --font-body: var(--font-sans);
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
 
-  /* Color Palette matching Login & Landing */
-  --editorial-text: #0f172a;
-  --editorial-text-secondary: hsl(215, 25%, 32%);
-  --editorial-text-muted: rgba(15, 23, 42, 0.55);
-  --editorial-surface-glass: rgba(255, 255, 255, 0.9);
-  --editorial-surface-card: rgba(255, 255, 255, 0.94);
-  --editorial-surface-soft: rgba(15, 23, 42, 0.04);
-  --editorial-border: rgba(255, 255, 255, 0.85);
-  --editorial-border-soft: rgba(15, 23, 42, 0.08);
-  --editorial-border-strong: rgba(15, 23, 42, 0.16);
+  /* Shared Warm Palette (Matching Reference Mobile UI) */
+  --nexo-text-primary: #1C1B19;
+  --nexo-primary-hover: #2C2A27;
+  --nexo-text-muted: #8A8780;
+  --nexo-bg-ivory: #FAF9F6;
+  --nexo-bg-subtle: #EEECE7;
+  --nexo-surface-ivory: rgba(250, 249, 246, 0.88);
+  --nexo-card-surface: rgba(250, 249, 246, 0.88);
+  --nexo-border-beige: #E6E2DA;
+  --nexo-pill-active-bg: rgba(28, 27, 25, 0.08);
+  --nexo-pill-hover-bg: rgba(28, 27, 25, 0.045);
+
+  /* Shared Touch Target Geometry, Radius & Shadow Tokens */
+  --nexo-touch-min: 44px;
+  --nexo-btn-height: 52px;
+  --nexo-btn-px: 24px;
+  --nexo-btn-gap: 8px;
+  --nexo-btn-radius-primary: 16px;
+  --nexo-btn-radius-pill: 9999px;
+  --nexo-btn-shadow-primary: 0 4px 14px rgba(0, 0, 0, 0.15);
+  --nexo-chip-height: 36px;
+  --nexo-chip-px: 16px;
+  --nexo-list-item-min-height: 64px;
+  --nexo-list-item-icon-size: 44px;
+
+  /* Shared Layout, Radius, Shadow & Spacing Tokens */
+  --nexo-page-edge: 20px;
+  --nexo-dock-offset: 20px;
+  --nexo-dock-top: 50%;
+  --nexo-dock-width: 84px;
+  --nexo-dock-radius: 28px;
+  --nexo-dock-blur: 18px;
+  --nexo-dock-shadow: 0 10px 32px rgba(28, 27, 25, 0.12), 0 2px 8px rgba(28, 27, 25, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  --nexo-card-radius: 28px;
+  --nexo-main-left-offset: calc(var(--nexo-dock-offset) + var(--nexo-dock-width) + 18px);
+
+  /* Shared Typography Scale Tokens */
+  --nexo-fs-hero: clamp(44px, 4.2vw, 48px);
+  --nexo-fs-section: clamp(28px, 2.8vw, 32px);
+  --nexo-fs-col-title: 17.5px;
+  --nexo-fs-eyebrow: 14px;
+  --nexo-fs-big-num: 48px;
+  --nexo-fs-button: 16px;
+  --nexo-fs-desc: 15px;
+  --nexo-fs-dock-label: 12.5px;
+
+  /* Editorial Workspace Tokens mapped to Shared Palette */
+  --editorial-text: var(--nexo-text-primary);
+  --editorial-text-secondary: var(--nexo-text-muted);
+  --editorial-text-muted: var(--nexo-text-muted);
+  --editorial-surface-glass: var(--nexo-surface-ivory);
+  --editorial-surface-card: var(--nexo-card-surface);
+  --editorial-surface-soft: rgba(28, 27, 25, 0.04);
+  --editorial-border: var(--nexo-border-beige);
+  --editorial-border-soft: var(--nexo-border-beige);
+  --editorial-border-strong: rgba(28, 27, 25, 0.18);
 
   --editorial-radius-pill: 9999px;
-  --editorial-radius-card: 26px;
-  --editorial-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
-  --editorial-shadow-lg: 0 24px 60px rgba(15, 23, 42, 0.14);
+  --editorial-radius-card: var(--nexo-card-radius);
+  --editorial-shadow: 0 12px 36px rgba(0, 0, 0, 0.08);
+  --editorial-shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.12);
 }
 
 /* --------------------------------------------------------------------------
@@ -48,20 +97,19 @@ body,
 
 .app-shell.editorial-workspace-shell,
 .app-shell {
-  /* Authenticated surfaces share the reference's cool glass and navy ink. */
-  --editorial-text: #17233e;
-  --editorial-text-secondary: #31415b;
-  --editorial-text-muted: #3e4e66;
-  --editorial-surface-glass: rgba(237, 242, 250, 0.36);
-  --editorial-surface-card: rgba(246, 248, 252, 0.64);
-  --editorial-surface-soft: rgba(255, 255, 255, 0.24);
-  --editorial-message-surface: rgba(250, 250, 253, 0.82);
-  --editorial-control-surface: rgba(255, 255, 255, 0.36);
-  --editorial-surface-popup: rgba(243, 246, 252, 0.92);
-  --editorial-border: rgba(255, 255, 255, 0.36);
-  --editorial-border-soft: rgba(23, 35, 62, 0.1);
-  --editorial-blur: 10px;
-  --editorial-radius-card: 22px;
+  --editorial-text: var(--nexo-text-primary);
+  --editorial-text-secondary: var(--nexo-text-muted);
+  --editorial-text-muted: var(--nexo-text-muted);
+  --editorial-surface-glass: var(--nexo-surface-ivory);
+  --editorial-surface-card: var(--nexo-card-surface);
+  --editorial-surface-soft: rgba(250, 249, 246, 0.65);
+  --editorial-message-surface: rgba(250, 249, 246, 0.92);
+  --editorial-control-surface: rgba(250, 249, 246, 0.72);
+  --editorial-surface-popup: rgba(250, 249, 246, 0.96);
+  --editorial-border: var(--nexo-border-beige);
+  --editorial-border-soft: var(--nexo-border-beige);
+  --editorial-blur: 20px;
+  --editorial-radius-card: var(--nexo-card-radius);
   --text: var(--editorial-text);
   --text-secondary: var(--editorial-text-secondary);
   --text-muted: var(--editorial-text-muted);
@@ -71,11 +119,12 @@ body,
   --bg: transparent;
   --bg-subtle: var(--editorial-control-surface);
   --border: var(--editorial-border-soft);
-  --border-strong: rgba(23, 35, 62, 0.25);
-  --primary: #263450;
-  --primary-hover: #17233e;
-  --primary-soft: rgba(38, 52, 80, 0.1);
-  --focus: #263450;
+  --border-strong: rgba(28, 27, 25, 0.24);
+  --primary: #1C1B19;
+  --primary-strong: #2C2A27;
+  --primary-hover: var(--primary-strong);
+  --primary-soft: rgba(28, 27, 25, 0.08);
+  --focus: #1C1B19;
   color-scheme: light;
   position: relative !important;
   height: 100vh !important;
@@ -100,7 +149,7 @@ body,
   align-items: center !important;
   justify-content: space-between !important;
   height: 60px !important;
-  padding: 0 28px !important;
+  padding: 0 20px !important;
   background: transparent !important;
   flex-shrink: 0 !important;
 }
@@ -119,12 +168,12 @@ body,
 }
 
 .editorial-master-topbar__left .brand-name {
-  font-family: var(--font-display) !important;
+  font-family: var(--font-brand) !important;
   font-style: normal !important;
   font-size: 29px !important;
   font-weight: 400 !important;
   letter-spacing: -0.02em !important;
-  color: #0f172a !important;
+  color: var(--nexo-text-primary) !important;
 }
 
 .editorial-master-topbar__left .brand-name sup {
@@ -133,64 +182,45 @@ body,
   font-size: 11px !important;
   font-weight: 600 !important;
   margin-left: 2px !important;
-  color: rgba(15, 23, 42, 0.6) !important;
-}
-
-.editorial-master-topbar__center {
-  display: flex !important;
-  align-items: center !important;
-  gap: 36px !important;
-}
-
-.topbar-nav-tab {
-  background: transparent !important;
-  border: 0 !important;
-  padding: 6px 12px !important;
-  font-family: var(--font-body) !important;
-  font-size: 14.5px !important;
-  font-weight: 550 !important;
-  color: rgba(15, 23, 42, 0.72) !important;
-  cursor: pointer !important;
-  transition: all 150ms ease !important;
-  border-radius: var(--editorial-radius-pill) !important;
-  outline: none !important;
-}
-
-.topbar-nav-tab:hover {
-  color: #0f172a !important;
-  background: rgba(255, 255, 255, 0.45) !important;
-}
-
-.topbar-nav-tab.is-active {
-  color: #0f172a !important;
-  font-weight: 650 !important;
+  color: var(--nexo-text-muted) !important;
 }
 
 .editorial-master-topbar__right {
   display: flex !important;
   align-items: center !important;
-  gap: 14px !important;
+  gap: 8px !important;
   position: relative !important;
 }
 
 .topbar-action-icon-btn {
-  width: 36px !important;
-  height: 36px !important;
-  border-radius: 9999px !important;
+  width: var(--nexo-touch-min, 44px) !important;
+  height: var(--nexo-touch-min, 44px) !important;
+  min-width: var(--nexo-touch-min, 44px) !important;
+  min-height: var(--nexo-touch-min, 44px) !important;
+  padding: 0 !important;
+  border-radius: var(--nexo-btn-radius-pill, 9999px) !important;
   background: transparent !important;
   border: 0 !important;
-  color: #334155 !important;
+  box-shadow: none !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
   cursor: pointer !important;
-  display: grid !important;
+  display: inline-grid !important;
   place-items: center !important;
   position: relative !important;
-  transition: all 150ms ease !important;
-  outline: none !important;
+  transition:
+    transform 150ms ease,
+    opacity 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease !important;
 }
 
-.topbar-action-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.5) !important;
-  color: #0f172a !important;
+.topbar-action-icon-btn:hover:not(:disabled) {
+  background: var(--nexo-bg-subtle, #EEECE7) !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+}
+
+.topbar-action-icon-btn:active:not(:disabled) {
+  transform: scale(0.97) !important;
 }
 
 .topbar-bell-btn {
@@ -199,13 +229,13 @@ body,
 
 .topbar-bell-dot {
   position: absolute !important;
-  top: 7px !important;
-  right: 7px !important;
-  width: 7px !important;
-  height: 7px !important;
+  top: 10px !important;
+  right: 10px !important;
+  width: 8px !important;
+  height: 8px !important;
   background: #ef4444 !important;
   border-radius: 9999px !important;
-  border: 1.5px solid #ffffff !important;
+  border: 1.5px solid var(--nexo-bg-ivory, #FAF9F6) !important;
 }
 
 .topbar-avatar-btn {
@@ -236,8 +266,60 @@ body,
   width: 10px !important;
   height: 10px !important;
   border-radius: 9999px !important;
-  background: #10b981 !important;
+  background: #94a3b8 !important;
   border: 2px solid #ffffff !important;
+  transition:background-color 240ms ease !important;
+}
+
+/* Presence: online only when connected and activity is shared. */
+.topbar-online-dot.is-online {
+  background: #10b981 !important;
+}
+
+.topbar-online-dot.is-connecting {
+  background: #f59e0b !important;
+}
+
+.topbar-online-dot.is-offline {
+  background: #94a3b8 !important;
+}
+
+.topbar-account {
+  position: relative;
+  display: flex;
+}
+
+.topbar-account-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 1px solid var(--editorial-border-soft);
+  background: var(--primary-soft);
+}
+
+.topbar-presence-label {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--editorial-text-muted);
+}
+
+.topbar-presence-label i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.topbar-presence-label.is-online i {
+  background: #10b981;
+}
+
+.topbar-presence-label.is-connecting i {
+  background: #f59e0b;
 }
 
 .topbar-account-popover {
@@ -259,41 +341,66 @@ body,
 }
 
 /* ==========================================================================
-   Master Workspace Body (Vertical Dock + Stage Viewport)
+   Master Workspace Body (Unified Big Card: Left Top-Aligned Sidebar + Stage)
    ========================================================================== */
 .editorial-workspace-body {
   position: relative !important;
   z-index: 2 !important;
   display: flex !important;
+  flex-direction: row !important;
   flex: 1 1 0 !important;
   min-height: 0 !important;
-  gap: 16px !important;
-  padding: 0 20px 20px 20px !important;
+  gap: 0 !important;
+  margin: 8px var(--nexo-page-edge, 20px) 20px var(--nexo-page-edge, 20px) !important;
+  padding: 0 !important;
+  border: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
+  border-radius: var(--nexo-card-radius, 28px) !important;
+  background: var(--nexo-card-surface, rgba(250, 249, 246, 0.88)) !important;
+  backdrop-filter: blur(20px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08) !important;
   overflow: hidden !important;
+  box-sizing: border-box !important;
 }
 
-/* Left Vertical Dock */
+/* Left Vertical Sidebar Inside Unified Card (Top-Aligned, Same Surface Color) */
 .editorial-dock {
-  width: 76px !important;
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
+  z-index: 5 !important;
+  width: var(--nexo-dock-width, 88px) !important;
   height: 100% !important;
+  max-height: 100% !important;
   flex-shrink: 0 !important;
-  border-radius: 26px !important;
-  background: var(--editorial-surface-glass) !important;
-  backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
-  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
-  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36)) !important;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 0 !important;
+  border-right: 1.5px solid var(--nexo-border-beige, #E6E2DA) !important;
+  box-shadow: none !important;
   display: flex !important;
   flex-direction: column !important;
+  justify-content: flex-start !important;
   align-items: center !important;
-  padding: 16px 8px !important;
-  gap: 10px !important;
-  position: relative !important;
+  padding: 18px 10px !important;
+  gap: 8px !important;
+  overflow-y: auto !important;
+  scrollbar-width: none !important;
+  box-sizing: border-box !important;
+}
+
+.editorial-dock::-webkit-scrollbar {
+  display: none !important;
 }
 
 .dock-btn {
-  width: 60px !important;
-  height: 62px !important;
+  min-width: 68px !important;
+  width: 68px !important;
+  min-height: 58px !important;
+  height: 58px !important;
   position: relative !important;
   display: flex !important;
   flex-direction: column !important;
@@ -302,56 +409,79 @@ body,
   gap: 5px !important;
   background: transparent !important;
   border: 0 !important;
-  border-radius: 18px !important;
-  color: var(--editorial-text-muted, #3e4e66) !important;
+  border-radius: 20px !important;
+  color: var(--nexo-text-muted, #8A8780) !important;
   cursor: pointer !important;
-  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1) !important;
-  padding: 6px 2px !important;
+  transition:
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 160ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  padding: 6px 4px !important;
   outline: none !important;
 }
 
-.dock-btn:hover {
-  color: #0f172a !important;
+.dock-btn:hover:not(.is-active) {
+  background: var(--nexo-bg-subtle, #EEECE7) !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+}
+
+.dock-btn:active {
+  transform: scale(0.97) !important;
+}
+
+.dock-btn:focus-visible {
+  outline: 2px solid var(--nexo-text-primary, #1C1B19) !important;
+  outline-offset: 2px !important;
 }
 
 .dock-btn.is-active {
-  color: #0f172a !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
 }
 
 .dock-active-pill {
   position: absolute !important;
   inset: 0 !important;
-  background: rgba(255, 255, 255, 0.85) !important;
-  border-radius: 18px !important;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06) !important;
-  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36)) !important;
+  background: var(--nexo-bg-subtle, #EEECE7) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-radius: 20px !important;
+  box-shadow: none !important;
+  border: 0 !important;
   z-index: 0 !important;
 }
 
 .dock-btn svg {
-  stroke-width: 1.8;
+  stroke-width: 1.65;
   position: relative !important;
   z-index: 1 !important;
+}
+
+.dock-btn.is-active svg {
+  stroke-width: 1.95;
 }
 
 .dock-label {
   position: relative !important;
   z-index: 1 !important;
   white-space: nowrap !important;
+  font-family: var(--font-sans) !important;
   letter-spacing: -0.01em !important;
-  font-size: 10.5px !important;
-  font-weight: 550 !important;
-  line-height: 1 !important;
+  font-size: var(--nexo-fs-dock-label, 12.5px) !important;
+  font-weight: 400 !important;
+  line-height: 1.15 !important;
 }
 
 .dock-btn.is-active .dock-label {
-  font-weight: 650 !important;
+  font-weight: 600 !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
 }
 
 .dock-badge-dot {
   position: absolute !important;
-  top: 8px !important;
-  right: 14px !important;
+  top: 7px !important;
+  right: 16px !important;
   width: 7px !important;
   height: 7px !important;
   background: #ef4444 !important;
@@ -363,6 +493,7 @@ body,
 .editorial-stage-viewport {
   flex: 1 1 0 !important;
   min-width: 0 !important;
+  width: 100% !important;
   height: 100% !important;
   display: flex !important;
   flex-direction: column !important;
@@ -372,317 +503,57 @@ body,
 .editorial-main-content {
   flex: 1 1 0 !important;
   min-height: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.editorial-main-content.view-chat,
+.editorial-main-content.is-workspace-scope {
+  overflow: hidden !important;
+}
+
+.editorial-main-content .view-reveal {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
   height: 100% !important;
   display: flex !important;
   flex-direction: column !important;
-  overflow-y: auto !important;
-}
-
-.editorial-main-content.view-chat {
-  overflow: hidden !important;
 }
 
 .editorial-main-content .view-transition-wrapper {
   flex: 1 1 0 !important;
   min-height: 0 !important;
   height: 100% !important;
+  max-height: 100% !important;
   display: flex !important;
   flex-direction: column !important;
-}
-
-.app-stage {
-  background: transparent !important;
-  display: flex !important;
-  flex-direction: column !important;
-  min-height: 0 !important;
-  flex: 1 1 0 !important;
-  overflow: hidden !important;
-  position: relative !important;
-  z-index: 2 !important;
-}
-
-.app-content {
-  background: transparent !important;
-  background-color: transparent !important;
-  flex: 1 1 0 !important;
-  min-height: 0 !important;
-  overflow-y: auto !important;
-  position: relative !important;
-}
-
-.app-content.view-chat {
   overflow: hidden !important;
 }
 
 .view-transition-wrapper {
   background: transparent !important;
   background-color: transparent !important;
-  min-height: 100% !important;
+  min-height: 0 !important;
+  height: 100% !important;
   display: flex !important;
   flex-direction: column !important;
   isolation: auto !important;
 }
 
-/* --------------------------------------------------------------------------
-   2. Sidebar (Minimalist Editorial Navigation with Frosted Glass)
-   -------------------------------------------------------------------------- */
-.notion-reference-shell .app-sidebar,
-.app-sidebar {
-  width: 295px !important;
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
-  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
-  box-shadow: 6px 0 30px rgba(15, 23, 42, 0.05) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  z-index: 10 !important;
-  position: relative !important;
-}
-
-.sidebar-head {
-  padding: 24px 22px 18px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06) !important;
-}
-
-.sidebar-head .brand {
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-  text-decoration: none !important;
-}
-
-.sidebar-head .brand-name {
-  font-family: var(--font-display) !important;
-  font-style: normal !important;
-  font-size: 24px !important;
-  font-weight: 700 !important;
-  letter-spacing: -0.015em !important;
-  color: #0f172a !important;
-}
-
-.sidebar-head .brand-name sup {
-  font-family: var(--font-body) !important;
-  font-style: normal !important;
-  font-size: 10.5px !important;
-  margin-left: 2px !important;
-  color: rgba(15, 23, 42, 0.6) !important;
-}
-
-.sidebar-head .brand-mark svg {
-  width: 28px !important;
-  height: 28px !important;
-  border-radius: 8px !important;
-}
-
-/* Search bar in sidebar */
-.notion-sidebar-home {
-  padding: 16px 14px 8px !important;
-}
-
-.notion-sidebar-search {
-  width: 100% !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 10px !important;
-  padding: 10px 16px !important;
-  border-radius: var(--editorial-radius-pill) !important;
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
-  border: 1px solid rgba(15, 23, 42, 0.12) !important;
-  color: rgba(15, 23, 42, 0.6) !important;
-  font-size: 13px !important;
-  font-weight: 500 !important;
-  cursor: pointer !important;
-  transition: all 180ms ease !important;
-  outline: none !important;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
-}
-
-.notion-sidebar-search:hover {
-  background: #ffffff !important;
-  border-color: rgba(15, 23, 42, 0.25) !important;
-  color: #0f172a !important;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
-}
-
-.notion-sidebar-search kbd {
-  font-family: var(--font-body) !important;
-  font-size: 10.5px !important;
-  font-weight: 600 !important;
-  padding: 3px 8px !important;
-  border-radius: var(--editorial-radius-pill) !important;
-  background: rgba(15, 23, 42, 0.06) !important;
-  border: 1px solid rgba(15, 23, 42, 0.1) !important;
-  color: #0f172a !important;
-}
-
-.notion-sidebar-shortcuts {
-  display: none !important;
-}
-
-/* Navigation items in sidebar */
-.sidebar-scroll-region {
-  flex: 1 !important;
-  padding: 12px 12px !important;
-  overflow-y: auto !important;
-}
-
-.nav-group {
-  margin-bottom: 22px !important;
-}
-
-.nav-group__label {
-  font-family: var(--font-body) !important;
-  font-size: 11px !important;
-  font-weight: 650 !important;
-  letter-spacing: 0.12em !important;
-  text-transform: uppercase !important;
-  color: rgba(15, 23, 42, 0.45) !important;
-  padding: 6px 14px !important;
-  display: block !important;
-}
-
-.sidebar-nav button {
-  width: 100% !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important;
-  padding: 10px 16px !important;
-  margin: 3px 0 !important;
-  border-radius: var(--editorial-radius-pill) !important;
-  background: transparent !important;
-  border: 1px solid transparent !important;
-  color: rgba(15, 23, 42, 0.72) !important;
-  font-size: 13.5px !important;
-  font-weight: 500 !important;
-  text-align: left !important;
-  cursor: pointer !important;
-  position: relative !important;
-  transition:
-    transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
-    background-color 150ms ease,
-    color 150ms ease !important;
-  outline: none !important;
-}
-
-.sidebar-nav button:hover {
-  background: rgba(15, 23, 42, 0.05) !important;
-  color: #0f172a !important;
-  transform: scale(1.02);
-}
-
-/* Active Navigation Item = Solid Black Pill Button */
-.sidebar-nav button.active {
-  background: #000000 !important;
-  color: #ffffff !important;
-  font-weight: 600 !important;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18) !important;
-  border-color: #000000 !important;
-}
-
-.sidebar-nav button.active svg,
-.sidebar-nav button.active .nav-brand-mark {
-  color: #ffffff !important;
-  filter: brightness(10);
-}
-
-.sidebar-nav button b {
-  margin-left: auto !important;
-  background: #ef4444 !important;
-  color: #ffffff !important;
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  padding: 2px 8px !important;
-  border-radius: var(--editorial-radius-pill) !important;
-  line-height: 1.3 !important;
-}
-
-.sidebar-nav button.active b {
-  background: #ffffff !important;
-  color: #000000 !important;
-}
-
-/* Sidebar Footer & User Profile */
-.sidebar-footer.notion-sidebar-footer {
-  padding: 14px 12px 18px !important;
-  border-top: 1px solid rgba(15, 23, 42, 0.06) !important;
-  background: rgba(255, 255, 255, 0.4) !important;
-}
-
-.sidebar-user-container {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-}
-
-.sidebar-user.notion-user-bar {
-  flex: 1 !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-  padding: 8px 12px !important;
-  border-radius: var(--editorial-radius-pill) !important;
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
-  border: 1px solid rgba(15, 23, 42, 0.08) !important;
-  color: #0f172a !important;
-  cursor: pointer !important;
-  transition: all 180ms ease !important;
-  outline: none !important;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
-}
-
-.sidebar-user.notion-user-bar:hover {
-  background: #ffffff !important;
-  border-color: rgba(15, 23, 42, 0.16) !important;
-  transform: translateY(-1px);
-}
-
-.sidebar-profile-copy strong {
-  font-size: 13px !important;
-  font-weight: 600 !important;
-  display: block !important;
-  color: #0f172a !important;
-}
-
-.sidebar-profile-copy small {
-  font-size: 11.5px !important;
-  color: var(--editorial-text-muted, #3e4e66) !important;
-  display: block !important;
-}
-
-.notion-tool-btn {
-  width: 36px !important;
-  height: 36px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  border-radius: var(--editorial-radius-pill) !important;
-  background: rgba(255, 255, 255, 0.85) !important;
-  border: 1px solid rgba(15, 23, 42, 0.08) !important;
-  color: rgba(15, 23, 42, 0.7) !important;
-  cursor: pointer !important;
-  transition: all 180ms ease !important;
-  outline: none !important;
-}
-
-.notion-tool-btn:hover {
-  background: #ffffff !important;
-  color: #0f172a !important;
-}
-
 /* User Account Menu Popover */
 .sidebar-account-menu {
   border-radius: 22px !important;
-  background: var(--editorial-surface-popup, rgba(243, 246, 252, 0.92)) !important;
-  backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
-  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
-  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36)) !important;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16) !important;
+  background: var(--editorial-surface-popup, rgba(250, 249, 246, 0.96)) !important;
+  backdrop-filter: blur(var(--editorial-blur, 20px)) !important;
+  -webkit-backdrop-filter: blur(var(--editorial-blur, 20px)) !important;
+  border: 1px solid var(--editorial-border, #E6E2DA) !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.14) !important;
   padding: 10px !important;
   color: var(--editorial-text) !important;
   font-family: var(--font-body) !important;
@@ -750,7 +621,7 @@ body,
   font-weight: 500 !important;
   line-height: 1.5;
   color: var(--editorial-text) !important;
-  transition: background-color 150ms ease, color 150ms ease !important;
+  transition:background-color 150ms ease, color 150ms ease !important;
 }
 
 .sidebar-account-menu > button svg {
@@ -771,49 +642,10 @@ body,
   background: rgba(155, 40, 59, 0.08) !important;
 }
 
-/* Collapsed Sidebar State */
-.app-shell.is-collapsed .app-sidebar {
-  width: 64px !important;
-  min-width: 64px !important;
-}
-
-.app-shell.is-collapsed .sidebar-head {
-  padding: 20px 10px !important;
-  justify-content: center !important;
-}
-
-.app-shell.is-collapsed .nav-item-label,
-.app-shell.is-collapsed .nav-group__label,
-.app-shell.is-collapsed .notion-sidebar-search,
-.app-shell.is-collapsed .sidebar-profile-copy,
-.app-shell.is-collapsed .sidebar-head .brand-name,
-.app-shell.is-collapsed .sidebar-head .icon-button,
-.app-shell.is-collapsed .sidebar-account-menu {
-  display: none !important;
-}
-
-.app-shell.is-collapsed .sidebar-nav button {
-  justify-content: center !important;
-  padding: 10px !important;
-  width: 44px !important;
-  margin-inline: auto !important;
-}
-
-.sidebar-collapsed-dot {
-  position: absolute !important;
-  top: 8px !important;
-  right: 8px !important;
-  width: 8px !important;
-  height: 8px !important;
-  border-radius: 50% !important;
-  background: #ef4444 !important;
-  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6) !important;
-}
-
 .mobile-overlay {
   position: fixed !important;
   inset: 0 !important;
-  background: rgba(15, 23, 42, 0.4) !important;
+  background: rgba(28, 27, 25, 0.4) !important;
   backdrop-filter: blur(8px) !important;
   -webkit-backdrop-filter: blur(8px) !important;
   z-index: 99 !important;
@@ -823,57 +655,52 @@ body,
 
 @media (max-width: 768px) {
   .editorial-master-topbar {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) auto !important;
-    grid-template-rows: 44px 36px !important;
-    height: 100px !important;
-    gap: 4px 8px !important;
-    padding: 8px 12px !important;
+    height: 56px !important;
+    padding: 0 12px !important;
   }
   .editorial-master-topbar__left .brand-name {
     font-size: 24px !important;
   }
   .editorial-master-topbar__right {
-    grid-column: 2;
-    grid-row: 1;
     gap: 4px !important;
   }
-  .editorial-master-topbar__center {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    gap: 2px !important;
-    min-width: 0;
-    overflow-x: auto;
-    scrollbar-width: thin;
-  }
-  .topbar-nav-tab {
-    flex: 1 0 auto;
-    min-height: 36px;
-    white-space: nowrap;
-    font-size: 13px !important;
-    padding: 6px 8px !important;
-  }
   .editorial-workspace-body {
-    flex-direction: column-reverse !important;
-    gap: 8px !important;
-    padding: 0 10px max(8px, env(safe-area-inset-bottom)) !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+    margin: 4px 12px 96px 12px !important;
+    padding: 0 !important;
+    border-radius: 24px !important;
   }
   .editorial-dock {
-    flex: 0 0 68px !important;
-    width: 100% !important;
-    height: 68px !important;
+    position: fixed !important;
+    top: auto !important;
+    bottom: max(16px, env(safe-area-inset-bottom, 16px)) !important;
+    left: 16px !important;
+    right: 16px !important;
+    transform: none !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 68px !important;
+    max-height: none !important;
     flex-direction: row !important;
     justify-content: space-around !important;
-    padding: 6px 4px !important;
-    gap: 0 !important;
-    border-radius: 20px !important;
+    padding: 6px 8px !important;
+    gap: 2px !important;
+    background: var(--nexo-surface-ivory, rgba(250, 249, 246, 0.88)) !important;
+    backdrop-filter: blur(var(--nexo-dock-blur, 18px)) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(var(--nexo-dock-blur, 18px)) saturate(150%) !important;
+    border: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
+    box-shadow: var(--nexo-dock-shadow, 0 10px 32px rgba(28, 27, 25, 0.12), 0 2px 8px rgba(28, 27, 25, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.82)) !important;
+    border-radius: var(--nexo-dock-radius, 28px) !important;
+    z-index: 50 !important;
   }
   .editorial-dock .dock-btn {
     flex: 1 1 0 !important;
     width: auto !important;
-    min-width: 0 !important;
-    max-width: 72px;
-    height: 54px !important;
+    min-width: 56px !important;
+    min-height: 56px !important;
+    height: 56px !important;
+    max-width: 88px;
   }
   .editorial-dock .dock-label {
     max-width: 100%;
@@ -882,11 +709,15 @@ body,
     white-space: nowrap;
   }
   .editorial-stage-viewport {
-    height: auto !important;
+    height: 100% !important;
     min-height: 0;
   }
+  .editorial-main-content,
+  .editorial-main-content:not(.view-overview) {
+    padding: 0 !important;
+  }
   .editorial-main-content :is(.profile-page, .workspace-admin, .task-page, .meetings-page) {
-    padding: 20px 12px 40px !important;
+    padding: 0 !important;
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
@@ -901,107 +732,6 @@ body,
     min-width: 0;
     overflow-x: auto;
   }
-  .app-sidebar {
-    position: fixed !important;
-    top: 0 !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    width: 280px !important;
-    transform: translateX(-100%) !important;
-    transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1) !important;
-    z-index: 100 !important;
-  }
-
-  .app-sidebar.is-mobile-open {
-    transform: translateX(0) !important;
-  }
-}
-
-/* --------------------------------------------------------------------------
-   3. Topbar (Glassmorphic Editorial Bar)
-   -------------------------------------------------------------------------- */
-.app-topbar.notion-reference-topbar,
-.app-topbar {
-  background: rgba(255, 255, 255, 0.82) !important;
-  backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
-  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.85) !important;
-  height: 60px !important;
-  padding: 0 28px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  z-index: 20 !important;
-}
-
-.notion-topbar-path {
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-}
-
-.notion-topbar-path button {
-  background: none !important;
-  border: none !important;
-  color: var(--editorial-text-muted, #3e4e66) !important;
-  font-size: 13px !important;
-  font-weight: 500 !important;
-  cursor: pointer !important;
-  transition: color 150ms ease !important;
-  outline: none !important;
-}
-
-.notion-topbar-path button:hover {
-  color: #0f172a !important;
-}
-
-.notion-topbar-path svg {
-  color: rgba(15, 23, 42, 0.3) !important;
-}
-
-.notion-topbar-path h1,
-.notion-topbar-path strong {
-  font-family: var(--font-display) !important;
-  font-style: normal !important;
-  font-size: 21px !important;
-  font-weight: 500 !important;
-  letter-spacing: -0.01em !important;
-  color: #0f172a !important;
-  margin: 0 !important;
-}
-
-.notion-topbar-search {
-  display: flex !important;
-  align-items: center !important;
-  gap: 9px !important;
-  padding: 7px 18px !important;
-  border-radius: var(--editorial-radius-pill) !important;
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
-  border: 1px solid rgba(15, 23, 42, 0.12) !important;
-  color: rgba(15, 23, 42, 0.65) !important;
-  font-size: 12.5px !important;
-  font-weight: 500 !important;
-  cursor: pointer !important;
-  transition: all 180ms ease !important;
-  outline: none !important;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
-}
-
-.notion-topbar-search:hover {
-  background: #ffffff !important;
-  border-color: rgba(15, 23, 42, 0.25) !important;
-  color: #0f172a !important;
-  transform: translateY(-1px);
-}
-
-.notion-topbar-search kbd {
-  font-size: 10px !important;
-  font-weight: 600 !important;
-  padding: 2px 7px !important;
-  border-radius: var(--editorial-radius-pill) !important;
-  background: rgba(15, 23, 42, 0.06) !important;
-  border: 1px solid rgba(15, 23, 42, 0.1) !important;
-  color: #0f172a !important;
 }
 
 /* --------------------------------------------------------------------------
@@ -1009,22 +739,22 @@ body,
    -------------------------------------------------------------------------- */
 
 /* --------------------------------------------------------------------------
-   5. Video Meetings View (MeetingPage — Cinematic SFU Stage)
+   5. Video Meetings View (MeetingPage — Unified Frame inside .ws-shell)
    -------------------------------------------------------------------------- */
 .meetings-page {
-  padding: 32px clamp(20px, 3vw, 48px) 80px !important;
-  max-width: 1400px !important;
-  margin: 0 auto !important;
+  padding: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
 }
 
 .meeting-page-title {
   font-family: var(--font-display) !important;
   font-style: normal !important;
-  font-size: clamp(2.2rem, 3.5vw, 3rem) !important;
-  font-weight: 500 !important;
-  letter-spacing: -0.015em !important;
-  color: #0f172a !important;
-  margin: 0 0 8px !important;
+  font-size: var(--nexo-fs-section, clamp(28px, 2.8vw, 32px)) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+  margin: 0 0 6px !important;
 }
 
 .meeting-page-description {
@@ -1032,30 +762,33 @@ body,
 }
 
 .meeting-room-card {
-  border-radius: var(--editorial-radius-card) !important;
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
-  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36)) !important;
-  backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
-  padding: 24px 26px !important;
-  box-shadow: var(--editorial-shadow) !important;
-  transition: all 200ms ease !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 18px 28px !important;
+  box-shadow: none !important;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease !important;
 }
 
 .meeting-room-card:hover {
-  transform: translateY(-3px) !important;
-  border-color: rgba(15, 23, 42, 0.2) !important;
-  box-shadow: var(--editorial-shadow-lg) !important;
+  transform: none !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+  box-shadow: none !important;
 }
 
 .meeting-room-card.is-selected {
-  border-color: #000000 !important;
-  box-shadow:
-    0 0 0 2px #000000,
-    var(--editorial-shadow-lg) !important;
+  background: var(--nexo-pill-active, rgba(28, 27, 25, 0.08)) !important;
+  box-shadow: inset 3px 0 0 var(--nexo-text-primary, #1C1B19) !important;
 }
 
 .meeting-room-card__title {
-  color: #0f172a !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
 }
 
 .meeting-room-card__meta {
@@ -1063,10 +796,13 @@ body,
 }
 
 .meeting-lobby-preview-box {
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
-  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36)) !important;
-  border-radius: 28px !important;
-  box-shadow: var(--editorial-shadow-lg) !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-left: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 .meeting-tile,
@@ -1085,9 +821,8 @@ body,
     0 16px 36px rgba(15, 23, 42, 0.25) !important;
 }
 
-/* Floating Controls Bar in Meeting */
-.meeting-controls-dock,
-.meeting-controls {
+/* Floating control dock under the video stage (not the room-management panel). */
+.meeting-controls-dock {
   border-radius: var(--editorial-radius-pill) !important;
   background: rgba(0, 0, 0, 0.9) !important;
   backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
@@ -1101,7 +836,7 @@ body,
 .meeting-dock-btn,
 .meeting-control-btn {
   border-radius: var(--editorial-radius-pill) !important;
-  transition: transform 180ms ease !important;
+  transition:transform 180ms ease !important;
 }
 
 .meeting-dock-btn:hover:not(:disabled),
@@ -1120,104 +855,146 @@ body,
 }
 
 /* --------------------------------------------------------------------------
-   6. Task Board View (TaskBoardPage — Tactile Kanban Panels)
+   6. Task Board View (TaskBoardPage — Unified Kanban inside .ws-shell)
    -------------------------------------------------------------------------- */
 .task-page {
-  padding: 32px clamp(20px, 3vw, 48px) 80px !important;
-  max-width: 1400px !important;
-  margin: 0 auto !important;
+  padding: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
 }
 
-.task-page-heading h2 {
+.task-page-heading h1 {
   font-family: var(--font-display) !important;
   font-style: normal !important;
-  font-size: clamp(2rem, 3.2vw, 2.8rem) !important;
-  font-weight: 500 !important;
-  letter-spacing: -0.015em !important;
-  color: #0f172a !important;
-  margin: 0 0 8px !important;
+  font-size: var(--nexo-fs-section, clamp(28px, 2.8vw, 32px)) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+  margin: 0 0 6px !important;
 }
 
 .task-column,
 .task-lane {
-  border-radius: var(--editorial-radius-card) !important;
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
-  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36)) !important;
-  backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
-  box-shadow: var(--editorial-shadow) !important;
-  padding: 22px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+  padding: 24px 28px !important;
+}
+
+.task-column + .task-column,
+.task-lane + .task-lane {
+  border-left: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
 }
 
 .task-column h3 {
   font-family: var(--font-display) !important;
   font-style: normal !important;
-  font-size: 18px !important;
-  font-weight: 500 !important;
-  color: #0f172a !important;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+  font-size: var(--nexo-fs-col, 17.5px) !important;
+  font-weight: 600 !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
 }
 
 .task-card {
-  border-radius: 18px !important;
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
-  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  border-radius: 14px !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+  border: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
   padding: 16px !important;
-  color: #0f172a !important;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+  box-shadow: none !important;
   transition:
-    transform 180ms ease,
-    border-color 180ms ease,
-    box-shadow 180ms ease !important;
+    background-color 160ms ease,
+    border-color 160ms ease !important;
 }
 
 .task-card:hover {
-  transform: translateY(-2px) !important;
-  border-color: rgba(15, 23, 42, 0.2) !important;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important;
+  transform: none !important;
+  background: rgba(255, 255, 255, 0.85) !important;
+  border-color: #d3cec3 !important;
+  box-shadow: none !important;
 }
 
 .task-title {
-  color: #0f172a !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
 }
 
 /* --------------------------------------------------------------------------
-   7. Profile & Admin Views
+   7. Profile & Admin Views (Single Unified Frame with Internal Scroll)
    -------------------------------------------------------------------------- */
 .profile-page,
 .workspace-admin {
-  padding: 32px clamp(20px, 3vw, 48px) 80px !important;
-  max-width: 1040px !important;
-  margin: 0 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain !important;
+}
+
+.profile-page > *,
+.workspace-admin > * {
+  flex-shrink: 0 !important;
 }
 
 .profile-header h1,
 .workspace-admin h1 {
   font-family: var(--font-display) !important;
   font-style: normal !important;
-  font-size: clamp(2.2rem, 3.5vw, 3rem) !important;
-  font-weight: 500 !important;
-  letter-spacing: -0.015em !important;
-  color: #0f172a !important;
+  font-size: var(--nexo-fs-section, clamp(28px, 2.8vw, 32px)) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
 }
 
 .profile-card,
 .workspace-admin section {
-  border-radius: var(--editorial-radius-card) !important;
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
-  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36)) !important;
-  backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
-  padding: 28px !important;
-  box-shadow: var(--editorial-shadow) !important;
-  color: #0f172a !important;
+  flex-shrink: 0 !important;
+  overflow: visible !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: clamp(24px, 2.8vw, 32px) clamp(28px, 3.2vw, 44px) !important;
+  box-shadow: none !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+}
+
+.profile-card.profile-hero {
+  padding: 0 0 clamp(24px, 2.8vw, 32px) !important;
+  overflow: hidden !important;
+}
+
+.profile-page > :last-child,
+.workspace-admin > section:last-of-type {
+  border-bottom: 0 !important;
 }
 
 .workspace-admin input:not([type="checkbox"]),
 .workspace-admin select,
 .profile-field-input:not(textarea) {
   border-radius: var(--editorial-radius-pill) !important;
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
-  border: 1.5px solid rgba(15, 23, 42, 0.12) !important;
-  color: #0f172a !important;
+  background: rgba(255, 255, 255, 0.65) !important;
+  border: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
   outline: none !important;
 }
 
@@ -1269,40 +1046,289 @@ body,
 }
 
 /* --------------------------------------------------------------------------
-   9. Primary Action Buttons: Solid Black Pill from Landing & Login
+   9. Shared Touch Targets: Button (primary / secondary / text / icon), Chip, ListItem
    -------------------------------------------------------------------------- */
+.editorial-workspace-shell .button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: var(--nexo-btn-gap, 8px) !important;
+  min-width: var(--nexo-touch-min, 44px) !important;
+  min-height: var(--nexo-touch-min, 44px) !important;
+  font-family: var(--font-body) !important;
+  font-size: var(--nexo-fs-button, 16px) !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  transition:
+    transform 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    opacity 150ms ease !important;
+}
+
+.editorial-workspace-shell .button--md,
+.editorial-workspace-shell .button--lg {
+  height: var(--nexo-btn-height, 52px) !important;
+  min-height: var(--nexo-btn-height, 52px) !important;
+  padding: 0 var(--nexo-btn-px, 24px) !important;
+}
+
+.editorial-workspace-shell .button--sm {
+  min-height: var(--nexo-touch-min, 44px) !important;
+  padding: 0 18px !important;
+  font-size: 14.5px !important;
+}
+
+/* 1. Primary Button: near-black #1C1B19, white 600 text, ~52px height, ~24px px, ~16px radius, soft shadow */
 .editorial-workspace-shell .button--primary,
 .editorial-workspace-shell .button-primary {
-  border-radius: var(--editorial-radius-pill) !important;
-  background-color: #263450 !important;
+  border-radius: var(--nexo-btn-radius-primary, 16px) !important;
+  background-color: var(--nexo-text-primary, #1C1B19) !important;
   color: #ffffff !important;
-  font-family: var(--font-body) !important;
-  font-weight: 500 !important;
-  border: 1px solid #263450 !important;
-  transition:
-    transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
-    background-color 150ms ease,
-    box-shadow 150ms ease !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15) !important;
+  font-weight: 600 !important;
+  border: 1px solid var(--nexo-text-primary, #1C1B19) !important;
+  box-shadow: var(--nexo-btn-shadow-primary, 0 4px 14px rgba(0, 0, 0, 0.15)) !important;
 }
 
 .editorial-workspace-shell .button--primary:hover:not(:disabled),
 .editorial-workspace-shell .button-primary:hover:not(:disabled) {
-  transform: scale(1.03) !important;
-  background-color: #172033 !important;
+  background-color: var(--nexo-primary-hover, #2C2A27) !important;
+  border-color: var(--nexo-primary-hover, #2C2A27) !important;
 }
 
-.editorial-workspace-shell .button:active:not(:disabled) {
-  transform: scale(0.98) !important;
-}
-
+/* 2. Secondary Button: transparent at rest (like ListItem), subtle #EEECE7 on hover, pill radius, no border/shadow */
 .editorial-workspace-shell .button--secondary,
 .editorial-workspace-shell .button-secondary {
-  border-radius: var(--editorial-radius-pill) !important;
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64)) !important;
-  color: #0f172a !important;
-  border: 1px solid rgba(15, 23, 42, 0.12) !important;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+  border-radius: var(--nexo-btn-radius-pill, 9999px) !important;
+  background: transparent !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+  font-weight: 600 !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+}
+
+.editorial-workspace-shell .button--secondary:hover:not(:disabled),
+.editorial-workspace-shell .button-secondary:hover:not(:disabled) {
+  background: var(--nexo-bg-subtle, #EEECE7) !important;
+  border-color: transparent !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+}
+
+/* Ghost & Soft variants harmonized with transparent at rest + subtle hover */
+.editorial-workspace-shell .button--ghost,
+.editorial-workspace-shell .button--soft {
+  border-radius: var(--nexo-btn-radius-pill, 9999px) !important;
+  background: transparent !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+}
+
+.editorial-workspace-shell .button--ghost:hover:not(:disabled),
+.editorial-workspace-shell .button--soft:hover:not(:disabled) {
+  background: var(--nexo-bg-subtle, #EEECE7) !important;
+  border-color: transparent !important;
+}
+
+/* 4. Icon Button: 44x44 circle, transparent background, #1C1B19 stroke icon, #EEECE7 hover */
+.editorial-workspace-shell .button--icon,
+.editorial-workspace-shell .icon-button:not(.ws-header__mobile-trigger):not(.chat-mobile-channels-btn) {
+  width: var(--nexo-touch-min, 44px) !important;
+  height: var(--nexo-touch-min, 44px) !important;
+  min-width: var(--nexo-touch-min, 44px) !important;
+  min-height: var(--nexo-touch-min, 44px) !important;
+  padding: 0 !important;
+  border-radius: var(--nexo-btn-radius-pill, 9999px) !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  cursor: pointer !important;
+  transition:
+    transform 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease !important;
+}
+
+.editorial-workspace-shell .button--icon:hover:not(:disabled),
+.editorial-workspace-shell .icon-button:hover:not(:disabled) {
+  background: var(--nexo-bg-subtle, #EEECE7) !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+}
+
+/* 5. Text Button ("Xem tất cả"): no background, no border, ~15px weight 500 warm gray, min-height 44px */
+.editorial-workspace-shell .button--text {
+  height: auto !important;
+  min-height: var(--nexo-touch-min, 44px) !important;
+  min-width: var(--nexo-touch-min, 44px) !important;
+  padding: 0 8px !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  color: var(--nexo-text-muted, #8A8780) !important;
+}
+
+.editorial-workspace-shell .button--text:hover:not(:disabled) {
+  background: transparent !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+}
+
+/* 3. Chip (Display Pill, ~36px height, ~16px px, warm ivory #FAF9F6, 1px beige border #E6E2DA, static) */
+.nexo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--nexo-chip-height, 36px);
+  min-height: var(--nexo-chip-height, 36px);
+  padding: 0 var(--nexo-chip-px, 16px);
+  border-radius: var(--nexo-btn-radius-pill, 9999px);
+  background: var(--nexo-bg-ivory, #FAF9F6);
+  border: 1px solid var(--nexo-border-beige, #E6E2DA);
+  color: var(--nexo-text-primary, #1C1B19);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  box-sizing: border-box;
+  user-select: none;
+  pointer-events: none;
+}
+
+.nexo-chip svg {
+  color: var(--nexo-text-muted, #8A8780);
+  flex-shrink: 0;
+}
+
+/* 6. Shared ListItem Component (Matching Reference Transaction Row) */
+.nexo-list-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--nexo-list-item-min-height, 64px);
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--nexo-text-primary, #1C1B19);
+  font-family: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition:
+    transform 150ms ease,
+    background-color 150ms ease,
+    opacity 150ms ease;
+}
+
+.nexo-list-item:hover:not(:disabled) {
+  background: var(--nexo-bg-subtle, #EEECE7);
+}
+
+.nexo-list-item__icon {
+  width: var(--nexo-list-item-icon-size, 44px);
+  height: var(--nexo-list-item-icon-size, 44px);
+  min-width: var(--nexo-list-item-icon-size, 44px);
+  min-height: var(--nexo-list-item-icon-size, 44px);
+  border-radius: var(--nexo-btn-radius-pill, 9999px);
+  background: var(--nexo-bg-subtle, #EEECE7);
+  color: var(--nexo-text-primary, #1C1B19);
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: background-color 150ms ease;
+}
+
+.nexo-list-item:hover:not(:disabled) .nexo-list-item__icon {
+  background: var(--nexo-bg-ivory, #FAF9F6);
+}
+
+.nexo-list-item__body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.nexo-list-item__content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.nexo-list-item__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--nexo-text-primary, #1C1B19);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nexo-list-item__subtitle {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--nexo-text-muted, #8A8780);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nexo-list-item__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  flex-shrink: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.nexo-list-item__meta-primary {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--nexo-text-primary, #1C1B19);
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.nexo-list-item__meta-secondary {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--nexo-text-muted, #8A8780);
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+/* Shared Touch Target Interaction States: Active (~0.97), Focus-Visible (2px #1C1B19 offset 2px), Disabled (40%) */
+.editorial-workspace-shell
+  :is(.button, .icon-button, .nexo-list-item, .topbar-action-icon-btn):active:not(:disabled) {
+  transform: scale(0.97) !important;
+}
+
+.editorial-workspace-shell
+  :is(.button, .icon-button, .nexo-list-item, .topbar-action-icon-btn, button):disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
 }
 
 .badge {
@@ -1333,11 +1359,17 @@ body,
 }
 
 /* --------------------------------------------------------------------------
-   10. Keyboard Focus (appearance only; interactions remain unchanged)
+   10. Keyboard Focus (2px #1C1B19 outline, 2px offset)
    -------------------------------------------------------------------------- */
-.editorial-workspace-shell :is(input, textarea, select, button, a, [tabindex]):focus-visible {
-  outline: 2px solid #263450 !important;
-  outline-offset: 3px !important;
+.editorial-workspace-shell :is(button, a, summary, [tabindex]:not(input):not(textarea):not(select)):focus-visible {
+  outline: 2px solid var(--nexo-text-primary, #1C1B19) !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+}
+
+.editorial-workspace-shell :is(input, textarea, select):is(:focus, :focus-visible) {
+  outline: none !important;
+  outline-offset: 0 !important;
 }
 
 /* --------------------------------------------------------------------------
@@ -1377,15 +1409,15 @@ body,
 }
 
 .network-reconnect-btn {
-  background: #000000 !important;
+  background: var(--primary) !important;
   color: #ffffff !important;
   border-radius: 9999px !important;
-  border: 1px solid #000000 !important;
+  border: 1px solid var(--primary) !important;
   padding: 4px 14px !important;
   font-size: 12px !important;
   font-weight: 500 !important;
   cursor: pointer !important;
-  transition: transform 150ms ease !important;
+  transition:transform 150ms ease !important;
 }
 
 .network-reconnect-btn:hover {

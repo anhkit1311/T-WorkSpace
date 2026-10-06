@@ -111,6 +111,24 @@ export async function setChannelPreferenceApi(
   return data.preference;
 }
 
+/**
+ * The API exposes pin/bookmark as toggles (POST /api/messages/:id/pin|bookmark); callers pass the
+ * flag they want to flip. Pinning is limited to workspace owners/admins by the server.
+ */
+export async function setMessagePreferenceApi(
+  accessToken: string,
+  messageId: string,
+  input: { pinned: boolean } | { bookmarked: boolean },
+): Promise<void> {
+  const action = "pinned" in input ? "pin" : "bookmark";
+  const response = await fetch(`${API_BASE}/api/messages/${messageId}/${action}`, {
+    method: "POST",
+    credentials: "include",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+  });
+  await handleResponse<{ success: boolean }>(response);
+}
+
 export async function uploadAttachmentApi(
   accessToken: string,
   channelId: string,

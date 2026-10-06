@@ -26,8 +26,10 @@ export type AmbientMood =
   | "landing"
   | "login"
   | "overview"
+  | "workspace"
   | "chat"
   | "meetings"
+  | "files"
   | "tasks"
   | "profile"
   | "admin"
@@ -47,8 +49,10 @@ const MOODS: Record<AmbientMood, MoodSpec> = {
   landing: { tint: "#f2c6b2", mist: 0.34, motes: 1, camX: 0, camY: 0 },
   login: { tint: "#d6cdf0", mist: 0.4, motes: 0.85, camX: 0.7, camY: -0.25 },
   overview: { tint: "#f0d0c2", mist: 0.24, motes: 0.8, camX: 0, camY: 0.25 },
+  workspace: { tint: "#e5d5cb", mist: 0.16, motes: 0.55, camX: -0.15, camY: 0.15 },
   chat: { tint: "#cdd7ec", mist: 0.1, motes: 0.38, camX: -0.55, camY: 0.1 },
   meetings: { tint: "#c8d2ea", mist: 0.16, motes: 0.5, camX: 0.55, camY: -0.2 },
+  files: { tint: "#d8dee9", mist: 0.12, motes: 0.42, camX: 0.2, camY: -0.15 },
   tasks: { tint: "#ead5c4", mist: 0.12, motes: 0.42, camX: -0.35, camY: -0.3 },
   profile: { tint: "#e6cfe0", mist: 0.2, motes: 0.6, camX: 0.35, camY: 0.3 },
   admin: { tint: "#d3d9e6", mist: 0.14, motes: 0.45, camX: 0.25, camY: -0.1 },

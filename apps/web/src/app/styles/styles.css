@@ -70,9 +70,10 @@
   --duration-fast: var(--motion-duration-micro);
   --duration-normal: var(--motion-duration-component);
   --duration-slow: var(--motion-duration-page);
-  --font-ui:
-    "Plus Jakarta Sans", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI",
-    sans-serif;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
+  --font-brand: "Playfair Display", Georgia, serif;
+  --font-ui: var(--font-sans);
   --type-caption: 0.75rem;
   --type-label: 0.8125rem;
   --type-body: 0.875rem;
@@ -111,7 +112,8 @@
   --input-bg: var(--surface);
   --input-border: var(--border);
   --backdrop: rgba(0, 0, 0, 0.72);
-  color-scheme: dark;
+  /* Every rendered surface (public pages and the workspace glass) is light. */
+  color-scheme: light;
 }
 
 [data-theme="dark"] {

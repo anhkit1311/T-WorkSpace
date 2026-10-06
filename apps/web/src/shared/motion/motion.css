@@ -22,18 +22,6 @@
   --motion-ease-out: var(--ease-out);
   --motion-ease-spring: var(--ease-emphasized);
 }
-html[data-motion="reduced"] *, html[data-motion="reduced"] *::before, html[data-motion="reduced"] *::after {
-  animation: none !important;
-  transition-duration: 0s !important;
-  scroll-behavior: auto !important;
-}
-@media (prefers-reduced-motion: reduce) {
-  html:not([data-motion-preview="full"]) *, html:not([data-motion-preview="full"]) *::before, html:not([data-motion-preview="full"]) *::after {
-    animation: none !important;
-    transition-duration: 0s !important;
-    scroll-behavior: auto !important;
-  }
-}
 /* Motion owns these controls' transform; CSS retains the incumbent colors/borders. */
 [data-motion-control] { transition-property: background-color, border-color, color, opacity !important; }
 .motion-tooltip { position: fixed; z-index: 1000; pointer-events: none; max-width: 240px; padding: 7px 11px; border-radius: 12px; color: var(--text, #17213b); background: var(--bg-card, #edf2f8); border: 1px solid var(--border, #b9c5d5); box-shadow: 0 4px 16px #17213b1c; font: 12px/1.4 Inter, sans-serif; }

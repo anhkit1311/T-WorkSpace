@@ -19,7 +19,15 @@ import {
   verifyOtpApi,
 } from "../../features/auth/api";
 import type { AuthMode, PublicScreen, ToastMessage, ViewId } from "../types";
-import { appEntryRoute, appRouteUrl, readAppRoute, type AppRoute } from "../navigation";
+import {
+  appEntryRoute,
+  appRouteUrl,
+  isWorkspaceTabView,
+  readAppRoute,
+  selectWorkspaceRoute,
+  type AppRoute,
+  type WorkspaceTabId,
+} from "../navigation";
 import { clearAccountDrafts } from "../../shared/lib/drafts";
 import { readSessionHint, shouldTryRestore, writeSessionHint } from "../session-hint";
 
@@ -34,6 +42,7 @@ interface AppContextValue {
   setActiveView: (view: ViewId) => void;
   route: AppRoute;
   navigate: (route: AppRoute, replace?: boolean) => void;
+  openWorkspace: (workspaceId: string, tab?: WorkspaceTabId) => void;
   openChannel: (workspaceId: string, channelId?: string, meeting?: boolean) => void;
   chatNavigation: {
     workspaceId: string;
@@ -93,7 +102,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setRoute(target);
     setMobileNavOpen(false);
   }, []);
-  const setActiveView = (view: ViewId) => navigate({ view });
+  const setActiveView = useCallback(
+    (view: ViewId) => {
+      const keepWorkspace =
+        (isWorkspaceTabView(view) || view === "admin") && route.workspaceId
+          ? route.workspaceId
+          : undefined;
+      navigate({ view, workspaceId: keepWorkspace });
+    },
+    [navigate, route.workspaceId],
+  );
   // Re-read the route whenever auth lands in the app; the initial route may come from /login.
   const enterApp = useCallback(() => {
     setRoute(appEntryRoute(new URL(window.location.href)));
@@ -132,9 +150,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   },[screen,authMode,isAuthChecking,route]);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = "dark";
-    document.documentElement.style.colorScheme = "dark";
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#0a0a0a");
+    // The editorial glass UI is light-only; a dark color-scheme turned native selects,
+    // date pickers and scrollbars black on top of light surfaces.
+    document.documentElement.dataset.theme = "light";
+    document.documentElement.style.colorScheme = "light";
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#e8eef6");
     localStorage.removeItem("collabspace-theme");
   }, []);
 
@@ -303,6 +323,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       activeView,
       route,
       navigate,
+      openWorkspace: (workspaceId, tab = "workspace") =>
+        navigate(selectWorkspaceRoute(workspaceId, tab)),
       openChannel: (workspaceId, channelId, meeting = false) =>
         navigate({ view: meeting ? "meetings" : "chat", workspaceId, channelId }),
       chatNavigation,

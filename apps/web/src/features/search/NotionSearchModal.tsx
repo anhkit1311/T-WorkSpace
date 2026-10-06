@@ -36,30 +36,61 @@ function SearchBackdrop(props: HTMLMotionProps<"div">) {
     style={{...props.style, pointerEvents: present ? undefined : "none"}} />;
 }
 
+// Titles match the dock labels; descriptions carry synonyms so either wording is searchable.
 const pages: { id: ViewId; title: string; desc: string; icon: IconName }[] = [
   {
     id: "overview",
     title: "Trang chủ",
-    desc: "Không gian làm việc & tổng quan hoạt động",
+    desc: "Tổng quan toàn hệ thống, ưu tiên cá nhân & lời mời nhóm",
     icon: "home",
   },
   {
+    id: "workspace",
+    title: "Nhóm làm việc",
+    desc: "Không gian nhóm, tổng quan hoạt động, thành viên & chức năng nhóm",
+    icon: "users",
+  },
+  {
     id: "chat",
-    title: "Tin nhắn",
-    desc: "Kênh hội thoại, thảo luận & tệp chia sẻ",
+    title: "Trao đổi (Kênh chat)",
+    desc: "Tin nhắn theo kênh #kênh, chủ đề phản hồi & tệp chia sẻ trong nhóm",
     icon: "message",
   },
   {
+    id: "tasks",
+    title: "Công việc",
+    desc: "Bảng công việc Kanban theo nhóm và kênh",
+    icon: "tasks",
+  },
+  {
     id: "meetings",
-    title: "Cuộc họp video",
-    desc: "Phòng họp trực tuyến bảo mật & chia sẻ màn hình",
+    title: "Cuộc họp",
+    desc: "Phòng họp video SFU, lịch họp & chia sẻ màn hình trong nhóm",
     icon: "video",
   },
   {
-    id: "profile",
-    title: "Trang cá nhân",
-    desc: "Cài đặt tài khoản & thông tin cá nhân",
+    id: "files",
+    title: "Tài liệu nhóm",
+    desc: "Kho tệp đính kèm đã ghim và gần đây trong nhóm làm việc",
+    icon: "folder",
+  },
+  {
+    id: "notifications",
+    title: "Thông báo",
+    desc: "Nhắc tên & phản hồi trong chủ đề bạn tham gia",
+    icon: "bell",
+  },
+  {
+    id: "admin",
+    title: "Quản trị nhóm",
+    desc: "Thành viên, lời mời, kênh & nhật ký nhóm",
     icon: "admin",
+  },
+  {
+    id: "profile",
+    title: "Hồ sơ cá nhân",
+    desc: "Thông tin tài khoản, ảnh đại diện & quyền riêng tư",
+    icon: "profile",
   },
 ];
 
@@ -476,9 +507,7 @@ export function NotionSearchModal({
                     <span className="notion-search-group-title">
                       TIN NHẮN · {results.length} KẾT QUẢ
                     </span>
-                    {loading && (
-                      <span className="notion-search-group-loading">Đang tìm…</span>
-                    )}
+                    {loading && <span className="notion-search-group-loading">Đang tìm…</span>}
                   </div>
 
                   {loading && results.length === 0 && (
@@ -518,8 +547,12 @@ export function NotionSearchModal({
                         >
                           <div className="notion-search-message-top">
                             <div className="notion-search-message-location">
-                              <span className="notion-search-pill-badge">{message.workspaceName}</span>
-                              <span className="notion-search-channel-pill">#{message.channelName}</span>
+                              <span className="notion-search-pill-badge">
+                                {message.workspaceName}
+                              </span>
+                              <span className="notion-search-channel-pill">
+                                #{message.channelName}
+                              </span>
                             </div>
                             <div className="notion-search-message-meta">
                               <strong className="notion-search-author">{message.authorName}</strong>
@@ -535,9 +568,7 @@ export function NotionSearchModal({
                               </time>
                             </div>
                           </div>
-                          <div className="notion-search-message-content">
-                            {message.content}
-                          </div>
+                          <div className="notion-search-message-content">{message.content}</div>
                         </button>
                       );
                     })}
@@ -560,7 +591,9 @@ export function NotionSearchModal({
                               if (key !== searchKeyRef.current) return;
                               setResults((old) => [
                                 ...old,
-                                ...items.filter((item) => !old.some((other) => other.id === item.id)),
+                                ...items.filter(
+                                  (item) => !old.some((other) => other.id === item.id),
+                                ),
                               ]);
                               setHasMore(items.length === 30);
                             })
@@ -624,7 +657,9 @@ export function NotionSearchModal({
               {!loading && !error && term.length < 2 && (
                 <div className="notion-search-tip">
                   <Icon name="sparkles" size={15} />
-                  <span>Gợi ý: Nhập từ 2 ký tự trở lên để tìm kiếm sâu trong nội dung tin nhắn.</span>
+                  <span>
+                    Gợi ý: Nhập từ 2 ký tự trở lên để tìm kiếm sâu trong nội dung tin nhắn.
+                  </span>
                 </div>
               )}
             </div>

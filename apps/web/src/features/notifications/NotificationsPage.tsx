@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { WorkspaceItem } from "@doan/shared";
 import { governanceApi } from "../workspaces/api";
 import { getWorkspacesApi } from "../chat/api";
-import { Button } from "../../shared/ui/Primitives";
+import { Button, Chip, ListItem } from "../../shared/ui/Primitives";
+import { Icon } from "../../shared/ui/Icon";
 import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
+import { useMotionSafe } from "../../shared/motion/MotionProvider";
 import "../workspaces/workspace-admin.css";
+import "./notifications.css";
 
 export interface NotificationItem {
   id: string;
@@ -26,6 +29,42 @@ export interface NotificationPage {
   hasMore: boolean;
 }
 
+const SAMPLE_NOTIFICATIONS = [
+  {
+    id: "sample-notif-1",
+    icon: "at-sign" as const,
+    title: "Minh Anh đã nhắc tên bạn",
+    subtitle: "#thiet-ke-ui · Bạn xem giúp mình bộ màu nút bấm mới nhé",
+    metaPrimary: "10:24",
+    metaSecondary: "Hôm nay",
+  },
+  {
+    id: "sample-notif-2",
+    icon: "messages" as const,
+    title: "Hoàng Nam đã phản hồi trong chủ đề",
+    subtitle: "#do-an-tot-nghiep · Đã cập nhật tài liệu kiến trúc hệ thống",
+    metaPrimary: "09:15",
+    metaSecondary: "Hôm nay",
+  },
+  {
+    id: "sample-notif-3",
+    icon: "bell" as const,
+    title: "Thu Hà đã nhắc tên bạn",
+    subtitle: "#kiem-thu · Nhờ bạn kiểm tra lại luồng thông báo thời gian thực",
+    metaPrimary: "16:40",
+    metaSecondary: "Hôm qua",
+  },
+];
+
+function formatNotificationTime(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return { time: "—", day: "" };
+  return {
+    time: date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
+    day: date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }),
+  };
+}
+
 export function NotificationsPage() {
   const { accessToken, navigate } = useApp();
   const { socket } = useSocket();
@@ -33,6 +72,15 @@ export function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [unread, setUnread] = useState(false);
+  // The list sits under the header and group options; offer a jump when there is news.
+  const listHeadingRef = useRef<HTMLHeadingElement>(null);
+  const { reduced } = useMotionSafe();
+  const jumpToList = () => {
+    const heading = listHeadingRef.current;
+    if (!heading) return;
+    heading.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+    heading.focus({ preventScroll: true });
+  };
   const [groups, setGroups] = useState<WorkspaceItem[]>([]);
   const [workspaceId, setWorkspaceId] = useState("");
   const [muted, setMuted] = useState(false);
@@ -114,25 +162,59 @@ export function NotificationsPage() {
     }
   };
   return (
-    <section className="workspace-admin">
+    <section className="workspace-admin notifications-page" aria-label="Thông báo">
       <header>
-        <h1>Thông báo ({page.unreadCount} chưa đọc)</h1>
+        <div className="notifications-page__title-row">
+          <h1>Thông báo</h1>
+          <Chip icon="bell">
+            {page.unreadCount > 0 ? `${page.unreadCount} chưa đọc` : "Đã xem hết"}
+          </Chip>
+        </div>
         <p>
           Nhắc tên và phản hồi trong chủ đề bạn tham gia. Nội dung chỉ hiển thị khi bạn còn quyền
           đọc kênh.
         </p>
         <div className="admin-actions">
-          <Button variant="secondary" onClick={() => setUnread((value) => !value)}>
-            {unread ? "Xem tất cả" : "Chỉ chưa đọc"}
-          </Button>
-          <Button disabled={busy || !page.unreadCount} onClick={() => void mark()}>
+          <Button
+            variant="primary"
+            icon="check"
+            disabled={busy || !page.unreadCount}
+            onClick={() => void mark()}
+          >
             Đánh dấu tất cả đã đọc
           </Button>
+          <Button
+            variant="secondary"
+            icon="filter"
+            aria-pressed={unread}
+            onClick={() => setUnread((value) => !value)}
+          >
+            {unread ? "Xem tất cả" : "Chỉ chưa đọc"}
+          </Button>
+          {page.unreadCount > 0 && page.items.length > 0 && (
+            <Button
+              variant="text"
+              icon="chevron-down"
+              aria-controls="notification-list"
+              onClick={jumpToList}
+            >
+              Xem danh sách
+            </Button>
+          )}
         </div>
       </header>
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <p className="inline-alert" role="alert">
+          {error}
+        </p>
+      )}
       <section>
-        <h2>Tùy chọn theo nhóm</h2>
+        <div className="notifications-section-head">
+          <h2>Tùy chọn theo nhóm</h2>
+          {groups.length > 0 && (
+            <Chip icon="users">{groups.length} nhóm đang tham gia</Chip>
+          )}
+        </div>
         <label>
           Nhóm
           <select value={workspaceId} onChange={(event) => setWorkspaceId(event.target.value)}>
@@ -160,79 +242,135 @@ export function NotificationsPage() {
                 .finally(() => setBusy(false));
             }}
           />
-          Tắt thông báo mới của nhóm này
+          <span>Tắt thông báo mới của nhóm này</span>
         </label>
       </section>
-      <section>
-        {loading && <p role="status">Đang tải thông báo…</p>}
-        {!loading && !page.items.length && <p>Không có thông báo phù hợp.</p>}
-        <ul>
-          {page.items.map((item) => (
-            <li key={item.id}>
-              <button
-                className="notification-item"
-                onClick={() => {
-                  void mark(item.id);
-                  navigate({
-                    view: "chat",
-                    workspaceId: item.workspaceId,
-                    channelId: item.channelId,
-                    messageId: item.threadRootId ?? item.messageId,
-                    threadId: item.threadRootId ?? undefined,
-                  });
-                }}
-              >
-                <strong>
-                  {!item.readAt ? "Chưa đọc · " : ""}
-                  {item.kind === "mention" ? "Nhắc tên" : "Phản hồi chủ đề"} · {item.authorName}
-                </strong>
-                <span>
-                  #{item.channelName} · {item.content}
-                </span>
-                <time dateTime={item.createdAt}>
-                  {new Date(item.createdAt).toLocaleString("vi-VN")}
-                </time>
-              </button>
-              {!item.readAt && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() => void mark(item.id)}
-                >
-                  Đã đọc
-                </Button>
-              )}
-            </li>
-          ))}
-        </ul>
-        {page.hasMore && (
+      <section id="notification-list" aria-label="Danh sách thông báo">
+        <div className="notifications-section-head">
+          <h2 ref={listHeadingRef} tabIndex={-1}>
+            {unread ? "Thông báo chưa đọc" : "Tất cả thông báo"}
+          </h2>
           <Button
-            disabled={loading}
-            variant="secondary"
-            onClick={() => {
-              setLoading(true);
-              void governanceApi<NotificationPage>(
-                accessToken!,
-                `notifications?before=${page.items.at(-1)!.id}${unread ? "&unread=true" : ""}`,
-              )
-                .then((next) =>
-                  setPage((old) => ({
-                    ...next,
-                    items: [
-                      ...old.items,
-                      ...next.items.filter(
-                        (item) => !old.items.some((other) => other.id === item.id),
-                      ),
-                    ],
-                  })),
-                )
-                .catch((reason) => setError(reason.message))
-                .finally(() => setLoading(false));
-            }}
+            variant="text"
+            onClick={() => setUnread(false)}
           >
-            Tải thông báo cũ
+            Xem tất cả
           </Button>
+        </div>
+        {loading && (
+          <p role="status" className="loading-note">
+            Đang tải thông báo…
+          </p>
+        )}
+        {!loading && !page.items.length && (
+          <>
+            <div className="nexo-list-group" role="list" aria-label="Thông báo mẫu xem trước">
+              {SAMPLE_NOTIFICATIONS.map((sample) => (
+                <ListItem
+                  key={sample.id}
+                  role="listitem"
+                  icon={sample.icon}
+                  title={sample.title}
+                  subtitle={sample.subtitle}
+                  metaPrimary={sample.metaPrimary}
+                  metaSecondary={sample.metaSecondary}
+                />
+              ))}
+            </div>
+            <div className="state-card state-card--compact notifications-empty-card">
+              <span className="state-card__icon">
+                <Icon name="bell" size={22} />
+              </span>
+              <h3>{unread ? "Không còn thông báo chưa đọc" : "Chưa có thông báo"}</h3>
+              <p>
+                Khi ai đó nhắc tên bạn hoặc phản hồi trong chủ đề bạn tham gia, thông báo sẽ ở đây.
+              </p>
+            </div>
+          </>
+        )}
+        {page.items.length > 0 && (
+          <div className="nexo-list-group notification-list" role="list">
+            {page.items.map((item) => {
+              const { time, day } = formatNotificationTime(item.createdAt);
+              return (
+                <div
+                  key={item.id}
+                  role="listitem"
+                  className={`notification-row ${item.readAt ? "" : "is-unread"}`}
+                >
+                  <ListItem
+                    icon={item.kind === "mention" ? "at-sign" : "messages"}
+                    title={
+                      <>
+                        {item.authorName}{" "}
+                        <span className="notification-kind">
+                          {item.kind === "mention" ? "đã nhắc tên bạn" : "đã phản hồi trong chủ đề"}
+                        </span>
+                        {!item.readAt && <span className="sr-only"> (chưa đọc)</span>}
+                      </>
+                    }
+                    subtitle={
+                      <>
+                        <b>#{item.channelName}</b> · {item.content}
+                      </>
+                    }
+                    metaPrimary={time}
+                    metaSecondary={day}
+                    onClick={() => {
+                      void mark(item.id);
+                      navigate({
+                        view: "chat",
+                        workspaceId: item.workspaceId,
+                        channelId: item.channelId,
+                        messageId: item.threadRootId ?? item.messageId,
+                        threadId: item.threadRootId ?? undefined,
+                      });
+                    }}
+                  />
+                  {!item.readAt && (
+                    <Button
+                      variant="text"
+                      icon="check"
+                      disabled={busy}
+                      onClick={() => void mark(item.id)}
+                    >
+                      Đã đọc
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {page.hasMore && (
+          <div className="notifications-more">
+            <Button
+              disabled={loading}
+              variant="secondary"
+              onClick={() => {
+                setLoading(true);
+                void governanceApi<NotificationPage>(
+                  accessToken!,
+                  `notifications?before=${page.items.at(-1)!.id}${unread ? "&unread=true" : ""}`,
+                )
+                  .then((next) =>
+                    setPage((old) => ({
+                      ...next,
+                      items: [
+                        ...old.items,
+                        ...next.items.filter(
+                          (item) => !old.items.some((other) => other.id === item.id),
+                        ),
+                      ],
+                    })),
+                  )
+                  .catch((reason) => setError(reason.message))
+                  .finally(() => setLoading(false));
+              }}
+            >
+              Tải thông báo cũ
+            </Button>
+          </div>
         )}
       </section>
     </section>

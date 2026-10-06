@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import type { MeetingState } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import { useMeeting } from "../../app/providers/MeetingContext";
+import { Button, ConfirmDialog } from "../../shared/ui/Primitives";
+import { AnimatePresence } from "motion/react";
 import "./meeting-controls.css";
 import { hostActionToast } from "./host-action-toast";
 export function MeetingControls({
@@ -10,20 +12,25 @@ export function MeetingControls({
   onJoin,
   onCancel,
   onCount,
+  onState,
 }: {
   roomId: string;
   waiting: boolean;
   onJoin: () => void;
   onCancel: () => void;
   onCount?: (count: number) => void;
+  onState?: (state: MeetingState | null) => void;
 }) {
   const { user, notify } = useApp();
   const { controlSocket: socket } = useMeeting();
   const [state, setState] = useState<MeetingState | null>(null),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(false),
-    [endConfirm, setEndConfirm] = useState(false);
+    [busy, setBusy] = useState(false);
   const countRef = useRef(onCount);
+  const stateCallback = useRef(onState);
+  stateCallback.current = onState;
+  useEffect(() => { stateCallback.current?.(state); }, [state]);
+  const [confirmation, setConfirmation] = useState<{name:string; target?:string; label:string; description:string} | null>(null);
   countRef.current = onCount;
   useEffect(() => {
     if (!socket) return;
@@ -72,7 +79,7 @@ export function MeetingControls({
         .timeout(10000)
         .emitWithAck("meeting_action", { roomId, action: name, targetUserId, enabled });
       if (!data.success) throw new Error(data.error);
-      setEndConfirm(false);
+      setConfirmation(null);
       const done = hostActionToast(name, targetName, enabled);
       if (done) notify(done, undefined, "info");
     } catch (reason) {
@@ -83,9 +90,13 @@ export function MeetingControls({
   };
   return (
     <section className="meeting-controls" aria-label="Điều hành phiên họp">
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <p className="meeting-controls-alert" role="alert">
+          {error}
+        </p>
+      )}
       {waiting && (
-        <div role="status">
+        <div className="meeting-controls-waiting" role="status">
           <strong>{me?.state === "admitted" ? "Bạn đã được duyệt" : "Đang ở phòng chờ"}</strong>
           <p>
             Thiết bị chưa phát vào phòng.{" "}
@@ -93,8 +104,14 @@ export function MeetingControls({
               ? "Bấm vào họp để sử dụng lựa chọn mic/camera của bạn."
               : "Chờ host hoặc co-host duyệt."}
           </p>
-          {me?.state === "admitted" && <button onClick={onJoin}>Vào họp sau khi được duyệt</button>}
-          <button onClick={onCancel}>Rời phòng chờ</button>
+          {me?.state === "admitted" && (
+            <Button size="sm" variant="primary" onClick={onJoin}>
+              Vào họp sau khi được duyệt
+            </Button>
+          )}
+          <Button size="sm" variant="ghost" onClick={onCancel}>
+            Rời phòng chờ
+          </Button>
         </div>
       )}
       {state && (
@@ -108,44 +125,47 @@ export function MeetingControls({
           <details open={waiting}>
             <summary>Người tham gia và điều hành</summary>
             {!waiting && me && (
-              <button
+              <Button
+                size="sm"
+                variant="secondary"
                 disabled={busy}
                 aria-pressed={me.raisedHand}
+                title={me.raisedHand ? "Hạ tay (H)" : "Giơ tay (H)"} aria-keyshortcuts="H"
                 onClick={() => void action("hand", undefined, !me.raisedHand)}
               >
                 {me.raisedHand ? "Hạ tay" : "Giơ tay"}
-              </button>
+              </Button>
             )}
             {canManage && (
               <div className="meeting-host-actions">
-                <button
+                <Button
+                  size="sm"
+                  variant="secondary"
                   disabled={busy}
                   aria-pressed={state.waitingEnabled}
                   onClick={() => void action("waiting", undefined, !state.waitingEnabled)}
                 >
                   {state.waitingEnabled ? "Tắt phòng chờ" : "Bật phòng chờ"}
-                </button>
-                <button
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
                   disabled={busy}
                   aria-pressed={state.locked}
                   onClick={() => void action("lock", undefined, !state.locked)}
                 >
                   {state.locked ? "Mở khóa phòng" : "Khóa phòng"}
-                </button>
+                </Button>
                 {isHost && (
-                  <button disabled={busy} onClick={() => setEndConfirm(true)}>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    disabled={busy}
+                    onClick={() => setConfirmation({name:"end",label:"Xác nhận kết thúc",description:"Kết thúc phiên này và ngắt media của mọi người?"})}
+                  >
                     Kết thúc cho tất cả
-                  </button>
+                  </Button>
                 )}
-              </div>
-            )}
-            {endConfirm && (
-              <div role="alert">
-                <p>Kết thúc phiên này và ngắt media của mọi người?</p>
-                <button disabled={busy} onClick={() => void action("end")}>
-                  Xác nhận kết thúc
-                </button>
-                <button onClick={() => setEndConfirm(false)}>Hủy</button>
               </div>
             )}
             <ul>
@@ -160,37 +180,56 @@ export function MeetingControls({
                     {p.connections > 1 ? ` · ${p.connections} tab` : ""}
                   </span>
                   {canManage && p.userId !== user?.id && p.role !== "host" && (
-                    <div>
+                    <div className="meeting-participant-actions">
                       {p.state === "waiting" ? (
-                        <button disabled={busy} onClick={() => void action("admit", p.userId)}>
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          disabled={busy}
+                          onClick={() => void action("admit", p.userId)}
+                        >
                           Duyệt vào phòng
-                        </button>
+                        </Button>
                       ) : (
                         <>
-                          <button disabled={busy} onClick={() => void action("mute", p.userId)}>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={busy}
+                            onClick={() => setConfirmation({name:"mute",target:p.userId,label:"Tắt nguồn mic",description:`Tắt nguồn microphone của ${p.displayName}? Người này phải tự bật lại thiết bị.`})}
+                          >
                             Tắt nguồn mic
-                          </button>
+                          </Button>
                           {isHost && (
                             <>
-                              <button
+                              <Button
+                                size="sm"
+                                variant="secondary"
                                 disabled={busy}
                                 onClick={() => void action("cohost", p.userId, p.role !== "cohost")}
                               >
                                 {p.role === "cohost" ? "Bỏ co-host" : "Đặt co-host"}
-                              </button>
-                              <button
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="secondary"
                                 disabled={busy}
-                                onClick={() => void action("transfer", p.userId)}
+                                onClick={() => setConfirmation({name:"transfer",target:p.userId,label:"Chuyển host",description:`Chuyển quyền host cho ${p.displayName}? Bạn sẽ mất quyền host và không thể tự lấy lại quyền.`})}
                               >
                                 Chuyển host
-                              </button>
+                              </Button>
                             </>
                           )}
                         </>
                       )}
-                      <button disabled={busy} onClick={() => void action("kick", p.userId)}>
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        disabled={busy}
+                        onClick={() => setConfirmation({name:"kick",target:p.userId,label:"Loại khỏi phiên",description:`Ngắt kết nối của ${p.displayName} và loại người này khỏi phiên họp hiện tại?`})}
+                      >
                         Loại khỏi phiên
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </li>
@@ -204,6 +243,7 @@ export function MeetingControls({
           </details>
         </>
       )}
+      <AnimatePresence>{confirmation && <ConfirmDialog title={confirmation.label} description={confirmation.description} confirmLabel={confirmation.label} loading={busy} onClose={() => setConfirmation(null)} onConfirm={() => void action(confirmation.name,confirmation.target)} />}</AnimatePresence>
     </section>
   );
 }

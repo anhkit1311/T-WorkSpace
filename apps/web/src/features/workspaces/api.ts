@@ -1,4 +1,9 @@
-import type { ChannelItem, GroupMemberItem } from "@doan/shared";
+import type {
+  ChannelItem,
+  GroupMemberItem,
+  WorkspaceFileItem,
+  WorkspaceOverviewSummary,
+} from "@doan/shared";
 import { ApiError } from "../auth/api";
 
 export interface Administration {
@@ -32,12 +37,14 @@ export async function governanceApi<T = { success: boolean }>(
   path: string,
   method = "GET",
   body?: object,
+  signal?: AbortSignal,
 ): Promise<T> {
   const res = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/${path}`, {
     method,
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     credentials: "include",
     body: body ? JSON.stringify(body) : undefined,
+    signal,
   });
   const data = await res.json();
   if (!res.ok)
@@ -48,3 +55,36 @@ export async function governanceApi<T = { success: boolean }>(
     );
   return data as T;
 }
+
+export async function getWorkspaceOverviewApi(
+  token: string,
+  workspaceId: string,
+  signal?: AbortSignal,
+): Promise<WorkspaceOverviewSummary> {
+  return governanceApi<WorkspaceOverviewSummary>(
+    token,
+    `workspaces/${workspaceId}/overview`,
+    "GET",
+    undefined,
+    signal,
+  );
+}
+
+export async function getWorkspaceFilesApi(
+  token: string,
+  workspaceId: string,
+  options?: { before?: string | null; limit?: number; signal?: AbortSignal },
+): Promise<{ files: WorkspaceFileItem[]; nextCursor: string | null }> {
+  const params = new URLSearchParams();
+  if (options?.before) params.set("before", options.before);
+  if (options?.limit) params.set("limit", String(options.limit));
+  const query = params.toString();
+  return governanceApi<{ files: WorkspaceFileItem[]; nextCursor: string | null }>(
+    token,
+    `workspaces/${workspaceId}/files${query ? `?${query}` : ""}`,
+    "GET",
+    undefined,
+    options?.signal,
+  );
+}
+

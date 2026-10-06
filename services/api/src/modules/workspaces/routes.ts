@@ -14,7 +14,7 @@ import {
   validateId,
 } from "./service.js";
 import { sendWorkspaceInvitation } from "../../infrastructure/email/service.js";
-import { homeSummary } from "./home.js";
+import { homeSummary, listWorkspaceFiles, workspaceOverview } from "./home.js";
 import {
   acceptInvitation,
   changeMember,
@@ -30,10 +30,29 @@ export async function workspaceRoutes({
   request,
   response,
   pathname,
+  params,
 }: RouteContext): Promise<void> {
   if (pathname === "/api/home" && request.method === "GET") {
     response.setHeader("Cache-Control", "no-store");
     sendJson(response, 200, await homeSummary(await getAuthUserId(request)));
+    return;
+  }
+  const workspaceOverviewMatch = pathname.match(/^\/api\/workspaces\/([^/]+)\/overview$/);
+  if (request.method === "GET" && workspaceOverviewMatch) {
+    const userId = await getAuthUserId(request);
+    const workspaceId = workspaceOverviewMatch[1];
+    response.setHeader("Cache-Control", "no-store");
+    sendJson(response, 200, await workspaceOverview(userId, workspaceId));
+    return;
+  }
+  const workspaceFilesMatch = pathname.match(/^\/api\/workspaces\/([^/]+)\/files$/);
+  if (request.method === "GET" && workspaceFilesMatch) {
+    const userId = await getAuthUserId(request);
+    const workspaceId = workspaceFilesMatch[1];
+    const before = params.get("before") ?? undefined;
+    const limit = Number(params.get("limit")) || 24;
+    response.setHeader("Cache-Control", "no-store");
+    sendJson(response, 200, await listWorkspaceFiles(userId, workspaceId, before, limit, false));
     return;
   }
   const governance = pathname.match(

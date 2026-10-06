@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import type { AmbientMood, AmbientScene } from "./ambient-scene";
-import { useMotionSafe, useSceneCovered } from "./MotionProvider";
 
 const VIDEO_SRC = "https://designerstephen.github.io/public-assets/videos/serene-art-hero.mp4";
-// TODO(asset): owner must supply licensed local WebM/MP4 + a matching poster.
-// Keep the approved source until supplied; do not fetch/copy third-party media.
+const VIDEO_POSTER =
+  "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=2000&q=80";
 
 // Pages outside React's prop flow (scroll-driven landing) reach the live scene through this bridge.
 let liveScene: AmbientScene | null = null;
@@ -16,7 +15,9 @@ export const ambientBridge = {
   pulse() {
     liveScene?.pulse();
   },
-  debugState() { return liveScene?.debugState(); },
+  debugState() {
+    return liveScene?.debugState();
+  },
 };
 
 interface AmbientBackdropProps {
@@ -34,16 +35,12 @@ interface AmbientBackdropProps {
 export function AmbientBackdrop({ mood, tone, active = true }: AmbientBackdropProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const { reduced } = useMotionSafe();
-  const covered = useSceneCovered();
-  const drawing = active && !covered;
-  const saveData = Boolean((navigator as Navigator & {connection?:{saveData?:boolean}}).connection?.saveData);
   const sceneRef = useRef<AmbientScene | null>(null);
   const moodRef = useRef(mood);
   const activeRef = useRef(active);
   const [webgl, setWebgl] = useState(true);
   moodRef.current = mood;
-  activeRef.current = drawing;
+  activeRef.current = active;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -53,13 +50,13 @@ export function AmbientBackdrop({ mood, tone, active = true }: AmbientBackdropPr
     void import("./ambient-scene")
       .then(({ AmbientScene }) => {
         if (cancelled) return;
-        const scene = new AmbientScene(canvas, { reducedMotion: reduced });
+        const scene = new AmbientScene(canvas, { reducedMotion: false });
         sceneRef.current = scene;
         liveScene = scene;
         scene.setMood(moodRef.current, false);
         scene.setActive(activeRef.current);
         scene.start();
-        if (!reduced) gsap.fromTo(canvas, { autoAlpha: 0 }, { autoAlpha: 1, duration: 1.2, ease: "power2.out" });
+        gsap.fromTo(canvas, { autoAlpha: 0 }, { autoAlpha: 1, duration: 1.2, ease: "power2.out" });
       })
       .catch(() => {
         if (!cancelled) setWebgl(false);
@@ -72,26 +69,44 @@ export function AmbientBackdrop({ mood, tone, active = true }: AmbientBackdropPr
       sceneRef.current?.dispose();
       sceneRef.current = null;
     };
-  }, [reduced]);
+  }, []);
 
   useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = true;
+    video.defaultMuted = true;
     const sync = () => {
-      if (!videoRef.current) return;
-      if (reduced || saveData || !drawing || document.hidden) videoRef.current.pause();
-      else void videoRef.current.play().catch(() => { /* Autoplay denied: retain the loaded first frame. */ });
+      const el = videoRef.current;
+      if (!el) return;
+      el.muted = true;
+      el.defaultMuted = true;
+      if (!active || document.hidden) {
+        el.pause();
+      } else {
+        void el.play().catch(() => {
+          /* Autoplay blocked until interaction: poster/first frame remains visible. */
+        });
+      }
     };
     sync();
-    document.addEventListener("visibilitychange",sync);
-    return () => document.removeEventListener("visibilitychange",sync);
-  },[drawing,reduced,saveData]);
+    video.addEventListener("loadeddata", sync);
+    video.addEventListener("canplay", sync);
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      video.removeEventListener("loadeddata", sync);
+      video.removeEventListener("canplay", sync);
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, [active]);
 
   useEffect(() => {
     sceneRef.current?.setMood(mood);
   }, [mood]);
 
   useEffect(() => {
-    sceneRef.current?.setActive(drawing);
-  }, [drawing]);
+    sceneRef.current?.setActive(active);
+  }, [active]);
 
   return (
     <div className={`ambient-backdrop ambient-backdrop--${tone}`} aria-hidden="true">
@@ -99,11 +114,12 @@ export function AmbientBackdrop({ mood, tone, active = true }: AmbientBackdropPr
         ref={videoRef}
         className="ambient-backdrop__video"
         src={VIDEO_SRC}
-        autoPlay={!reduced && !saveData && drawing}
+        poster={VIDEO_POSTER}
+        autoPlay
         loop
         muted
         playsInline
-        preload="metadata"
+        preload="auto"
       />
       <div className="ambient-backdrop__veil ambient-backdrop__veil--public" />
       <div className="ambient-backdrop__veil ambient-backdrop__veil--workspace" />

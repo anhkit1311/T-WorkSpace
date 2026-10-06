@@ -1,4 +1,4 @@
-# Design System Master File
+# Design System Master File — nexo Editorial Glass
 
 > **LOGIC:** When building a specific page, first check `design-system/pages/[page-name].md`.
 > If that file exists, its rules **override** this Master file.
@@ -6,247 +6,190 @@
 
 ---
 
-**Project:** Realtime Workspace
-**Generated:** 2026-09-08 13:08:37
-**Category:** Productivity Tool
-**Design Dials:** Variance 5/10 (Balanced / Modern) | Motion 4/10 (Standard) | Density 8/10 (Dense / Dashboard)
+**Project:** nexo — Realtime Collaborative Workspace
+**Revised:** 2026-10 — rewritten to match the shipped Editorial Glass interface
+**Design Dials:** Variance 5/10 (Balanced) | Motion 6/10 (Calm; 60 fps target, not a measured guarantee) | Density 7/10 (Workspace)
 
-**Refined:** 2026-09-08 — Swiss/minimal productivity workspace, responsive drawers, functional search, light-only interface
+**Source of truth in code**
+
+| Concern                          | File                                               |
+| -------------------------------- | -------------------------------------------------- |
+| Shell tokens, topbar, dock       | `apps/web/src/app/styles/editorial-workspace.css`  |
+| Page heroes, states, modals      | `apps/web/src/app/styles/unified-surfaces.css`     |
+| Backdrop (video + three.js veil) | `apps/web/src/app/styles/screen-motion.css`        |
+| Primitives (Button, Modal, …)    | `apps/web/src/shared/ui/Primitives.tsx`            |
+| Motion timing (Motion + GSAP)    | `apps/web/src/shared/motion/tokens.ts`             |
 
 ---
 
 ## Global Rules
 
-### Color Palette
+The interface is **light-only**. `AppContext` sets `data-theme="light"`, `color-scheme: light`
+and `theme-color #e8eef6` so native controls (`<select>`, `datetime-local`, scrollbars) stay light.
+Do not add OS theme detection or a theme toggle unless the product direction changes.
 
-| Role             | Hex       | CSS Variable                 |
-| ---------------- | --------- | ---------------------------- |
-| Primary          | `#8F3F76` | `--color-primary`            |
-| On Primary       | `#FFFFFF` | `--color-primary-foreground` |
-| Secondary        | `#A84C89` | `--color-online`             |
-| On Secondary     | `#4A1F3E` | `--plum-900`                 |
-| Accent/CTA       | `#D94B18` | `--color-accent`             |
-| On Accent/CTA    | `#FFFFFF` | `--color-accent-foreground`  |
-| Background       | `#FFF8ED` | `--color-background`         |
-| Foreground       | `#2C1D17` | `--color-foreground`         |
-| Card             | `#FFFFFF` | `--color-card`               |
-| Card Foreground  | `#2C1D17` | `--color-foreground`         |
-| Muted            | `#F4ECE4` | `--color-muted`              |
-| Muted Foreground | `#6E5547` | `--color-muted-foreground`   |
-| Border           | `#E7D8CA` | `--color-border`             |
-| Destructive      | `#DC2626` | `--color-destructive`        |
-| On Destructive   | `#FFFFFF` | `--color-on-destructive`     |
-| Ring             | `#8F3F76` | `--color-ring`               |
+### Color Palette (authenticated workspace, `.app-shell`)
 
-**Color Notes:** Warm plum is the product color. Burnt orange is reserved for high-priority actions; cream and brown neutrals reproduce the warmth of the supplied palette reference.
+| Role                     | Value                        | CSS Variable                     |
+| ------------------------ | ---------------------------- | -------------------------------- |
+| Primary (navy)           | `#263450`                    | `--primary`                      |
+| Primary strong / hover   | `#1B263B`                    | `--primary-strong`               |
+| Primary soft             | `rgba(38, 52, 80, 0.10)`     | `--primary-soft`                 |
+| Ink                      | `#17233E`                    | `--editorial-text` / `--text`    |
+| Ink secondary            | `#31415B`                    | `--editorial-text-secondary`     |
+| Ink muted                | `#3E4E66`                    | `--editorial-text-muted`         |
+| Glass card               | `rgba(246, 248, 252, 0.64)`  | `--editorial-surface-card`       |
+| Glass popup              | `rgba(243, 246, 252, 0.92)`  | `--editorial-surface-popup`      |
+| Glass soft strip         | `rgba(255, 255, 255, 0.24)`  | `--editorial-surface-soft`       |
+| Glass edge               | `rgba(255, 255, 255, 0.36)`  | `--editorial-border`             |
+| Hairline                 | `rgba(23, 35, 62, 0.10)`     | `--editorial-border-soft`        |
+| Opaque panel (dense UI)  | `rgba(255, 255, 255, 0.78)`  | — (meeting controls, QoS card)   |
+| Success / online         | `#10B981`                    | —                                |
+| Warning / connecting     | `#F59E0B`                    | —                                |
+| Offline / hidden         | `#94A3B8`                    | —                                |
+| Danger text on tint      | `#B91C1C` on `#FEF2F2`       | `.inline-alert`, alerts          |
 
-**Left navigation:** use a light plum surface (`#F4E4EF`) with warm-plum selected states (`#8F3F76`) and dark-plum labels (`#73305F`). Do not introduce teal, mint, cyan, or blue accents.
+**Rules**
 
-The interface is intentionally light-only. Do not add operating-system theme detection or a theme toggle unless the product direction changes.
+- Navy is the only accent. Never use pure black (`#000`) for selected/active states; use `--primary`.
+- Pure black is reserved for the in-call control dock (`.meeting-controls-dock`) over video.
+- Status colors are semantic only (presence, alerts, badges); never decorative.
 
 ### Typography
 
-- **Heading Font:** Plus Jakarta Sans, with Inter/system fallback
-- **Body Font:** Inter
-- **Mood:** calm, precise, friendly, modern, professional productivity
-- **Google Fonts:** [Inter + Inter](https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap)
+| Role    | Family             | Token            | Usage                                          |
+| ------- | ------------------ | ---------------- | ---------------------------------------------- |
+| Display | Playfair Display   | `--font-display` | Page titles, card titles, brand moments        |
+| Body    | Inter              | `--font-body`    | All UI text, labels, buttons                   |
+| Mono    | JetBrains Mono     | `--font-mono`    | `code`, `kbd`, QoS figures, session IDs        |
 
-**CSS Import:**
+- Fonts are loaded once in `apps/web/index.html`.
+- Playfair defaults to old-style figures; the shell sets `font-variant-numeric: lining-nums`
+  so "0" never reads as "o".
+- Page title: `clamp(2.2rem, 3.5vw, 3rem)`, weight 500, letter-spacing `-0.015em`.
 
-```css
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
-```
+### Glassmorphism
 
-### Spacing Variables
+| Element            | Background                    | Blur                     | Radius | Shadow                              |
+| ------------------ | ----------------------------- | ------------------------ | ------ | ----------------------------------- |
+| Page hero / header | `--editorial-surface-card`    | `var(--editorial-blur)`  | 28px   | `0 24px 60px rgba(15,23,42,.10)`    |
+| Card / section     | `--editorial-surface-card`    | `var(--editorial-blur)`  | 22px   | `--editorial-shadow`                |
+| Filter / head strip| `--editorial-surface-soft`    | `var(--editorial-blur)`  | 22px   | none                                |
+| Dense panel        | `rgba(255,255,255,.78)`       | `var(--editorial-blur)`  | 20px   | `0 12px 32px rgba(15,23,42,.06)`    |
+| Popover / modal    | `--editorial-surface-popup`   | `var(--editorial-blur)`  | 22–28px| `0 24px 60px rgba(15,23,42,.16)`    |
 
-_Density: 8/10 — Dense / Dashboard_
+- `--editorial-blur` is **10px**. Do not stack more than two blurred layers.
+- Never paint headings, labels or filters directly onto the landscape backdrop — wrap them in a
+  page hero or a soft strip.
 
-| Token         | Value              | Usage                     |
-| ------------- | ------------------ | ------------------------- |
-| `--space-xs`  | `2px` / `0.125rem` | Tight gaps                |
-| `--space-sm`  | `4px` / `0.25rem`  | Icon gaps, inline spacing |
-| `--space-md`  | `8px` / `0.5rem`   | Standard padding          |
-| `--space-lg`  | `12px` / `0.75rem` | Section padding           |
-| `--space-xl`  | `16px` / `1rem`    | Large gaps                |
-| `--space-2xl` | `24px` / `1.5rem`  | Section margins           |
-| `--space-3xl` | `32px` / `2rem`    | Hero padding              |
+### Radius & Spacing
 
-### Shadow Depths
-
-| Level         | Value                          | Usage                       |
-| ------------- | ------------------------------ | --------------------------- |
-| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)`   | Subtle lift                 |
-| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.1)`    | Cards, buttons              |
-| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)`  | Modals, dropdowns           |
-| `--shadow-xl` | `0 20px 25px rgba(0,0,0,0.15)` | Hero images, featured cards |
+| Token / value                | Usage                          |
+| ---------------------------- | ------------------------------ |
+| `9999px` (`--editorial-radius-pill`) | Buttons, inputs, chips, call dock |
+| `28px`                       | Page heroes, modals            |
+| `22px` (`--editorial-radius-card`)   | Cards, sections        |
+| `14–20px`                    | Inline alerts, list rows       |
+| Page padding                 | `32px clamp(20px, 3vw, 48px) 80px`; mobile `20px 12px 40px` |
 
 ---
 
 ## Component Specs
 
-### Buttons
+Always use the primitives in `Primitives.tsx`; raw `<button>` elements are only acceptable for
+bespoke controls with their own class (dock buttons, video tiles, chips).
 
-```css
-/* Primary Button */
-.btn-primary {
-  background: #d94b18;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
+### Buttons — `<Button variant size icon loading>`
 
-.btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
+| Variant     | Look                                                | Use                              |
+| ----------- | --------------------------------------------------- | -------------------------------- |
+| `primary`   | Navy pill, white text                               | One main action per area         |
+| `secondary` | Glass pill, hairline border                         | Supporting actions               |
+| `ghost`     | Transparent, ink text                               | Tertiary, inline row actions     |
+| `danger`    | Red pill                                            | Destructive confirmations only   |
 
-/* Secondary Button */
-.btn-secondary {
-  background: transparent;
-  color: #8f3f76;
-  border: 2px solid #8f3f76;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-```
+Icon-only actions use `<IconButton icon label>`; the label is required (tooltip + `aria-label`).
 
-### Cards
+### Cards & States
 
-```css
-.card {
-  background: #fff8ed;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: var(--shadow-md);
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
-}
-```
+- `.state-card` — centered empty/error state with `.state-card__icon`.
+- `.inline-alert` — non-blocking error with optional action.
+- `.loading-note` — centered muted status text.
 
 ### Inputs
 
-```css
-.input {
-  padding: 12px 16px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: border-color 200ms ease;
-}
+Pill inputs on glass: `border: 1.5px solid rgba(15,23,42,.12)`, background `--editorial-surface-card`,
+focus ring `2px solid var(--primary)` offset `3px`.
 
-.input:focus {
-  border-color: #8f3f76;
-  outline: none;
-  box-shadow: 0 0 0 3px #8f3f7620;
-}
-```
+### Modals — `<Modal title eyebrow footer onClose>`
 
-### Modals
-
-```css
-.modal-overlay {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-}
-
-.modal {
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: var(--shadow-xl);
-  max-width: 500px;
-  width: 90%;
-}
-```
+Use for every confirmation (no `window.confirm`). Footer layout helpers: `.modal-footer-actions`,
+`.modal-footer-split`.
 
 ---
 
-## Style Guidelines
+## Page Pattern
 
-**Style:** Flat Design
+**Pattern Name:** Floating dock + glass stage
 
-**Keywords:** 2D, minimalist, bold colors, no shadows, clean lines, simple shapes, typography-focused, modern, icon-heavy
-
-**Best For:** Web apps, mobile apps, cross-platform, startup MVPs, user-friendly, SaaS, dashboards, corporate
-
-**Key Effects:** No gradients/shadows, simple hover (color/opacity shift), fast loading, clean transitions (150-200ms ease), minimal icons
-
-### Page Pattern
-
-**Pattern Name:** Multi-pane Collaboration Workspace
-
-- **Desktop:** Workspace rail > channel navigation > conversation > contextual details.
-- **Tablet:** Workspace rail > channel navigation > conversation; details open as a drawer.
-- **Mobile:** Conversation first; channels and details open as accessible drawers with a scrim.
-- **Hierarchy:** Compact top bar, concise channel context, timeline, messages, persistent composer.
-- **Utilities:** Search must return actionable channel/message results; theme control must expose a clear accessible label.
+- **Desktop:** Topbar (brand · search · notifications · account) → left dock → glass page stage.
+- **Mobile (≤768px):** Single-row 56px topbar; dock moves to the bottom; chat channels open as a
+  drawer with a scrim (≤680px).
+- **Hierarchy:** Page hero (title, one-line purpose, primary actions) → working surfaces.
+- **Utilities:** Ctrl/⌘+K search lists every workspace page plus message results.
 
 ---
 
 ## Motion
 
-**Stagger List** (Standard) — Trigger: load or scroll | Duration: 300-450ms | Easing: `back.out(1.4)`
+Timing lives in `shared/motion/tokens.ts`. Run `npm run motion:css --workspace @doan/web` after changing tokens to regenerate `shared/motion/motion.css`. CSS keyframes live only in `shared/motion/keyframes.css`.
 
-```js
-gsap.from(".grid-item", {
-  opacity: 0,
-  scale: 0.92,
-  y: 16,
-  duration: 0.4,
-  stagger: { each: 0.06, from: "start", grid: "auto" },
-  ease: "back.out(1.4)",
-});
-```
+| Layer      | Library    | Behaviour                                                         |
+| ---------- | ---------- | ----------------------------------------------------------------- |
+| Presence   | Motion     | Views (300ms / 140ms), panels (260ms / 160ms), modals, existing dock pill |
+| Reveal     | GSAP       | Stagger of first-level page blocks (550ms, `expo.out`, 50ms each) |
+| Atmosphere | three.js   | Motes + valley mist over the video; mood per view, paused in-call |
 
-**Framework notes:** grid: 'auto' lets GSAP infer rows/columns from a CSS grid layout for a natural wave stagger; Use matchMedia('(prefers-reduced-motion: reduce)') to skip non-essential motion and render the final state immediately
+- Animate only `transform` and `opacity`; clear inline transforms after reveal. Do not use permanent `will-change` or `transition: all`.
+- Motion owns controls, presence, panels and view wrappers. GSAP owns first-level reveal children and Three.js uniforms. CSS owns spinner/reveal keyframes and color/border feedback. Never animate the same property on the same element from two owners.
+- `useMotionSafe()` supplies complete static presets under `prefers-reduced-motion`: duration 0, opacity 1, no displacement/gesture/stagger. `MotionProvider` synchronizes `html[data-motion]`, CSS and GSAP matchMedia. Video pauses; decorative Three.js renders only its static presentation, with no running scene ticker.
+- Workspace tabs replace content immediately, then animate only the new `.ws-body` contents by 6px / 220ms. Cancel superseded animation on rapid navigation; do not keep outgoing tab content behind it.
+- Allowed micro patterns: native Button press .97 / hover -1px (snappy), tooltip (400ms pointer, immediate keyboard), existing pressed icon pop, bell notification shake, field error shake ≤4px once, numeric count 600ms, existing reaction picker stagger 20ms, send icon feedback, Toast swipe dismissal. Keep all current labels/icons/static geometry.
+- Panels trap focus where modal, release it when exit begins, and make exiting layers inert. Normal-flow chat info closes immediately to avoid reserving an empty column during exit. Preserve current desktop/mobile panel shapes; bottom sheets and new UI blocks require owner approval.
+- Full overlays acquire a scene-cover lease. Nested overlays release independently; hidden tabs and meetings pause decorative drawing. Dispose ticker/listeners/observers/geometry/materials/renderer on unmount. Adaptive motes halve once after a continuous 2s below 50Hz; no second scene loop.
 
-- ✅ Combine with from: 'center' for a bento-grid layout to draw the eye inward first
-- ❌ Don't use back.out on dense data tables; the overshoot reads as sloppy on informational UI
-- ⚡ Group DOM writes; avoid interleaving layout reads (getBoundingClientRect) between staggered tweens
+| Token | Values |
+| --- | --- |
+| DURATION (seconds) | micro .12; overlay .22; page .30; story .90; panel .26; panelExit .16; count .60; enter .22; exit .14; reveal .55; stagger .05; scene 1.10 |
+| EASE | out [.16,1,.3,1]; inOut [.65,0,.35,1]; emphasized [.2,0,0,1] |
+| SPRING (stiffness / damping / mass) | snappy 520 / 38 / .7; gentle 260 / 30 / .9; bouncy 420 / 24 / .7 |
+
+DEV-only `?motion-debug=1` samples rAF callbacks, long tasks, CLS and blurred DOM depth. Its preview buttons test full/reduced presentation without changing the OS preference. rAF Hz is not compositor/GPU FPS; blur DOM depth is not a compositor layer count. This probe is excluded from the production bundle. Evidence and limitations: [motion review](../../docs/ui-review-2026-10-04/motion/README.md).
 
 ---
 
 ## Anti-Patterns (Do NOT Use)
 
-- ❌ Complex onboarding
-- ❌ Slow performance
-
-### Additional Forbidden Patterns
-
-- ❌ **Emojis as icons** — Use SVG icons (Heroicons, Lucide, Simple Icons)
-- ❌ **Missing cursor:pointer** — All clickable elements must have cursor:pointer
-- ❌ **Layout-shifting hovers** — Avoid scale transforms that shift layout
-- ❌ **Low contrast text** — Maintain 4.5:1 minimum contrast ratio
-- ❌ **Instant state changes** — Always use transitions (150-300ms)
-- ❌ **Invisible focus states** — Focus states must be visible for a11y
+- ❌ UI that looks interactive but is not wired to real data or actions ("giao diện giả")
+- ❌ Hard-coded placeholder content shown as if real (fake pinned messages, fake metrics)
+- ❌ `window.confirm` / `window.alert`
+- ❌ Dark surfaces inside the light shell (except video stage and call dock)
+- ❌ Pure black accents, Notion-blue, teal or plum accents
+- ❌ Emojis as icons (emoji are fine as reactions/stickers content)
+- ❌ Invisible focus states; layout-shifting hover effects
 
 ---
 
 ## Pre-Delivery Checklist
 
-Before delivering any UI code, verify:
-
-- [ ] No emojis used as icons (use SVG instead)
-- [ ] All icons from consistent icon set (Heroicons/Lucide)
-- [ ] `cursor-pointer` on all clickable elements
-- [ ] Hover states with smooth transitions (150-300ms)
-- [ ] Light mode: text contrast 4.5:1 minimum
+- [ ] Every visible control performs a real action or is removed
+- [ ] Buttons use `<Button>` / `<IconButton>`
+- [ ] Headings and filters sit on glass, not directly on the backdrop
+- [ ] Text contrast ≥ 4.5:1 on glass
 - [ ] Focus states visible for keyboard navigation
 - [ ] `prefers-reduced-motion` respected
-- [ ] Responsive: 375px, 768px, 1024px, 1440px
-- [ ] No content hidden behind fixed navbars
-- [ ] No horizontal scroll on mobile
+- [ ] Responsive: 375px, 768px, 1024px, 1440px; no horizontal scroll on mobile
+- [ ] `npm run typecheck` and `npm run build --workspace @doan/web` pass
 
 
 ## Khóa giao diện — đợt sửa UX 04–05/10/2026

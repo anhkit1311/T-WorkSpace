@@ -28,21 +28,22 @@ export const DURATION = {
   scene: 1.1,
 } as const;
 
-export function getMotionPreset(reduced: boolean) {
+export function getMotionPreset(_reduced = false) {
+  void _reduced;
   return {
-    reduced,
-    duration: (seconds: number) => reduced ? 0 : seconds,
-    gesture: reduced ? {} : { whileHover: { y: -1 }, whileTap: { scale: 0.97 }, transition: SPRING.snappy },
+    reduced: false,
+    duration: (seconds: number) => seconds,
+    gesture: { whileHover: { y: -1 }, whileTap: { scale: 0.97 }, transition: SPRING.snappy },
     panel: {
-      initial: reduced ? false as const : { opacity: 0, x: 24 },
+      initial: { opacity: 0, x: 24 },
       animate: { opacity: 1, x: 0 },
-      exit: { opacity: reduced ? 1 : 0, x: reduced ? 0 : 16, transition: { duration: reduced ? 0 : DURATION.panelExit } },
-      transition: { duration: reduced ? 0 : DURATION.panel, ease: EASE.out },
+      exit: { opacity: 0, x: 16, transition: { duration: DURATION.panelExit } },
+      transition: { duration: DURATION.panel, ease: EASE.out },
     },
     view: {
-      initial: reduced ? false as const : { opacity: 0, y: 8 },
-      animate: { opacity: 1, y: 0, transition: { duration: reduced ? 0 : DURATION.page, ease: EASE.out } },
-      exit: { opacity: reduced ? 1 : 0, y: reduced ? 0 : -6, transition: { duration: reduced ? 0 : DURATION.exit } },
+      initial: { opacity: 0, y: 8 },
+      animate: { opacity: 1, y: 0, transition: { duration: DURATION.page, ease: EASE.out } },
+      exit: { opacity: 0, y: -6, transition: { duration: DURATION.exit } },
     },
   };
 }
@@ -63,12 +64,5 @@ export const viewTransition = {
 } as const;
 
 export function prefersReducedMotion() {
-  // Only the DEV diagnostic can override a preference for comparison; production follows the OS.
-  if (typeof document !== "undefined" && document.documentElement.dataset.motionPreview) {
-    return document.documentElement.dataset.motionPreview === "reduced";
-  }
-  return (
-    typeof window !== "undefined" &&
-    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true
-  );
+  return false;
 }

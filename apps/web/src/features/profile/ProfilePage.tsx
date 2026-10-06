@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { AnimatePresence } from "motion/react";
 import { useApp } from "../../app/providers/AppContext";
-import { Badge, Button, Field } from "../../shared/ui/Primitives";
+import { Button, Chip, Field, ListItem } from "../../shared/ui/Primitives";
 import { LogoutConfirmDialog } from "../auth/LogoutConfirmDialog";
 import { Icon } from "../../shared/ui/Icon";
 import { changePasswordApi } from "../auth/api";
@@ -170,9 +170,12 @@ export function ProfilePage() {
     <div className="profile-page">
       <header className="profile-header">
         <div>
-          <h1>Hồ sơ cá nhân</h1>
-          <p>Quản lý thông tin tài khoản và bảo mật của bạn.</p>
+          <h1>Cài đặt trang cá nhân</h1>
+          <p>Quản lý thông tin hồ sơ, quyền riêng tư và bảo mật tài khoản của bạn.</p>
         </div>
+        <Chip icon="lock">
+          {profileVisibility === "workspace" ? "Hiển thị cùng nhóm" : "Chỉ mình tôi"}
+        </Chip>
       </header>
 
       {/* Identity preview */}
@@ -189,7 +192,8 @@ export function ProfilePage() {
         >
           <span>KHÔNG GIAN CỦA BẠN</span>
           <label className="profile-cover-upload">
-            Đổi ảnh bìa
+            <Icon name="image" size={16} />
+            <span>Đổi ảnh bìa</span>
             <input
               id="profile-cover"
               name="cover"
@@ -211,7 +215,8 @@ export function ProfilePage() {
             )}
           </div>
           <label className="profile-avatar-upload">
-            Đổi ảnh đại diện
+            <Icon name="camera" size={16} />
+            <span>Đổi ảnh đại diện</span>
             <input
               id="profile-avatar"
               name="avatar"
@@ -227,18 +232,14 @@ export function ProfilePage() {
         <div className="profile-identity">
           <div className="profile-name-row">
             <h2>{displayName || "Chưa cập nhật thông tin"}</h2>
-            {user?.email && (
-              <Badge tone="blue">
-                <Icon name="check" size={12} /> Đã đăng nhập
-              </Badge>
-            )}
+            {user?.email && <Chip icon="check">Đã đăng nhập</Chip>}
           </div>
           <p className="profile-email">{user?.email || "Chưa cập nhật email"}</p>
           <p className="profile-bio-preview">
             {bio || "Thêm một lời giới thiệu ngắn để đồng đội hiểu hơn về bạn."}
           </p>
           {statusText && <p className="profile-bio-preview">{statusText}</p>}
-          <span className="profile-activity">
+          <span className={`profile-activity ${showActivity ? "" : "is-hidden"}`}>
             <i /> {showActivity ? "Hiển thị hoạt động" : "Ẩn hoạt động"}
           </span>
           {!user?.displayName && (
@@ -420,7 +421,13 @@ export function ProfilePage() {
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <Button type="submit" loading={saving} disabled={saving || !displayName.trim()}>
+            <Button
+              type="submit"
+              variant="primary"
+              icon="check"
+              loading={saving}
+              disabled={saving || !displayName.trim()}
+            >
               Lưu thay đổi
             </Button>
           </div>
@@ -477,13 +484,17 @@ export function ProfilePage() {
                 {passwordError}
               </p>
             )}
-            <Button
-              type="submit"
-              loading={changingPassword}
-              disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
-            >
-              Đổi mật khẩu
-            </Button>
+            <div>
+              <Button
+                type="submit"
+                variant="primary"
+                icon="lock"
+                loading={changingPassword}
+                disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
+              >
+                Đổi mật khẩu
+              </Button>
+            </div>
           </form>
         </section>
       )}
@@ -493,25 +504,33 @@ export function ProfilePage() {
         <h3 className="profile-section-title">
           <Icon name="lock" size={16} /> Thông tin tài khoản
         </h3>
-        <div className="profile-meta-list">
-          <div className="profile-meta-item">
-            <span>Mã tài khoản</span>
-            <strong>{user?.id || "—"}</strong>
-          </div>
-          <div className="profile-meta-item">
-            <span>Email đăng nhập</span>
-            <strong>{user?.email || "Chưa có thông tin"}</strong>
-          </div>
+        <div className="nexo-list-group profile-meta-list" role="list">
+          <ListItem
+            role="listitem"
+            icon="profile"
+            title="Mã tài khoản"
+            subtitle="Định danh phiên đăng nhập hiện tại"
+            metaPrimary={user?.id || "—"}
+            metaSecondary="Tài khoản Nexo"
+          />
+          <ListItem
+            role="listitem"
+            icon="mail"
+            title="Email đăng nhập"
+            subtitle="Địa chỉ xác thực chính của tài khoản"
+            metaPrimary={user?.email || "Chưa có thông tin"}
+            metaSecondary="Đã xác thực"
+          />
         </div>
       </section>
 
       {/* Danger Zone */}
       <section className="profile-card profile-danger-zone">
         <h3 className="profile-section-title">Đăng xuất tài khoản</h3>
-        <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: "0 0 16px" }}>
+        <p style={{ fontSize: "14px", color: "var(--nexo-text-muted, #8A8780)", margin: "0 0 16px" }}>
           Đăng xuất sẽ xóa phiên làm việc hiện tại trên trình duyệt này.
         </p>
-        <Button variant="danger" icon="logout" onClick={() => setLogoutConfirmOpen(true)}>
+        <Button variant="secondary" icon="logout" onClick={() => setLogoutConfirmOpen(true)}>
           Đăng xuất khỏi thiết bị
         </Button>
       </section>

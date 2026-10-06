@@ -117,6 +117,8 @@ export type WorkspaceItem = {
   name: string;
   slug: string;
   role: MemberRole;
+  memberCount?: number;
+  unreadCount?: number;
 };
 
 export type ChannelItem = {
@@ -282,3 +284,54 @@ export interface HomeSummary {
  meetings:MeetingScheduleItem[];
  unreadNotifications:number;
 }
+
+export interface WorkspaceFileItem {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  channelId: string;
+  channelName: string;
+  uploaderId: string;
+  uploaderName: string;
+  createdAt: string;
+  messageId: string | null;
+  taskId: string | null;
+  taskTitle: string | null;
+  pinned: boolean;
+}
+
+export interface WorkspaceOverviewSummary {
+  tasks: {
+    id: string;
+    title: string;
+    status: "todo" | "doing" | "done";
+    priority: "low" | "normal" | "high" | "urgent";
+    dueAt: string | null;
+    assigneeId: string | null;
+    assigneeName: string | null;
+    channelId: string;
+    channelName: string;
+    workspaceId: string;
+    version: number;
+  }[];
+  recentMessages: {
+    id: string;
+    channelId: string;
+    channelName: string;
+    authorId: string;
+    authorName: string;
+    content: string;
+    createdAt: string;
+    attachmentName: string | null;
+  }[];
+  meetings: MeetingScheduleItem[];
+  rooms: {
+    id: string;
+    name: string;
+    type: "voice" | "video";
+    description: string;
+  }[];
+  files: WorkspaceFileItem[];
+}
+

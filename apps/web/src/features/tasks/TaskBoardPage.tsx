@@ -4,7 +4,11 @@ import { getWorkspacesApi, getChannelsApi, uploadAttachmentApi } from "../chat/a
 import { governanceApi } from "../workspaces/api";
 import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
-import { Button } from "../../shared/ui/Primitives";
+import { Button, IconButton, ConfirmDialog } from "../../shared/ui/Primitives";
+import { AnimatePresence, motion, useIsPresent } from "motion/react";
+import { useMotionSafe } from "../../shared/motion/MotionProvider";
+import { ambientBridge } from "../../shared/motion/AmbientBackdrop";
+import { beforeTaskAt } from "../../shared/lib/interaction";
 import { AttachmentView } from "../chat/ChatAttachment";
 import type { ChannelMember } from "../chat/ThreadPanel";
 import "./task-board.css";
@@ -15,7 +19,7 @@ const statuses = { todo: "Cần làm", doing: "Đang làm", done: "Hoàn thành"
 const priorities = { low: "Thấp", normal: "Bình thường", high: "Cao", urgent: "Khẩn cấp" } as const;
 type Board = { tasks: TaskItem[]; truncated: boolean };
 export function TaskBoardPage() {
-  const { accessToken, user, route, navigate } = useApp();
+  const { accessToken, user, route, navigate, notify } = useApp();
   const { socket, isConnected } = useSocket();
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]),
     [channels, setChannels] = useState<ChannelItem[]>([]),
@@ -25,6 +29,9 @@ export function TaskBoardPage() {
     [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
     [revision, setRevision] = useState(0);
+  const [boardRevision, setBoardRevision] = useState(0);
+  const [createSuccess, setCreateSuccess] = useState(0);
+  const [loadedBoardRevision, setLoadedBoardRevision] = useState(-1);
   const [creation, setCreation, creationReady] = useDraft<{ title: string; id: string }>(
     `${user?.id ?? "anonymous"}:task-create:${route.channelId ?? ""}`,
     { title: "", id: crypto.randomUUID() },
@@ -37,6 +44,18 @@ export function TaskBoardPage() {
     [deadline, setDeadline] = useState(""),
     [archived, setArchived] = useState(false);
   const dragId = useRef<string | null>(null);
+  const createInputRef = useRef<HTMLInputElement>(null);
+  const focusCreateRef = useRef(false);
+  useEffect(() => {
+    if (!busy && !loading && loadedBoardRevision === boardRevision && creationReady && focusCreateRef.current && createInputRef.current) {
+      // Restore after the board refresh settles.
+      createInputRef.current.focus();
+      focusCreateRef.current = false;
+    }
+  }, [busy, loading, creationReady, boardRevision, loadedBoardRevision]);
+  const [movingIds, setMovingIds] = useState<Set<string>>(() => new Set());
+  const movingRef = useRef(new Set<string>());
+  const [dropTarget, setDropTarget] = useState<{status:string; before:string | null} | null>(null);
   const workspace = workspaces.find((w) => w.id === route.workspaceId),
     channel = channels.find((c) => c.id === route.channelId);
   const readOnly = Boolean(workspace?.archivedAt || channel?.archivedAt);
@@ -117,7 +136,10 @@ export function TaskBoardPage() {
           }
         })
         .finally(() => {
-          if (active) setLoading(false);
+          if (active && request === generation) {
+            setLoading(false);
+            setLoadedBoardRevision(boardRevision);
+          }
         });
     };
     const changed = (event: { channelId: string }) => {
@@ -137,7 +159,7 @@ export function TaskBoardPage() {
       .then((data) => {
         if (active) setMembers(data.members);
       })
-      .catch(() => {});
+      .catch(reason => {if(active)setError(reason instanceof Error ? reason.message : "Không tải được người phụ trách.");});
     socket?.on("task_changed", changed);
     socket?.on("connect", load);
     socket?.on("access_revoked", revoked);
@@ -157,6 +179,7 @@ export function TaskBoardPage() {
     deadline,
     archived,
     revision,
+    boardRevision,
     socket,
   ]);
   const fail = (reason: unknown) =>
@@ -174,8 +197,11 @@ export function TaskBoardPage() {
         { title, clientTaskId: creation.id },
       );
       setCreation({ title: "", id: crypto.randomUUID() });
-      setRevision((n) => n + 1);
-      navigate({ ...route, taskId: data.task.id });
+      focusCreateRef.current = true;
+      setBoardRevision((n) => n + 1);
+      setCreateSuccess(n => n + 1);
+      ambientBridge.pulse();
+      notify("Đã tạo nhiệm vụ", undefined, "success", {label:"Mở",onClick:() => navigate({...route,taskId:data.task.id})});
     } catch (reason) {
       fail(reason);
     } finally {
@@ -183,9 +209,9 @@ export function TaskBoardPage() {
     }
   };
   const move = async (task: TaskItem, status: TaskItem["status"], beforeTaskId?: string | null) => {
-    if (!accessToken || busy || readOnly || task.archivedAt) return;
-    const previous = board;
-    setBusy(true);
+    if (!accessToken || busy || movingRef.current.has(task.id) || readOnly || task.archivedAt) return;
+    movingRef.current.add(task.id);
+    setMovingIds(new Set(movingRef.current));
     setError("");
     setBoard((old) => ({
       ...old,
@@ -197,41 +223,25 @@ export function TaskBoardPage() {
         status,
         ...(beforeTaskId !== undefined ? { beforeTaskId } : {}),
       });
-      setRevision((n) => n + 1);
+      setBoardRevision((n) => n + 1);
     } catch (reason) {
-      setBoard(previous);
+      setBoard(old => ({...old,tasks:old.tasks.map(item => item.id === task.id ? task : item)}));
       fail(reason);
     } finally {
-      setBusy(false);
+      movingRef.current.delete(task.id);
+      setMovingIds(new Set(movingRef.current));
     }
   };
   return (
     <section className="task-page" aria-label="Bảng công việc">
       <header className="task-page-heading">
         <div>
-          <h2>Công việc của nhóm</h2>
-          <p>Trao đổi trong chat, theo dõi tiến độ trên bảng.</p>
+          <h2>Bảng công việc Kanban{channel ? ` — #${channel.name}` : ""}</h2>
+          <p>Theo dõi tiến độ nhiệm vụ theo từng kênh trong nhóm {workspace?.name ?? ""}.</p>
         </div>
         <span role="status">{isConnected ? "Đồng bộ trực tiếp" : "Đang chờ kết nối"}</span>
       </header>
       <div className="task-toolbar">
-        <label>
-          Nhóm
-          <select
-            value={route.workspaceId ?? ""}
-            onChange={(event) => {
-              setError("");
-              navigate({ view: "tasks", workspaceId: event.target.value });
-            }}
-          >
-            <option value="">Chọn nhóm</option>
-            {workspaces.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name}
-              </option>
-            ))}
-          </select>
-        </label>
         <label>
           Bảng theo kênh
           <select
@@ -254,7 +264,14 @@ export function TaskBoardPage() {
             ))}
           </select>
         </label>
-        <button onClick={() => setRevision((n) => n + 1)}>Tải lại bảng</button>
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="refresh"
+          onClick={() => setRevision((n) => n + 1)}
+        >
+          Tải lại bảng
+        </Button>
       </div>
       {error && (
         <p className="task-alert" role="alert">
@@ -271,6 +288,7 @@ export function TaskBoardPage() {
             <label>
               Nhiệm vụ mới
               <input
+                ref={createInputRef}
                 value={title}
                 maxLength={160}
                 disabled={busy || readOnly || !creationReady}
@@ -279,7 +297,7 @@ export function TaskBoardPage() {
                 required
               />
             </label>
-            <Button type="submit" loading={busy} disabled={busy || readOnly || !title.trim()}>
+            <Button icon="plus" successFlash={createSuccess} type="submit" loading={busy} disabled={busy || readOnly || !title.trim()}>
               Tạo nhiệm vụ
             </Button>
           </form>
@@ -354,14 +372,16 @@ export function TaskBoardPage() {
               return (
                 <section
                   key={key}
-                  className="task-column"
+                  className={`task-column ${dropTarget?.status === key ? "is-drop-target" : ""}`}
                   aria-label={label}
-                  onDragOver={(event) => event.preventDefault()}
+                  onDragOver={(event) => {event.preventDefault(); setDropTarget({status:key,before:beforeTaskAt(Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[data-task-id]')).map(el => ({id:el.dataset.taskId!,top:el.getBoundingClientRect().top,height:el.getBoundingClientRect().height})),event.clientY,dragId.current)});}}
                   onDrop={(event) => {
                     event.preventDefault();
                     const task = board.tasks.find((t) => t.id === dragId.current);
+                    const before = beforeTaskAt(Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[data-task-id]')).map(el => ({id:el.dataset.taskId!,top:el.getBoundingClientRect().top,height:el.getBoundingClientRect().height})),event.clientY,dragId.current);
                     dragId.current = null;
-                    if (task) void move(task, key as TaskItem["status"], null);
+                    setDropTarget(null);
+                    if (task) void move(task, key as TaskItem["status"], before);
                   }}
                 >
                   <h3>
@@ -371,8 +391,11 @@ export function TaskBoardPage() {
                   {items.map((task, index) => (
                     <article
                       key={task.id}
-                      className={`task-card priority-${task.priority}`}
-                      draggable={!busy && !readOnly && !archived}
+                      className={`task-card priority-${task.priority} ${dropTarget?.before === task.id ? "is-insert-before" : ""}`}
+                      data-task-id={task.id}
+                      aria-busy={movingIds.has(task.id) || undefined}
+                      draggable={!busy && !movingIds.has(task.id) && !readOnly && !archived}
+                      onDragEnd={() => {dragId.current=null;setDropTarget(null);}}
                       onDragStart={(event) => {
                         dragId.current = task.id;
                         event.dataTransfer.setData("text/plain", task.id);
@@ -401,7 +424,7 @@ export function TaskBoardPage() {
                         Chuyển trạng thái
                         <select
                           value={task.status}
-                          disabled={busy || readOnly || archived}
+                          disabled={busy || movingIds.has(task.id) || readOnly || archived}
                           onChange={(event) =>
                             void move(task, event.target.value as TaskItem["status"])
                           }
@@ -413,12 +436,14 @@ export function TaskBoardPage() {
                           ))}
                         </select>
                       </label>
-                      <button
-                        disabled={index === 0 || busy || readOnly || archived}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={index === 0 || busy || movingIds.has(task.id) || readOnly || archived}
                         onClick={() => void move(task, task.status, items[index - 1].id)}
                       >
                         Đưa lên trên
-                      </button>
+                      </Button>
                     </article>
                   ))}
                 </section>
@@ -427,7 +452,7 @@ export function TaskBoardPage() {
           </div>
         </>
       )}
-      {route.taskId && accessToken && (
+      <AnimatePresence mode="wait" initial={false}>{route.taskId && accessToken && (
         <TaskPanel
           key={route.taskId}
           taskId={route.taskId}
@@ -435,9 +460,9 @@ export function TaskBoardPage() {
           readOnly={readOnly}
           members={members}
           onClose={() => navigate({ ...route, taskId: undefined })}
-          onSaved={() => setRevision((n) => n + 1)}
+          onSaved={() => setBoardRevision((n) => n + 1)}
         />
-      )}
+      )}</AnimatePresence>
     </section>
   );
 }
@@ -457,10 +482,13 @@ function TaskPanel({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const safe = useMotionSafe();
+  const present = useIsPresent();
   const { socket } = useSocket();
   const { route, navigate, user } = useApp();
-  const panelRef = usePanelDialog(onClose);
+  const panelRef = usePanelDialog(onClose, true, ".task-panel-scrim");
   const [progress, setProgress] = useState<number | null>(null);
+  const [confirmation, setConfirmation] = useState<{title:string; description:string; body:object} | null>(null);
   const [task, setTask] = useState<TaskDetail | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
@@ -657,250 +685,336 @@ function TaskPanel({
     }
   };
   const disabled = busy || readOnly || Boolean(task?.archivedAt);
+  // Visible reasons for locked controls (a title tooltip is invisible to keyboard and touch).
+  const dirtyNoteId = "task-panel-dirty-note";
+  const readOnlyNoteId = "task-panel-readonly-note";
+  const lockedBy = dirty ? dirtyNoteId : undefined;
   return (
-    <aside
-      ref={panelRef}
-      role="dialog"
-      aria-modal="true"
-      tabIndex={-1}
-      className="task-panel"
-      aria-label="Chi tiết nhiệm vụ"
-    >
-      <header>
-        <h2>Chi tiết nhiệm vụ</h2>
-        <button ref={closeRef} onClick={onClose} aria-label="Đóng nhiệm vụ">
-          Đóng
-        </button>
-      </header>
-      {error && <p role="alert">{error}</p>}
-      {changed && (
-        <p role="status">
-          Nhiệm vụ đã thay đổi. Bản đang sửa được giữ lại; tải lại để lấy phiên bản mới.
-        </p>
-      )}
-      <button disabled={busy} onClick={() => void reload()}>
-        Tải lại nhiệm vụ
-      </button>
-      {!task && !error && <p role="status">Đang tải…</p>}
-      {task && (
-        <>
-          <small>
-            Phiên bản {task.version}
-            {task.archivedAt ? " · Đã lưu trữ" : ""}
-          </small>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              void patch({
-                title,
-                description,
-                priority,
-                assigneeId: assigneeId || null,
-                dueAt: dueAt ? new Date(dueAt).toISOString() : null,
-              });
-            }}
-            onChange={() => setDirty(true)}
-          >
-            <fieldset disabled={disabled}>
-              <label>
-                Tiêu đề
-                <input
-                  value={title}
-                  maxLength={160}
-                  required
-                  onChange={(event) => setTitle(event.target.value)}
-                />
-              </label>
-              <label>
-                Mô tả
-                <textarea
-                  value={description}
-                  maxLength={8000}
-                  onChange={(event) => setDescription(event.target.value)}
-                />
-              </label>
-              <label>
-                Ưu tiên
-                <select value={priority} onChange={(event) => setPriority(event.target.value)}>
-                  {Object.entries(priorities).map(([key, label]) => (
-                    <option key={key} value={key}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Người phụ trách
-                <select value={assigneeId} onChange={(event) => setAssigneeId(event.target.value)}>
-                  <option value="">Chưa giao</option>
-                  {assigneeId && !members.some((m) => m.userId === assigneeId) && (
-                    <option value={assigneeId}>{task.assigneeName} · Đã mất quyền</option>
-                  )}
-                  {members.map((m) => (
-                    <option key={m.userId} value={m.userId}>
-                      {m.displayName}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Hạn chót
-                <input
-                  type="datetime-local"
-                  value={dueAt}
-                  onChange={(event) => setDueAt(event.target.value)}
-                />
-              </label>
-              <Button type="submit" disabled={!dirty || disabled}>
-                Lưu thay đổi
-              </Button>
-            </fieldset>
-          </form>
-          {task.sourceMessageId && (
-            <button
-              onClick={() =>
-                navigate({
-                  view: "chat",
-                  workspaceId: route.workspaceId,
-                  channelId: task.channelId,
-                  messageId: task.sourceMessageId!,
-                })
-              }
+    <>
+      <button
+        type="button"
+        className="task-panel-scrim"
+        inert={!present}
+        style={present ? undefined : {pointerEvents:"none"}}
+        aria-label="Đóng chi tiết nhiệm vụ"
+        tabIndex={-1}
+        onClick={onClose}
+      />
+      <motion.aside
+        {...safe.panel}
+        inert={!present}
+        style={present ? undefined : {pointerEvents:"none"}}
+        aria-description={dirty ? "Lưu thay đổi trước khi thêm checklist, tệp hoặc bình luận." : undefined}
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
+        className="task-panel"
+        aria-label="Chi tiết nhiệm vụ"
+      >
+        <header>
+          <h2>Chi tiết nhiệm vụ</h2>
+          <IconButton ref={closeRef} icon="x" label="Đóng bảng chi tiết" onClick={onClose} />
+        </header>
+        {error && (
+          <p className="task-alert" role="alert">
+            {error}
+          </p>
+        )}
+        {changed && (
+          <p role="status">
+            Nhiệm vụ đã thay đổi. Bản đang sửa được giữ lại; tải lại để lấy phiên bản mới.
+          </p>
+        )}
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="refresh"
+          disabled={busy}
+          onClick={() => void reload()}
+        >
+          Tải lại nhiệm vụ
+        </Button>
+        {!task && !error && <p role="status">Đang tải…</p>}
+        {task && (
+          <>
+            <small>
+              Phiên bản {task.version}
+              {task.archivedAt ? " · Đã lưu trữ" : ""}
+            </small>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void patch({
+                  title,
+                  description,
+                  priority,
+                  assigneeId: assigneeId || null,
+                  dueAt: dueAt ? new Date(dueAt).toISOString() : null,
+                }).then(() => {
+                  // Saving disables the fieldset and then the clean Save button, which drops
+                  // focus to <body>; keep keyboard users inside the panel.
+                  if (document.activeElement === document.body) panelRef.current?.focus();
+                });
+              }}
+              onChange={() => setDirty(true)}
             >
-              Mở tin nhắn nguồn
-            </button>
-          )}
-          <h3>Checklist</h3>
-          {task.checklist.map((item) => (
-            <div key={item.id} className="task-checklist-item">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={item.done}
-                  disabled={disabled || dirty}
-                  onChange={() => void patch({ action: "checklist-toggle", itemId: item.id })}
-                />
-                {item.label}
-              </label>
-              <button
-                disabled={disabled || dirty}
-                onClick={() => void patch({ action: "checklist-remove", itemId: item.id })}
-              >
-                Bỏ mục
-              </button>
-            </div>
-          ))}
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              void patch({ action: "checklist-add", label: checklist }).then((ok) => {
-                if (ok) setChecklist("");
-              });
-            }}
-          >
-            <label>
-              Mục checklist mới
-              <input
-                value={checklist}
-                maxLength={200}
-                disabled={disabled}
-                onChange={(event) => setChecklist(event.target.value)}
-              />
-            </label>
-            <button disabled={disabled || dirty || !checklist.trim()}>Thêm mục</button>
-          </form>
-          <h3>Tệp đính kèm</h3>
-          {progress !== null && busy && (
-            <p role="status">
-              Tải tệp {progress}%{" "}
-              <progress max={100} value={progress} aria-label="Tiến độ tải tệp nhiệm vụ" />
-            </p>
-          )}
-          {task.attachments.map((attachment) => (
-            <div key={attachment.id}>
-              <AttachmentView attachment={attachment} accessToken={token} />
-              <button
-                disabled={disabled || dirty}
+              <fieldset disabled={disabled}>
+                <label>
+                  Tiêu đề
+                  <input
+                    value={title}
+                    maxLength={160}
+                    required
+                    onChange={(event) => setTitle(event.target.value)}
+                  />
+                </label>
+                <label>
+                  Mô tả
+                  <textarea
+                    value={description}
+                    maxLength={8000}
+                    onChange={(event) => setDescription(event.target.value)}
+                  />
+                </label>
+                <label>
+                  Ưu tiên
+                  <select value={priority} onChange={(event) => setPriority(event.target.value)}>
+                    {Object.entries(priorities).map(([key, label]) => (
+                      <option key={key} value={key}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Người phụ trách
+                  <select
+                    value={assigneeId}
+                    onChange={(event) => setAssigneeId(event.target.value)}
+                  >
+                    <option value="">Chưa giao</option>
+                    {assigneeId && !members.some((m) => m.userId === assigneeId) && (
+                      <option value={assigneeId}>{task.assigneeName} · Đã mất quyền</option>
+                    )}
+                    {members.map((m) => (
+                      <option key={m.userId} value={m.userId}>
+                        {m.displayName}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Hạn chót
+                  <input
+                    type="datetime-local"
+                    value={dueAt}
+                    onChange={(event) => setDueAt(event.target.value)}
+                  />
+                </label>
+                <Button type="submit" disabled={!dirty || disabled}>
+                  Lưu thay đổi
+                </Button>
+              </fieldset>
+            </form>
+            {task.sourceMessageId && (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon="message"
                 onClick={() =>
-                  void patch({ action: "attachment-remove", attachmentId: attachment.id })
+                  navigate({
+                    view: "chat",
+                    workspaceId: route.workspaceId,
+                    channelId: task.channelId,
+                    messageId: task.sourceMessageId!,
+                  })
                 }
               >
-                Gỡ tệp
-              </button>
-            </div>
-          ))}
-          <label>
-            Chọn tệp
-            <input
-              type="file"
-              disabled={disabled || Boolean(attached.current)}
-              onChange={(event) => {
-                attached.current = null;
-                setFile(event.target.files?.[0] ?? null);
+                Mở tin nhắn nguồn
+              </Button>
+            )}
+            {dirty && (
+              <small id={dirtyNoteId} className="task-panel-note" role="status">
+                Bạn có thay đổi chưa lưu. Lưu trước khi thêm checklist, tệp, bình luận hoặc lưu trữ.
+              </small>
+            )}
+            <h3>Checklist</h3>
+            {task.checklist.map((item) => (
+              <div key={item.id} className="task-checklist-item">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={item.done}
+                    disabled={disabled || dirty}
+                    aria-describedby={lockedBy}
+                    onChange={() => void patch({ action: "checklist-toggle", itemId: item.id })}
+                  />
+                  {item.label}
+                </label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={disabled || dirty}
+                  title={dirty ? "Lưu thay đổi trước khi bỏ mục checklist." : undefined}
+                  aria-describedby={lockedBy}
+                  onClick={() => setConfirmation({title:"Bỏ mục", description:`Bỏ mục “${item.label}” khỏi checklist?`, body:{action:"checklist-remove",itemId:item.id}})}
+                >
+                  Bỏ mục
+                </Button>
+              </div>
+            ))}
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void patch({ action: "checklist-add", label: checklist }).then((ok) => {
+                  if (ok) setChecklist("");
+                });
               }}
-            />
-          </label>
-          {file && <small>{file.name}</small>}
-          <button disabled={disabled || dirty || !file} onClick={() => void upload()}>
-            Tải và gắn tệp
-          </button>
-          <h3>Bình luận</h3>
-          {task.comments.length === 100 && <small>Hiển thị 100 bình luận gần nhất.</small>}
-          {task.comments.map((item) => (
-            <article key={item.id}>
-              <strong>{item.authorName}</strong>
-              <time>{new Date(item.createdAt).toLocaleString("vi-VN")}</time>
-              <p>{item.content}</p>
-            </article>
-          ))}
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              void patch({ action: "comment", content: comment }).then((ok) => {
-                if (ok) setComment("");
-              });
-            }}
-          >
+            >
+              <label>
+                Mục checklist mới
+                <input
+                  value={checklist}
+                  maxLength={200}
+                  disabled={disabled}
+                  onChange={(event) => setChecklist(event.target.value)}
+                />
+              </label>
+              <Button
+                type="submit"
+                variant="secondary"
+                size="sm"
+                icon="plus"
+                disabled={disabled || dirty || !checklist.trim()}
+                title={dirty ? "Lưu thay đổi trước khi thêm checklist." : undefined}
+                aria-describedby={lockedBy}
+              >
+                Thêm mục
+              </Button>
+            </form>
+            <h3>Tệp đính kèm</h3>
+            {progress !== null && busy && (
+              <p role="status">
+                Tải tệp {progress}%{" "}
+                <progress max={100} value={progress} aria-label="Tiến độ tải tệp nhiệm vụ" />
+              </p>
+            )}
+            {task.attachments.map((attachment) => (
+              <div key={attachment.id}>
+                <AttachmentView attachment={attachment} accessToken={token} />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={disabled || dirty}
+                  title={dirty ? "Lưu thay đổi trước khi gỡ tệp." : undefined}
+                  aria-describedby={lockedBy}
+                  onClick={() => setConfirmation({title:"Gỡ tệp", description:"Gỡ tệp khỏi nhiệm vụ này? Tệp sẽ không còn xuất hiện trong danh sách đính kèm của nhiệm vụ.",body:{action:"attachment-remove",attachmentId:attachment.id}})}
+                >
+                  Gỡ tệp
+                </Button>
+              </div>
+            ))}
             <label>
-              Bình luận mới
-              <textarea
-                value={comment}
-                maxLength={4000}
-                disabled={disabled}
-                onChange={(event) => setComment(event.target.value)}
+              Chọn tệp
+              <input
+                type="file"
+                disabled={disabled || Boolean(attached.current)}
+                onChange={(event) => {
+                  attached.current = null;
+                  setFile(event.target.files?.[0] ?? null);
+                }}
               />
             </label>
-            <button disabled={disabled || dirty || !comment.trim()}>Gửi bình luận</button>
-          </form>
-          <h3>Lịch sử hoạt động</h3>
-          <ol>
-            {task.activity.map((item) => (
-              <li key={item.id}>
-                {item.actorName} ·{" "}
-                {(
-                  {
-                    created: "Tạo nhiệm vụ",
-                    update: "Cập nhật nhiệm vụ",
-                    comment: "Bình luận",
-                    "checklist-add": "Thêm checklist",
-                    "checklist-toggle": "Đánh dấu checklist",
-                    "checklist-remove": "Bỏ checklist",
-                    "attachment-add": "Gắn tệp",
-                    "attachment-remove": "Gỡ tệp",
-                  } as Record<string, string>
-                )[item.action] ?? item.action}
+            {file && <small>{file.name}</small>}
+            <Button
+              variant="secondary"
+              size="sm"
+              icon="upload"
+              disabled={disabled || dirty || !file}
+              title={dirty ? "Lưu thay đổi trước khi gắn tệp." : undefined}
+              aria-describedby={lockedBy}
+              loading={busy && progress !== null}
+              onClick={() => void upload()}
+            >
+              Tải và gắn tệp
+            </Button>
+            <h3>Bình luận</h3>
+            {task.comments.length === 100 && <small>Hiển thị 100 bình luận gần nhất.</small>}
+            {task.comments.map((item) => (
+              <article key={item.id}>
+                <strong>{item.authorName}</strong>
                 <time>{new Date(item.createdAt).toLocaleString("vi-VN")}</time>
-              </li>
+                <p>{item.content}</p>
+              </article>
             ))}
-          </ol>
-          <button
-            disabled={busy || readOnly || dirty}
-            onClick={() => void patch({ archived: !task.archivedAt })}
-          >
-            {task.archivedAt ? "Khôi phục nhiệm vụ" : "Lưu trữ nhiệm vụ"}
-          </button>
-        </>
-      )}
-    </aside>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void patch({ action: "comment", content: comment }).then((ok) => {
+                  if (ok) setComment("");
+                });
+              }}
+            >
+              <label>
+                Bình luận mới
+                <textarea
+                  value={comment}
+                  maxLength={4000}
+                  disabled={disabled}
+                  onChange={(event) => setComment(event.target.value)}
+                />
+              </label>
+              <Button
+                type="submit"
+                size="sm"
+                icon="send"
+                disabled={disabled || dirty || !comment.trim()}
+                title={dirty ? "Lưu thay đổi trước khi gửi bình luận." : undefined}
+                aria-describedby={lockedBy}
+              >
+                Gửi bình luận
+              </Button>
+            </form>
+            <h3>Lịch sử hoạt động</h3>
+            <ol>
+              {task.activity.map((item) => (
+                <li key={item.id}>
+                  {item.actorName} ·{" "}
+                  {(
+                    {
+                      created: "Tạo nhiệm vụ",
+                      update: "Cập nhật nhiệm vụ",
+                      comment: "Bình luận",
+                      "checklist-add": "Thêm checklist",
+                      "checklist-toggle": "Đánh dấu checklist",
+                      "checklist-remove": "Bỏ checklist",
+                      "attachment-add": "Gắn tệp",
+                      "attachment-remove": "Gỡ tệp",
+                    } as Record<string, string>
+                  )[item.action] ?? item.action}
+                  <time>{new Date(item.createdAt).toLocaleString("vi-VN")}</time>
+                </li>
+              ))}
+            </ol>
+            {readOnly && (
+              <small id={readOnlyNoteId} className="task-panel-note">
+                Nhóm hoặc kênh đã lưu trữ nên không thể lưu trữ hay khôi phục nhiệm vụ.
+              </small>
+            )}
+            <Button
+              variant={task.archivedAt ? "secondary" : "danger"}
+              size="sm"
+              disabled={busy || readOnly || dirty}
+              aria-describedby={readOnly ? readOnlyNoteId : lockedBy}
+              onClick={() => task.archivedAt ? void patch({archived:false}) : setConfirmation({title:"Lưu trữ nhiệm vụ",description:"Nhiệm vụ sẽ chuyển sang danh sách đã lưu trữ. Bạn có thể khôi phục từ bộ lọc Đã lưu trữ.",body:{archived:true}})}
+            >
+              {task.archivedAt ? "Khôi phục nhiệm vụ" : "Lưu trữ nhiệm vụ"}
+            </Button>
+          </>
+        )}
+        <AnimatePresence>{confirmation && <ConfirmDialog title={confirmation.title} description={confirmation.description} confirmLabel={confirmation.title} loading={busy} onClose={() => setConfirmation(null)} onConfirm={() => void patch(confirmation.body).then(ok => {if(ok)setConfirmation(null);})} />}</AnimatePresence>
+      </motion.aside>
+    </>
   );
 }

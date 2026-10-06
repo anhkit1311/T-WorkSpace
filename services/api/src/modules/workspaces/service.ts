@@ -44,7 +44,18 @@ export async function requireChannelAccess(
 
 export async function getUserWorkspaces(userId: string): Promise<WorkspaceItem[]> {
   const result = await query<WorkspaceItem>(
-    `SELECT w.id, w.name, w.slug, w.description, w.archived_at AS "archivedAt", m.role
+    `SELECT w.id, w.name, w.slug, w.description, w.archived_at AS "archivedAt", m.role,
+       (SELECT count(*)::integer FROM memberships mc WHERE mc.workspace_id = w.id) AS "memberCount",
+       (SELECT count(*)::integer FROM messages unread
+         JOIN channels c ON c.id = unread.channel_id
+         LEFT JOIN channel_preferences cp ON cp.channel_id = c.id AND cp.user_id = $1
+         WHERE c.workspace_id = w.id
+           AND c.type = 'text'
+           AND unread.deleted_at IS NULL
+           AND unread.author_id <> $1
+           AND EXISTS (SELECT 1 FROM channel_access access WHERE access.channel_id = c.id AND access.user_id = $1)
+           AND unread.created_at > COALESCE(cp.last_read_at, 'epoch'::timestamptz)
+       ) AS "unreadCount"
      FROM workspaces w
      JOIN memberships m ON m.workspace_id = w.id
      WHERE m.user_id = $1
@@ -597,6 +608,8 @@ export async function createWorkspace(userId: string, name: string): Promise<Wor
       name: trimmed,
       slug,
       role: "owner",
+      memberCount: 1,
+      unreadCount: 0,
     };
   });
 }

@@ -1,5 +1,14 @@
 export type ViewId =
-  "overview" | "chat" | "meetings" | "profile" | "admin" | "invitation" | "notifications" | "tasks";
+  | "overview"
+  | "workspace"
+  | "chat"
+  | "meetings"
+  | "files"
+  | "profile"
+  | "admin"
+  | "invitation"
+  | "notifications"
+  | "tasks";
 
 export type PublicScreen = "landing" | "login" | "app";
 export type AuthMode = "login" | "register";

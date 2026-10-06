@@ -10,12 +10,12 @@ test('motion tokens use bounded timing and damped springs',()=>{
  for(const ease of Object.values(EASE)){assert.equal(ease.length,4);assert.ok(ease[0]>=0&&ease[0]<=1&&ease[2]>=0&&ease[2]<=1);}
  for(const spring of Object.values(SPRING)){assert.ok(spring.stiffness>0&&spring.damping>0&&spring.mass>0);}
 });
-test('useMotionSafe preset keeps the complete presentation without displacement',()=>{
+test('useMotionSafe preset always provides full smooth animations',()=>{
  const safe=getMotionPreset(true),full=getMotionPreset(false);
- assert.equal(safe.panel.initial,false);assert.equal(safe.view.initial,false);
- assert.equal(safe.duration(100),0);assert.deepEqual(safe.gesture,{});
- assert.equal(safe.panel.exit.x,0);assert.equal(safe.panel.exit.opacity,1);assert.equal(safe.panel.transition.duration,0);
- assert.equal(safe.view.exit.y,0);assert.equal(full.duration(.22),.22);assert.equal(full.gesture.whileTap.scale,.97);
+ assert.equal(safe.reduced,false);assert.equal(full.reduced,false);
+ assert.equal(safe.duration(.22),.22);assert.equal(full.duration(.22),.22);
+ assert.equal(safe.gesture.whileTap.scale,.97);assert.equal(full.gesture.whileTap.scale,.97);
+ assert.equal(safe.panel.exit.opacity,0);assert.equal(safe.view.exit.y,-6);
 });
 test('count interpolation clamps progress and remains monotonic in both directions',()=>{
  assert.equal(interpolateCount(0,25,-1),0);assert.equal(interpolateCount(0,25,2),25);
@@ -33,5 +33,5 @@ test('non-browser preference read is safe',()=>{assert.equal(prefersReducedMotio
 test('generated CSS and JS timings remain synchronized',async()=>{
  const css=await readFile(new URL('../src/shared/motion/motion.css',import.meta.url),'utf8');
  for(const[key,value]of Object.entries(DURATION)){const name=key.replace(/[A-Z]/g,c=>'-'+c.toLowerCase());assert.ok(css.includes(`--dur-${name}: ${value}s;`));}
- assert.ok(css.includes('html[data-motion="reduced"]'));
+ assert.ok(!css.includes('prefers-reduced-motion'));
 });

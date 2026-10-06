@@ -15,8 +15,10 @@ export interface AppRoute {
 
 const views = new Set([
   "overview",
+  "workspace",
   "chat",
   "meetings",
+  "files",
   "profile",
   "admin",
   "invitation",
@@ -24,6 +26,40 @@ const views = new Set([
   "tasks",
 ]);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export type WorkspaceTabId = "workspace" | "tasks" | "chat" | "meetings" | "files";
+
+export function isWorkspaceTabView(view: ViewId): view is WorkspaceTabId {
+  return (
+    view === "workspace" ||
+    view === "tasks" ||
+    view === "chat" ||
+    view === "meetings" ||
+    view === "files"
+  );
+}
+
+export function selectWorkspaceRoute(
+  workspaceId: string,
+  tab: WorkspaceTabId = "workspace",
+): AppRoute {
+  return {
+    view: tab,
+    workspaceId,
+  };
+}
+
+export function switchWorkspaceTabRoute(
+  currentRoute: AppRoute,
+  targetTab: WorkspaceTabId,
+  fallbackWorkspaceId?: string,
+): AppRoute {
+  const workspaceId = currentRoute.workspaceId ?? fallbackWorkspaceId;
+  return {
+    view: targetTab,
+    workspaceId,
+  };
+}
 
 const publicAuthPath = /^\/(login|register)\/?$/;
 
@@ -49,7 +85,8 @@ export function readAppRoute(url: URL): AppRoute {
     }
   }
   if (route.channelId && !route.workspaceId) route.invalid = true;
-  route.query = url.searchParams.get("q") || undefined;
+  const query = url.searchParams.get("q");
+  if (query) route.query = query;
   if (route.view === "invitation")
     route.invitationToken = new URLSearchParams(url.hash.slice(1)).get("token") ?? undefined;
   return route;
@@ -71,3 +108,4 @@ export function appRouteUrl(route: AppRoute): string {
   if (route.query) params.set("q", route.query);
   return `/app/${route.view}${params.size ? `?${params}` : ""}${route.invitationToken ? `#token=${encodeURIComponent(route.invitationToken)}` : ""}`;
 }
+

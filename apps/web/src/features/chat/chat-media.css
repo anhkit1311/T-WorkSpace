@@ -20,7 +20,7 @@
   background: linear-gradient(145deg, #ffe7a7, #f8bad5);
   color: #382c48;
   transform: rotate(-3deg);
-  box-shadow: 0 4px 12px #0003;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
 }
 .chat-sticker > span {
   font-size: 52px;
@@ -52,8 +52,8 @@
 }
 .chat-media-button:hover,
 .chat-media-button:focus-visible {
-  color: var(--text);
-  background: rgba(180, 210, 230, 0.12);
+  color: #0f172a;
+  background: rgba(38, 52, 80, 0.08);
 }
 .chat-media-button:disabled {
   opacity: 0.4;
@@ -77,16 +77,18 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 5px;
   padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface-raised);
-  box-shadow: 0 14px 35px #0007;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(var(--editorial-blur, 10px));
+  -webkit-backdrop-filter: blur(var(--editorial-blur, 10px));
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
 }
 .chat-sticker-picker button {
   border: 0;
-  border-radius: 8px;
+  border-radius: 12px;
   background: transparent;
-  color: var(--text);
+  color: #0f172a;
   cursor: pointer;
   display: grid;
   justify-items: center;
@@ -94,25 +96,16 @@
 }
 .chat-sticker-picker button:hover,
 .chat-sticker-picker button:focus-visible {
-  background: rgba(180, 210, 230, 0.12);
+  background: rgba(38, 52, 80, 0.08);
 }
 .chat-sticker-picker span {
   font-size: 27px;
 }
 .chat-sticker-picker small {
   font-size: 9px;
+  color: #475569;
 }
-.chat-recording-banner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
-  margin-bottom: 7px;
-  border: 1px solid #e07a7a55;
-  border-radius: 8px;
-  color: #ffb5b5;
-  font-size: 12px;
-}
+/* .chat-recording-banner and .chat-recording-dot are styled in chat-live.css. */
 .chat-recording-banner button {
   margin-left: auto;
   border: 0;
@@ -120,20 +113,9 @@
   color: inherit;
   cursor: pointer;
 }
-.chat-recording-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #e95c5c;
-  animation: chat-record-pulse 1s infinite alternate;
-}
-@keyframes chat-record-pulse {
-  to {
-    opacity: 0.3;
-  }
-}
+
 .chat-media-button.is-recording {
-  color: #ff7777;
+  color: #dc2626;
 }
 .chat-author-button,
 .chat-author-name {
