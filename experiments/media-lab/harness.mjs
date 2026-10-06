@@ -191,6 +191,11 @@ async function launchChrome(url, index) {
     ],
     { stdio: ["ignore", "ignore", "pipe"] },
   );
+  // A browser that starts after the timeout must not survive as an orphan peer.
+  const fail = (error) => {
+    child.kill();
+    throw error;
+  };
   const browserUrl = await new Promise((resolve, reject) => {
     let buffer = "";
     const timer = setTimeout(() => reject(new Error("Chrome did not start")), 20000);
@@ -203,7 +208,7 @@ async function launchChrome(url, index) {
       }
     });
     child.once("exit", () => reject(new Error("Chrome exited early")));
-  });
+  }).catch(fail);
   const browser = await Cdp.open(browserUrl);
   const port = new URL(browserUrl).port;
   let pageUrl;
@@ -213,7 +218,7 @@ async function launchChrome(url, index) {
       ?.webSocketDebuggerUrl;
     if (!pageUrl) await delay(200);
   }
-  if (!pageUrl) throw new Error("Lab page target not found");
+  if (!pageUrl) fail(new Error("Lab page target not found"));
   const page = await Cdp.open(pageUrl);
   return { child, browser, page, profile };
 }
@@ -436,8 +441,19 @@ async function runTier(n) {
     await delay(1500);
     for (const client of clients)
       await rm(client.profile, { recursive: true, force: true }).catch(() => undefined);
-    if (workspace) await pool.query(`DELETE FROM workspaces WHERE id=$1`, [workspace.id]);
-    await pool.query(`DELETE FROM users WHERE id=ANY($1::uuid[]) AND email LIKE 'lab-%@example.test'`, [users]);
+    // Cleanup must not mask the tier's own error, and must run even if one step fails.
+    try {
+      if (workspace) await pool.query(`DELETE FROM workspaces WHERE id=$1`, [workspace.id]);
+      // In --join mode the room outlives the fixtures: drop sessions they hosted
+      // (host_id has no ON DELETE action) before deleting the lab users.
+      await pool.query(`DELETE FROM meeting_sessions WHERE host_id=ANY($1::uuid[])`, [users]);
+      await pool.query(
+        `DELETE FROM users WHERE id=ANY($1::uuid[]) AND email LIKE 'lab-%@example.test'`,
+        [users],
+      );
+    } catch (error) {
+      console.error(`[${label}] fixture cleanup failed: ${error.message}`);
+    }
   }
 }
 
@@ -464,7 +480,9 @@ await mkdir(outDir, { recursive: true });
 const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
 const outFile = join(outDir, `${label}-${stamp}.json`);
 const results = [];
-const save = () => writeFile(outFile, JSON.stringify({ label, mode, environment, results }, null, 2));
+// --join runs measure nothing, so they leave no evidence file.
+const save = () =>
+  joinMode ? Promise.resolve() : writeFile(outFile, JSON.stringify({ label, mode, environment, results }, null, 2));
 try {
   for (const n of tiers) {
     try {
@@ -486,4 +504,4 @@ try {
   }
   await pool.end();
 }
-console.log(`raw results: ${outFile}`);
+if (!joinMode) console.log(`raw results: ${outFile}`);

@@ -1,6 +1,6 @@
 // Build the Chapter 5 tables and SVG figures from docs/evidence/media-lab/*.json.
 //   node experiments/media-lab/summarize.mjs
-// Uses the newest file per label; failed tiers stay visible as "không hoàn thành".
+// Aggregates every run per label and N as mean ± sample SD; failed tiers stay visible.
 import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,42 +16,84 @@ const SERIES = [
 ];
 const EXTRA = [{ label: "sfu-layer0-norender", name: "SFU, mọi ô lớp 0" }];
 
+// Every run of a label is aggregated per N (mean ± sample SD across runs).
 const files = (await readdir(evidenceDir)).filter((f) => f.endsWith(".json")).sort();
-const latest = new Map();
+const runsByLabel = new Map();
 for (const file of files) {
   const data = JSON.parse(await readFile(join(evidenceDir, file), "utf8"));
-  latest.set(data.label, { file, data });
+  if (!runsByLabel.has(data.label)) runsByLabel.set(data.label, []);
+  runsByLabel.get(data.label).push({ file, data });
 }
-const rowsOf = (label) => latest.get(label)?.data.results.map((r) => r.summary) ?? [];
+const METRICS = {
+  upKbps: (r) => r.upKbps?.mean,
+  downKbps: (r) => r.downKbps?.mean,
+  clientCpuPct: (r) => r.clientCpuPct?.mean,
+  activeEncoders: (r) => r.activeEncoders,
+  rttMs: (r) => r.rttMs,
+  videoJitterMs: (r) => r.videoJitterMs,
+  lossPct: (r) => r.lossPct,
+  recvFps: (r) => r.recvFps,
+  jitterBufferMs: (r) => r.jitterBufferMs,
+  serverWorkerCpuPct: (r) => r.serverWorkerCpuPct,
+};
+const stats = (values) => {
+  const v = values.filter((x) => typeof x === "number" && Number.isFinite(x));
+  if (!v.length) return null;
+  const mean = v.reduce((a, b) => a + b, 0) / v.length;
+  const sd = v.length > 1 ? Math.sqrt(v.reduce((a, b) => a + (b - mean) ** 2, 0) / (v.length - 1)) : null;
+  return { mean, sd };
+};
+function rowsOf(label) {
+  const byN = new Map();
+  for (const { data } of runsByLabel.get(label) ?? [])
+    for (const { summary } of data.results) {
+      if (!byN.has(summary.clients)) byN.set(summary.clients, []);
+      byN.get(summary.clients).push(summary);
+    }
+  return [...byN.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([clients, summaries]) => {
+      const ok = summaries.filter((r) => !r.failed);
+      return {
+        clients,
+        runs: ok.length,
+        failed: summaries.length - ok.length,
+        failure: summaries.find((r) => r.failed)?.failed,
+        m: Object.fromEntries(Object.entries(METRICS).map(([k, f]) => [k, stats(ok.map(f))])),
+      };
+    });
+}
 
 const fmt = (v, digits = 0) =>
   v === null || v === undefined ? "–" : Number(v).toLocaleString("vi-VN", { maximumFractionDigits: digits });
+const cell = (st, digits = 0) =>
+  !st ? "–" : st.sd === null ? fmt(st.mean, digits) : `${fmt(st.mean, digits)} ± ${fmt(st.sd, digits)}`;
 
 // ---------- tables ----------
 const header =
-  "| N | Uplink TB (kbps) | Downlink TB (kbps) | CPU client TB (%) | Encoder hoạt động | RTT (ms) | Jitter video (ms) | Mất gói (%) | FPS nhận | Jitter buffer (ms) | CPU worker SFU (%) |\n| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |";
+  "| N | Lượt | Uplink (kbps) | Downlink (kbps) | CPU client (%) | Encoder | RTT (ms) | Jitter video (ms) | Mất gói (%) | FPS nhận | Jitter buffer (ms) | CPU worker SFU (%) |\n| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |";
 function table(label) {
   return [
     header,
-    ...rowsOf(label).map((s) =>
-      s.failed
-        ? `| ${s.clients} | không hoàn thành: ${s.failed.split("\n")[0].slice(0, 60)} |  |  |  |  |  |  |  |  |  |`
-        : `| ${s.clients} | ${fmt(s.upKbps.mean)} | ${fmt(s.downKbps.mean)} | ${fmt(s.clientCpuPct.mean)} | ${fmt(s.activeEncoders, 1)} | ${fmt(s.rttMs, 1)} | ${fmt(s.videoJitterMs, 1)} | ${fmt(s.lossPct, 2)} | ${fmt(s.recvFps, 1)} | ${fmt(s.jitterBufferMs)} | ${fmt(s.serverWorkerCpuPct, 1)} |`,
+    ...rowsOf(label).map((r) =>
+      !r.runs
+        ? `| ${r.clients} | 0/${r.failed} | không hoàn thành: ${String(r.failure).split("\n")[0].slice(0, 60)} |  |  |  |  |  |  |  |  |  |`
+        : `| ${r.clients} | ${r.runs}${r.failed ? `/${r.runs + r.failed}` : ""} | ${cell(r.m.upKbps)} | ${cell(r.m.downKbps)} | ${cell(r.m.clientCpuPct, 1)} | ${cell(r.m.activeEncoders, 1)} | ${cell(r.m.rttMs, 1)} | ${cell(r.m.videoJitterMs, 1)} | ${cell(r.m.lossPct, 2)} | ${cell(r.m.recvFps, 1)} | ${cell(r.m.jitterBufferMs)} | ${cell(r.m.serverWorkerCpuPct, 1)} |`,
     ),
   ].join("\n");
 }
 
 // ---------- SVG line chart (one axis, direct labels, shaped markers) ----------
-function chart({ title, unit, pick, log = false, file }) {
+function chart({ title, unit, metric, log = false, file }) {
   const W = 640, H = 360, L = 64, R = 140, T = 44, B = 48;
   const series = SERIES.map((s) => ({
     ...s,
     points: rowsOf(s.label)
-      .filter((r) => !r.failed && typeof pick(r) === "number")
-      .map((r) => ({ x: r.clients, y: pick(r) })),
+      .filter((r) => r.runs && r.m[metric])
+      .map((r) => ({ x: r.clients, y: r.m[metric].mean, sd: r.m[metric].sd ?? 0 })),
   })).filter((s) => s.points.length);
   const xs = series.flatMap((s) => s.points.map((p) => p.x));
-  const ys = series.flatMap((s) => s.points.map((p) => p.y));
+  const ys = series.flatMap((s) => s.points.map((p) => p.y + p.sd));
   const xMin = Math.min(...xs), xMax = Math.max(...xs);
   const yMinRaw = log ? Math.max(0.1, Math.min(...ys.filter((y) => y > 0))) : 0;
   const yMaxRaw = Math.max(...ys);
@@ -97,6 +139,13 @@ ${xTicks.map((x) => `<text x="${sx(x)}" y="${H - B + 18}" font-size="11" text-an
 ${series
   .map(
     (s) =>
+      s.points
+        .filter((p) => p.sd > 0)
+        .map(
+          (p) =>
+            `<line x1="${sx(p.x)}" x2="${sx(p.x)}" y1="${sy(Math.max(p.y - p.sd, log ? 1e-9 : 0))}" y2="${sy(p.y + p.sd)}" stroke="${s.color}" stroke-width="1.5" opacity="0.7"/>`,
+        )
+        .join("") +
       `<polyline fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" points="${s.points.map((p) => `${sx(p.x)},${sy(p.y)}`).join(" ")}"/>` +
       s.points.map((p) => marker(s, sx(p.x), sy(p.y))).join(""),
   )
@@ -108,24 +157,30 @@ ${ends.map(({ s, x, y }) => `<text x="${x + 10}" y="${y + 4}" font-size="11" fil
 
 await mkdir(figureDir, { recursive: true });
 const figures = [
-  await chart({ title: "Uplink mỗi client theo số người", unit: "kbps (trung bình các client)", pick: (r) => r.upKbps.mean, file: "fig-5-uplink.svg" }),
-  await chart({ title: "Downlink mỗi client theo số người", unit: "kbps (trung bình các client)", pick: (r) => r.downKbps.mean, file: "fig-5-downlink.svg" }),
-  await chart({ title: "CPU mỗi client theo số người", unit: "% của một lõi (100% = 1 lõi)", pick: (r) => r.clientCpuPct.mean, file: "fig-5-cpu.svg" }),
-  await chart({ title: "RTT theo số người", unit: "ms", pick: (r) => r.rttMs, log: true, file: "fig-5-rtt.svg" }),
-  await chart({ title: "Tốc độ khung hình nhận theo số người", unit: "khung/giây (nguồn phát 20 fps)", pick: (r) => r.recvFps, file: "fig-5-fps.svg" }),
+  await chart({ title: "Uplink mỗi client theo số người", unit: "kbps (trung bình các client)", metric: "upKbps", file: "fig-5-uplink.svg" }),
+  await chart({ title: "Downlink mỗi client theo số người", unit: "kbps (trung bình các client)", metric: "downKbps", file: "fig-5-downlink.svg" }),
+  await chart({ title: "CPU mỗi client theo số người", unit: "% của một lõi (100% = 1 lõi)", metric: "clientCpuPct", file: "fig-5-cpu.svg" }),
+  await chart({ title: "RTT theo số người", unit: "ms", metric: "rttMs", log: true, file: "fig-5-rtt.svg" }),
+  await chart({ title: "Tốc độ khung hình nhận theo số người", unit: "khung/giây (nguồn phát 20 fps)", metric: "recvFps", file: "fig-5-fps.svg" }),
 ];
 
-const env = [...latest.values()][0]?.data.environment ?? {};
+const env = [...runsByLabel.values()][0]?.[0]?.data.environment ?? {};
 const sections = [...SERIES, ...EXTRA]
-  .filter((s) => latest.has(s.label))
-  .map((s) => `### ${s.name} (\`${s.label}\`)\n\nNguồn: [${latest.get(s.label).file}](../evidence/media-lab/${latest.get(s.label).file})\n\n${table(s.label)}`);
+  .filter((s) => runsByLabel.has(s.label))
+  .map(
+    (s) =>
+      `### ${s.name} (\`${s.label}\`)\n\nNguồn: ${runsByLabel
+        .get(s.label)
+        .map(({ file }) => `[${file}](../evidence/media-lab/${file})`)
+        .join(", ")}\n\n${table(s.label)}`,
+  );
 const md = `# Kết quả phòng thí nghiệm media — Mesh và SFU
 
 Sinh tự động bởi \`node experiments/media-lab/summarize.mjs\` từ số liệu gốc trong \`docs/evidence/media-lab/\`.
 
 **Môi trường:** ${env.cpu ?? "?"}, ${env.logicalCores ?? "?"} luồng, ${env.memoryGiB ?? "?"} GiB RAM, ${env.platform ?? ""}, Node ${env.node ?? ""}.
 Trình duyệt: ${env.browser ?? ""}. ${env.network ?? ""}. Thu: ${env.capture ?? ""}. Hiển thị video nhận: ${env.remoteRendering ?? ""}.
-Mỗi mức N: khởi động ${env.warmupSeconds ?? "?"} s, đo ${env.measureSeconds ?? "?"} s, lấy mẫu \`getStats()\` mỗi 2 s, CPU mỗi trình duyệt qua CDP \`SystemInfo.getProcessInfo\`.
+Ô có dạng "trung bình ± độ lệch chuẩn" khi có từ 2 lượt; cột "Lượt" là số lượt thành công (/tổng nếu có lượt lỗi). Mỗi lượt, mỗi mức N: khởi động ${env.warmupSeconds ?? "?"} s, đo ${env.measureSeconds ?? "?"} s, lấy mẫu \`getStats()\` mỗi 2 s, CPU mỗi trình duyệt qua CDP \`SystemInfo.getProcessInfo\`.
 
 ${sections.join("\n\n")}
 
