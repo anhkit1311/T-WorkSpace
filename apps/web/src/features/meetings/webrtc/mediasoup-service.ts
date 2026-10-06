@@ -221,6 +221,9 @@ export class MediasoupClientService {
   getProducer(source: ProducerSource): types.Producer | undefined {
     return this.producers.get(source);
   }
+  videoConsumerIdForTrack(trackId: string) {
+    return [...this.consumers.values()].find((consumer) => consumer.track.id === trackId)?.id;
+  }
   getVideoConsumerIds() {
     return [...this.consumers.values()]
       .filter((consumer) => consumer.kind === "video" && consumer.appData.source === "webcam")

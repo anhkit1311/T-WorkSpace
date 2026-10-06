@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { ConsumerOptions, ProducerInfo, QosMetrics, TransportOptions } from "@doan/shared";
 import type { MediasoupClientService } from "../../features/meetings/webrtc/mediasoup-service";
 import {
@@ -51,6 +59,12 @@ interface MeetingContextValue {
   toggleScreenShare: () => Promise<void>;
   exportQosCsv: () => void;
   exportQosJson: () => void;
+  /**
+   * Report what the grid renders for a peer's camera: a simulcast spatial layer, null when
+   * the tile is off-page (consumer paused at the SFU), or undefined when the grid no longer
+   * reports (falls back to the participant-count policy).
+   */
+  setVideoDemand: (socketId: string, layer: number | null | undefined) => void;
 }
 
 const MeetingContext = createContext<MeetingContextValue | null>(null);
@@ -163,13 +177,43 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
     };
   }, [socket]);
 
+  const [videoDemand, setVideoDemandState] = useState<Record<string, number | null>>({});
+  const appliedDemandRef = useRef(new Map<string, number | null>());
+  const setVideoDemand = useCallback((socketId: string, layer: number | null | undefined) => {
+    setVideoDemandState((old) => {
+      if (old[socketId] === layer) return old;
+      const next = { ...old };
+      if (layer === undefined) delete next[socketId];
+      else next[socketId] = layer;
+      return next;
+    });
+  }, []);
   useEffect(() => {
-    if (!inCall || !socket) return;
-    const consumers = mediasoupRef.current?.getVideoConsumerIds() ?? [];
-    const spatialLayer = consumers.length > 6 ? 0 : consumers.length > 2 ? 1 : 2;
-    for (const consumerId of consumers)
-      socket.emit("consumer_layer", { roomId, consumerId, spatialLayer });
-  }, [inCall, remotePeers, roomId, socket]);
+    if (!inCall) appliedDemandRef.current.clear();
+  }, [inCall]);
+  useEffect(() => {
+    const ms = mediasoupRef.current;
+    if (!inCall || !socket || !ms) return;
+    const fallback = (count: number) => (count > 6 ? 0 : count > 2 ? 1 : 2);
+    const cameraCount = remotePeers.filter((peer) => peer.videoTrack).length;
+    const applied = appliedDemandRef.current;
+    for (const peer of remotePeers) {
+      if (!peer.videoTrack) continue;
+      const consumerId = ms.videoConsumerIdForTrack(peer.videoTrack.id);
+      if (!consumerId) continue;
+      const demand = videoDemand[peer.socketId];
+      const target = demand === undefined ? fallback(cameraCount) : demand;
+      const previous = applied.has(consumerId) ? applied.get(consumerId) : 2;
+      if (applied.has(consumerId) && previous === target) continue;
+      applied.set(consumerId, target);
+      if (target === null) {
+        socket.emit("pause_consumer", { roomId, consumerId });
+        continue;
+      }
+      if (previous === null) socket.emit("resume_consumer", { roomId, consumerId });
+      socket.emit("consumer_layer", { roomId, consumerId, spatialLayer: target });
+    }
+  }, [inCall, remotePeers, roomId, socket, videoDemand]);
 
   // Lắng nghe sự kiện Producer mới từ SFU
   useEffect(() => {
@@ -925,6 +969,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
         toggleScreenShare,
         exportQosCsv,
         exportQosJson,
+        setVideoDemand,
       }}
     >
       {children}

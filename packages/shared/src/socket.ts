@@ -121,6 +121,10 @@ export interface ClientToServerEvents {
     data: { roomId: string; consumerId: string },
     callback?: (response: { success: boolean; error?: string }) => void,
   ) => void;
+  pause_consumer: (
+    data: { roomId: string; consumerId: string },
+    callback?: (response: { success: boolean; error?: string }) => void,
+  ) => void;
   close_producer: (
     data: { roomId: string; producerId: string },
     callback?: (response: { success: boolean; error?: string }) => void,

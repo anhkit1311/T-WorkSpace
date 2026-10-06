@@ -274,6 +274,7 @@ export function initSocketServer(
             "produce",
             "consume",
             "resume_consumer",
+            "pause_consumer",
             "close_producer",
             "restart_ice",
             "consumer_layer",
@@ -681,6 +682,16 @@ export function initSocketServer(
         callback?.({ success: true });
       } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : "Lỗi mở consumer";
+        callback?.({ success: false, error: msg });
+      }
+    });
+
+    socket.on("pause_consumer", async (data, callback) => {
+      try {
+        await roomManager.pauseConsumer(data.roomId, socket.id, data.consumerId);
+        callback?.({ success: true });
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : "Lỗi tạm dừng consumer";
         callback?.({ success: false, error: msg });
       }
     });

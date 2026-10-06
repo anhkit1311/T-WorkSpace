@@ -345,6 +345,12 @@ class MediasoupRoomManager {
     };
   }
 
+  // Paused consumers stop SFU -> client forwarding (off-page tiles in the dynamic grid).
+  async pauseConsumer(roomId: string, socketId: string, consumerId: string): Promise<void> {
+    const consumer = this.getPeer(roomId, socketId)?.consumers.get(consumerId);
+    if (consumer && !consumer.paused) await consumer.pause();
+  }
+
   async resumeConsumer(roomId: string, socketId: string, consumerId: string): Promise<void> {
     const peer = this.getPeer(roomId, socketId);
     const consumer = peer?.consumers.get(consumerId);
