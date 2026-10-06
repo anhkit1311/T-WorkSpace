@@ -20,3 +20,6 @@ redis-data/
 .aws/
 .DS_Store
 Thumbs.db
+experiments/media-lab/.build/
+experiments/packet-capture/*.pcapng
+experiments/packet-capture/*.csv

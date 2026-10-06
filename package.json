@@ -25,7 +25,8 @@
     "format:check": "prettier --check .",
     "test": "npm run build --workspace @doan/shared && npm run build --workspace @doan/api && npm run test --workspaces --if-present",
     "start:api": "npm --workspace @doan/api run start",
-    "start:web": "npm --workspace @doan/web run preview"
+    "start:web": "npm --workspace @doan/web run preview",
+    "lab": "npm run build --workspace @doan/shared && npm run build --workspace @doan/api && node experiments/media-lab/harness.mjs"
   },
   "devDependencies": {
     "prettier": "^3.5.3"
