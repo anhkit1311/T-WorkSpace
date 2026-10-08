@@ -2,6 +2,7 @@ import {
   useEffect,
   useId,
   useRef,
+  useState,
   useLayoutEffect,
   Children,
   cloneElement,
@@ -259,9 +260,21 @@ export function Avatar({
     .map((part) => part[0])
     .join("")
     .toUpperCase();
+  // Remote avatars (e.g. expired Google URLs) fall back to initials instead of a broken image.
+  const [failedImage, setFailedImage] = useState<string | null>(null);
+  const showImage = Boolean(image) && failedImage !== image;
   return (
     <span className={`avatar avatar--${size}`} aria-label={name} title={name}>
-      {image ? <img src={image} alt="" /> : <span>{initials}</span>}
+      {showImage ? (
+        <img
+          src={image}
+          alt=""
+          referrerPolicy="no-referrer"
+          onError={() => setFailedImage(image ?? null)}
+        />
+      ) : (
+        <span>{initials}</span>
+      )}
       {status && <i className={`avatar-status avatar-status--${status}`} />}
     </span>
   );
@@ -492,8 +505,14 @@ function TimedToast({ toast, dismiss }: {toast: ReturnType<typeof useApp>["toast
     onMouseEnter={() => {hovered.current=true; pause();}} onMouseLeave={() => {hovered.current=false; resume();}}
     onFocusCapture={() => {focused.current=true; pause();}}
     onBlurCapture={e => {if(!e.currentTarget.contains(e.relatedTarget)){focused.current=false;resume();}}}>
-    <span className="toast__icon"><Icon name={toast.tone === "warning" ? "warning" : toast.tone === "success" ? "check" : "info"} size={16} /></span>
-    <div><strong>{toast.title}</strong>{toast.description && <p>{toast.description}</p>}</div>
+    <span className="toast__icon"><Icon name={toast.icon ?? (toast.tone === "warning" ? "warning" : toast.tone === "success" ? "check" : "info")} size={18} /></span>
+    {toast.onOpen ? (
+      <button type="button" className="toast__open" onClick={() => { toast.onOpen?.(); dismiss(); }}>
+        <strong>{toast.title}</strong>{toast.description && <p>{toast.description}</p>}
+      </button>
+    ) : (
+      <div><strong>{toast.title}</strong>{toast.description && <p>{toast.description}</p>}</div>
+    )}
     {toast.action && <Button size="sm" variant="ghost" onClick={toast.action.onClick}>{toast.action.label}</Button>}
     <IconButton className="toast-close" icon="x" label="Đóng thông báo" onClick={dismiss} />
   </motion.article>;

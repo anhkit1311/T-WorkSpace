@@ -25,7 +25,7 @@ import {
   getWorkspaceOverviewApi,
   governanceApi,
 } from "./api";
-import { Avatar, Badge, Button, Chip, Field, IconButton, ListItem, Modal, ConfirmDialog } from "../../shared/ui/Primitives";
+import { Avatar, Badge, Button, Chip, Field, IconButton, Modal, ConfirmDialog } from "../../shared/ui/Primitives";
 import { AnimatePresence, useAnimate } from "motion/react";
 import { useMotionSafe } from "../../shared/motion/MotionProvider";
 import { DURATION, EASE, tabDirection } from "../../shared/motion/tokens";
@@ -33,6 +33,7 @@ import { CreateWorkspaceModal, workspaceNameError } from "./CreateWorkspaceModal
 import { Icon, type IconName } from "../../shared/ui/Icon";
 import { usePanelDialog } from "../../shared/hooks/usePanelDialog";
 import { ChatPage } from "../chat/LiveChatPage";
+import { useUserAvatars } from "../chat/useUserAvatars";
 import { TaskBoardPage } from "../tasks/TaskBoardPage";
 import { MeetingPage } from "../meetings/MeetingPage";
 import "./workspace-shell.css";
@@ -42,40 +43,6 @@ const WORKSPACE_TABS: { id: WorkspaceTabId; label: string; icon: IconName }[] = 
   { id: "tasks", label: "Công việc", icon: "check-square" },
   { id: "meetings", label: "Cuộc họp", icon: "video" },
   { id: "files", label: "Tài liệu", icon: "folder" },
-];
-
-const SAMPLE_WORKSPACE_FILES: {
-  id: string;
-  icon: IconName;
-  title: string;
-  subtitle: string;
-  metaPrimary: string;
-  metaSecondary: string;
-}[] = [
-  {
-    id: "sample-file-1",
-    icon: "file",
-    title: "Bao-cao-tien-do-sprint-4.pdf",
-    subtitle: "#chung • Minh Anh • Đã ghim",
-    metaPrimary: "2.4 MB",
-    metaSecondary: "Hôm nay",
-  },
-  {
-    id: "sample-file-2",
-    icon: "image",
-    title: "System-Architecture-v2.png",
-    subtitle: "#ky-thuat • Hoàng Nam",
-    metaPrimary: "1.8 MB",
-    metaSecondary: "06/10",
-  },
-  {
-    id: "sample-file-3",
-    icon: "file",
-    title: "Checklist-kiem-thu-UAT.xlsx",
-    subtitle: "#kiem-thu • Thu Hà",
-    metaPrimary: "640 KB",
-    metaSecondary: "05/10",
-  },
 ];
 
 const TASK_STATUS_LABEL: Record<"todo" | "doing" | "done", string> = {
@@ -135,6 +102,7 @@ export function WorkspaceShell() {
   const [overviewError, setOverviewError] = useState("");
 
   const [members, setMembers] = useState<GroupMemberItem[]>([]);
+  const memberAvatarOf = useUserAvatars(useMemo(() => members.map((m) => m.userId), [members]));
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -1188,7 +1156,7 @@ export function WorkspaceShell() {
                 const online = onlineUserIds.includes(m.userId);
                 return (
                   <div key={m.userId} className="ws-members-modal__item" role="listitem">
-                    <Avatar name={m.displayName} size="md" />
+                    <Avatar name={m.displayName} image={memberAvatarOf(m.userId)} size="md" />
                     <div className="ws-members-modal__info">
                       <strong>
                         {m.displayName}
@@ -1248,6 +1216,9 @@ function WorkspaceOverviewTab({
   onJoinMeetingRoom,
   onOpenAttachment,
 }: WorkspaceOverviewTabProps) {
+  const avatarOf = useUserAvatars(
+    useMemo(() => overview?.recentMessages.map((m) => m.authorId) ?? [], [overview]),
+  );
   if (loading && !overview) {
     return (
       <div className="ws-overview" aria-busy="true">
@@ -1427,7 +1398,7 @@ function WorkspaceOverviewTab({
                     className="ws-message-item"
                     onClick={() => onOpenMessage(msg.channelId, msg.id)}
                   >
-                    <Avatar name={msg.authorName} size="sm" />
+                    <Avatar name={msg.authorName} image={avatarOf(msg.authorId)} size="sm" />
                     <div className="ws-message-item__body">
                       <div className="ws-message-item__top">
                         <strong>{msg.authorName}</strong>
@@ -1770,20 +1741,6 @@ function WorkspaceFilesTab({
         </div>
       ) : visibleFiles.length === 0 ? (
         <div className="ws-files-empty-wrap">
-          <div className="ws-files-table ws-files-table--sample" role="list" aria-label="Tài liệu mẫu xem trước">
-            {SAMPLE_WORKSPACE_FILES.map((item) => (
-              <ListItem
-                key={item.id}
-                role="listitem"
-                icon={item.icon}
-                title={item.title}
-                subtitle={item.subtitle}
-                metaPrimary={item.metaPrimary}
-                metaSecondary={item.metaSecondary}
-                onClick={() => {}}
-              />
-            ))}
-          </div>
           <div className="ws-files-empty">
             <Icon name="folder" size={28} />
             <h3>

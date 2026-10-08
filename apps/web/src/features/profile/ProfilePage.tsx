@@ -255,7 +255,7 @@ export function ProfilePage() {
         <h3 className="profile-section-title">
           <Icon name="settings" size={16} /> Thông tin cá nhân
         </h3>
-        <form onSubmit={handleUpdateProfile} className="profile-form" onInputCapture={() => setError("")}>
+        <form onSubmit={handleUpdateProfile} className="profile-form" onInput={() => setError("")}>
           {error && errorField === "profile" && <p className="field__error" role="alert">{error}</p>}
           <div className="profile-input-row">
             <Field
@@ -443,7 +443,7 @@ export function ProfilePage() {
           <p className="profile-password-hint">
             Sau khi đổi mật khẩu, các phiên đăng nhập sẽ bị thu hồi và bạn cần đăng nhập lại.
           </p>
-          <form onSubmit={handleChangePassword} className="profile-form profile-password-form" onInputCapture={() => setPasswordError("")}>
+          <form onSubmit={handleChangePassword} className="profile-form profile-password-form" onInput={() => setPasswordError("")}>
             <Field label="Mật khẩu hiện tại">
               <input
                 className="profile-field-input"

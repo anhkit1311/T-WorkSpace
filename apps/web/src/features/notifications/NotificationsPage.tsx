@@ -29,33 +29,6 @@ export interface NotificationPage {
   hasMore: boolean;
 }
 
-const SAMPLE_NOTIFICATIONS = [
-  {
-    id: "sample-notif-1",
-    icon: "at-sign" as const,
-    title: "Minh Anh đã nhắc tên bạn",
-    subtitle: "#thiet-ke-ui · Bạn xem giúp mình bộ màu nút bấm mới nhé",
-    metaPrimary: "10:24",
-    metaSecondary: "Hôm nay",
-  },
-  {
-    id: "sample-notif-2",
-    icon: "messages" as const,
-    title: "Hoàng Nam đã phản hồi trong chủ đề",
-    subtitle: "#do-an-tot-nghiep · Đã cập nhật tài liệu kiến trúc hệ thống",
-    metaPrimary: "09:15",
-    metaSecondary: "Hôm nay",
-  },
-  {
-    id: "sample-notif-3",
-    icon: "bell" as const,
-    title: "Thu Hà đã nhắc tên bạn",
-    subtitle: "#kiem-thu · Nhờ bạn kiểm tra lại luồng thông báo thời gian thực",
-    metaPrimary: "16:40",
-    metaSecondary: "Hôm qua",
-  },
-];
-
 function formatNotificationTime(iso: string) {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return { time: "—", day: "" };
@@ -263,30 +236,15 @@ export function NotificationsPage() {
           </p>
         )}
         {!loading && !page.items.length && (
-          <>
-            <div className="nexo-list-group" role="list" aria-label="Thông báo mẫu xem trước">
-              {SAMPLE_NOTIFICATIONS.map((sample) => (
-                <ListItem
-                  key={sample.id}
-                  role="listitem"
-                  icon={sample.icon}
-                  title={sample.title}
-                  subtitle={sample.subtitle}
-                  metaPrimary={sample.metaPrimary}
-                  metaSecondary={sample.metaSecondary}
-                />
-              ))}
-            </div>
-            <div className="state-card state-card--compact notifications-empty-card">
-              <span className="state-card__icon">
-                <Icon name="bell" size={22} />
-              </span>
-              <h3>{unread ? "Không còn thông báo chưa đọc" : "Chưa có thông báo"}</h3>
-              <p>
-                Khi ai đó nhắc tên bạn hoặc phản hồi trong chủ đề bạn tham gia, thông báo sẽ ở đây.
-              </p>
-            </div>
-          </>
+          <div className="state-card state-card--compact notifications-empty-card">
+            <span className="state-card__icon">
+              <Icon name="bell" size={22} />
+            </span>
+            <h3>{unread ? "Không còn thông báo chưa đọc" : "Chưa có thông báo"}</h3>
+            <p>
+              Khi ai đó nhắc tên bạn hoặc phản hồi trong chủ đề bạn tham gia, thông báo sẽ ở đây.
+            </p>
+          </div>
         )}
         {page.items.length > 0 && (
           <div className="nexo-list-group notification-list" role="list">

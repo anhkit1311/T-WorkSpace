@@ -383,10 +383,16 @@ export function LoginPage() {
   };
 
   return (
-    <main id="main-content" className="editorial-auth-shell" onInputCapture={event => {
+    // Bubble-phase onInput, not onInputCapture: a capture-phase state update re-renders the
+    // controlled input with its old value before React's onChange runs, swallowing keystrokes.
+    <main id="main-content" className="editorial-auth-shell" onInput={event => {
       if (event.target instanceof HTMLInputElement && event.target.name) {
-        const name = event.target.name;
-        setErrors(previous => ({...previous,[name]:undefined,general:undefined}));
+        const name = event.target.name as keyof typeof errors;
+        setErrors(previous =>
+          previous[name] === undefined && previous.general === undefined
+            ? previous
+            : { ...previous, [name]: undefined, general: undefined },
+        );
       }
     }}>
       {/* Top Bar with Brand & Back */}
@@ -701,15 +707,6 @@ export function LoginPage() {
                   </div>
                 )}
 
-                {/* Google Sign In Button */}
-                <div className="editorial-auth-style-13">
-                  <GoogleSignInButton onCredential={handleGoogleCredential} disabled={loading} />
-                </div>
-
-                <div className="editorial-auth-divider">
-                  <span>hoặc tiếp tục với email</span>
-                </div>
-
                 <form onSubmit={submit} noValidate>
                   {!isLogin && (
                     <div className="editorial-field">
@@ -800,6 +797,15 @@ export function LoginPage() {
                     {loading ? "Đang xử lý..." : isLogin ? "Đăng nhập" : "Tiếp tục tạo tài khoản"}
                   </button>
                 </form>
+
+                <div className="editorial-auth-divider">
+                  <span>hoặc tiếp tục với Google</span>
+                </div>
+
+                {/* Google Sign In Button */}
+                <div className="editorial-auth-style-13">
+                  <GoogleSignInButton onCredential={handleGoogleCredential} disabled={loading} />
+                </div>
 
                 <div
                   className="editorial-auth-style-14"

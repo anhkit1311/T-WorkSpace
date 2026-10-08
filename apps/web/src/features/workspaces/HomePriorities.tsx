@@ -4,94 +4,7 @@ import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
 import { governanceApi } from "./api";
 import { Button, ListItem } from "../../shared/ui/Primitives";
-import type { IconName } from "../../shared/ui/Icon";
 import "./home-priorities.css";
-
-const SAMPLE_TASKS: {
-  id: string;
-  icon: IconName;
-  title: string;
-  subtitle: string;
-  metaPrimary: string;
-  metaSecondary: string;
-}[] = [
-  {
-    id: "sample-task-1",
-    icon: "check-square",
-    title: "Hoàn thiện giao diện Trang chủ",
-    subtitle: "Đồ án tốt nghiệp · Giao bởi Anh Kiệt",
-    metaPrimary: "18:00",
-    metaSecondary: "Hôm nay",
-  },
-  {
-    id: "sample-task-2",
-    icon: "tasks",
-    title: "Kiểm thử kết nối WebRTC đa điểm",
-    subtitle: "Đồ án tốt nghiệp · Cần làm",
-    metaPrimary: "23:59",
-    metaSecondary: "08/10",
-  },
-  {
-    id: "sample-task-3",
-    icon: "file",
-    title: "Viết báo cáo chương 3 kiến trúc",
-    subtitle: "Nhóm Nghiên cứu · Đang làm",
-    metaPrimary: "17:00",
-    metaSecondary: "10/10",
-  },
-];
-
-const SAMPLE_MEETINGS: {
-  id: string;
-  icon: IconName;
-  title: string;
-  subtitle: string;
-  metaPrimary: string;
-  metaSecondary: string;
-}[] = [
-  {
-    id: "sample-meeting-1",
-    icon: "video",
-    title: "Họp rà soát tiến độ tuần",
-    subtitle: "Đồ án tốt nghiệp · #phong-hop-chinh",
-    metaPrimary: "15:30",
-    metaSecondary: "Hôm nay",
-  },
-  {
-    id: "sample-meeting-2",
-    icon: "calendar",
-    title: "Demo tính năng SFU & Kanban",
-    subtitle: "Đồ án tốt nghiệp · #ky-thuat",
-    metaPrimary: "09:00",
-    metaSecondary: "07/10",
-  },
-];
-
-const SAMPLE_NOTIFICATIONS: {
-  id: string;
-  icon: IconName;
-  title: string;
-  subtitle: string;
-  metaPrimary: string;
-  metaSecondary: string;
-}[] = [
-  {
-    id: "sample-notif-1",
-    icon: "bell",
-    title: "Anh Kiệt đã nhắc đến bạn",
-    subtitle: "#tong-quan · Đồ án tốt nghiệp",
-    metaPrimary: "Mới",
-    metaSecondary: "15:50",
-  },
-  {
-    id: "sample-notif-2",
-    icon: "check-square",
-    title: "Công việc mới được giao",
-    subtitle: "Kiểm thử kết nối WebRTC · Đồ án",
-    metaPrimary: "Hôm nay",
-    metaSecondary: "10:33",
-  },
-];
 
 export function HomePriorities() {
   const { accessToken, navigate } = useApp(),
@@ -164,23 +77,7 @@ export function HomePriorities() {
           <article className="home-priority-card">
             <h3>Công việc được giao</h3>
             {summary.tasks.length === 0 ? (
-              <>
-                <p className="home-priority-empty">Chưa có công việc cần xử lý.</p>
-                <ul className="home-priority-list" aria-label="Xem trước danh sách công việc mẫu">
-                  {SAMPLE_TASKS.map((item) => (
-                    <li key={item.id} className="home-priority-list-item">
-                      <ListItem
-                        icon={item.icon}
-                        title={item.title}
-                        subtitle={item.subtitle}
-                        metaPrimary={item.metaPrimary}
-                        metaSecondary={item.metaSecondary}
-                        onClick={() => navigate({ view: "tasks" })}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </>
+              <p className="home-priority-empty">Chưa có công việc cần xử lý.</p>
             ) : (
               <ul className="home-priority-list">
                 {summary.tasks.map((task) => {
@@ -226,23 +123,7 @@ export function HomePriorities() {
           <article className="home-priority-card">
             <h3>Lịch họp sắp tới</h3>
             {summary.meetings.length === 0 ? (
-              <>
-                <p className="home-priority-empty">Chưa có cuộc họp được lên lịch.</p>
-                <ul className="home-priority-list" aria-label="Xem trước lịch họp mẫu">
-                  {SAMPLE_MEETINGS.map((item) => (
-                    <li key={item.id} className="home-priority-list-item">
-                      <ListItem
-                        icon={item.icon}
-                        title={item.title}
-                        subtitle={item.subtitle}
-                        metaPrimary={item.metaPrimary}
-                        metaSecondary={item.metaSecondary}
-                        onClick={() => navigate({ view: "meetings" })}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </>
+              <p className="home-priority-empty">Chưa có cuộc họp được lên lịch.</p>
             ) : (
               <ul className="home-priority-list">
                 {summary.meetings.map((meeting) => {
@@ -291,20 +172,6 @@ export function HomePriorities() {
                 {summary.unreadNotifications ? "thông báo chưa đọc" : "Bạn đã xem hết thông báo."}
               </p>
             </div>
-            <ul className="home-priority-list" aria-label="Xem trước thông báo mẫu">
-              {SAMPLE_NOTIFICATIONS.map((item) => (
-                <li key={item.id} className="home-priority-list-item">
-                  <ListItem
-                    icon={item.icon}
-                    title={item.title}
-                    subtitle={item.subtitle}
-                    metaPrimary={item.metaPrimary}
-                    metaSecondary={item.metaSecondary}
-                    onClick={() => navigate({ view: "notifications" })}
-                  />
-                </li>
-              ))}
-            </ul>
             <Button
               variant="secondary"
               icon="bell"

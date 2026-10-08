@@ -35,7 +35,8 @@ import { useSocket } from "../../app/providers/SocketContext";
 import "./chat-live.css";
 import "./chat-media.css";
 import { AttachmentView } from "./ChatAttachment";
-import { ThreadPanel, type ChannelMember } from "./ThreadPanel";
+import type { ChannelMember } from "./ThreadPanel";
+import { useUserAvatars } from "./useUserAvatars";
 import { governanceApi } from "../workspaces/api";
 import { isAtLatest, jumpToLatestLabel } from "./jump-latest";
 
@@ -163,7 +164,7 @@ export function ChatPage() {
   const [deleteTarget, setDeleteTarget] = useState<ChatMessageItem | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [reactionPickerId, setReactionPickerId] = useState("");
-  const [filterTab, setFilterTab] = useState<"all" | "unread" | "favorites">("all");
+  const [filterTab, setFilterTab] = useState<"all" | "favorites">("all");
   const [showInChannelSearch, setShowInChannelSearch] = useState(false);
   const [recording, setRecording] = useState(false);
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
@@ -1237,17 +1238,12 @@ export function ChatPage() {
     });
   }
 
-  const totalUnread = useMemo(
-    () => channels.reduce((sum, c) => sum + (c.unreadCount ?? 0), 0),
-    [channels],
-  );
 
   const filteredChannels = useMemo(() => {
     return channels
       .filter((c) => {
         const matches = c.name.toLowerCase().includes(channelSearch.toLowerCase());
         if (!matches) return false;
-        if (filterTab === "unread") return Boolean(c.unreadCount);
         if (filterTab === "favorites") return Boolean(c.pinned);
         return true;
       })
@@ -1257,6 +1253,12 @@ export function ChatPage() {
   }, [channels, channelSearch, filterTab]);
 
   const visibleMessages = searchResults ?? messages;
+  const avatarOf = useUserAvatars(
+    useMemo(
+      () => [...visibleMessages.map((m) => m.authorId), ...members.map((m) => m.userId)],
+      [visibleMessages, members],
+    ),
+  );
   const draftLink = firstLink(content);
   const pinnedMessage = messages.find((m) => m.pinned);
   const openMeetingRoom = () =>
@@ -1323,16 +1325,6 @@ export function ChatPage() {
             onClick={() => setFilterTab("all")}
           >
             Tất cả
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={filterTab === "unread"}
-            className={`chat-filter-pill ${filterTab === "unread" ? "is-active" : ""}`}
-            onClick={() => setFilterTab("unread")}
-          >
-            Chưa đọc
-            {totalUnread > 0 && <span className="filter-badge-red">{totalUnread}</span>}
           </button>
           <button
             type="button"
@@ -1460,48 +1452,6 @@ export function ChatPage() {
           </div>
 
           <div className="chat-header-action-group">
-            {channel && (
-              <>
-                <button
-                  type="button"
-                  className={`chat-header-icon-btn ${channel.pinned ? "is-active" : ""}`}
-                  title={channel.pinned ? "Bỏ ghim kênh" : "Ghim kênh"}
-                  aria-label={channel.pinned ? "Bỏ ghim kênh" : "Ghim kênh"}
-                  aria-pressed={Boolean(channel.pinned)}
-                  onClick={() => void toggleChannelFlag("pinned")}
-                >
-                  <Icon name="star" size={17} fill={channel.pinned ? "currentColor" : "none"} />
-                </button>
-                <button
-                  type="button"
-                  className={`chat-header-icon-btn ${channel.muted ? "is-active" : ""}`}
-                  title={channel.muted ? "Bật lại thông báo kênh" : "Tắt thông báo kênh"}
-                  aria-label={channel.muted ? "Bật lại thông báo kênh" : "Tắt thông báo kênh"}
-                  aria-pressed={Boolean(channel.muted)}
-                  onClick={() => void toggleChannelFlag("muted")}
-                >
-                  <Icon name={channel.muted ? "bell-off" : "bell"} size={17} />
-                </button>
-              </>
-            )}
-            <button
-              type="button"
-              className={`chat-header-icon-btn ${showInChannelSearch ? "is-active" : ""}`}
-              title="Tìm trong kênh"
-              aria-label="Tìm kiếm"
-              onClick={() => setShowInChannelSearch((prev) => !prev)}
-            >
-              <Icon name="search" size={17} />
-            </button>
-            <button
-              type="button"
-              className="chat-header-icon-btn"
-              title="Phòng họp video SFU"
-              aria-label="Cuộc họp video"
-              onClick={openMeetingRoom}
-            >
-              <Icon name="video" size={17} />
-            </button>
             <button
               type="button"
               className={`chat-header-icon-btn ${showInfoPanel ? "is-active" : ""}`}
@@ -1676,47 +1626,163 @@ export function ChatPage() {
                     className={`message-item ${isMine ? "is-mine" : "is-incoming"} ${searchHighlight?.messageId === m.id ? "is-search-target" : ""}`}
                     tabIndex={0}
                   >
-                    {!isMine && (
-                      <div className="message-author-avatar">
-                        <Avatar name={m.authorName} size="sm" />
-                      </div>
-                    )}
+                    <div className="message-author-avatar">
+                      <Avatar name={m.authorName} image={avatarOf(m.authorId)} size="sm" />
+                    </div>
                     <div className="message-item__body">
-                      {!isMine && <span className="chat-author-name-tag">{m.authorName}</span>}
+                      <span className="chat-author-name-tag">{m.authorName}</span>
                       {m.replyToId && (
                         <div className="chat-reply-quote">
                           <Icon name="arrow-right" size={12} />{" "}
                           {m.replyToContent === "" ? "Tệp đính kèm" : m.replyToContent ?? "Tin nhắn đã xóa"}
                         </div>
                       )}
-                      {editingId === m.id ? (
-                        <div className="chat-edit-box">
-                          <textarea
-                            value={editingContent}
-                            maxLength={4000}
-                            onChange={(event) => setEditingContent(event.target.value)}
-                          />
-                          <div className="chat-edit-box__actions">
-                            <Button size="sm" variant="ghost" onClick={() => setEditingId("")}>
-                              Hủy
-                            </Button>
-                            <Button
-                              size="sm"
-                              disabled={!editingContent.trim()}
-                              onClick={() => void saveEdit(m.id)}
-                            >
-                              Lưu
-                            </Button>
+                      <div className="message-bubble-row">
+                        {editingId === m.id ? (
+                          <div className="chat-edit-box">
+                            <textarea
+                              value={editingContent}
+                              maxLength={4000}
+                              onChange={(event) => setEditingContent(event.target.value)}
+                            />
+                            <div className="chat-edit-box__actions">
+                              <Button size="sm" variant="ghost" onClick={() => setEditingId("")}>
+                                Hủy
+                              </Button>
+                              <Button
+                                size="sm"
+                                disabled={!editingContent.trim()}
+                                onClick={() => void saveEdit(m.id)}
+                              >
+                                Lưu
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="message-bubble">
-                          {m.content && <MessageText content={m.content.trim()} />}
-                          {m.attachment && accessToken && (
-                            <AttachmentView attachment={m.attachment} accessToken={accessToken} />
-                          )}
-                        </div>
-                      )}
+                        ) : (
+                          <div className="message-bubble">
+                            {m.content && <MessageText content={m.content.trim()} />}
+                            {m.attachment && accessToken && (
+                              <AttachmentView attachment={m.attachment} accessToken={accessToken} />
+                            )}
+                          </div>
+                        )}
+
+                        {!readOnly && (
+                          <div
+                            className={`chat-message-actions ${reactionPickerId === m.id ? "is-open" : ""}`}
+                          >
+                            <div className="chat-reaction-picker-anchor">
+                              <button
+                                type="button"
+                                className={reactionPickerId === m.id ? "is-active" : ""}
+                                title="Thả cảm xúc"
+                                aria-label="Chọn biểu cảm"
+                                aria-expanded={reactionPickerId === m.id}
+                                onClick={() =>
+                                  setReactionPickerId((current) => (current === m.id ? "" : m.id))
+                                }
+                              >
+                                <Icon name="smile" size={14} />
+                              </button>
+                              <AnimatePresence>
+                                {reactionPickerId === m.id && (
+                                  <motion.div
+                                    className="chat-reaction-picker"
+                                    initial={safe.reduced ? false : { opacity: 0, scale: 0.95, y: 4 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{
+                                      duration: safe.duration(DURATION.micro),
+                                      ease: EASE.out,
+                                    }}
+                                    style={{ transformOrigin: "bottom left" }}
+                                    role="group"
+                                    aria-label="Chọn biểu cảm"
+                                  >
+                                    {reactionEmojis.map((emoji, idx) => (
+                                      <motion.button
+                                        initial={safe.reduced ? false : { opacity: 0, y: 3 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{
+                                          duration: safe.duration(DURATION.micro),
+                                          delay: safe.duration(idx * 0.02),
+                                        }}
+                                        type="button"
+                                        key={emoji}
+                                        aria-label={`Thả cảm xúc ${emoji}`}
+                                        onClick={() => {
+                                          setReactionPickerId("");
+                                          void messageAction("react_message", {
+                                            messageId: m.id,
+                                            emoji,
+                                          }).catch(fail);
+                                        }}
+                                      >
+                                        {emoji}
+                                      </motion.button>
+                                    ))}
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                            <button
+                              type="button"
+                              title="Trả lời"
+                              aria-label="Trả lời tin nhắn"
+                              onClick={() => {
+                                setReplyTo(m);
+                                composerRef.current?.focus();
+                              }}
+                            >
+                              <Icon name="arrow-right" size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              className={m.pinned ? "is-active" : ""}
+                              title={m.pinned ? "Bỏ ghim" : "Ghim tin nhắn"}
+                              aria-label={m.pinned ? "Bỏ ghim" : "Ghim tin nhắn"}
+                              aria-pressed={Boolean(m.pinned)}
+                              onClick={() => void toggleMessageFlag(m, "pinned")}
+                            >
+                              <Icon name="pin" size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              className={m.bookmarked ? "is-active" : ""}
+                              title={m.bookmarked ? "Bỏ đánh dấu" : "Đánh dấu tin nhắn"}
+                              aria-label={m.bookmarked ? "Bỏ đánh dấu" : "Đánh dấu tin nhắn"}
+                              aria-pressed={Boolean(m.bookmarked)}
+                              onClick={() => void toggleMessageFlag(m, "bookmarked")}
+                            >
+                              <Icon name="bookmark" size={14} />
+                            </button>
+                            {isMine && m.content && (
+                              <button
+                                type="button"
+                                title="Sửa tin nhắn"
+                                aria-label="Sửa tin nhắn"
+                                onClick={() => {
+                                  setEditingId(m.id);
+                                  setEditingContent(m.content);
+                                }}
+                              >
+                                <Icon name="edit" size={14} />
+                              </button>
+                            )}
+                            {isMine && (
+                              <button
+                                type="button"
+                                className="is-danger"
+                                title="Thu hồi tin nhắn"
+                                aria-label="Thu hồi tin nhắn"
+                                onClick={() => setDeleteTarget(m)}
+                              >
+                                <Icon name="trash" size={14} />
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
 
                       {(m.pinned || m.bookmarked) && (
                         <div className="chat-message-flags">
@@ -1733,24 +1799,9 @@ export function ChatPage() {
                         </div>
                       )}
 
-                      {(m.replyCount ?? 0) > 0 && (
-                        <button
-                          type="button"
-                          className="chat-thread-button"
-                          onClick={() => navigate({ ...route, threadId: m.id })}
-                        >
-                          <Icon name="messages" size={13} /> {m.replyCount} phản hồi trong chủ đề
-                          {(m.threadUnreadCount ?? 0) > 0 && (
-                            <b className="chat-thread-unread">{m.threadUnreadCount} mới</b>
-                          )}
-                        </button>
-                      )}
-
-                      {/* Reactions dock matching mockup */}
-                      <div className="chat-reactions-dock">
-                        {m.reactions &&
-                          m.reactions.length > 0 &&
-                          m.reactions.map((reaction) => (
+                      {m.reactions && m.reactions.length > 0 && (
+                        <div className="chat-reactions-dock">
+                          {m.reactions.map((reaction) => (
                             <button
                               type="button"
                               key={reaction.emoji}
@@ -1766,52 +1817,8 @@ export function ChatPage() {
                               <span>{reaction.emoji}</span> <ReactionCount value={reaction.count} />
                             </button>
                           ))}
-                        <div className="chat-reaction-picker-anchor">
-                          <button
-                            type="button"
-                            className="chat-reaction-add-btn"
-                            title="Thả cảm xúc"
-                            aria-label="Chọn biểu cảm"
-                            aria-expanded={reactionPickerId === m.id}
-                            disabled={readOnly}
-                            onClick={() =>
-                              setReactionPickerId((current) => (current === m.id ? "" : m.id))
-                            }
-                          >
-                            <Icon name="smile" size={13} />
-                          </button>
-                          <AnimatePresence>{reactionPickerId === m.id && (
-                            <motion.div
-                              className="chat-reaction-picker"
-                              initial={safe.reduced ? false : { opacity:0, scale:0.95, y:4 }}
-                              animate={{opacity:1,scale:1,y:0}} exit={{opacity:0}}
-                              transition={{duration:safe.duration(DURATION.micro),ease:EASE.out}}
-                              style={{transformOrigin:"bottom left"}}
-                              role="group"
-                              aria-label="Chọn biểu cảm"
-                            >
-                              {reactionEmojis.map((emoji, index) => (
-                                <motion.button
-                                  initial={safe.reduced ? false : {opacity:0,y:3}} animate={{opacity:1,y:0}}
-                                  transition={{duration:safe.duration(DURATION.micro),delay:safe.duration(index * 0.02)}}
-                                  type="button"
-                                  key={emoji}
-                                  aria-label={`Thả cảm xúc ${emoji}`}
-                                  onClick={() => {
-                                    setReactionPickerId("");
-                                    void messageAction("react_message", {
-                                      messageId: m.id,
-                                      emoji,
-                                    }).catch(fail);
-                                  }}
-                                >
-                                  {emoji}
-                                </motion.button>
-                              ))}
-                            </motion.div>
-                          )}</AnimatePresence>
                         </div>
-                      </div>
+                      )}
 
                       <div className="message-item__meta">
                         <time dateTime={m.createdAt}>{formattedTime}</time>
@@ -1835,76 +1842,6 @@ export function ChatPage() {
                             </span>
                           ))}
                       </div>
-
-                      {!readOnly && (
-                        <div className="chat-message-actions">
-                          <button
-                            type="button"
-                            title="Trả lời"
-                            aria-label="Trả lời tin nhắn"
-                            onClick={() => {
-                              setReplyTo(m);
-                              composerRef.current?.focus();
-                            }}
-                          >
-                            <Icon name="arrow-right" size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            title="Mở chủ đề"
-                            aria-label="Mở chủ đề của tin nhắn"
-                            onClick={() => navigate({ ...route, threadId: m.id })}
-                          >
-                            <Icon name="messages" size={14} />
-                          </button>
-                          {isMine && m.content && (
-                            <button
-                              type="button"
-                              title="Sửa tin nhắn"
-                              aria-label="Sửa tin nhắn"
-                              onClick={() => {
-                                setEditingId(m.id);
-                                setEditingContent(m.content);
-                              }}
-                            >
-                              <Icon name="edit" size={14} />
-                            </button>
-                          )}
-                          {isAdmin && (
-                            <button
-                              type="button"
-                              className={m.pinned ? "is-active" : ""}
-                              title={m.pinned ? "Bỏ ghim" : "Ghim tin nhắn"}
-                              aria-label={m.pinned ? "Bỏ ghim" : "Ghim tin nhắn"}
-                              aria-pressed={Boolean(m.pinned)}
-                              onClick={() => void toggleMessageFlag(m, "pinned")}
-                            >
-                              <Icon name="pin" size={14} />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            className={m.bookmarked ? "is-active" : ""}
-                            title={m.bookmarked ? "Bỏ đánh dấu" : "Đánh dấu tin nhắn"}
-                            aria-label={m.bookmarked ? "Bỏ đánh dấu" : "Đánh dấu tin nhắn"}
-                            aria-pressed={Boolean(m.bookmarked)}
-                            onClick={() => void toggleMessageFlag(m, "bookmarked")}
-                          >
-                            <Icon name="bookmark" size={14} />
-                          </button>
-                          {isMine && (
-                            <button
-                              type="button"
-                              className="is-danger"
-                              title="Xóa tin"
-                              aria-label="Xóa tin nhắn"
-                              onClick={() => setDeleteTarget(m)}
-                            >
-                              <Icon name="trash" size={14} />
-                            </button>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </article>
                 </Fragment>
@@ -2060,7 +1997,7 @@ export function ChatPage() {
               className="chat-dock-textarea"
               maxLength={4000}
               rows={1}
-              disabled={!channel || busy || sending || readOnly || !draftReady}
+              disabled={!channel || busy || readOnly || !draftReady}
               placeholder={!isConnected ? "Mất kết nối. Đang thử lại…" : "Nhập tin nhắn…"}
               value={content}
               onKeyDown={handleKeyDown}
@@ -2150,17 +2087,6 @@ export function ChatPage() {
             </div>
           </form>
         </fieldset>
-
-        <AnimatePresence mode="wait" initial={false}>{route.threadId && (
-          <ThreadPanel
-            key={route.threadId}
-            rootId={route.threadId}
-            channelId={channelId}
-            members={mentionMembers}
-            readOnly={readOnly}
-            onClose={() => navigate({ ...route, threadId: undefined })}
-          />
-        )}</AnimatePresence>
       </div>
 
       {/* 3. Panel: Right Info Card — Distinguishes Channel Info vs Group Info */}
@@ -2350,7 +2276,7 @@ export function ChatPage() {
                 <div className="chat-info-members-list">
                   {members.map((m) => (
                     <div key={m.userId} className="chat-info-member-pill">
-                      <Avatar name={m.displayName} size="sm" />
+                      <Avatar name={m.displayName} image={avatarOf(m.userId)} size="sm" />
                       <div className="member-pill-text">
                         <strong>{m.displayName}</strong>
                         <small>
@@ -2404,7 +2330,7 @@ export function ChatPage() {
 
       <AnimatePresence>{deleteTarget && (
         <Modal
-          title="Xóa tin nhắn"
+          title="Thu hồi tin nhắn"
           eyebrow="TIN NHẮN"
           onClose={() => {
             if (!deleting) setDeleteTarget(null);
@@ -2420,7 +2346,7 @@ export function ChatPage() {
                 loading={deleting}
                 onClick={() => void confirmDeleteMessage()}
               >
-                Xóa tin nhắn
+                Thu hồi tin nhắn
               </Button>
             </div>
           }

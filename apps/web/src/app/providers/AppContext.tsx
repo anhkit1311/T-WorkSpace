@@ -62,7 +62,7 @@ interface AppContextValue {
   mobileNavOpen: boolean;
   setMobileNavOpen: (value: boolean) => void;
   toasts: ToastMessage[];
-  notify: (title: string, description?: string, tone?: ToastMessage["tone"], action?: ToastMessage["action"]) => void;
+  notify: (title: string, description?: string, tone?: ToastMessage["tone"], action?: ToastMessage["action"], extras?: Pick<ToastMessage, "icon" | "onOpen">) => void;
   dismissToast: (id: number) => void;
   user: AuthUser | null;
   accessToken: string | null;
@@ -189,11 +189,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [enterApp]);
 
-  const notify = (title: string, description?: string, tone: ToastMessage["tone"] = "success", action?: ToastMessage["action"]) => {
+  const notify = (title: string, description?: string, tone: ToastMessage["tone"] = "success", action?: ToastMessage["action"], extras?: Pick<ToastMessage, "icon" | "onOpen">) => {
     // Preserve the owner's previous request to hide login welcome banners.
     if (["Chào mừng trở lại", "Xác thực thành công", "Đăng nhập Google thành công"].includes(title)) return;
     const id = ++toastId.current;
-    setToasts((items) => [...items, { id, title, description, tone, action }].slice(-3));
+    setToasts((items) => [...items, { id, title, description, tone, action, ...extras }].slice(-3));
   };
 
   useEffect(() => {

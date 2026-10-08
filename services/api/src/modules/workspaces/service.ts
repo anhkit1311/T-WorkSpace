@@ -438,13 +438,18 @@ export async function setChannelPreference(
 export async function getChannelPreference(
   userId: string,
   channelId: string,
-): Promise<{ pinned: boolean; muted: boolean }> {
+): Promise<{ pinned: boolean; muted: boolean; workspaceId: string }> {
   await requireChannelAccess(userId, channelId);
-  const result = await query<{ pinned: boolean; muted: boolean }>(
-    `SELECT pinned, muted FROM channel_preferences WHERE user_id=$1 AND channel_id=$2`,
+  // workspaceId lets a new-message toast navigate straight to the channel's workspace.
+  const result = await query<{ pinned: boolean; muted: boolean; workspaceId: string }>(
+    `SELECT COALESCE(cp.pinned,false) AS pinned, COALESCE(cp.muted,false) AS muted,
+            ca.workspace_id AS "workspaceId"
+     FROM channel_access ca
+     LEFT JOIN channel_preferences cp ON cp.channel_id=ca.channel_id AND cp.user_id=ca.user_id
+     WHERE ca.user_id=$1 AND ca.channel_id=$2`,
     [userId, channelId],
   );
-  return result.rows[0] ?? { pinned: false, muted: false };
+  return result.rows[0];
 }
 
 export async function editMessage(

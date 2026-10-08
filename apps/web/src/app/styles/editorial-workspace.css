@@ -66,10 +66,27 @@
   --editorial-text-muted: var(--nexo-text-muted);
   --editorial-surface-glass: var(--nexo-surface-ivory);
   --editorial-surface-card: var(--nexo-card-surface);
-  --editorial-surface-soft: rgba(28, 27, 25, 0.04);
+  --editorial-surface-soft: rgba(250, 249, 246, 0.65);
+  --editorial-control-surface: rgba(250, 249, 246, 0.72);
+  --editorial-surface-popup: rgba(250, 249, 246, 0.96);
   --editorial-border: var(--nexo-border-beige);
   --editorial-border-soft: var(--nexo-border-beige);
   --editorial-border-strong: rgba(28, 27, 25, 0.18);
+  --editorial-blur: 20px;
+
+  --text: var(--nexo-text-primary);
+  --text-secondary: var(--nexo-text-muted);
+  --text-muted: var(--nexo-text-muted);
+  --surface: var(--nexo-card-surface);
+  --surface-raised: var(--editorial-surface-popup);
+  --surface-soft: var(--nexo-bg-subtle);
+  --bg-subtle: var(--nexo-bg-subtle);
+  --border: var(--nexo-border-beige);
+  --border-strong: rgba(28, 27, 25, 0.24);
+  --primary: var(--nexo-text-primary);
+  --primary-hover: var(--nexo-primary-hover);
+  --primary-soft: rgba(28, 27, 25, 0.08);
+  --focus: var(--nexo-text-primary);
 
   --editorial-radius-pill: 9999px;
   --editorial-radius-card: var(--nexo-card-radius);
@@ -670,6 +687,20 @@ body,
     margin: 4px 12px 96px 12px !important;
     padding: 0 !important;
     border-radius: 24px !important;
+    /* backdrop-filter would make the card the containing block of the fixed dock below, so the
+       dock floated over the composer on short viewports (e.g. 200% zoom). Blur via ::before. */
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .editorial-workspace-body::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    pointer-events: none;
   }
   .editorial-dock {
     position: fixed !important;
@@ -999,10 +1030,10 @@ body,
 }
 
 /* --------------------------------------------------------------------------
-   8. Search Modal & Global Modals
+   8. Search Modal, Global Modals & Toast Notifications (Warm Nexo Style)
    -------------------------------------------------------------------------- */
 .modal-backdrop {
-  background: rgba(15, 23, 42, 0.4) !important;
+  background: rgba(28, 27, 25, 0.36) !important;
   backdrop-filter: blur(8px) !important;
   -webkit-backdrop-filter: blur(8px) !important;
 }
@@ -1011,12 +1042,16 @@ body,
 .modal,
 .dialog-content {
   border-radius: 28px !important;
-  background: var(--editorial-surface-popup, rgba(243, 246, 252, 0.92)) !important;
-  backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
-  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
-  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36)) !important;
-  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.18) !important;
-  color: #0f172a !important;
+  background: var(--editorial-surface-popup, rgba(250, 249, 246, 0.96)) !important;
+  backdrop-filter: blur(var(--editorial-blur, 20px)) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(var(--editorial-blur, 20px)) saturate(140%) !important;
+  border: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
+  box-shadow:
+    0 24px 64px rgba(28, 27, 25, 0.16),
+    0 4px 16px rgba(28, 27, 25, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82) !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+  font-family: var(--font-body) !important;
 }
 
 .modal__header h2,
@@ -1024,31 +1059,172 @@ body,
 .dialog-content h2 {
   font-family: var(--font-display) !important;
   font-style: normal !important;
-  font-size: 24px !important;
-  font-weight: 500 !important;
-  color: #0f172a !important;
-  letter-spacing: -0.01em !important;
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+  letter-spacing: -0.02em !important;
+  margin: 0 !important;
+}
+
+.modal__header .eyebrow {
+  color: var(--nexo-text-muted, #8A8780) !important;
+  margin-bottom: 4px !important;
 }
 
 .modal__header {
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
-  padding: 24px 28px 18px !important;
+  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
+  padding: 20px 24px 16px !important;
+  background: transparent !important;
 }
 
 .modal__body {
-  padding: 24px 28px !important;
-  color: #0f172a !important;
+  padding: 20px 24px !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+  font-size: 15px !important;
+  line-height: 1.55 !important;
+}
+
+.modal__body p {
+  margin: 0;
+  color: var(--nexo-text-muted, #8A8780);
+  font-size: 14.5px;
+  line-height: 1.55;
 }
 
 .modal__footer {
-  border-top: 1px solid rgba(15, 23, 42, 0.08) !important;
-  padding: 18px 28px 24px !important;
+  border-top: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
+  padding: 16px 24px 20px !important;
+  background: transparent !important;
+}
+
+/* Toast Popup Notifications (Matching Warm Nexo Card & ListItem Style) */
+.toast-viewport {
+  position: fixed !important;
+  z-index: 600 !important;
+  right: 20px !important;
+  bottom: 20px !important;
+  display: grid !important;
+  gap: 10px !important;
+  width: min(400px, calc(100vw - 32px)) !important;
+  align-content: start !important;
+  pointer-events: none !important;
+}
+
+/* Chat/meetings move toasts to the top; release the bottom anchor so the grid
+   does not stretch each toast to fill the viewport height. */
+.toast-viewport.toast-viewport--raised {
+  top: calc(76px + env(safe-area-inset-top)) !important;
+  bottom: auto !important;
+}
+
+.toast {
+  pointer-events: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-height: 68px !important;
+  padding: 14px 16px !important;
+  border-radius: 22px !important;
+  background: var(--editorial-surface-popup, rgba(250, 249, 246, 0.96)) !important;
+  backdrop-filter: blur(var(--editorial-blur, 20px)) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(var(--editorial-blur, 20px)) saturate(140%) !important;
+  border: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
+  box-shadow:
+    0 14px 36px rgba(28, 27, 25, 0.12),
+    0 2px 8px rgba(28, 27, 25, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82) !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+  font-family: var(--font-body) !important;
+}
+
+.toast__icon,
+.toast--info .toast__icon,
+.toast--success .toast__icon {
+  width: var(--nexo-list-item-icon-size, 44px) !important;
+  height: var(--nexo-list-item-icon-size, 44px) !important;
+  min-width: var(--nexo-list-item-icon-size, 44px) !important;
+  min-height: var(--nexo-list-item-icon-size, 44px) !important;
+  border-radius: var(--nexo-btn-radius-pill, 9999px) !important;
+  background: var(--nexo-bg-subtle, #EEECE7) !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  flex-shrink: 0 !important;
+}
+
+.toast--warning .toast__icon {
+  width: var(--nexo-list-item-icon-size, 44px) !important;
+  height: var(--nexo-list-item-icon-size, 44px) !important;
+  min-width: var(--nexo-list-item-icon-size, 44px) !important;
+  min-height: var(--nexo-list-item-icon-size, 44px) !important;
+  border-radius: var(--nexo-btn-radius-pill, 9999px) !important;
+  background: #F6EFE2 !important;
+  color: #8F5314 !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  flex-shrink: 0 !important;
+}
+
+.toast > div {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+.toast > .toast__open {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: none !important;
+  text-align: left !important;
+  font: inherit !important;
+  color: inherit !important;
+  cursor: pointer !important;
+}
+
+.toast > .toast__open:focus-visible {
+  outline: 2px solid var(--nexo-text-primary, #1C1B19) !important;
+  outline-offset: 4px !important;
+  border-radius: 8px !important;
+}
+
+.toast strong {
+  font-family: var(--font-body) !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+  line-height: 1.35 !important;
+}
+
+.toast p {
+  margin: 0 !important;
+  font-family: var(--font-body) !important;
+  font-size: 13.5px !important;
+  font-weight: 400 !important;
+  color: var(--nexo-text-muted, #8A8780) !important;
+  line-height: 1.4 !important;
+}
+
+.motion-tooltip {
+  background: var(--nexo-bg-ivory, #FAF9F6) !important;
+  color: var(--nexo-text-primary, #1C1B19) !important;
+  border: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(28, 27, 25, 0.1) !important;
+  font-family: var(--font-body) !important;
 }
 
 /* --------------------------------------------------------------------------
    9. Shared Touch Targets: Button (primary / secondary / text / icon), Chip, ListItem
    -------------------------------------------------------------------------- */
-.editorial-workspace-shell .button {
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -1071,22 +1247,22 @@ body,
     opacity 150ms ease !important;
 }
 
-.editorial-workspace-shell .button--md,
-.editorial-workspace-shell .button--lg {
+:is(.editorial-workspace-shell, .modal) .button--md,
+:is(.editorial-workspace-shell, .modal) .button--lg {
   height: var(--nexo-btn-height, 52px) !important;
   min-height: var(--nexo-btn-height, 52px) !important;
   padding: 0 var(--nexo-btn-px, 24px) !important;
 }
 
-.editorial-workspace-shell .button--sm {
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--sm {
   min-height: var(--nexo-touch-min, 44px) !important;
   padding: 0 18px !important;
   font-size: 14.5px !important;
 }
 
 /* 1. Primary Button: near-black #1C1B19, white 600 text, ~52px height, ~24px px, ~16px radius, soft shadow */
-.editorial-workspace-shell .button--primary,
-.editorial-workspace-shell .button-primary {
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--primary,
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button-primary {
   border-radius: var(--nexo-btn-radius-primary, 16px) !important;
   background-color: var(--nexo-text-primary, #1C1B19) !important;
   color: #ffffff !important;
@@ -1095,15 +1271,30 @@ body,
   box-shadow: var(--nexo-btn-shadow-primary, 0 4px 14px rgba(0, 0, 0, 0.15)) !important;
 }
 
-.editorial-workspace-shell .button--primary:hover:not(:disabled),
-.editorial-workspace-shell .button-primary:hover:not(:disabled) {
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--primary:hover:not(:disabled),
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button-primary:hover:not(:disabled) {
   background-color: var(--nexo-primary-hover, #2C2A27) !important;
   border-color: var(--nexo-primary-hover, #2C2A27) !important;
 }
 
+/* Danger Button in Modals/Workspaces: matches Primary Button geometry (~16px radius, soft shadow) */
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--danger {
+  border-radius: var(--nexo-btn-radius-primary, 16px) !important;
+  background-color: #C83A32 !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  border: 1px solid #C83A32 !important;
+  box-shadow: 0 4px 14px rgba(200, 58, 50, 0.2) !important;
+}
+
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--danger:hover:not(:disabled) {
+  background-color: #B23029 !important;
+  border-color: #B23029 !important;
+}
+
 /* 2. Secondary Button: transparent at rest (like ListItem), subtle #EEECE7 on hover, pill radius, no border/shadow */
-.editorial-workspace-shell .button--secondary,
-.editorial-workspace-shell .button-secondary {
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--secondary,
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button-secondary {
   border-radius: var(--nexo-btn-radius-pill, 9999px) !important;
   background: transparent !important;
   color: var(--nexo-text-primary, #1C1B19) !important;
@@ -1112,16 +1303,16 @@ body,
   box-shadow: none !important;
 }
 
-.editorial-workspace-shell .button--secondary:hover:not(:disabled),
-.editorial-workspace-shell .button-secondary:hover:not(:disabled) {
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--secondary:hover:not(:disabled),
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button-secondary:hover:not(:disabled) {
   background: var(--nexo-bg-subtle, #EEECE7) !important;
   border-color: transparent !important;
   color: var(--nexo-text-primary, #1C1B19) !important;
 }
 
 /* Ghost & Soft variants harmonized with transparent at rest + subtle hover */
-.editorial-workspace-shell .button--ghost,
-.editorial-workspace-shell .button--soft {
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--ghost,
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--soft {
   border-radius: var(--nexo-btn-radius-pill, 9999px) !important;
   background: transparent !important;
   color: var(--nexo-text-primary, #1C1B19) !important;
@@ -1129,15 +1320,15 @@ body,
   box-shadow: none !important;
 }
 
-.editorial-workspace-shell .button--ghost:hover:not(:disabled),
-.editorial-workspace-shell .button--soft:hover:not(:disabled) {
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--ghost:hover:not(:disabled),
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--soft:hover:not(:disabled) {
   background: var(--nexo-bg-subtle, #EEECE7) !important;
   border-color: transparent !important;
 }
 
 /* 4. Icon Button: 44x44 circle, transparent background, #1C1B19 stroke icon, #EEECE7 hover */
-.editorial-workspace-shell .button--icon,
-.editorial-workspace-shell .icon-button:not(.ws-header__mobile-trigger):not(.chat-mobile-channels-btn) {
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--icon,
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .icon-button:not(.ws-header__mobile-trigger):not(.chat-mobile-channels-btn) {
   width: var(--nexo-touch-min, 44px) !important;
   height: var(--nexo-touch-min, 44px) !important;
   min-width: var(--nexo-touch-min, 44px) !important;
@@ -1158,10 +1349,11 @@ body,
     opacity 150ms ease !important;
 }
 
-.editorial-workspace-shell .button--icon:hover:not(:disabled),
-.editorial-workspace-shell .icon-button:hover:not(:disabled) {
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--icon:hover:not(:disabled),
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .icon-button:hover:not(:disabled) {
   background: var(--nexo-bg-subtle, #EEECE7) !important;
   color: var(--nexo-text-primary, #1C1B19) !important;
+  transform: none !important;
 }
 
 /* 5. Text Button ("Xem tất cả"): no background, no border, ~15px weight 500 warm gray, min-height 44px */
@@ -1319,12 +1511,12 @@ body,
 }
 
 /* Shared Touch Target Interaction States: Active (~0.97), Focus-Visible (2px #1C1B19 offset 2px), Disabled (40%) */
-.editorial-workspace-shell
+:is(.editorial-workspace-shell, .modal, .toast-viewport)
   :is(.button, .icon-button, .nexo-list-item, .topbar-action-icon-btn):active:not(:disabled) {
   transform: scale(0.97) !important;
 }
 
-.editorial-workspace-shell
+:is(.editorial-workspace-shell, .modal, .toast-viewport)
   :is(.button, .icon-button, .nexo-list-item, .topbar-action-icon-btn, button):disabled {
   opacity: 0.4 !important;
   cursor: not-allowed !important;
@@ -1361,13 +1553,13 @@ body,
 /* --------------------------------------------------------------------------
    10. Keyboard Focus (2px #1C1B19 outline, 2px offset)
    -------------------------------------------------------------------------- */
-.editorial-workspace-shell :is(button, a, summary, [tabindex]:not(input):not(textarea):not(select)):focus-visible {
+:is(.editorial-workspace-shell, .modal, .toast-viewport) :is(button, a, summary, [tabindex]:not(input):not(textarea):not(select)):focus-visible {
   outline: 2px solid var(--nexo-text-primary, #1C1B19) !important;
   outline-offset: 2px !important;
   box-shadow: none !important;
 }
 
-.editorial-workspace-shell :is(input, textarea, select):is(:focus, :focus-visible) {
+:is(.editorial-workspace-shell, .modal, .toast-viewport) :is(input, textarea, select):is(:focus, :focus-visible) {
   outline: none !important;
   outline-offset: 0 !important;
 }
@@ -1477,4 +1669,11 @@ body,
   .topbar-meeting-chip__icon {
     display: block;
   }
+}
+
+/* Compact density for every in-app view (landing/login are separate screens): scale each
+   page uniformly so text, spacing and controls shrink together and more content fits.
+   Applied to the page root, not the shell, because the shell is sized in vh units. */
+.editorial-main-content .view-reveal > * {
+  zoom: 0.9;
 }

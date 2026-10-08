@@ -44,9 +44,9 @@ const SocketContext = createContext<SocketContextValue | null>(null);
 const SOCKET_URL = import.meta.env.VITE_API_URL ?? "";
 
 export function SocketProvider({ children }: { children: ReactNode }) {
-  const { accessToken, user, activeView, notify } = useApp();
-  const notificationRef = useRef({ accessToken, user, activeView, notify });
-  notificationRef.current = { accessToken, user, activeView, notify };
+  const { accessToken, user, activeView, notify, openChannel } = useApp();
+  const notificationRef = useRef({ accessToken, user, activeView, notify, openChannel });
+  notificationRef.current = { accessToken, user, activeView, notify, openChannel };
   const socketRef = useRef<Socket | null>(null);
   const activeChannelRef = useRef<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -200,12 +200,21 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       )
         .then((response) => (response.ok ? response.json() : null))
         .then((data) => {
-          if (data && !data.preference?.muted)
+          if (data && !data.preference?.muted) {
+            const workspaceId: string | undefined = data.preference?.workspaceId;
             current.notify(
               `Tin mới từ ${message.authorName}`,
               message.content || message.attachment?.fileName || "Tệp đính kèm",
               "info",
+              undefined,
+              {
+                icon: "message",
+                onOpen: workspaceId
+                  ? () => notificationRef.current.openChannel(workspaceId, message.channelId)
+                  : undefined,
+              },
             );
+          }
         })
         .catch(() => { /* Do not send a toast when the mute preference is unknown. Unread data remains in the inbox and reconnect retries. */ });
     });
