@@ -40,6 +40,7 @@ const label =
     layer === null ? null : `layer${layer}`,
     args.simulcast === "0" ? "nosimulcast" : null,
     args.render === "0" ? "norender" : null,
+    args.policy === "relay" ? "relay" : null,
   ]
     .filter(Boolean)
     .join("-");
@@ -283,6 +284,7 @@ async function runTier(n) {
         query.set("token", await createAccessToken(users[i]));
         if (layer !== null) query.set("layer", String(layer));
         if (args.simulcast === "0") query.set("simulcast", "0");
+        if (args.policy === "relay") query.set("policy", "relay");
       } else query.set("relay", labOrigin);
       clients.push(await launchChrome(`${labOrigin}/lab.html?${query}`, i));
       await delay(1500);
@@ -472,6 +474,7 @@ const environment = {
   meshEncodings: "single encoding, maxBitrate 1200 kbps per peer connection",
   consumerLayer: layer ?? "auto (app policy: >6 consumers -> 0, >2 -> 1, else 2)",
   sfuAnnouncedIp: mode === "sfu" ? announcedIp : null,
+  icePolicy: args.policy === "relay" ? `relay only via ${process.env.TURN_URLS}` : "all",
   warmupSeconds: warmup,
   measureSeconds: seconds,
 };

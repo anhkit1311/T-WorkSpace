@@ -198,6 +198,8 @@ export type ProducerInfo = {
 
 export type TransportOptions = {
   iceServers?: { urls: string[]; username?: string; credential?: string }[];
+  /** Client-side override; "relay" forces media through TURN (used to verify the relay path). */
+  iceTransportPolicy?: "all" | "relay";
   id: string;
   iceParameters: unknown;
   iceCandidates: unknown[];

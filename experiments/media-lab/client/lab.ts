@@ -3,6 +3,7 @@
 // RTCPeerConnection per remote peer (full mesh) over a tiny relay.
 import { io, type Socket } from "socket.io-client";
 import { MediasoupClientService } from "../../../apps/web/src/features/meetings/webrtc/mediasoup-service";
+import type { TransportOptions } from "../../../packages/shared/src/index";
 
 type Mode = "sfu" | "mesh";
 interface Sample {
@@ -210,7 +211,12 @@ async function collect(reports: RTCStatsReport[]): Promise<Sample> {
       ) {
         rtts.push(stat.currentRoundTripTime * 1000);
         const localCandidate = report.get(stat.localCandidateId);
-        if (localCandidate) protocols.add(String(localCandidate.protocol));
+        // protocol and candidate type, e.g. "udp/host" or "udp/relay" (TURN)
+        if (localCandidate)
+          protocols.add(
+            `${localCandidate.protocol}/${localCandidate.candidateType}` +
+              (localCandidate.relayProtocol ? `/turn-${localCandidate.relayProtocol}` : ""),
+          );
       }
     });
   });
@@ -279,7 +285,10 @@ async function runSfu() {
     existingProducers: { producerId: string }[];
   }>(socket, "join_meeting", { roomId });
   await service.loadDevice(joined.routerRtpCapabilities);
-  const sendParams = await ack<{ params: never }>(socket, "create_webrtc_transport", { roomId });
+  // ?policy=relay forces both transports through the TURN server returned by the API.
+  const policy = params.get("policy") === "relay" ? "relay" : undefined;
+  const sendParams = await ack<{ params: TransportOptions }>(socket, "create_webrtc_transport", { roomId });
+  if (policy) sendParams.params.iceTransportPolicy = policy;
   const send = service.initSendTransport(
     sendParams.params,
     async (dtlsParameters) => {
@@ -300,7 +309,8 @@ async function runSfu() {
         })
       ).producerId,
   );
-  const recvParams = await ack<{ params: never }>(socket, "create_webrtc_transport", { roomId });
+  const recvParams = await ack<{ params: TransportOptions }>(socket, "create_webrtc_transport", { roomId });
+  if (policy) recvParams.params.iceTransportPolicy = policy;
   const recv = service.initRecvTransport(recvParams.params, async (dtlsParameters) => {
     await ack(socket, "connect_webrtc_transport", {
       roomId,

@@ -115,6 +115,7 @@ export class MediasoupClientService {
       iceCandidates: options.iceCandidates as types.IceCandidate[],
       dtlsParameters: options.dtlsParameters as types.DtlsParameters,
       iceServers: options.iceServers,
+      iceTransportPolicy: options.iceTransportPolicy,
     });
 
     transport.on("connect", ({ dtlsParameters }, callback, errback) => {
@@ -144,6 +145,7 @@ export class MediasoupClientService {
       iceCandidates: options.iceCandidates as types.IceCandidate[],
       dtlsParameters: options.dtlsParameters as types.DtlsParameters,
       iceServers: options.iceServers,
+      iceTransportPolicy: options.iceTransportPolicy,
     });
 
     transport.on("connect", ({ dtlsParameters }, callback, errback) => {
