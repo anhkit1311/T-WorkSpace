@@ -12,6 +12,25 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev:web"],
       "port": 5173
+    },
+    {
+      "name": "api-audit",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["dist/api/server.js"],
+      "port": 3002,
+      "env": { "API_PORT": "3002", "WEB_ORIGIN": "http://localhost:5177" }
+    },
+    {
+      "name": "web-audit",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--workspace", "@doan/web", "exec", "--", "vite", "preview", "--outDir", "../../dist/web-audit", "--port", "5177", "--strictPort"],
+      "port": 5177
+    },
+    {
+      "name": "web-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--workspace", "@doan/web", "run", "preview", "--", "--port", "5176", "--strictPort"],
+      "port": 5176
     }
   ]
 }
