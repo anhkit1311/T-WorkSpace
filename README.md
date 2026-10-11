@@ -32,15 +32,13 @@ npm run db:migrate
 
 Sửa JWT_SECRET thành chuỗi ngẫu nhiên ít nhất32 ký tự; kiểm DATABASE_URL/WEB_ORIGIN/VITE_API_URL. Cấu hình Resend hoặc SMTP để đăng ký/nhận OTP; hệ thống không log mã xác thực.
 
-Hai terminal:
+Chạy API và web cùng lúc bằng một lệnh (Ctrl+C dừng cả hai):
 
 ```powershell
-npm run dev:api
+npm run dev
 ```
 
-```powershell
-npm run dev:web
-```
+Cần chạy riêng thì dùng `npm run dev:api` hoặc `npm run dev:web`.
 
 Web localhost:5173; API localhost:3001. Vite dùng polling watcher trong development Windows. DB đã có dữ liệu nâng cấp bằng migrate, không xóa volume. Tổng 21 migration, bytea cũ vẫn tương thích.
 
