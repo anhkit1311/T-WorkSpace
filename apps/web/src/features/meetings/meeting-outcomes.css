@@ -1,0 +1,247 @@
+/* Agenda, shared notes and meeting tasks: same light glass and navy ink as the other panels. */
+.meeting-outcomes {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 10px 14px 16px;
+  color: #0f172a;
+  font-size: 13.5px;
+}
+
+.meeting-outcomes section {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.meeting-outcomes h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.meeting-outcomes small,
+.meeting-outcomes-meta {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.meeting-outcomes-count {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.meeting-outcomes-save {
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.meeting-outcomes-alert,
+.meeting-notes-conflict {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(180, 83, 9, 0.22);
+  background: rgba(255, 251, 235, 0.92);
+  color: #92400e;
+  font-size: 12.5px;
+}
+
+.meeting-notes-conflict p {
+  margin: 0 0 8px;
+}
+
+.meeting-notes-conflict div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.meeting-outcomes-empty {
+  margin: 0;
+  padding: 24px 8px;
+  text-align: center;
+  color: #64748b;
+}
+
+.meeting-outcomes select,
+.meeting-outcomes input,
+.meeting-outcomes textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 10px;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 13px;
+}
+
+.meeting-outcomes textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.5;
+}
+
+.meeting-outcomes :is(select, input, textarea):focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+.meeting-agenda,
+.meeting-task-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.meeting-agenda li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.meeting-agenda label {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.meeting-agenda input[type="checkbox"] {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  accent-color: #2563eb;
+}
+
+.meeting-agenda li.is-done label span {
+  color: #64748b;
+  text-decoration: line-through;
+}
+
+.meeting-agenda .icon-button {
+  flex: none;
+  width: 28px;
+  height: 28px;
+}
+
+.meeting-outcomes-inline {
+  display: flex;
+  gap: 6px;
+}
+
+.meeting-notes-readonly {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #334155;
+}
+
+.meeting-task-list li {
+  display: grid;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 10px;
+}
+
+.meeting-task-list li:hover {
+  background: rgba(241, 245, 249, 0.9);
+}
+
+.meeting-task-list button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #0f172a;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.meeting-task-list button span {
+  overflow-wrap: anywhere;
+}
+
+.meeting-task-list button:hover span {
+  text-decoration: underline;
+}
+
+.meeting-task-form {
+  display: grid;
+  gap: 6px;
+}
+
+.meeting-task-form > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+@media (max-width: 480px) {
+  .meeting-task-form > div {
+    grid-template-columns: 1fr 1fr;
+  }
+  .meeting-task-form > div > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Summary card posted into a text channel when a meeting ends. */
+.meeting-summary-card {
+  display: grid;
+  gap: 6px;
+  max-width: 560px;
+  padding: 12px 14px;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-radius: 16px;
+  background: rgba(239, 246, 255, 0.85);
+  color: #0f172a;
+}
+
+.meeting-summary-card header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 650;
+  color: #1d4ed8;
+  letter-spacing: 0.01em;
+}
+
+.meeting-summary-card p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.meeting-summary-card > button {
+  justify-self: start;
+}

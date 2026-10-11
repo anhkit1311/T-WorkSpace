@@ -2,6 +2,7 @@ import type {
   ChatMessageItem,
   ConsumerOptions,
   MediaKind,
+  MeetingNotes,
   PresenceEvent,
   ProducerInfo,
   ProducerSource,
@@ -12,6 +13,12 @@ export interface ServerToClientEvents {
   meeting_state_changed: (data: { roomId: string }) => void;
   meeting_closed: (data: { roomId: string; reason: string }) => void;
   meeting_mute: (data: { roomId: string }) => void;
+  meeting_outcomes_changed: (data: {
+    roomId: string;
+    sessionId: string;
+    part: "notes" | "agenda" | "tasks" | "channel" | "summary";
+    notes?: MeetingNotes;
+  }) => void;
   task_changed: (data: { channelId: string; taskId: string; version: number }) => void;
   notifications_changed: () => void;
   access_revoked: () => void;

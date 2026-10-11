@@ -13,6 +13,7 @@ import { useMeeting, type RemotePeer } from "../../app/providers/MeetingContext"
 import { bestGridLayout, layerForTile, pageSizeFor, paginate } from "./grid-layout";
 import { handToastTitle, raisedHandUserIds } from "./hand-raise";
 import { MeetingControls } from "./MeetingControls";
+import { MeetingOutcomesPanel } from "./MeetingOutcomesPanel";
 import { mapMediaError } from "./webrtc/local-media";
 import { useSocket } from "../../app/providers/SocketContext";
 import { Badge, Button, Chip, IconButton, ListItem, ConfirmDialog } from "../../shared/ui/Primitives";
@@ -273,6 +274,7 @@ export function MeetingPage() {
   const [editingScheduleId, setEditingScheduleId] = useState("");
   const [scheduleTitle, setScheduleTitle] = useState("");
   const [scheduleDescription, setScheduleDescription] = useState("");
+  const [scheduleAgenda, setScheduleAgenda] = useState("");
   const [scheduleRoomId, setScheduleRoomId] = useState("");
   const [scheduleStart, setScheduleStart] = useState("");
   const [scheduleEnd, setScheduleEnd] = useState("");
@@ -297,7 +299,7 @@ export function MeetingPage() {
   const gridRef = useRef<HTMLDivElement>(null);
   const [gridSize, setGridSize] = useState({ width: 0, height: 0 });
   const [gridPage, setGridPage] = useState(0);
-  const [sidePanel, setSidePanel] = useState<"none" | "people" | "chat">("none");
+  const [sidePanel, setSidePanel] = useState<"none" | "people" | "chat" | "notes">("none");
   const [callMessages, setCallMessages] = useState<ChatMessageItem[]>([]);
   const [callDraft, setCallDraft] = useState("");
   const [callChatError, setCallChatError] = useState("");
@@ -306,6 +308,12 @@ export function MeetingPage() {
   const panelRef = useRef(sidePanel);
   panelRef.current = sidePanel;
   const [callUnread, setCallUnread] = useState(0);
+  const sidePanelTitle =
+    sidePanel === "people"
+      ? "Người tham gia"
+      : sidePanel === "notes"
+        ? "Ghi chú & việc cần làm"
+        : "Chat cuộc họp";
   useEffect(() => {
     const list = callListRef.current;
     if(sidePanel === "chat") {
@@ -639,6 +647,7 @@ export function MeetingPage() {
     setEditingScheduleId(item?.id ?? "");
     setScheduleTitle(item?.title ?? "");
     setScheduleDescription(item?.description ?? "");
+    setScheduleAgenda((item?.agenda ?? []).join("\n"));
     setScheduleRoomId(item?.roomId ?? selectedId ?? visibleRooms[0]?.id ?? rooms[0]?.id ?? "");
     setScheduleStart(localDateTime(item ? new Date(item.startsAt) : start));
     setScheduleEnd(
@@ -666,6 +675,10 @@ export function MeetingPage() {
           roomId: scheduleRoomId,
           title: scheduleTitle.trim(),
           description: scheduleDescription.trim(),
+          agenda: scheduleAgenda
+            .split("\n")
+            .map((line) => line.replace(/^\s*[-•*]\s*/, "").trim())
+            .filter(Boolean),
           startsAt: startsAt.toISOString(),
           endsAt: endsAt.toISOString(),
         },
@@ -1206,6 +1219,15 @@ export function MeetingPage() {
                       placeholder="Nội dung, tài liệu cần chuẩn bị…"
                     />
                   </label>
+                  <label className="meeting-schedule-wide">
+                    Agenda (mỗi dòng một mục)
+                    <textarea
+                      rows={3}
+                      value={scheduleAgenda}
+                      onChange={(event) => setScheduleAgenda(event.target.value)}
+                      placeholder={"Báo cáo tiến độ\nPhân công tuần tới"}
+                    />
+                  </label>
                 </div>
                 <div className="meeting-schedule-form-actions">
                   <span>Thời gian theo múi giờ của thiết bị bạn.</span>
@@ -1516,13 +1538,19 @@ export function MeetingPage() {
             {sidePanel !== "none" && (
               <aside
                 className="meeting-side-panel"
-                aria-label={sidePanel === "people" ? "Người tham gia" : "Chat cuộc họp"}
+                aria-label={sidePanelTitle}
               >
                 <div className="meeting-side-panel-head">
-                  <strong>{sidePanel === "people" ? "Người tham gia" : "Chat cuộc họp"}</strong>
+                  <strong>{sidePanelTitle}</strong>
                   <IconButton icon="x" label="Đóng bảng phụ" onClick={() => setSidePanel("none")} />
                 </div>
-                {sidePanel === "people" ? (
+                {sidePanel === "notes" ? (
+                  meetingState?.id ? (
+                    <MeetingOutcomesPanel sessionId={meetingState.id} live />
+                  ) : (
+                    <p className="meeting-outcomes-empty">Đang tải phiên họp…</p>
+                  )
+                ) : sidePanel === "people" ? (
                   <div className="meeting-people-list">
                     <div>
                       <span>{user?.displayName || "Bạn"} · bạn</span>
@@ -1644,6 +1672,16 @@ export function MeetingPage() {
             >
               <Icon name="message" size={18} />
               {callUnread > 0 && <span className="badge" aria-label={`${callUnread} tin nhắn mới`}>{callUnread}</span>}
+            </button>
+            <button
+              type="button"
+              className={`meeting-dock-btn ${sidePanel === "notes" ? "is-active" : ""}`}
+              aria-label="Ghi chú và việc cần làm"
+              aria-pressed={sidePanel === "notes"}
+              title="Ghi chú và việc cần làm"
+              onClick={() => setSidePanel(sidePanel === "notes" ? "none" : "notes")}
+            >
+              <Icon name="file" size={18} />
             </button>
             <button
               type="button"

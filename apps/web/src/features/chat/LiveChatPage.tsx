@@ -39,6 +39,7 @@ import type { ChannelMember } from "./ThreadPanel";
 import { useUserAvatars } from "./useUserAvatars";
 import { governanceApi } from "../workspaces/api";
 import { isAtLatest, jumpToLatestLabel } from "./jump-latest";
+import { MeetingSummaryCard } from "../meetings/MeetingSummaryCard";
 
 const stickers = [
   { id: "cheer", emoji: "🎉", label: "Ăn mừng" },
@@ -1658,6 +1659,8 @@ export function ChatPage() {
                               </Button>
                             </div>
                           </div>
+                        ) : m.kind === "meeting_summary" ? (
+                          <MeetingSummaryCard message={m} />
                         ) : (
                           <div className="message-bubble">
                             {m.content && <MessageText content={m.content.trim()} />}
@@ -1756,7 +1759,7 @@ export function ChatPage() {
                             >
                               <Icon name="bookmark" size={14} />
                             </button>
-                            {isMine && m.content && (
+                            {isMine && m.content && m.kind !== "meeting_summary" && (
                               <button
                                 type="button"
                                 title="Sửa tin nhắn"

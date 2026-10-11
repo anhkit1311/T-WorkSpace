@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { MeetingScheduleItem } from "@doan/shared";
-import { query } from "../../infrastructure/database/db.js";
+import { query, withTransaction } from "../../infrastructure/database/db.js";
+import { normalizeAgenda, replaceScheduleAgenda } from "./outcomes.js";
 import { HttpError } from "../../shared/http/http-error.js";
 import { validateId } from "../workspaces/service.js";
 
@@ -10,6 +11,7 @@ type ScheduleInput = {
   description?: unknown;
   startsAt?: unknown;
   endsAt?: unknown;
+  agenda?: unknown;
 };
 
 function validateSchedule(input: ScheduleInput) {
@@ -53,6 +55,7 @@ const selectSchedule = `SELECT s.id, s.channel_id AS "roomId", c.workspace_id AS
   c.name AS "roomName", w.name AS "workspaceName", s.created_by AS "createdBy",
   u.display_name AS "organizerName", s.title, s.description,
   s.starts_at AS "startsAt", s.ends_at AS "endsAt",
+  COALESCE((SELECT json_agg(i.label ORDER BY i.position,i.id) FROM meeting_agenda_items i WHERE i.schedule_id=s.id),'[]'::json) AS agenda,
   (s.created_by=$1 OR m.role IN ('owner','admin')) AS "canManage"
   FROM meeting_schedules s
   JOIN channels c ON c.id=s.channel_id
@@ -80,12 +83,16 @@ export async function createMeetingSchedule(
   );
   if (!room.rowCount)
     throw new HttpError(404, "ROOM_NOT_FOUND", "Không tìm thấy phòng họp trong nhóm của bạn.");
+  const agenda = normalizeAgenda(input.agenda);
   const id = randomUUID();
-  await query(
-    `INSERT INTO meeting_schedules(id,channel_id,created_by,title,description,starts_at,ends_at)
-     VALUES($1,$2,$3,$4,$5,$6,$7)`,
-    [id, data.roomId, userId, data.title, data.description, data.startsAt, data.endsAt],
-  );
+  await withTransaction(async (client) => {
+    await client.query(
+      `INSERT INTO meeting_schedules(id,channel_id,created_by,title,description,starts_at,ends_at)
+       VALUES($1,$2,$3,$4,$5,$6,$7)`,
+      [id, data.roomId, userId, data.title, data.description, data.startsAt, data.endsAt],
+    );
+    await replaceScheduleAgenda(client, id, agenda);
+  });
   const result = await query<MeetingScheduleItem>(`${selectSchedule} WHERE s.id=$2`, [userId, id]);
   return result.rows[0];
 }
@@ -117,12 +124,27 @@ export async function updateMeetingSchedule(
   );
   if (!room.rowCount)
     throw new HttpError(404, "ROOM_NOT_FOUND", "Không tìm thấy phòng họp trong nhóm của bạn.");
-  const result = await query<MeetingScheduleItem>(
-    `UPDATE meeting_schedules SET channel_id=$2,title=$3,description=$4,starts_at=$5,ends_at=$6,updated_at=now()
-     WHERE id=$1 AND canceled_at IS NULL RETURNING id`,
-    [id, data.roomId, data.title, data.description, data.startsAt, data.endsAt],
-  );
-  if (!result.rowCount) throw new HttpError(404, "SCHEDULE_NOT_FOUND", "Không tìm thấy lịch họp.");
+  const agenda = input.agenda === undefined ? null : normalizeAgenda(input.agenda);
+  await withTransaction(async (client) => {
+    const result = await client.query(
+      `UPDATE meeting_schedules SET channel_id=$2,title=$3,description=$4,starts_at=$5,ends_at=$6,updated_at=now()
+       WHERE id=$1 AND canceled_at IS NULL RETURNING id`,
+      [id, data.roomId, data.title, data.description, data.startsAt, data.endsAt],
+    );
+    if (!result.rowCount)
+      throw new HttpError(404, "SCHEDULE_NOT_FOUND", "Không tìm thấy lịch họp.");
+    if (!agenda) return;
+    const current = await client.query<{ label: string }>(
+      `SELECT label FROM meeting_agenda_items WHERE schedule_id=$1 ORDER BY position,id`,
+      [id],
+    );
+    if (JSON.stringify(current.rows.map((row) => row.label)) === JSON.stringify(agenda)) return;
+    // Once a session has used the agenda, its ticked progress belongs to that meeting.
+    const started = await client.query(`SELECT 1 FROM meeting_sessions WHERE schedule_id=$1`, [id]);
+    if (started.rowCount)
+      throw new HttpError(409, "AGENDA_IN_USE", "Cuộc họp đã bắt đầu, hãy sửa agenda trong phòng họp.");
+    await replaceScheduleAgenda(client, id, agenda);
+  });
   const schedule = await query<MeetingScheduleItem>(`${selectSchedule} WHERE s.id=$2`, [
     userId,
     id,

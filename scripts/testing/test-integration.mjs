@@ -8,6 +8,7 @@ const result = spawnSync(
     "services/api/test/conversations.test.js",
     "services/api/test/tasks.test.js",
     "services/api/test/meeting-sessions.test.js",
+    "services/api/test/meeting-outcomes.test.js",
     "services/api/test/distributed.test.js",
     "services/api/test/storage.test.js",
     "services/api/test/worker-recovery.test.js",

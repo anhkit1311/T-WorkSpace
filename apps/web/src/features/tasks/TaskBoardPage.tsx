@@ -5,6 +5,7 @@ import { governanceApi } from "../workspaces/api";
 import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
 import { Button, IconButton, ConfirmDialog } from "../../shared/ui/Primitives";
+import { Icon } from "../../shared/ui/Icon";
 import { AnimatePresence, motion, useIsPresent } from "motion/react";
 import { useMotionSafe } from "../../shared/motion/MotionProvider";
 import { ambientBridge } from "../../shared/motion/AmbientBackdrop";
@@ -410,6 +411,11 @@ export function TaskBoardPage() {
                       <small>
                         {priorities[task.priority]} · {task.assigneeName ?? "Chưa giao"}
                       </small>
+                      {task.meetingSessionId && (
+                        <small className="task-origin">
+                          <Icon name="video" size={12} /> Từ cuộc họp
+                        </small>
+                      )}
                       {task.dueAt && (
                         <time dateTime={task.dueAt}>
                           Hạn: {new Date(task.dueAt).toLocaleDateString("vi-VN")}
@@ -817,6 +823,12 @@ function TaskPanel({
                 </Button>
               </fieldset>
             </form>
+            {task.meetingSessionId && (
+              <p className="task-panel-note">
+                <Icon name="video" size={13} /> Việc này được giao trong một cuộc họp; xem tổng
+                kết cuộc họp trong kênh.
+              </p>
+            )}
             {task.sourceMessageId && (
               <Button
                 variant="secondary"

@@ -5,7 +5,7 @@ import { query, withTransaction } from "../../infrastructure/database/db.js";
 import { HttpError } from "../../shared/http/http-error.js";
 import { requireChannelAccess, validateId } from "../workspaces/service.js";
 
-const projection = `SELECT t.id,t.channel_id AS "channelId",t.title,t.description,t.status,t.priority,t.due_at AS "dueAt",t.assignee_id AS "assigneeId",u.display_name AS "assigneeName",t.source_message_id AS "sourceMessageId",t.position::float8 AS position,t.version,t.archived_at AS "archivedAt",t.updated_at AS "updatedAt",(SELECT count(*)::integer FROM task_checklist WHERE task_id=t.id) AS "checklistTotal",(SELECT count(*)::integer FROM task_checklist WHERE task_id=t.id AND done) AS "checklistDone" FROM tasks t LEFT JOIN users u ON u.id=t.assignee_id JOIN channel_access access ON access.channel_id=t.channel_id AND access.user_id=$1`;
+const projection = `SELECT t.id,t.channel_id AS "channelId",t.title,t.description,t.status,t.priority,t.due_at AS "dueAt",t.assignee_id AS "assigneeId",u.display_name AS "assigneeName",t.source_message_id AS "sourceMessageId",t.meeting_session_id AS "meetingSessionId",t.position::float8 AS position,t.version,t.archived_at AS "archivedAt",t.updated_at AS "updatedAt",(SELECT count(*)::integer FROM task_checklist WHERE task_id=t.id) AS "checklistTotal",(SELECT count(*)::integer FROM task_checklist WHERE task_id=t.id AND done) AS "checklistDone" FROM tasks t LEFT JOIN users u ON u.id=t.assignee_id JOIN channel_access access ON access.channel_id=t.channel_id AND access.user_id=$1`;
 const statuses = ["todo", "doing", "done"],
   priorities = ["low", "normal", "high", "urgent"];
 function text(value: unknown, max: number, required = false) {
@@ -117,7 +117,12 @@ export async function getTask(userId: string, taskId: string): Promise<TaskDetai
     activity: activity.rows,
   } as TaskDetail;
 }
-export async function createTask(userId: string, channelId: string, body: Record<string, unknown>) {
+export async function createTask(
+  userId: string,
+  channelId: string,
+  body: Record<string, unknown>,
+  links: { meetingSessionId?: string } = {},
+) {
   validateId(channelId);
   validateId(body.clientTaskId);
   const title = text(body.title, 160, true),
@@ -132,6 +137,8 @@ export async function createTask(userId: string, channelId: string, body: Record
         due(body.dueAt ?? null),
         body.assigneeId ?? null,
         body.sourceMessageId ?? null,
+        // Appended only when present so fingerprints of older tasks stay valid.
+        ...(links.meetingSessionId ? [links.meetingSessionId] : []),
       ]),
     )
     .digest("hex");
@@ -170,7 +177,7 @@ export async function createTask(userId: string, channelId: string, body: Record
     }
     const id = randomUUID();
     await client.query(
-      `INSERT INTO tasks(id,channel_id,created_by,client_task_id,title,description,priority,due_at,assignee_id,source_message_id,position) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,(SELECT COALESCE(max(position),0)+1024 FROM tasks WHERE channel_id=$2 AND status='todo'))`,
+      `INSERT INTO tasks(id,channel_id,created_by,client_task_id,title,description,priority,due_at,assignee_id,source_message_id,meeting_session_id,position) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,(SELECT COALESCE(max(position),0)+1024 FROM tasks WHERE channel_id=$2 AND status='todo'))`,
       [
         id,
         channelId,
@@ -182,9 +189,13 @@ export async function createTask(userId: string, channelId: string, body: Record
         due(body.dueAt ?? null),
         assigned,
         body.sourceMessageId ?? null,
+        links.meetingSessionId ?? null,
       ],
     );
-    await log(client, id, userId, "created", { createFingerprint: fingerprint });
+    await log(client, id, userId, "created", {
+      createFingerprint: fingerprint,
+      ...(links.meetingSessionId ? { meetingSessionId: links.meetingSessionId } : {}),
+    });
     return id;
   });
   return getTask(userId, taskId);

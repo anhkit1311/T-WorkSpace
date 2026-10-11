@@ -8,6 +8,7 @@ import { query, pool } from "../database/db.js";
 import { createAdapter } from "@socket.io/postgres-adapter";
 import { addPresence, onlinePeers, startPresence } from "./presence.js";
 import { roomManager } from "../../modules/meetings/media/room-manager.js";
+import { publishMeetingSummary } from "../../modules/meetings/outcome-events.js";
 import { limitActor } from "../../shared/http/rate-limit.js";
 import {
   enterSession,
@@ -219,11 +220,18 @@ export function initSocketServer(
           io.to(`meeting:${result.channelId}`).emit("meeting_state_changed", {
             roomId: result.channelId,
           });
-          if (result.ended)
+          if (result.ended) {
             closeRoom(
               result.channelId,
               "Phiên họp đã kết thúc vì host rời phòng và không còn người có thể tiếp quản.",
             );
+            return publishMeetingSummary(
+              io,
+              result.channelId,
+              result.sessionId,
+              result.summaryMessageId,
+            );
+          }
         })
         .catch(console.error);
     };
@@ -512,8 +520,16 @@ export function initSocketServer(
     });
     socket.on("meeting_action", async (data, callback) => {
       try {
-        await meetingAction(user.id, data.roomId, socket.id, data);
-        if (data.action === "end") closeRoom(data.roomId, "Host đã kết thúc cuộc họp.");
+        const acted = await meetingAction(user.id, data.roomId, socket.id, data);
+        if (data.action === "end") {
+          closeRoom(data.roomId, "Host đã kết thúc cuộc họp.");
+          void publishMeetingSummary(
+            io,
+            data.roomId,
+            acted.sessionId,
+            acted.summaryMessageId,
+          ).catch(console.error);
+        }
         if (data.action === "kick")
           closeRoom(data.roomId, "Bạn đã bị host loại khỏi cuộc họp.", data.targetUserId);
         if (data.action === "mute" && data.targetUserId) {

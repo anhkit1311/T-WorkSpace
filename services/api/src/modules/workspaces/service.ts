@@ -153,6 +153,7 @@ export async function getChannelMessages(
        m.id,
        m.client_message_id as "clientMessageId",
        m.thread_root_id AS "threadRootId",
+       m.kind, m.meeting_session_id AS "meetingSessionId",
        (SELECT count(*)::integer FROM messages child WHERE child.thread_root_id=m.id AND child.deleted_at IS NULL) AS "replyCount",
        (SELECT count(*)::integer FROM messages child WHERE child.thread_root_id=m.id AND child.deleted_at IS NULL AND child.author_id<>$4 AND child.created_at>COALESCE((SELECT last_read_at FROM thread_reads WHERE root_id=m.id AND user_id=$4),'epoch'::timestamptz)) AS "threadUnreadCount",
        EXISTS(SELECT 1 FROM message_pins WHERE message_id=m.id) AS pinned,
@@ -463,7 +464,7 @@ export async function editMessage(
   if (!trimmed || trimmed.length > 4000)
     throw new HttpError(400, "INVALID_MESSAGE", "Nội dung phải có từ 1 đến 4000 ký tự.");
   const result = await query(
-    `UPDATE messages SET content=$1, edited_at=now() WHERE id=$2 AND author_id=$3 AND deleted_at IS NULL AND EXISTS(SELECT 1 FROM channel_access access WHERE access.channel_id=messages.channel_id AND access.user_id=$3 AND access.can_write) RETURNING id`,
+    `UPDATE messages SET content=$1, edited_at=now() WHERE id=$2 AND author_id=$3 AND kind='user' AND deleted_at IS NULL AND EXISTS(SELECT 1 FROM channel_access access WHERE access.channel_id=messages.channel_id AND access.user_id=$3 AND access.can_write) RETURNING id`,
     [trimmed, messageId, userId],
   );
   if (!result.rowCount)

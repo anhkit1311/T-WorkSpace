@@ -55,6 +55,7 @@ export type MeetingScheduleItem = {
   startsAt: string;
   endsAt: string;
   canManage: boolean;
+  agenda?: string[];
 };
 
 export type AuthResponse = {
@@ -156,6 +157,8 @@ export type ChatMessageItem = {
   replyToContent?: string | null;
   attachment?: { id: string; fileName: string; mimeType: string; fileSize: number } | null;
   reactions?: { emoji: string; count: number; reacted: boolean }[];
+  kind?: "user" | "meeting_summary";
+  meetingSessionId?: string | null;
 };
 
 export type GlobalMessageSearchItem = {
@@ -237,6 +240,7 @@ export interface TaskItem {
   assigneeId: string | null;
   assigneeName: string | null;
   sourceMessageId: string | null;
+  meetingSessionId: string | null;
   position: number;
   version: number;
   archivedAt: string | null;
@@ -280,6 +284,46 @@ export interface MeetingState {
     raisedHand: boolean;
     connections: number;
   }[];
+}
+export interface MeetingAgendaItem {
+  id: string;
+  label: string;
+  done: boolean;
+  doneByName: string | null;
+  fromSchedule: boolean;
+}
+export interface MeetingNotes {
+  content: string;
+  version: number;
+  updatedByName: string | null;
+  updatedAt: string | null;
+}
+export interface MeetingOutcomeTask {
+  id: string;
+  channelId: string;
+  title: string;
+  status: TaskItem["status"];
+  assigneeName: string | null;
+  dueAt: string | null;
+}
+export interface MeetingOutcomes {
+  sessionId: string;
+  roomId: string;
+  roomName: string;
+  workspaceId: string;
+  title: string;
+  startedAt: string;
+  endedAt: string | null;
+  hostId: string;
+  outcomeChannelId: string | null;
+  outcomeChannelName: string | null;
+  canEdit: boolean;
+  canManage: boolean;
+  attendees: { userId: string; displayName: string }[];
+  agenda: MeetingAgendaItem[];
+  notes: MeetingNotes;
+  tasks: MeetingOutcomeTask[];
+  summaryMessageId: string | null;
 }
 export interface HomeSummary {
  tasks:{id:string;title:string;status:'todo'|'doing';priority:'low'|'normal'|'high'|'urgent';dueAt:string|null;channelId:string;channelName:string;workspaceId:string}[];
