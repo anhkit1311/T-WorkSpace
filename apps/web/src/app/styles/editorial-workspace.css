@@ -1300,7 +1300,7 @@ body,
 
 /* 4. Icon Button: 44x44 circle, transparent background, #1C1B19 stroke icon, #EEECE7 hover */
 :is(.editorial-workspace-shell, .modal, .toast-viewport) .button--icon,
-:is(.editorial-workspace-shell, .modal, .toast-viewport) .icon-button:not(.ws-header__mobile-trigger):not(.chat-mobile-channels-btn) {
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .icon-button {
   width: var(--nexo-touch-min, 44px) !important;
   height: var(--nexo-touch-min, 44px) !important;
   min-width: var(--nexo-touch-min, 44px) !important;

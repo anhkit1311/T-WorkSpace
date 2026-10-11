@@ -59,7 +59,7 @@
   -webkit-backdrop-filter: none !important;
 }
 
-.editorial-workspace-shell :is(.home-priorities__header, .workspace-home__section-head) {
+.editorial-workspace-shell .home-priorities__header {
   align-items: center !important;
 }
 
@@ -190,7 +190,7 @@
 }
 
 /* Interactive glass cards share one lift curve. */
-.editorial-workspace-shell :is(.workspace-group-card, .meeting-room-card) {
+.editorial-workspace-shell .meeting-room-card {
   transition:
     transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 260ms cubic-bezier(0.16, 1, 0.3, 1),
