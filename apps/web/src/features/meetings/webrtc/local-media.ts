@@ -6,6 +6,20 @@ export interface JoinMediaOptions {
   cameraEnabled?: boolean;
 }
 
+/**
+ * Voice-call capture: ask the browser for its speech pipeline explicitly (echo cancellation,
+ * noise suppression, auto gain) and a mono track, which is what Opus voice mode expects.
+ */
+export function micConstraints(audioInputId?: string): MediaTrackConstraints {
+  return {
+    ...(audioInputId ? { deviceId: { ideal: audioInputId } } : {}),
+    echoCancellation: true,
+    noiseSuppression: true,
+    autoGainControl: true,
+    channelCount: { ideal: 1 },
+  };
+}
+
 export function mediaConstraints(options: JoinMediaOptions): MediaStreamConstraints {
   const dimensions =
     options.quality === "low"
@@ -14,12 +28,7 @@ export function mediaConstraints(options: JoinMediaOptions): MediaStreamConstrai
         ? { width: 1280, height: 720 }
         : { width: 960, height: 540 };
   return {
-    audio:
-      options.micEnabled === false
-        ? false
-        : options.audioInputId
-          ? { deviceId: { ideal: options.audioInputId } }
-          : true,
+    audio: options.micEnabled === false ? false : micConstraints(options.audioInputId),
     video:
       options.cameraEnabled === false
         ? false

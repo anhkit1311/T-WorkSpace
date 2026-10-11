@@ -20,7 +20,8 @@ import {
 import { handToastTitle, raisedHandUserIds } from "./hand-raise";
 import { MeetingControls } from "./MeetingControls";
 import { MeetingOutcomesPanel } from "./MeetingOutcomesPanel";
-import { mapMediaError } from "./webrtc/local-media";
+import { mapMediaError, micConstraints } from "./webrtc/local-media";
+import { MicLevelMeter } from "./MicLevelMeter";
 import { useSocket } from "../../app/providers/SocketContext";
 import { Badge, Button, Chip, IconButton, ListItem, ConfirmDialog } from "../../shared/ui/Primitives";
 import { AnimatePresence } from "motion/react";
@@ -74,7 +75,8 @@ function downloadCalendarEvent(item: MeetingScheduleItem) {
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-function Video({ stream, muted = false }: { stream: MediaStream | null; muted?: boolean }) {
+// Video elements never play sound: remote audio plays once, from the stable <Audio> list in the room.
+function Video({ stream }: { stream: MediaStream | null }) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     if (ref.current) ref.current.srcObject = stream;
@@ -82,7 +84,7 @@ function Video({ stream, muted = false }: { stream: MediaStream | null; muted?: 
       if (ref.current) ref.current.srcObject = null;
     };
   }, [stream]);
-  return <video ref={ref} autoPlay playsInline muted={muted} className="rtc-video-element" />;
+  return <video ref={ref} autoPlay playsInline muted className="rtc-video-element" />;
 }
 
 function Audio({ stream, outputDeviceId }: { stream: MediaStream; outputDeviceId?: string }) {
@@ -193,27 +195,23 @@ function ParticipantTile({
   stream,
   hasVideo,
   hasAudio,
-  muted = false,
   pinned = false,
   raisedHand = false,
   speaking,
   dominant = false,
   onPin,
-  outputDeviceId,
 }: {
   isLocal: boolean;
   displayName: string;
   stream: MediaStream | null;
   hasVideo: boolean;
   hasAudio: boolean;
-  muted?: boolean;
   pinned?: boolean;
   raisedHand?: boolean;
   /** Server-side audio level for remote peers; local tiles analyse their own track. */
   speaking?: boolean;
   dominant?: boolean;
   onPin?: () => void;
-  outputDeviceId?: string;
 }) {
   const analysed = useAudioActivity(stream, hasAudio && speaking === undefined);
   const isSpeaking = speaking ?? analysed;
@@ -223,11 +221,10 @@ function ParticipantTile({
       className={`video-tile ${isSpeaking ? "is-speaking" : ""} ${dominant ? "is-dominant" : ""} ${pinned ? "is-pinned" : ""}`}
     >
       {hasVideo && stream ? (
-        <Video stream={stream} muted={muted} />
+        <Video stream={stream} />
       ) : (
         <div className="participant-visual">{displayName.slice(0, 1).toUpperCase()}</div>
       )}
-      {!isLocal && stream && <Audio stream={stream} outputDeviceId={outputDeviceId} />}
       {onPin && (
         <button
           type="button"
@@ -572,7 +569,7 @@ export function MeetingPage() {
           width: { ideal: quality === "high" ? 1280 : quality === "low" ? 640 : 960 },
           height: { ideal: quality === "high" ? 720 : quality === "low" ? 360 : 540 },
         },
-        audio: audioInputId ? { deviceId: { ideal: audioInputId } } : true,
+        audio: micConstraints(audioInputId),
       })
       .then((stream) => {
         acquiredStream = stream;
@@ -896,7 +893,6 @@ export function MeetingPage() {
         speaking={meeting.speakingIds.includes(tile.id)}
         dominant={meeting.activeSpeakerId === tile.id && meeting.remotePeers.length > 1}
         onPin={() => togglePin(tile.id)}
-        outputDeviceId={outputDeviceId}
       />
     ) : (
       <ParticipantTile
@@ -906,7 +902,6 @@ export function MeetingPage() {
         stream={meeting.localStream}
         hasVideo={meeting.camera && Boolean(meeting.localStream)}
         hasAudio={meeting.mic}
-        muted={true}
         pinned={main || pinnedId === "local"}
         raisedHand={Boolean(user && raisedHands.has(user.id))}
         dominant={meeting.activeSpeakerId === "local" && meeting.remotePeers.length > 1}
@@ -1113,6 +1108,8 @@ export function MeetingPage() {
                     <span>{previewMic ? "Tắt Mic" : "Bật Mic"}</span>
                   </button>
                 </div>
+
+                <MicLevelMeter stream={previewStream} enabled={previewMic} />
 
                 {previewEnabled && (
                   <div className="meeting-device-grid">
@@ -1480,7 +1477,7 @@ export function MeetingPage() {
           />
           {meeting.localScreenStream && (
             <div className="shared-screen">
-              <Video stream={meeting.localScreenStream} muted />
+              <Video stream={meeting.localScreenStream} />
               <span>Bạn đang chia sẻ màn hình</span>
             </div>
           )}
@@ -1569,10 +1566,9 @@ export function MeetingPage() {
                 </button>
               </nav>
             )}
-            {/* Off-page peers keep their audio while their video is paused at the SFU. */}
-            {meeting.remotePeers
-              .filter((peer) => !visibleTileIds.has(peer.socketId))
-              .map((peer) => (
+            {/* One audio element per peer, outside the tiles: layout, paging and speaker
+                changes never remount it, so speech is not cut or played twice. */}
+            {meeting.remotePeers.map((peer) => (
                 <Audio key={peer.socketId} stream={peer.mediaStream} outputDeviceId={outputDeviceId} />
               ))}
 

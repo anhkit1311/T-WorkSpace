@@ -180,6 +180,8 @@ export class MediasoupClientService {
             ],
           }
         : {}),
+      // In-band FEC recovers lost voice packets. DTX stays off: it can clip word endings.
+      ...(track.kind === "audio" ? { codecOptions: { opusStereo: false, opusFec: true } } : {}),
     });
 
     this.producers.set(source, producer);

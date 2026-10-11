@@ -314,6 +314,32 @@
   color: #dc2626;
 }
 
+.mic-level {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--nexo-text-muted, #8A8780);
+}
+
+.mic-level__track {
+  height: 6px;
+  border-radius: var(--nexo-radius-pill, 9999px);
+  background: var(--nexo-bg-subtle, #EEECE7);
+  overflow: hidden;
+}
+
+.mic-level__fill {
+  display: block;
+  height: 100%;
+  background: #16a34a;
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.mic-level__hint {
+  color: #b45309;
+}
+
 .meeting-lobby-action {
   display: flex;
   flex-direction: column;
