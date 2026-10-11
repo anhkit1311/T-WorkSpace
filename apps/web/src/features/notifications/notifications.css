@@ -1,0 +1,118 @@
+/* Notification center styled with shared Nexo touch target tokens */
+.notifications-page > header {
+  padding: clamp(24px, 2.8vw, 32px) clamp(28px, 3.2vw, 44px);
+  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA);
+}
+
+.notifications-page__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.notifications-page h1 {
+  margin: 0 !important;
+}
+
+.notifications-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.notifications-section-head h2 {
+  margin: 0 !important;
+}
+
+.notification-list,
+.notifications-page .nexo-list-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notifications-page .nexo-list-group > * + *::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 72px;
+  right: 16px;
+  height: 1px;
+  background: var(--nexo-border-beige, #E6E2DA);
+  pointer-events: none;
+}
+
+.notification-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notification-row > .nexo-list-item {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.notification-row.is-unread > .nexo-list-item {
+  background: rgba(238, 236, 231, 0.55);
+}
+
+.notification-row.is-unread > .nexo-list-item:hover:not(:disabled) {
+  background: var(--nexo-bg-subtle, #EEECE7);
+}
+
+.notification-kind {
+  font-weight: 400;
+  color: var(--nexo-text-muted, #8A8780);
+}
+
+.notifications-empty-card {
+  margin-top: 12px;
+  padding: 18px 16px;
+  border-radius: 16px;
+  background: rgba(250, 249, 246, 0.65);
+  border: 1px dashed var(--nexo-border-beige, #E6E2DA);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+}
+
+.notifications-empty-card .state-card__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  background: var(--nexo-bg-subtle, #EEECE7);
+  color: var(--nexo-text-primary, #1C1B19);
+  display: inline-grid;
+  place-items: center;
+}
+
+.notifications-empty-card h3 {
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--nexo-text-primary, #1C1B19);
+}
+
+.notifications-empty-card p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--nexo-text-muted, #8A8780);
+}
+
+.notifications-more {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+}

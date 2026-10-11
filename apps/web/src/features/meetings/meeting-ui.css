@@ -32,80 +32,88 @@
 }
 
 /* --------------------------------------------------------------------------
-   Room Selection & Cards Grid
+   Room Selection & Cards Grid (Divided Columns inside Unified Frame)
    -------------------------------------------------------------------------- */
 .meeting-lobby-wrap {
   display: grid;
   grid-template-columns: 1.1fr 1fr;
-  gap: 36px;
-  align-items: start;
-  margin-top: 24px;
+  gap: 0;
+  align-items: stretch;
+  margin-top: 0;
+  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA);
 }
 
 @media (max-width: 768px) {
   .meeting-lobby-wrap {
     grid-template-columns: minmax(0, 1fr);
-    gap: 20px;
+    gap: 0;
   }
 }
 
 .meeting-rooms-section {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0;
 }
 
 .meeting-section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 0;
 }
 
 .meeting-section-header h3 {
-  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
+  font-family: var(--font-display, "Inter", sans-serif);
   font-style: normal;
-  font-size: 20px;
-  font-weight: 500;
-  color: #0f172a;
+  font-size: var(--nexo-fs-col, 17.5px);
+  font-weight: 600;
+  color: var(--nexo-text-primary, #1C1B19);
   margin: 0;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
 
 .meeting-room-card {
   width: 100%;
-  padding: 20px 24px;
-  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36));
-  border-radius: 26px;
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
-  backdrop-filter: blur(var(--editorial-blur, 16px));
-  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px));
+  min-height: 64px;
+  padding: 16px 28px;
+  border: 0;
+  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA);
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   cursor: pointer;
   text-align: left;
-  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
-              background-color 180ms ease,
-              border-color 180ms ease,
-              box-shadow 180ms ease;
+  transition:
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  box-shadow: 0 16px 36px -12px rgba(15, 23, 42, 0.08);
-  outline: none !important;
+  gap: 8px;
+  box-shadow: none;
 }
 
 .meeting-room-card:hover {
-  border-color: rgba(15, 23, 42, 0.2);
-  transform: translateY(-3px);
-  box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.12);
+  background: var(--nexo-bg-subtle, #EEECE7);
+  transform: none;
+  box-shadow: none;
 }
 
 .meeting-room-card.is-selected {
-  border-color: #000000;
-  box-shadow: 0 0 0 2px #000000, 0 20px 40px rgba(15, 23, 42, 0.12);
+  background: var(--nexo-bg-ivory, #FAF9F6);
+  box-shadow: inset 3px 0 0 var(--nexo-text-primary, #1C1B19);
 }
 
 .meeting-room-card:active {
-  transform: scale(0.99);
+  transform: scale(0.97);
+}
+
+.meeting-room-card:focus-visible {
+  outline: 2px solid var(--nexo-text-primary, #1C1B19);
+  outline-offset: -2px;
 }
 
 .meeting-room-card__header {
@@ -115,23 +123,35 @@
   gap: 12px;
 }
 
+.meeting-room-card__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  background: var(--nexo-bg-subtle, #EEECE7);
+  color: var(--nexo-text-primary, #1C1B19);
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
 .meeting-room-card__title {
   font-family: var(--font-body, 'Inter', sans-serif);
   font-size: 15.5px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--nexo-text-primary, #1C1B19);
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .meeting-room-card__meta {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding-left: 56px;
   font-size: 12.5px;
-  color: var(--editorial-text-muted, #3e4e66);
+  color: var(--nexo-text-muted, #8A8780);
   flex-wrap: wrap;
 }
 
@@ -149,95 +169,55 @@
 }
 
 .meeting-history {
-  margin-top: 48px;
-  border-top: 1px solid rgba(15, 23, 42, 0.08);
-  padding-top: 32px;
+  margin-top: 0;
+  border-top: 1px solid var(--nexo-border-beige, #E6E2DA);
+  padding: 28px clamp(28px, 3.2vw, 44px);
 }
 
 .meeting-history h2 {
   margin: 0 0 16px;
-  color: #0f172a;
-  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
+  color: var(--nexo-text-primary, #1C1B19);
+  font-family: var(--font-display, 'Inter', sans-serif);
   font-style: normal;
-  font-size: 22px;
-  font-weight: 500;
+  font-size: var(--nexo-fs-col, 17.5px);
+  font-weight: 600;
 }
 
 .meeting-history > p {
-  color: rgba(15, 23, 42, 0.6);
+  color: var(--nexo-text-muted, #8A8780);
   font-size: 14px;
+  margin: 16px 0 0;
 }
 
 .meeting-history-list {
   display: grid;
-  gap: 10px;
-}
-
-.meeting-history-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 20px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 18px;
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
-  transition: all 180ms ease;
-}
-
-.meeting-history-item:hover {
-  background: #ffffff;
-  border-color: rgba(15, 23, 42, 0.18);
-  transform: translateY(-1px);
-}
-
-.meeting-history-icon {
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
-  display: grid;
-  place-items: center;
-  border-radius: 9999px;
-  color: #0f172a;
-  background: rgba(15, 23, 42, 0.06);
-}
-
-.meeting-history-item > div {
-  min-width: 0;
-  flex: 1;
-  display: grid;
-  gap: 3px;
-}
-
-.meeting-history-item strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 14.5px;
-  font-weight: 600;
-  color: #0f172a;
-}
-
-.meeting-history-item time {
-  color: var(--editorial-text-muted, #3e4e66);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
+  gap: 0;
+  border-top: 1px solid var(--nexo-border-beige, #E6E2DA);
 }
 
 /* --------------------------------------------------------------------------
-   Meeting Lobby (Preview & Controls)
+   Meeting Lobby (Preview & Controls — Divided Right Column)
    -------------------------------------------------------------------------- */
 .meeting-lobby-preview-box {
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
-  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36));
-  border-radius: 28px;
-  padding: 28px;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
-  backdrop-filter: blur(var(--editorial-blur, 16px));
-  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px));
+  background: transparent;
+  border: 0;
+  border-left: 1px solid var(--nexo-border-beige, #E6E2DA);
+  border-radius: 0;
+  padding: clamp(22px, 2.6vw, 30px) 32px 28px;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .meeting-lobby-preview-box {
+    border-left: 0 !important;
+    border-top: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
+    padding: 20px !important;
+  }
 }
 
 .meeting-preview-screen {
@@ -272,7 +252,7 @@
   width: 72px;
   height: 72px;
   border-radius: 9999px;
-  background: #0f172a;
+  background: var(--nexo-text-primary, #1C1B19);
   color: #ffffff;
   font-size: 26px;
   font-weight: 700;
@@ -289,32 +269,43 @@
 }
 
 .lobby-control-btn {
-  min-height: 44px;
+  min-height: var(--nexo-btn-height, 52px);
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 22px;
-  border-radius: 9999px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
-  color: #0f172a;
-  font-size: 13.5px;
-  font-weight: 550;
+  padding: 0 24px;
+  border-radius: var(--nexo-radius-pill, 9999px);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--nexo-text-primary, #1C1B19);
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 180ms ease;
-  outline: none !important;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  transition:
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+  box-shadow: none;
 }
 
-.lobby-control-btn:hover {
-  background: #ffffff;
-  border-color: rgba(15, 23, 42, 0.25);
-  transform: scale(1.03);
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+.lobby-control-btn:hover:not(:disabled) {
+  background: var(--nexo-bg-subtle, #EEECE7);
 }
 
-.lobby-control-btn:active {
+.lobby-control-btn:active:not(:disabled) {
   transform: scale(0.97);
+}
+
+.lobby-control-btn:focus-visible {
+  outline: 2px solid var(--nexo-text-primary, #1C1B19);
+  outline-offset: 2px;
+}
+
+.lobby-control-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .lobby-control-btn.is-muted {
@@ -365,12 +356,85 @@
   gap: 10px;
 }
 
+.meeting-stage-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+.meeting-stage-layout.has-panel {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+}
+
+/* Columns/tile width are set inline from bestGridLayout(); the fixed height gives the
+   ResizeObserver a definite box instead of one derived from the tiles themselves. */
 .meeting-video-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  justify-content: center;
+  align-content: center;
+  gap: 16px;
   width: 100%;
+  height: clamp(320px, calc(100vh - 300px), 820px);
+  min-width: 0;
+}
+.meeting-video-grid.is-spotlight {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.meeting-spotlight-main {
   flex: 1;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+}
+.meeting-spotlight-main .video-tile {
+  height: 100%;
+  max-width: 100%;
+}
+.meeting-filmstrip {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  overflow-x: auto;
+}
+.meeting-filmstrip .video-tile {
+  flex: 0 0 200px;
+  border-radius: 16px;
+}
+.meeting-grid-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.meeting-grid-pager button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--editorial-border, rgba(15, 23, 42, 0.15));
+  border-radius: 50%;
+  background: var(--editorial-surface-card, #fff);
+  cursor: pointer;
+}
+.meeting-grid-pager button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+@media (max-width: 768px) {
+  .meeting-stage-layout.has-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .meeting-video-grid {
+    height: clamp(260px, 60vh, 640px);
+  }
+  .meeting-filmstrip .video-tile {
+    flex-basis: 140px;
+  }
 }
 
 .video-tile {
@@ -414,10 +478,7 @@
   animation-delay: 0.36s;
 }
 
-@keyframes speaking-pulse {
-  0% { transform: scaleY(0.3); }
-  100% { transform: scaleY(1.3); }
-}
+
 
 .meeting-reconnecting-overlay {
   position: absolute;
@@ -474,6 +535,23 @@
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
+/* Raised-hand badge: same dark pill as the name label, top-left (the pin sits top-right). */
+.participant-hand {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  background: rgba(8, 12, 20, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  color: #fbbf24;
+}
+
 .shared-screen {
   position: relative;
   width: 100%;
@@ -517,7 +595,31 @@
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
   margin: 20px auto 0;
   width: max-content;
+  /* Keep the controls reachable inside the .ws-body scroller; at the end of the
+     scroll the dock rests in its normal place under the stage. */
+  position: sticky;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   z-index: 40;
+}
+
+/* With the side panel open, centre the dock under the video column (panel 340px + 16px gap)
+   so it does not float over the panel; `safe` falls back to start when it cannot fit. */
+.meeting-stage-layout.has-panel + .meeting-controls-dock {
+  margin-right: 356px;
+  margin-left: 0;
+  align-self: safe center;
+}
+@media (max-width: 768px) {
+  /* The panel stacks under the stage here, so the dock centres on the full width again. */
+  .meeting-stage-layout.has-panel + .meeting-controls-dock {
+    margin: 20px auto 0;
+    align-self: auto;
+  }
+}
+
+/* Focus scrolling must not leave a field or button hidden behind the floating dock. */
+.ws-body--meetings:has(.meeting-controls-dock) {
+  scroll-padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
 }
 
 .meeting-dock-btn {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import type { ChatMessageItem, MeetingScheduleItem, WorkspaceItem } from "@doan/shared";
+import type { ChatMessageItem, MeetingScheduleItem, WorkspaceItem, MeetingState } from "@doan/shared";
 import { getChannelsApi, getMessagesApi, getWorkspacesApi } from "../chat/api";
 import {
   getMeetingHistoryApi,
@@ -9,13 +9,26 @@ import {
   type MeetingHistoryItem,
 } from "./api";
 import { useApp } from "../../app/providers/AppContext";
-import { useMeeting } from "../../app/providers/MeetingContext";
+import { useMeeting, type RemotePeer } from "../../app/providers/MeetingContext";
+import { bestGridLayout, layerForTile, pageSizeFor, paginate } from "./grid-layout";
+import {
+  applyLayerPolicy,
+  isLayerPolicy,
+  spotlightDelay,
+  type LayerPolicy,
+} from "./speaker-policy";
+import { handToastTitle, raisedHandUserIds } from "./hand-raise";
 import { MeetingControls } from "./MeetingControls";
+import { MeetingOutcomesPanel } from "./MeetingOutcomesPanel";
+import { mapMediaError } from "./webrtc/local-media";
 import { useSocket } from "../../app/providers/SocketContext";
-import { Badge, Button } from "../../shared/ui/Primitives";
+import { Badge, Button, Chip, IconButton, ListItem, ConfirmDialog } from "../../shared/ui/Primitives";
+import { AnimatePresence } from "motion/react";
+import { meetingShortcut } from "../../shared/lib/interaction";
 import { Icon } from "../../shared/ui/Icon";
 import "./meeting-ui.css";
 import "./meeting-schedules.css";
+import "./meeting-panels.css";
 
 type Room = {
   id: string;
@@ -73,6 +86,9 @@ function Video({ stream, muted = false }: { stream: MediaStream | null; muted?: 
 }
 
 function Audio({ stream, outputDeviceId }: { stream: MediaStream; outputDeviceId?: string }) {
+  const {notify} = useApp();
+  const notice = useRef(notify);
+  notice.current = notify;
   const ref = useRef<HTMLAudioElement>(null);
   useEffect(() => {
     if (ref.current) ref.current.srcObject = stream;
@@ -83,7 +99,7 @@ function Audio({ stream, outputDeviceId }: { stream: MediaStream; outputDeviceId
   useEffect(() => {
     if (!outputDeviceId || !ref.current) return;
     const element = ref.current as HTMLAudioElement & { setSinkId?: (id: string) => Promise<void> };
-    void element.setSinkId?.(outputDeviceId).catch(() => {});
+    void element.setSinkId?.(outputDeviceId).catch(() => notice.current("Không chọn được loa", "Âm thanh tiếp tục phát qua thiết bị mặc định. Hãy kiểm tra quyền thiết bị.", "warning"));
   }, [outputDeviceId]);
   return <audio ref={ref} autoPlay />;
 }
@@ -163,6 +179,14 @@ function useAudioActivity(stream: MediaStream | null, enabled: boolean) {
   return isSpeaking;
 }
 
+const GRID_GAP = 16;
+const FILMSTRIP_PAGE_SIZE = 5;
+const FILMSTRIP_TILE_WIDTH = 200;
+interface GridTile {
+  id: string;
+  peer: RemotePeer | null;
+}
+
 function ParticipantTile({
   isLocal,
   displayName,
@@ -171,6 +195,9 @@ function ParticipantTile({
   hasAudio,
   muted = false,
   pinned = false,
+  raisedHand = false,
+  speaking,
+  dominant = false,
   onPin,
   outputDeviceId,
 }: {
@@ -181,14 +208,19 @@ function ParticipantTile({
   hasAudio: boolean;
   muted?: boolean;
   pinned?: boolean;
+  raisedHand?: boolean;
+  /** Server-side audio level for remote peers; local tiles analyse their own track. */
+  speaking?: boolean;
+  dominant?: boolean;
   onPin?: () => void;
   outputDeviceId?: string;
 }) {
-  const isSpeaking = useAudioActivity(stream, hasAudio);
+  const analysed = useAudioActivity(stream, hasAudio && speaking === undefined);
+  const isSpeaking = speaking ?? analysed;
 
   return (
     <article
-      className={`video-tile ${isSpeaking ? "is-speaking" : ""} ${pinned ? "is-pinned" : ""}`}
+      className={`video-tile ${isSpeaking ? "is-speaking" : ""} ${dominant ? "is-dominant" : ""} ${pinned ? "is-pinned" : ""}`}
     >
       {hasVideo && stream ? (
         <Video stream={stream} muted={muted} />
@@ -206,6 +238,11 @@ function ParticipantTile({
         >
           <Icon name="star" size={14} />
         </button>
+      )}
+      {raisedHand && (
+        <span className="participant-hand" role="img" aria-label="Đang giơ tay" title="Đang giơ tay">
+          <Icon name="hand" size={14} />
+        </span>
       )}
       <div className="participant-label">
         <Icon
@@ -249,6 +286,7 @@ export function MeetingPage() {
   const [editingScheduleId, setEditingScheduleId] = useState("");
   const [scheduleTitle, setScheduleTitle] = useState("");
   const [scheduleDescription, setScheduleDescription] = useState("");
+  const [scheduleAgenda, setScheduleAgenda] = useState("");
   const [scheduleRoomId, setScheduleRoomId] = useState("");
   const [scheduleStart, setScheduleStart] = useState("");
   const [scheduleEnd, setScheduleEnd] = useState("");
@@ -268,12 +306,88 @@ export function MeetingPage() {
   const [videoInputId, setVideoInputId] = useState("");
   const [outputDeviceId, setOutputDeviceId] = useState("");
   const [quality, setQuality] = useState<"low" | "standard" | "high">("standard");
-  const [layout, setLayout] = useState<"grid" | "spotlight">("grid");
+  const [layout, setLayout] = useState<"grid" | "spotlight" | "auto">("grid");
+  const [layerPolicy, setLayerPolicy] = useState<LayerPolicy>(() => {
+    try {
+      const saved = localStorage.getItem("nexo:layerPolicy");
+      return isLayerPolicy(saved) ? saved : "combined";
+    } catch {
+      return "combined";
+    }
+  });
+  const changeLayerPolicy = (next: LayerPolicy) => {
+    setLayerPolicy(next);
+    try {
+      localStorage.setItem("nexo:layerPolicy", next);
+    } catch {
+      // Storage may be blocked; the choice still applies to this call.
+    }
+  };
+  const [autoSpotlightId, setAutoSpotlightId] = useState("");
+  const lastSpotlightSwitch = useRef(0);
+  const [policyTick, setPolicyTick] = useState(0);
   const [pinnedId, setPinnedId] = useState("");
-  const [sidePanel, setSidePanel] = useState<"none" | "people" | "chat">("none");
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [gridSize, setGridSize] = useState({ width: 0, height: 0 });
+  const [gridPage, setGridPage] = useState(0);
+  const [sidePanel, setSidePanel] = useState<"none" | "people" | "chat" | "notes">("none");
   const [callMessages, setCallMessages] = useState<ChatMessageItem[]>([]);
   const [callDraft, setCallDraft] = useState("");
   const [callChatError, setCallChatError] = useState("");
+  const callListRef = useRef<HTMLDivElement>(null);
+  const followCallChat = useRef(true);
+  const panelRef = useRef(sidePanel);
+  panelRef.current = sidePanel;
+  const [callUnread, setCallUnread] = useState(0);
+  const sidePanelTitle =
+    sidePanel === "people"
+      ? "Người tham gia"
+      : sidePanel === "notes"
+        ? "Ghi chú & việc cần làm"
+        : "Chat cuộc họp";
+  useEffect(() => {
+    const list = callListRef.current;
+    if(sidePanel === "chat") {
+      setCallUnread(0);
+      if(list && followCallChat.current) list.scrollTop = list.scrollHeight;
+    }
+  },[callMessages,sidePanel]);
+  const [meetingState, setMeetingState] = useState<MeetingState | null>(null);
+  const raisedHands = raisedHandUserIds(meetingState);
+  // Confirm the local hand state from the server, whether it changed via H or the button.
+  const myRaisedHand = meetingState?.participants.find((p) => p.userId === user?.id)?.raisedHand;
+  const lastRaisedHand = useRef<boolean | undefined>(undefined);
+  useEffect(() => {
+    const title = handToastTitle(lastRaisedHand.current, myRaisedHand);
+    lastRaisedHand.current = myRaisedHand;
+    if (title) notify(title, undefined, "info");
+  }, [myRaisedHand]);
+  const [leaveConfirm, setLeaveConfirm] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const requestLeave = () => {
+    if (meeting.sharing || meetingState?.participants.some(p => p.userId === user?.id && p.role === "host")) setLeaveConfirm(true);
+    else void meeting.leaveCall();
+  };
+  useEffect(() => {
+    if (!meeting.inCall) return;
+    const onKey = (event: KeyboardEvent) => {
+      const typing = event.target instanceof Element && Boolean(event.target.closest('input,textarea,select,[contenteditable="true"]'));
+      const key = meetingShortcut(event,typing,Boolean(document.querySelector('[role="dialog"]')));
+      if (!key) return;
+      event.preventDefault();
+      if (key === "m") void meeting.toggleMic();
+      if (key === "v") void meeting.toggleCamera();
+      if (key === "s") void meeting.toggleScreenShare();
+      if (key === "c") setSidePanel(old => old === "chat" ? "none" : "chat");
+      if (key === "escape") setSidePanel("none");
+      if (key === "h") {
+        const me = meetingState?.participants.find(p => p.userId === user?.id);
+        if (me) void meeting.controlSocket?.timeout(10000).emitWithAck("meeting_action",{roomId:meeting.roomId,action:"hand",enabled:!me.raisedHand}).then(result => {if(!result.success)setCallChatError(result.error || "Không thể giơ tay.");}).catch(reason => setCallChatError(reason.message));
+      }
+    };
+    document.addEventListener("keydown",onKey);
+    return () => document.removeEventListener("keydown",onKey);
+  },[meeting,meetingState,user?.id]);
   const previewVideoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -285,7 +399,7 @@ export function MeetingPage() {
         .then((list) => {
           if (active) setDevices(list);
         })
-        .catch(() => {});
+        .catch(reason => {if(active)setPreviewError(reason instanceof Error ? reason.message : "Không liệt kê được thiết bị.");});
     };
     refresh();
     navigator.mediaDevices.addEventListener?.("devicechange", refresh);
@@ -312,10 +426,12 @@ export function MeetingPage() {
           );
       });
     const onMessage = (message: ChatMessageItem) => {
-      if (message.channelId === roomId)
+      if (message.channelId === roomId) {
+        if(panelRef.current !== "chat" && message.authorId !== user?.id) setCallUnread(count => count+1);
         setCallMessages((previous) =>
           previous.some((item) => item.id === message.id) ? previous : [...previous, message],
         );
+      }
     };
     socket?.on("new_message", onMessage);
     return () => {
@@ -472,11 +588,8 @@ export function MeetingPage() {
           stream.getTracks().forEach((t) => t.stop());
         }
       })
-      .catch(() => {
-        if (active)
-          setPreviewError(
-            "Không truy cập được camera hoặc micro. Hãy kiểm tra quyền thiết bị rồi thử lại.",
-          );
+      .catch((reason) => {
+        if (active) setPreviewError(mapMediaError(reason));
       })
       .finally(() => {
         if (active) setPreviewLoading(false);
@@ -508,7 +621,13 @@ export function MeetingPage() {
     setPreviewMic(next);
   };
 
-  const selected = rooms.find((room) => room.id === selectedId);
+  const visibleRooms = route.workspaceId
+    ? rooms.filter((room) => room.workspaceId === route.workspaceId)
+    : rooms;
+  const visibleSchedules = route.workspaceId
+    ? schedules.filter((item) => item.workspaceId === route.workspaceId)
+    : schedules;
+  const selected = visibleRooms.find((room) => room.id === selectedId) ?? rooms.find((room) => room.id === selectedId);
 
   useEffect(() => {
     if (meeting.interruptedRoomId && rooms.some((room) => room.id === meeting.interruptedRoomId)) {
@@ -559,7 +678,8 @@ export function MeetingPage() {
     setEditingScheduleId(item?.id ?? "");
     setScheduleTitle(item?.title ?? "");
     setScheduleDescription(item?.description ?? "");
-    setScheduleRoomId(item?.roomId ?? selectedId ?? rooms[0]?.id ?? "");
+    setScheduleAgenda((item?.agenda ?? []).join("\n"));
+    setScheduleRoomId(item?.roomId ?? selectedId ?? visibleRooms[0]?.id ?? rooms[0]?.id ?? "");
     setScheduleStart(localDateTime(item ? new Date(item.startsAt) : start));
     setScheduleEnd(
       localDateTime(item ? new Date(item.endsAt) : new Date(start.getTime() + 3_600_000)),
@@ -586,6 +706,10 @@ export function MeetingPage() {
           roomId: scheduleRoomId,
           title: scheduleTitle.trim(),
           description: scheduleDescription.trim(),
+          agenda: scheduleAgenda
+            .split("\n")
+            .map((line) => line.replace(/^\s*[-•*]\s*/, "").trim())
+            .filter(Boolean),
           startsAt: startsAt.toISOString(),
           endsAt: endsAt.toISOString(),
         },
@@ -643,25 +767,152 @@ export function MeetingPage() {
 
   const renderRoleBadge = (role: WorkspaceItem["role"]) => {
     if (role === "owner") {
-      return (
-        <Badge tone="amber">
-          <Icon name="admin" size={11} /> Chủ nhóm
-        </Badge>
-      );
+      return <Chip icon="admin">Chủ nhóm</Chip>;
     }
     if (role === "admin") {
-      return (
-        <Badge tone="blue">
-          <Icon name="admin" size={11} /> Quản trị viên
-        </Badge>
-      );
+      return <Chip icon="admin">Quản trị viên</Chip>;
     }
-    return (
-      <Badge tone="neutral">
-        <Icon name="users" size={11} /> Thành viên
-      </Badge>
-    );
+    return <Chip icon="users">Thành viên</Chip>;
   };
+
+  // ----- Dynamic grid -----
+  useEffect(() => {
+    const element = gridRef.current;
+    if (!element) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setGridSize((old) =>
+        Math.abs(old.width - width) < 1 && Math.abs(old.height - height) < 1
+          ? old
+          : { width, height },
+      );
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [meeting.inCall, layout]);
+  const allTiles: GridTile[] = [
+    { id: "local", peer: null },
+    ...meeting.remotePeers.map((peer) => ({ id: peer.socketId, peer })),
+  ];
+  const staged = layout !== "grid";
+  const remoteFallback = meeting.remotePeers[0]?.socketId ?? "local";
+  const spotlightId =
+    layout === "spotlight"
+      ? allTiles.some((tile) => tile.id === pinnedId)
+        ? pinnedId
+        : "local"
+      : layout === "auto"
+        ? allTiles.some((tile) => tile.id === autoSpotlightId)
+          ? autoSpotlightId
+          : remoteFallback
+        : "";
+  const spotlightTile = allTiles.find((tile) => tile.id === spotlightId) ?? null;
+  const stripTiles = staged ? allTiles.filter((tile) => tile.id !== spotlightId) : allTiles;
+  const pagedTiles = paginate(
+    stripTiles,
+    staged ? FILMSTRIP_PAGE_SIZE : pageSizeFor(gridSize.width || window.innerWidth),
+    gridPage,
+  );
+  const gridLayout = bestGridLayout(pagedTiles.items.length, gridSize.width, gridSize.height, GRID_GAP);
+  const visibleTileIds = new Set([
+    ...pagedTiles.items.map((tile) => tile.id),
+    ...(spotlightTile ? [spotlightTile.id] : []),
+  ]);
+  // One string per render keeps the demand effect stable until a layer actually changes.
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  const tileLayers = Object.fromEntries(
+    meeting.remotePeers.map((peer) => {
+      const width = !visibleTileIds.has(peer.socketId)
+        ? 0
+        : peer.socketId === spotlightId
+          ? gridSize.width
+          : staged
+            ? FILMSTRIP_TILE_WIDTH
+            : gridLayout.tileWidth;
+      return [peer.socketId, layerForTile(width, devicePixelRatio)];
+    }),
+  );
+  // policyTick re-evaluates "quiet for 10 s" even when nobody starts or stops speaking.
+  void policyTick;
+  const policyLayers = applyLayerPolicy(
+    tileLayers,
+    layerPolicy,
+    meeting.activeSpeakerId,
+    meeting.lastSpokeAt(),
+    Date.now(),
+  );
+  const demandKey =
+    gridSize.width > 0
+      ? meeting.remotePeers
+          .map((peer) => `${peer.socketId}=${policyLayers[peer.socketId] ?? "off"}`)
+          .join("|")
+      : "";
+  const { setVideoDemand, activeSpeakerId, inCall } = meeting;
+  useEffect(() => {
+    if (!inCall || layerPolicy !== "combined") return;
+    const timer = window.setInterval(() => setPolicyTick((tick) => tick + 1), 2000);
+    return () => window.clearInterval(timer);
+  }, [inCall, layerPolicy]);
+  // Auto layout follows the SFU's dominant speaker (never yourself), with a hold time.
+  const speakerCandidate = activeSpeakerId && activeSpeakerId !== "local" ? activeSpeakerId : null;
+  useEffect(() => {
+    if (layout !== "auto") return;
+    const delay = spotlightDelay(
+      autoSpotlightId || null,
+      speakerCandidate,
+      lastSpotlightSwitch.current,
+      Date.now(),
+    );
+    if (delay === null) return;
+    const timer = window.setTimeout(() => {
+      lastSpotlightSwitch.current = Date.now();
+      setAutoSpotlightId(speakerCandidate!);
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [layout, speakerCandidate, autoSpotlightId]);
+  useEffect(() => {
+    const entries = demandKey ? demandKey.split("|").map((item) => item.split("=")) : [];
+    for (const [socketId, layer] of entries)
+      setVideoDemand(socketId, layer === "off" ? null : Number(layer));
+    return () => {
+      for (const [socketId] of entries) setVideoDemand(socketId, undefined);
+    };
+  }, [demandKey, setVideoDemand]);
+  const togglePin = (id: string) => {
+    setPinnedId(pinnedId === id ? "" : id);
+    setLayout("spotlight");
+  };
+  const renderTile = (tile: GridTile, main = false) =>
+    tile.peer ? (
+      <ParticipantTile
+        key={tile.id}
+        isLocal={false}
+        displayName={tile.peer.displayName}
+        stream={tile.peer.mediaStream}
+        hasVideo={Boolean(tile.peer.videoTrack)}
+        hasAudio={Boolean(tile.peer.audioTrack)}
+        pinned={main || pinnedId === tile.id}
+        raisedHand={raisedHands.has(tile.peer.userId)}
+        speaking={meeting.speakingIds.includes(tile.id)}
+        dominant={meeting.activeSpeakerId === tile.id && meeting.remotePeers.length > 1}
+        onPin={() => togglePin(tile.id)}
+        outputDeviceId={outputDeviceId}
+      />
+    ) : (
+      <ParticipantTile
+        key="local"
+        isLocal={true}
+        displayName={user?.displayName || "Bạn"}
+        stream={meeting.localStream}
+        hasVideo={meeting.camera && Boolean(meeting.localStream)}
+        hasAudio={meeting.mic}
+        muted={true}
+        pinned={main || pinnedId === "local"}
+        raisedHand={Boolean(user && raisedHands.has(user.id))}
+        dominant={meeting.activeSpeakerId === "local" && meeting.remotePeers.length > 1}
+        onPin={() => togglePin("local")}
+      />
+    );
 
   return (
     <div className="meetings-page">
@@ -696,41 +947,57 @@ export function MeetingPage() {
               Kết nối cuộc họp đã bị ngắt. Thiết bị đã được tắt; chọn “Tham gia” để kết nối lại.
             </div>
           )}
-          <header className="page-hero">
-            <h1 className="meeting-page-title">Cuộc họp video</h1>
-            <p className="meeting-page-description">
-              Chọn phòng trong nhóm của bạn và kiểm tra thiết bị trước khi tham gia.
-            </p>
-          </header>
-
           {loading ? (
-            <p role="status" className="loading-note">
-              Đang tải danh sách phòng họp…
-            </p>
-          ) : rooms.length === 0 ? (
-            <div className="state-card state-card--compact">
-              <span className="state-card__icon">
-                <Icon name="video" size={26} />
-              </span>
-              <h3>Chưa có phòng họp nào</h3>
-              <p>
-                Bạn chưa có phòng họp nào trong các nhóm hiện tại. Hãy tạo nhóm hoặc nhờ Quản trị
-                viên thêm bạn vào nhóm.
+            <>
+              <header className="page-hero">
+                <h1 className="meeting-page-title">Cuộc họp video</h1>
+                <p className="meeting-page-description">
+                  Chọn phòng trong nhóm của bạn và kiểm tra thiết bị trước khi tham gia.
+                </p>
+              </header>
+              <p role="status" className="loading-note">
+                Đang tải danh sách phòng họp…
               </p>
-              <Button variant="secondary" size="sm" onClick={() => setActiveView("overview")}>
-                Xem nhóm làm việc
-              </Button>
-            </div>
+            </>
+          ) : visibleRooms.length === 0 ? (
+            <>
+              <header className="page-hero">
+                <h1 className="meeting-page-title">Cuộc họp video</h1>
+                <p className="meeting-page-description">
+                  Chọn phòng trong nhóm của bạn và kiểm tra thiết bị trước khi tham gia.
+                </p>
+              </header>
+              <div className="state-card state-card--compact">
+                <span className="state-card__icon">
+                  <Icon name="video" size={26} />
+                </span>
+                <h3>Chưa có phòng họp nào</h3>
+                <p>
+                  Nhóm này hiện chưa có phòng họp khả dụng hoặc đã lưu trữ. Hãy kiểm tra cài đặt
+                  kênh của nhóm.
+                </p>
+                <Button variant="secondary" size="sm" onClick={() => setActiveView("overview")}>
+                  Xem nhóm làm việc
+                </Button>
+              </div>
+            </>
           ) : (
             <div className="meeting-lobby-wrap">
-              {/* Left Column: Room Cards */}
+              {/* Left Column: Header + Room Cards */}
               <div className="meeting-rooms-section">
+                <header className="page-hero">
+                  <h1 className="meeting-page-title">Cuộc họp video</h1>
+                  <p className="meeting-page-description">
+                    Chọn phòng trong nhóm của bạn và kiểm tra thiết bị trước khi tham gia.
+                  </p>
+                </header>
+
                 <div className="meeting-section-header">
-                  <h3>Chọn phòng họp ({rooms.length})</h3>
-                  <Badge tone="neutral">Phòng của nhóm</Badge>
+                  <h3>Chọn phòng họp ({visibleRooms.length})</h3>
+                  <Chip icon="video">Phòng của nhóm</Chip>
                 </div>
 
-                {rooms.map((room) => (
+                {visibleRooms.map((room) => (
                   <button
                     type="button"
                     key={room.id}
@@ -740,7 +1007,9 @@ export function MeetingPage() {
                   >
                     <div className="meeting-room-card__header">
                       <h4 className="meeting-room-card__title">
-                        <Icon name="video" size={16} style={{ color: "#bcd2dd" }} />
+                        <span className="meeting-room-card__icon" aria-hidden="true">
+                          <Icon name="video" size={18} />
+                        </span>
                         {room.name}
                       </h4>
                       {renderRoleBadge(room.role)}
@@ -953,7 +1222,7 @@ export function MeetingPage() {
                 <h2>Lịch họp sắp tới</h2>
                 <p>Lên kế hoạch trong phòng của nhóm và tham gia trực tiếp khi đến giờ.</p>
               </div>
-              {rooms.length > 0 && (
+              {visibleRooms.length > 0 && (
                 <Button
                   size="sm"
                   icon="plus"
@@ -986,7 +1255,7 @@ export function MeetingPage() {
                       value={scheduleRoomId}
                       onChange={(event) => setScheduleRoomId(event.target.value)}
                     >
-                      {rooms
+                      {visibleRooms
                         .filter(
                           (room) =>
                             !editingScheduleId ||
@@ -1028,6 +1297,15 @@ export function MeetingPage() {
                       placeholder="Nội dung, tài liệu cần chuẩn bị…"
                     />
                   </label>
+                  <label className="meeting-schedule-wide">
+                    Agenda (mỗi dòng một mục)
+                    <textarea
+                      rows={3}
+                      value={scheduleAgenda}
+                      onChange={(event) => setScheduleAgenda(event.target.value)}
+                      placeholder={"Báo cáo tiến độ\nPhân công tuần tới"}
+                    />
+                  </label>
                 </div>
                 <div className="meeting-schedule-form-actions">
                   <span>Thời gian theo múi giờ của thiết bị bạn.</span>
@@ -1051,13 +1329,11 @@ export function MeetingPage() {
               <p className="meeting-schedule-empty" role="status">
                 Đang tải lịch họp…
               </p>
-            ) : schedules.length === 0 ? (
-              <p className="meeting-schedule-empty">
-                Chưa có lịch họp sắp tới trong các nhóm của bạn.
-              </p>
+            ) : visibleSchedules.length === 0 ? (
+              <p className="meeting-schedule-empty">Chưa có lịch họp sắp tới trong nhóm này.</p>
             ) : (
               <div className="meeting-schedule-list">
-                {schedules.map((item) => {
+                {visibleSchedules.map((item) => {
                   const start = new Date(item.startsAt);
                   const end = new Date(item.endsAt);
                   return (
@@ -1095,32 +1371,31 @@ export function MeetingPage() {
                         >
                           Tham gia
                         </Button>
-                        <button type="button" onClick={() => downloadCalendarEvent(item)}>
+                        <Button
+                          size="sm"
+                          variant="text"
+                          icon="calendar"
+                          onClick={() => downloadCalendarEvent(item)}
+                        >
                           Thêm vào lịch
-                        </button>
+                        </Button>
                         {item.canManage && (
                           <>
-                            <button type="button" onClick={() => openScheduleForm(item)}>
+                            <Button
+                              size="sm"
+                              variant="text"
+                              icon="edit"
+                              onClick={() => openScheduleForm(item)}
+                            >
                               Sửa
-                            </button>
-                            {cancelScheduleId === item.id ? (
-                              <>
-                                <button
-                                  type="button"
-                                  disabled={savingSchedule}
-                                  onClick={() => void cancelSchedule(item.id)}
-                                >
-                                  Xác nhận huỷ
-                                </button>
-                                <button type="button" onClick={() => setCancelScheduleId("")}>
-                                  Giữ lại
-                                </button>
-                              </>
-                            ) : (
-                              <button type="button" onClick={() => setCancelScheduleId(item.id)}>
-                                Huỷ lịch
-                              </button>
-                            )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="text"
+                              onClick={() => setCancelScheduleId(item.id)}
+                            >
+                              Huỷ lịch
+                            </Button>
                           </>
                         )}
                       </div>
@@ -1139,29 +1414,34 @@ export function MeetingPage() {
             ) : history.length === 0 ? (
               <p>Bạn chưa tham gia cuộc họp nào.</p>
             ) : (
-              <div className="meeting-history-list">
-                {history.map((item) => (
-                  <article className="meeting-history-item" key={item.id}>
-                    <span className="meeting-history-icon">
-                      <Icon name="video" size={16} />
-                    </span>
-                    <div>
-                      <strong>{item.name}</strong>
-                      <time dateTime={item.joinedAt}>
-                        {new Date(item.joinedAt).toLocaleString("vi-VN", {
-                          day: "numeric",
-                          month: "numeric",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </time>
-                    </div>
-                    <Badge tone={item.leftAt ? "neutral" : "amber"}>
-                      {item.leftAt ? "Đã kết thúc" : "Chưa ghi nhận rời phòng"}
-                    </Badge>
-                  </article>
-                ))}
+              <div className="meeting-history-list" role="list">
+                {history.map((item) => {
+                  const joinedDate = new Date(item.joinedAt);
+                  const timeStr = Number.isNaN(joinedDate.getTime())
+                    ? ""
+                    : joinedDate.toLocaleTimeString("vi-VN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      });
+                  const dateStr = Number.isNaN(joinedDate.getTime())
+                    ? ""
+                    : joinedDate.toLocaleDateString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      });
+                  return (
+                    <ListItem
+                      key={item.id}
+                      role="listitem"
+                      icon="video"
+                      title={item.name}
+                      subtitle={item.leftAt ? "Đã kết thúc phiên họp" : "Chưa ghi nhận rời phòng"}
+                      metaPrimary={timeStr || (item.leftAt ? "Đã kết thúc" : "Đang mở")}
+                      metaSecondary={dateStr}
+                    />
+                  );
+                })}
               </div>
             )}
           </section>
@@ -1196,6 +1476,7 @@ export function MeetingPage() {
             onJoin={() => {}}
             onCancel={() => void meeting.leaveCall()}
             onCount={setParticipantCount}
+            onState={setMeetingState}
           />
           {meeting.localScreenStream && (
             <div className="shared-screen">
@@ -1214,111 +1495,138 @@ export function MeetingPage() {
 
           <div className="meeting-stage-toolbar">
             <span>{participantCount} người trong phòng</span>
-            <div role="group" aria-label="Kiểu hiển thị">
-              <button
-                type="button"
-                className={layout === "grid" ? "is-active" : ""}
+            <div className="meeting-layout-switch" role="group" aria-label="Kiểu hiển thị">
+              <Button
+                size="sm"
+                variant={layout === "grid" ? "primary" : "ghost"}
+                icon="grid"
                 aria-pressed={layout === "grid"}
                 onClick={() => setLayout("grid")}
               >
                 Lưới
-              </button>
-              <button
-                type="button"
-                className={layout === "spotlight" ? "is-active" : ""}
+              </Button>
+              <Button
+                size="sm"
+                variant={layout === "spotlight" ? "primary" : "ghost"}
+                icon="monitor"
                 aria-pressed={layout === "spotlight"}
                 onClick={() => setLayout("spotlight")}
               >
                 Tiêu điểm
-              </button>
+              </Button>
+              <Button
+                size="sm"
+                variant={layout === "auto" ? "primary" : "ghost"}
+                icon="mic"
+                aria-pressed={layout === "auto"}
+                title="Tự đưa người đang nói lên khung chính"
+                onClick={() => setLayout("auto")}
+              >
+                Người nói
+              </Button>
             </div>
           </div>
           <div className={`meeting-stage-layout ${sidePanel !== "none" ? "has-panel" : ""}`}>
-            {/* Video Grid */}
+            {/* Dynamic video grid: best-fit columns, paging, demand-driven SFU layers */}
             <div
-              className={`meeting-video-grid ${layout === "spotlight" ? "is-spotlight" : ""} ${meeting.localScreenStream || meeting.remotePeers.some((peer) => peer.screenStream) ? "has-share" : ""}`}
+              ref={gridRef}
+              className={`meeting-video-grid ${staged ? "is-spotlight" : ""} ${meeting.localScreenStream || meeting.remotePeers.some((peer) => peer.screenStream) ? "has-share" : ""}`}
+              style={
+                layout === "grid" && gridLayout.tileWidth > 0
+                  ? { gridTemplateColumns: `repeat(${gridLayout.columns}, ${Math.floor(gridLayout.tileWidth)}px)` }
+                  : undefined
+              }
             >
-              {/* Local Video Tile */}
-              <ParticipantTile
-                isLocal={true}
-                displayName={user?.displayName || "Bạn"}
-                stream={meeting.localStream}
-                hasVideo={meeting.camera && Boolean(meeting.localStream)}
-                hasAudio={meeting.mic}
-                muted={true}
-                pinned={pinnedId === "local" || (!pinnedId && layout === "spotlight")}
-                onPin={() => {
-                  setPinnedId(pinnedId === "local" ? "" : "local");
-                  setLayout("spotlight");
-                }}
-              />
-
-              {/* Remote Peers Video Tiles */}
-              {meeting.remotePeers.map((peer) => (
-                <ParticipantTile
-                  key={peer.socketId}
-                  isLocal={false}
-                  displayName={peer.displayName}
-                  stream={peer.mediaStream}
-                  hasVideo={Boolean(peer.videoTrack)}
-                  hasAudio={Boolean(peer.audioTrack)}
-                  pinned={pinnedId === peer.socketId}
-                  onPin={() => {
-                    setPinnedId(pinnedId === peer.socketId ? "" : peer.socketId);
-                    setLayout("spotlight");
-                  }}
-                  outputDeviceId={outputDeviceId}
-                />
-              ))}
+              {staged && spotlightTile && (
+                <div className="meeting-spotlight-main">{renderTile(spotlightTile, true)}</div>
+              )}
+              {staged ? (
+                <div className="meeting-filmstrip">{pagedTiles.items.map((tile) => renderTile(tile))}</div>
+              ) : (
+                pagedTiles.items.map((tile) => renderTile(tile))
+              )}
             </div>
+            {pagedTiles.pageCount > 1 && (
+              <nav className="meeting-grid-pager" aria-label="Trang người tham gia">
+                <button
+                  type="button"
+                  aria-label="Trang trước"
+                  disabled={pagedTiles.page === 0}
+                  onClick={() => setGridPage(pagedTiles.page - 1)}
+                >
+                  <Icon name="chevron-left" size={16} />
+                </button>
+                <span>
+                  Trang {pagedTiles.page + 1}/{pagedTiles.pageCount}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Trang sau"
+                  disabled={pagedTiles.page >= pagedTiles.pageCount - 1}
+                  onClick={() => setGridPage(pagedTiles.page + 1)}
+                >
+                  <Icon name="chevron-right" size={16} />
+                </button>
+              </nav>
+            )}
+            {/* Off-page peers keep their audio while their video is paused at the SFU. */}
+            {meeting.remotePeers
+              .filter((peer) => !visibleTileIds.has(peer.socketId))
+              .map((peer) => (
+                <Audio key={peer.socketId} stream={peer.mediaStream} outputDeviceId={outputDeviceId} />
+              ))}
 
             {sidePanel !== "none" && (
               <aside
                 className="meeting-side-panel"
-                aria-label={sidePanel === "people" ? "Người tham gia" : "Chat cuộc họp"}
+                aria-label={sidePanelTitle}
               >
                 <div className="meeting-side-panel-head">
-                  <strong>{sidePanel === "people" ? "Người tham gia" : "Chat cuộc họp"}</strong>
-                  <button
-                    type="button"
-                    aria-label="Đóng bảng phụ"
-                    onClick={() => setSidePanel("none")}
-                  >
-                    <Icon name="x" size={16} />
-                  </button>
+                  <strong>{sidePanelTitle}</strong>
+                  <IconButton icon="x" label="Đóng bảng phụ" onClick={() => setSidePanel("none")} />
                 </div>
-                {sidePanel === "people" ? (
+                {sidePanel === "notes" ? (
+                  meetingState?.id ? (
+                    <MeetingOutcomesPanel sessionId={meetingState.id} live />
+                  ) : (
+                    <p className="meeting-outcomes-empty">Đang tải phiên họp…</p>
+                  )
+                ) : sidePanel === "people" ? (
                   <div className="meeting-people-list">
                     <div>
                       <span>{user?.displayName || "Bạn"} · bạn</span>
-                      <button
-                        type="button"
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        icon="pin"
                         onClick={() => {
                           setPinnedId("local");
                           setLayout("spotlight");
                         }}
                       >
                         Ghim
-                      </button>
+                      </Button>
                     </div>
                     {meeting.remotePeers.map((peer) => (
                       <div key={peer.socketId}>
                         <span>{peer.displayName}</span>
-                        <button
-                          type="button"
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          icon="pin"
                           onClick={() => {
                             setPinnedId(peer.socketId);
                             setLayout("spotlight");
                           }}
                         >
                           Ghim
-                        </button>
+                        </Button>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <>
-                    <div className="meeting-chat-list" role="log" aria-label="Tin nhắn cuộc họp">
+                    <div ref={callListRef} className="meeting-chat-list" role="log" aria-label="Tin nhắn cuộc họp" onScroll={event => {const el=event.currentTarget;followCallChat.current=el.scrollHeight-el.scrollTop-el.clientHeight<90;}}>
                       {callMessages.length ? (
                         callMessages.map((item) => (
                           <p key={item.id}>
@@ -1368,7 +1676,7 @@ export function MeetingPage() {
               aria-label={meeting.mic ? "Tắt micro" : "Bật micro"}
               aria-pressed={meeting.mic}
               onClick={() => void meeting.toggleMic()}
-              title={meeting.mic ? "Tắt micro" : "Bật micro"}
+              title={meeting.mic ? "Tắt micro (M)" : "Bật micro (M)"}
             >
               <Icon name={meeting.mic ? "mic" : "mic-off"} size={18} />
             </button>
@@ -1379,7 +1687,7 @@ export function MeetingPage() {
               aria-label={meeting.camera ? "Tắt camera" : "Bật camera"}
               aria-pressed={meeting.camera}
               onClick={() => void meeting.toggleCamera()}
-              title={meeting.camera ? "Tắt camera" : "Bật camera"}
+              title={meeting.camera ? "Tắt camera (V)" : "Bật camera (V)"}
             >
               <Icon name={meeting.camera ? "camera" : "camera-off"} size={18} />
             </button>
@@ -1390,7 +1698,7 @@ export function MeetingPage() {
               aria-label={meeting.sharing ? "Dừng chia sẻ màn hình" : "Chia sẻ màn hình"}
               aria-pressed={meeting.sharing}
               onClick={() => void meeting.toggleScreenShare()}
-              title={meeting.sharing ? "Dừng chia sẻ màn hình" : "Chia sẻ màn hình"}
+              title={meeting.sharing ? "Dừng chia sẻ màn hình (S)" : "Chia sẻ màn hình (S)"}
             >
               <Icon name="share" size={18} />
             </button>
@@ -1400,10 +1708,21 @@ export function MeetingPage() {
               className={`meeting-dock-btn ${sidePanel === "chat" ? "is-active" : ""}`}
               aria-label="Chat cuộc họp"
               aria-pressed={sidePanel === "chat"}
-              title="Chat cuộc họp"
+              title="Chat cuộc họp (C)"
               onClick={() => setSidePanel(sidePanel === "chat" ? "none" : "chat")}
             >
               <Icon name="message" size={18} />
+              {callUnread > 0 && <span className="badge" aria-label={`${callUnread} tin nhắn mới`}>{callUnread}</span>}
+            </button>
+            <button
+              type="button"
+              className={`meeting-dock-btn ${sidePanel === "notes" ? "is-active" : ""}`}
+              aria-label="Ghi chú và việc cần làm"
+              aria-pressed={sidePanel === "notes"}
+              title="Ghi chú và việc cần làm"
+              onClick={() => setSidePanel(sidePanel === "notes" ? "none" : "notes")}
+            >
+              <Icon name="file" size={18} />
             </button>
             <button
               type="button"
@@ -1419,7 +1738,7 @@ export function MeetingPage() {
               type="button"
               className="meeting-dock-btn is-leave"
               aria-label="Rời khỏi phòng họp"
-              onClick={() => void meeting.leaveCall()}
+              onClick={requestLeave}
               title="Rời khỏi phòng họp"
             >
               <Icon name="phone" size={16} />
@@ -1439,6 +1758,18 @@ export function MeetingPage() {
               </p>
             </div>
             <div className="meeting-qos-actions">
+              <label className="meeting-policy-select">
+                Chọn luồng
+                <select
+                  value={layerPolicy}
+                  onChange={(event) => changeLayerPolicy(event.target.value as LayerPolicy)}
+                  title="Chính sách chọn lớp simulcast cho các ô video"
+                >
+                  <option value="combined">Kết hợp</option>
+                  <option value="visible">Theo ô hiển thị</option>
+                  <option value="speaker">Theo người nói</option>
+                </select>
+              </label>
               <Button
                 size="sm"
                 variant="secondary"
@@ -1465,6 +1796,8 @@ export function MeetingPage() {
           </div>
         </div>
       )}
+      <AnimatePresence>{leaveConfirm && <ConfirmDialog title="Rời phòng" description={meeting.sharing ? "Bạn đang chia sẻ màn hình. Rời phòng sẽ dừng chia sẻ và ngắt thiết bị của bạn." : "Bạn đang là host. Rời phòng sẽ chuyển quyền host cho người phù hợp; nếu không còn người tham gia, phiên sẽ kết thúc."} confirmLabel="Rời phòng" loading={leaving} onClose={() => setLeaveConfirm(false)} onConfirm={() => {setLeaving(true); void meeting.leaveCall().finally(() => {setLeaving(false);setLeaveConfirm(false);});}} />}</AnimatePresence>
+      <AnimatePresence>{cancelScheduleId && <ConfirmDialog title="Huỷ lịch" description="Hủy lịch họp này? Lịch sẽ không còn xuất hiện trong danh sách cuộc họp sắp tới của nhóm." confirmLabel="Xác nhận huỷ" loading={savingSchedule} onClose={() => setCancelScheduleId("")} onConfirm={() => void cancelSchedule(cancelScheduleId)} />}</AnimatePresence>
     </div>
   );
 }

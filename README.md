@@ -13,6 +13,7 @@ React/TypeScript + Node/Socket.IO + PostgreSQL + mediasoup. Cập nhật **01/10
 - Workspace, owner/admin/member, invitation, private channel, lưu trữ/khôi phục, quota và audit.
 - Kanban: assignment/deadline/checklist/comment/file/source message, stable order, realtime và version conflict.
 - Lịch họp/lobby, host/co-host, waiting/lock/kick/end/raise hand, screen share, worker pool và room affinity.
+- Kết quả cuộc họp: agenda từ lịch, ghi chú chung realtime (khóa theo phiên bản), tạo việc Kanban ngay trong họp và một tin tổng kết tự đăng vào kênh khi phiên kết thúc.
 - URL định danh; home ưu tiên công việc/lịch/thông báo; bản nháp/outbox qua reload; retry chat không tạo trùng.
 - Storage DB/S3, PostgreSQL adapter/presence TTL, readiness/metrics/logs, migration lock và retention.
 
@@ -31,17 +32,17 @@ npm run db:migrate
 
 Sửa JWT_SECRET thành chuỗi ngẫu nhiên ít nhất32 ký tự; kiểm DATABASE_URL/WEB_ORIGIN/VITE_API_URL. Cấu hình Resend hoặc SMTP để đăng ký/nhận OTP; hệ thống không log mã xác thực.
 
-Hai terminal:
+Chạy API và web cùng lúc bằng một lệnh (Ctrl+C dừng cả hai):
 
 ```powershell
-npm run dev:api
+npm run dev
 ```
 
-```powershell
-npm run dev:web
-```
+Cần chạy riêng thì dùng `npm run dev:api` hoặc `npm run dev:web`.
 
-Web localhost:5173; API localhost:3001. Vite dùng polling watcher trong development Windows. DB đã có dữ liệu nâng cấp bằng migrate, không xóa volume. Tổng20 migration, bytea cũ vẫn tương thích.
+Web localhost:5173; API localhost:3001. Vite dùng polling watcher trong development Windows. DB đã có dữ liệu nâng cấp bằng migrate, không xóa volume. Tổng 21 migration, bytea cũ vẫn tương thích.
+
+Google Sign-In cần đăng ký đúng origin của web trong Google Cloud; xem [xử lý lỗi origin_mismatch](docs/guides/google-oauth-local.md). Dev server dùng cổng của `WEB_ORIGIN` trong `.env` (mẫu mặc định 5173), báo lỗi nếu cổng bận.
 
 ## Kiểm tra
 
@@ -66,7 +67,7 @@ Benchmark local50/100/200 socket,2 API process,4tin/giây,30s ×2/mức:732tin,0
 ## API và vận hành
 
 - GET /health: liveness.
-- GET /ready: PostgreSQL và schema đã migrate020.
+- GET /ready: PostgreSQL và schema đã migrate 021.
 - GET /api/openapi.json: danh mục REST; socket types trong packages/shared/src/socket.ts.
 - GET /api/operations/metrics: cần OPERATIONS_TOKEN riêng.
 - SOCKET_ADAPTER=postgres: đồng bộ chat/task/notification giữa node, lease45s/heartbeat15s. WebSocket hoặc sticky-session nếu polling.

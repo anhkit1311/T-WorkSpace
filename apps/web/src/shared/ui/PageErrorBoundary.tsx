@@ -1,4 +1,5 @@
 import { Component, type ReactNode, type ErrorInfo } from "react";
+import { Button } from "./Primitives";
 export class PageErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() {
@@ -12,7 +13,9 @@ export class PageErrorBoundary extends Component<{ children: ReactNode }, { fail
       <section className="page-load-error" role="alert">
         <h2>Không mở được trang</h2>
         <p>Hãy tải lại trang để tiếp tục. Bản nháp đã lưu vẫn được giữ.</p>
-        <button onClick={() => window.location.reload()}>Tải lại trang</button>
+        <Button icon="refresh" onClick={() => window.location.reload()}>
+          Tải lại trang
+        </Button>
       </section>
     ) : (
       this.props.children

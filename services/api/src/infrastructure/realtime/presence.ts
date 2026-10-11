@@ -1,6 +1,7 @@
 import { query } from "../database/db.js";
 import type { initSocketServer } from "./socket.js";
 import { leaveSession } from "../../modules/meetings/sessions.js";
+import { publishMeetingSummary } from "../../modules/meetings/outcome-events.js";
 export async function addPresence(socketId: string, userId: string, instanceId: string) {
   await query(
     `INSERT INTO socket_presence(socket_id,user_id,instance_id,expires_at) VALUES($1,$2,$3,now()+interval '45 seconds') ON CONFLICT(socket_id) DO UPDATE SET expires_at=EXCLUDED.expires_at`,
@@ -30,11 +31,18 @@ export async function sweepStaleMeetings(io: ReturnType<typeof initSocketServer>
       io.to(`meeting:${result.channelId}`).emit("meeting_state_changed", {
         roomId: result.channelId,
       });
-      if (result.ended)
+      if (result.ended) {
         io.to(`meeting:${result.channelId}`).emit("meeting_closed", {
           roomId: result.channelId,
           reason: "Máy chủ media đã ngắt. Hãy tham gia phiên mới.",
         });
+        await publishMeetingSummary(
+          io,
+          result.channelId,
+          result.sessionId,
+          result.summaryMessageId,
+        ).catch(console.error);
+      }
     }
   }
   await query(

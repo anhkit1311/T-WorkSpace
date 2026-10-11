@@ -45,6 +45,19 @@ async function verifyGoogleIdToken(token: string): Promise<GoogleTokenInfo> {
   }
 }
 
+const GOOGLE_AVATAR_HOST = /^https:\/\/lh\d+\.googleusercontent\.com\//;
+
+/**
+ * Google re-sends the account photo on every sign-in. Keep a photo the user chose in their
+ * profile (uploaded data URL or another link); only fill an empty avatar or refresh one that is
+ * still the Google-provided photo.
+ */
+export function resolveGoogleAvatar(current: string | null, fromGoogle: string | null | undefined) {
+  if (!fromGoogle) return current;
+  if (!current || GOOGLE_AVATAR_HOST.test(current)) return fromGoogle;
+  return current;
+}
+
 export async function verifyGoogleAuth(input: GoogleAuthInput): Promise<GoogleUserPayload> {
   let payload: GoogleTokenInfo | null = null;
 
@@ -156,10 +169,12 @@ export async function findOrCreateGoogleUser(
 
     if (byGoogleId.rows[0]) {
       const u = byGoogleId.rows[0];
-      // Cập nhật avatar nếu có
-      if (avatarUrl && avatarUrl !== u.avatar_url) {
+      // Chỉ làm mới ảnh Google khi người dùng chưa tự đặt ảnh riêng; ảnh tải lên trong hồ sơ
+      // không được ghi đè mỗi lần đăng nhập lại.
+      const storedAvatar = resolveGoogleAvatar(u.avatar_url, avatarUrl);
+      if (storedAvatar !== u.avatar_url) {
         await client.query(`UPDATE users SET avatar_url = $1, updated_at = now() WHERE id = $2`, [
-          avatarUrl,
+          storedAvatar,
           u.id,
         ]);
       }
@@ -170,7 +185,7 @@ export async function findOrCreateGoogleUser(
           id: u.id,
           email: u.email,
           displayName: u.display_name,
-          avatarUrl: avatarUrl || u.avatar_url,
+          avatarUrl: storedAvatar,
           authProvider: u.auth_provider,
           emailVerified: false,
           requireOtp: true,
@@ -181,7 +196,7 @@ export async function findOrCreateGoogleUser(
         id: u.id,
         email: u.email,
         displayName: u.display_name,
-        avatarUrl: avatarUrl || u.avatar_url,
+        avatarUrl: storedAvatar,
         authProvider: u.auth_provider,
         emailVerified: true,
         requireOtp: false,
@@ -204,6 +219,8 @@ export async function findOrCreateGoogleUser(
 
     if (byEmail.rows[0]) {
       const u = byEmail.rows[0];
+      // COALESCE below keeps an existing avatar; report the value that is actually stored.
+      const storedAvatar = u.avatar_url ?? avatarUrl ?? null;
       // Liên kết google_id và kích hoạt email nếu Google đã xác minh
       await client.query(
         `UPDATE users
@@ -221,7 +238,7 @@ export async function findOrCreateGoogleUser(
           id: u.id,
           email: u.email,
           displayName: u.display_name,
-          avatarUrl: avatarUrl || u.avatar_url,
+          avatarUrl: storedAvatar,
           authProvider: u.auth_provider,
           emailVerified: false,
           requireOtp: true,
@@ -232,7 +249,7 @@ export async function findOrCreateGoogleUser(
         id: u.id,
         email: u.email,
         displayName: u.display_name,
-        avatarUrl: avatarUrl || u.avatar_url,
+        avatarUrl: storedAvatar,
         authProvider: u.auth_provider,
         emailVerified: true,
         requireOtp: false,

@@ -6,6 +6,10 @@ import {
   Bell,
   BookOpen,
   Bookmark,
+  AtSign,
+  RefreshCw,
+  BellOff,
+  Trash2,
   Pin,
   CalendarDays,
   Camera,
@@ -27,6 +31,7 @@ import {
   Headset,
   House,
   Info,
+  TriangleAlert,
   LayoutDashboard,
   LayoutGrid,
   Link2,
@@ -50,7 +55,7 @@ import {
   Plus,
   Search,
   Send,
-  Settings2,
+  Settings,
   Share2,
   ShieldCheck,
   Sparkles,
@@ -82,6 +87,10 @@ export type IconName =
   | "arrow-right"
   | "arrow-up-down"
   | "bell"
+  | "bell-off"
+  | "trash"
+  | "at-sign"
+  | "refresh"
   | "book"
   | "bookmark"
   | "pin"
@@ -109,6 +118,7 @@ export type IconName =
   | "help-circle"
   | "home"
   | "info"
+  | "warning"
   | "link"
   | "lock"
   | "logout"
@@ -186,6 +196,7 @@ const icons = {
   "help-circle": CircleHelp,
   home: House,
   info: Info,
+  warning: TriangleAlert,
   link: Link2,
   lock: LockKeyhole,
   logout: LogOut,
@@ -205,7 +216,7 @@ const icons = {
   record: Circle,
   search: Search,
   send: Send,
-  settings: Settings2,
+  settings: Settings,
   share: Share2,
   sparkles: Sparkles,
   split: PanelLeft,
@@ -229,6 +240,10 @@ const icons = {
   pencil: SquarePen,
   smile: Smile,
   "thumbs-up": ThumbsUp,
+  "bell-off": BellOff,
+  trash: Trash2,
+  "at-sign": AtSign,
+  refresh: RefreshCw,
 } satisfies Record<IconName, LucideIcon>;
 
 interface IconProps extends SVGProps<SVGSVGElement> {
@@ -237,6 +252,27 @@ interface IconProps extends SVGProps<SVGSVGElement> {
 }
 
 export function Icon({ name, size = 18, ...props }: IconProps) {
+  if (name === "home") {
+    return (
+      <svg
+        aria-hidden="true"
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.85}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        {...props}
+      >
+        <path d="M3 10.6L12 3.2l9 7.4" />
+        <path d="M16.8 4.4v3.4" strokeWidth={2.2} />
+        <path d="M5.6 8.8V18.8a1.7 1.7 0 0 0 1.7 1.7h9.4a1.7 1.7 0 0 0 1.7-1.7V8.8" />
+        <rect x="9.8" y="13.2" width="4.4" height="7.3" rx="0.5" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  }
   const Glyph = icons[name];
   return <Glyph aria-hidden="true" size={size} strokeWidth={1.8} absoluteStrokeWidth {...props} />;
 }

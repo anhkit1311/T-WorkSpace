@@ -1,0 +1,53 @@
+[
+  {
+    "inside": true,
+    "label": "_r_2i_-0",
+    "tag": "INPUT"
+  },
+  {
+    "inside": true,
+    "label": "Hủy",
+    "tag": "BUTTON"
+  },
+  {
+    "inside": true,
+    "label": "Đóng",
+    "tag": "BUTTON"
+  },
+  {
+    "inside": true,
+    "label": "_r_2i_-0",
+    "tag": "INPUT"
+  },
+  {
+    "inside": true,
+    "label": "Hủy",
+    "tag": "BUTTON"
+  },
+  {
+    "inside": true,
+    "label": "Đóng",
+    "tag": "BUTTON"
+  },
+  {
+    "inside": true,
+    "label": "_r_2i_-0",
+    "tag": "INPUT"
+  },
+  {
+    "inside": true,
+    "label": "Hủy",
+    "tag": "BUTTON"
+  },
+  {
+    "reverse": {
+      "inside": true,
+      "label": "Hủy",
+      "tag": "BUTTON"
+    }
+  },
+  {
+    "closed": 0,
+    "returned": "Tạo nhóm mới"
+  }
+]

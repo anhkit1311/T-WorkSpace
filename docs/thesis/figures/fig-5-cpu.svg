@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360" font-family="Inter, Segoe UI, Arial, sans-serif" role="img" aria-label="CPU mỗi client theo số người">
+<rect width="640" height="360" fill="#fcfcfb"/>
+<text x="64" y="22" font-size="14" font-weight="600" fill="#0b0b0b">CPU mỗi client theo số người</text>
+<text x="64" y="38" font-size="11" fill="#52514e">% của một lõi (100% = 1 lõi)</text>
+<line x1="64" x2="500" y1="312" y2="312" stroke="#e6e5e0" stroke-width="1"/><text x="56" y="316" font-size="11" text-anchor="end" fill="#52514e">0</text>
+<line x1="64" x2="500" y1="222.66666666666669" y2="222.66666666666669" stroke="#e6e5e0" stroke-width="1"/><text x="56" y="226.66666666666669" font-size="11" text-anchor="end" fill="#52514e">100</text>
+<line x1="64" x2="500" y1="133.33333333333334" y2="133.33333333333334" stroke="#e6e5e0" stroke-width="1"/><text x="56" y="137.33333333333334" font-size="11" text-anchor="end" fill="#52514e">200</text>
+<line x1="64" x2="500" y1="44" y2="44" stroke="#e6e5e0" stroke-width="1"/><text x="56" y="48" font-size="11" text-anchor="end" fill="#52514e">300</text>
+<text x="64" y="330" font-size="11" text-anchor="middle" fill="#52514e">2</text>
+<text x="209.33333333333331" y="330" font-size="11" text-anchor="middle" fill="#52514e">4</text>
+<text x="354.66666666666663" y="330" font-size="11" text-anchor="middle" fill="#52514e">6</text>
+<text x="500" y="330" font-size="11" text-anchor="middle" fill="#52514e">8</text>
+<text x="282" y="350" font-size="11" text-anchor="middle" fill="#52514e">Số người trong phòng (N)</text>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="64,286.004 209.33333333333331,236.24533333333335 354.66666666666663,114.84133333333335 500,167.27999999999997"/><circle cx="64" cy="286.004" r="4.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><circle cx="209.33333333333331" cy="236.24533333333335" r="4.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><circle cx="354.66666666666663" cy="114.84133333333335" r="4.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><circle cx="500" cy="167.27999999999997" r="4.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<polyline fill="none" stroke="#eb6834" stroke-width="2" stroke-linejoin="round" points="64,288.68399999999997 209.33333333333331,285.468 354.66666666666663,282.43066666666664"/><rect x="59.5" y="284.18399999999997" width="9" height="9" rx="1.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><rect x="204.83333333333331" y="280.968" width="9" height="9" rx="1.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><rect x="350.16666666666663" y="277.93066666666664" width="9" height="9" rx="1.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<text x="510" y="171.27999999999997" font-size="11" fill="#0b0b0b">Mesh P2P</text>
+<text x="364.66666666666663" y="286.43066666666664" font-size="11" fill="#0b0b0b">SFU + simulcast</text>
+</svg>

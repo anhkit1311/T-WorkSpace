@@ -44,7 +44,18 @@ export async function requireChannelAccess(
 
 export async function getUserWorkspaces(userId: string): Promise<WorkspaceItem[]> {
   const result = await query<WorkspaceItem>(
-    `SELECT w.id, w.name, w.slug, w.description, w.archived_at AS "archivedAt", m.role
+    `SELECT w.id, w.name, w.slug, w.description, w.archived_at AS "archivedAt", m.role,
+       (SELECT count(*)::integer FROM memberships mc WHERE mc.workspace_id = w.id) AS "memberCount",
+       (SELECT count(*)::integer FROM messages unread
+         JOIN channels c ON c.id = unread.channel_id
+         LEFT JOIN channel_preferences cp ON cp.channel_id = c.id AND cp.user_id = $1
+         WHERE c.workspace_id = w.id
+           AND c.type = 'text'
+           AND unread.deleted_at IS NULL
+           AND unread.author_id <> $1
+           AND EXISTS (SELECT 1 FROM channel_access access WHERE access.channel_id = c.id AND access.user_id = $1)
+           AND unread.created_at > COALESCE(cp.last_read_at, 'epoch'::timestamptz)
+       ) AS "unreadCount"
      FROM workspaces w
      JOIN memberships m ON m.workspace_id = w.id
      WHERE m.user_id = $1
@@ -142,6 +153,7 @@ export async function getChannelMessages(
        m.id,
        m.client_message_id as "clientMessageId",
        m.thread_root_id AS "threadRootId",
+       m.kind, m.meeting_session_id AS "meetingSessionId",
        (SELECT count(*)::integer FROM messages child WHERE child.thread_root_id=m.id AND child.deleted_at IS NULL) AS "replyCount",
        (SELECT count(*)::integer FROM messages child WHERE child.thread_root_id=m.id AND child.deleted_at IS NULL AND child.author_id<>$4 AND child.created_at>COALESCE((SELECT last_read_at FROM thread_reads WHERE root_id=m.id AND user_id=$4),'epoch'::timestamptz)) AS "threadUnreadCount",
        EXISTS(SELECT 1 FROM message_pins WHERE message_id=m.id) AS pinned,
@@ -427,13 +439,18 @@ export async function setChannelPreference(
 export async function getChannelPreference(
   userId: string,
   channelId: string,
-): Promise<{ pinned: boolean; muted: boolean }> {
+): Promise<{ pinned: boolean; muted: boolean; workspaceId: string }> {
   await requireChannelAccess(userId, channelId);
-  const result = await query<{ pinned: boolean; muted: boolean }>(
-    `SELECT pinned, muted FROM channel_preferences WHERE user_id=$1 AND channel_id=$2`,
+  // workspaceId lets a new-message toast navigate straight to the channel's workspace.
+  const result = await query<{ pinned: boolean; muted: boolean; workspaceId: string }>(
+    `SELECT COALESCE(cp.pinned,false) AS pinned, COALESCE(cp.muted,false) AS muted,
+            ca.workspace_id AS "workspaceId"
+     FROM channel_access ca
+     LEFT JOIN channel_preferences cp ON cp.channel_id=ca.channel_id AND cp.user_id=ca.user_id
+     WHERE ca.user_id=$1 AND ca.channel_id=$2`,
     [userId, channelId],
   );
-  return result.rows[0] ?? { pinned: false, muted: false };
+  return result.rows[0];
 }
 
 export async function editMessage(
@@ -447,7 +464,7 @@ export async function editMessage(
   if (!trimmed || trimmed.length > 4000)
     throw new HttpError(400, "INVALID_MESSAGE", "Nội dung phải có từ 1 đến 4000 ký tự.");
   const result = await query(
-    `UPDATE messages SET content=$1, edited_at=now() WHERE id=$2 AND author_id=$3 AND deleted_at IS NULL AND EXISTS(SELECT 1 FROM channel_access access WHERE access.channel_id=messages.channel_id AND access.user_id=$3 AND access.can_write) RETURNING id`,
+    `UPDATE messages SET content=$1, edited_at=now() WHERE id=$2 AND author_id=$3 AND kind='user' AND deleted_at IS NULL AND EXISTS(SELECT 1 FROM channel_access access WHERE access.channel_id=messages.channel_id AND access.user_id=$3 AND access.can_write) RETURNING id`,
     [trimmed, messageId, userId],
   );
   if (!result.rowCount)
@@ -597,6 +614,8 @@ export async function createWorkspace(userId: string, name: string): Promise<Wor
       name: trimmed,
       slug,
       role: "owner",
+      memberCount: 1,
+      unreadCount: 0,
     };
   });
 }

@@ -1,12 +1,24 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { ConsumerOptions, ProducerInfo, QosMetrics, TransportOptions } from "@doan/shared";
 import type { MediasoupClientService } from "../../features/meetings/webrtc/mediasoup-service";
 import {
+  isScreenPickerCancel,
+  mapMediaError,
   mediaConstraints,
+  mediaErrorTitle,
   publishSelectedTracks,
   type JoinMediaOptions,
 } from "../../features/meetings/webrtc/local-media";
 import { useApp } from "./AppContext";
+import { callDropMessage } from "../../features/meetings/call-drop";
 import { useSocket } from "./SocketContext";
 import { io, type Socket } from "socket.io-client";
 import { mediaOperation } from "../../features/meetings/webrtc/operation";
@@ -47,6 +59,18 @@ interface MeetingContextValue {
   toggleScreenShare: () => Promise<void>;
   exportQosCsv: () => void;
   exportQosJson: () => void;
+  /**
+   * Report what the grid renders for a peer's camera: a simulcast spatial layer, null when
+   * the tile is off-page (consumer paused at the SFU), or undefined when the grid no longer
+   * reports (falls back to the participant-count policy).
+   */
+  setVideoDemand: (socketId: string, layer: number | null | undefined) => void;
+  /** Dominant speaker chosen by the SFU; "local" when it is this connection. */
+  activeSpeakerId: string | null;
+  /** Peers above the SFU audio-level threshold right now ("local" for this connection). */
+  speakingIds: string[];
+  /** Last time each peer was heard, in Date.now() milliseconds. Read on demand. */
+  lastSpokeAt: () => Record<string, number>;
 }
 
 const MeetingContext = createContext<MeetingContextValue | null>(null);
@@ -104,9 +128,11 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
   }, [localStream, localScreenStream]);
   useEffect(() => {
     if (!socket) return;
+    /** Ends the call bound to this socket; true when there was a call in a room. */
     const cleanup = () => {
       if (activeSocketRef.current !== socket || (!roomIdRef.current && !mediasoupRef.current))
-        return;
+        return false;
+      const hadRoom = Boolean(roomIdRef.current);
       if (roomIdRef.current) setInterruptedRoomId(roomIdRef.current);
       streamsRef.current.forEach((stream) => stream.getTracks().forEach((track) => track.stop()));
       mediasoupRef.current?.close();
@@ -121,8 +147,15 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
       setSharing(false);
       joinAbortRef.current?.abort();
       joinEpochRef.current += 1;
+      return hadRoom;
     };
-    socket.on("disconnect", cleanup);
+    // The return banner only renders on the meetings view; say why the call ended wherever
+    // the user is. A logout clears the token first and already warned about leaving.
+    const dropped = (reason: string) => {
+      if (cleanup() && tokenRef.current)
+        notify("Cuộc họp bị ngắt", callDropMessage(reason), "warning");
+    };
+    socket.on("disconnect", dropped);
     const closed = (data: { roomId: string; reason: string }) => {
       if (data.roomId !== roomIdRef.current) return;
       cleanup();
@@ -143,20 +176,84 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
     socket.on("meeting_closed", closed);
     socket.on("meeting_mute", muted);
     return () => {
-      socket.off("disconnect", cleanup);
+      socket.off("disconnect", dropped);
       socket.off("meeting_closed", closed);
       socket.off("meeting_mute", muted);
-      cleanup();
+      dropped("replaced");
     };
   }, [socket]);
 
+  const [activeSpeakerId, setActiveSpeakerId] = useState<string | null>(null);
+  const [speakingIds, setSpeakingIds] = useState<string[]>([]);
+  const lastSpokeAtRef = useRef<Record<string, number>>({});
+  const lastSpokeAt = useCallback(() => lastSpokeAtRef.current, []);
   useEffect(() => {
-    if (!inCall || !socket) return;
-    const consumers = mediasoupRef.current?.getVideoConsumerIds() ?? [];
-    const spatialLayer = consumers.length > 6 ? 0 : consumers.length > 2 ? 1 : 2;
-    for (const consumerId of consumers)
-      socket.emit("consumer_layer", { roomId, consumerId, spatialLayer });
-  }, [inCall, remotePeers, roomId, socket]);
+    if (!socket || !inCall) {
+      setActiveSpeakerId(null);
+      setSpeakingIds([]);
+      lastSpokeAtRef.current = {};
+      return;
+    }
+    const tileId = (socketId: string) => (socketId === socket.id ? "local" : socketId);
+    const speaker = (data: { roomId: string; socketId: string | null }) => {
+      if (data.roomId !== roomIdRef.current) return;
+      const id = data.socketId ? tileId(data.socketId) : null;
+      if (id) lastSpokeAtRef.current[id] = Date.now();
+      setActiveSpeakerId(id);
+    };
+    const levels = (data: { roomId: string; levels: { socketId: string }[] }) => {
+      if (data.roomId !== roomIdRef.current) return;
+      const now = Date.now();
+      const ids = data.levels.map((level) => tileId(level.socketId)).sort();
+      for (const id of ids) lastSpokeAtRef.current[id] = now;
+      // Levels arrive every 400 ms; skip renders while the set of speakers is unchanged.
+      setSpeakingIds((previous) => (previous.join("|") === ids.join("|") ? previous : ids));
+    };
+    socket.on("active_speaker", speaker);
+    socket.on("audio_levels", levels);
+    return () => {
+      socket.off("active_speaker", speaker);
+      socket.off("audio_levels", levels);
+    };
+  }, [socket, inCall]);
+
+  const [videoDemand, setVideoDemandState] = useState<Record<string, number | null>>({});
+  const appliedDemandRef = useRef(new Map<string, number | null>());
+  const setVideoDemand = useCallback((socketId: string, layer: number | null | undefined) => {
+    setVideoDemandState((old) => {
+      if (old[socketId] === layer) return old;
+      const next = { ...old };
+      if (layer === undefined) delete next[socketId];
+      else next[socketId] = layer;
+      return next;
+    });
+  }, []);
+  useEffect(() => {
+    if (!inCall) appliedDemandRef.current.clear();
+  }, [inCall]);
+  useEffect(() => {
+    const ms = mediasoupRef.current;
+    if (!inCall || !socket || !ms) return;
+    const fallback = (count: number) => (count > 6 ? 0 : count > 2 ? 1 : 2);
+    const cameraCount = remotePeers.filter((peer) => peer.videoTrack).length;
+    const applied = appliedDemandRef.current;
+    for (const peer of remotePeers) {
+      if (!peer.videoTrack) continue;
+      const consumerId = ms.videoConsumerIdForTrack(peer.videoTrack.id);
+      if (!consumerId) continue;
+      const demand = videoDemand[peer.socketId];
+      const target = demand === undefined ? fallback(cameraCount) : demand;
+      const previous = applied.has(consumerId) ? applied.get(consumerId) : 2;
+      if (applied.has(consumerId) && previous === target) continue;
+      applied.set(consumerId, target);
+      if (target === null) {
+        socket.emit("pause_consumer", { roomId, consumerId });
+        continue;
+      }
+      if (previous === null) socket.emit("resume_consumer", { roomId, consumerId });
+      socket.emit("consumer_layer", { roomId, consumerId, spatialLayer: target });
+    }
+  }, [inCall, remotePeers, roomId, socket, videoDemand]);
 
   // Lắng nghe sự kiện Producer mới từ SFU
   useEffect(() => {
@@ -428,6 +525,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
         existingProducers?: ProducerInfo[];
         error?: string;
         waiting?: boolean;
+        activeSpeakerSocketId?: string | null;
       }>((resolve, reject) => {
         request("join_meeting", { roomId: targetRoomId, scheduleId })
           .then((value) => resolve(value as Parameters<typeof resolve>[0]))
@@ -449,6 +547,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
 
       // 2. Nạp router capabilities vào Device
       roomIdRef.current = targetRoomId;
+      setActiveSpeakerId(joinResult.activeSpeakerSocketId ?? null);
       await mediaOperation(ms.loadDevice(joinResult.routerRtpCapabilities), joinAbort.signal);
       ensureCurrent();
 
@@ -736,6 +835,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
     togglingRef.current.add(source);
     const epoch = joinEpochRef.current;
     let captured: MediaStream | null = null;
+    let turningOn = true;
     try {
       const producer = ms.getProducer(source);
       let stream = streamsRef.current[0];
@@ -744,6 +844,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
         ?.getTracks()
         .find((item) => item.kind === kind && item.readyState === "live");
       const enabled = track?.enabled && !producer?.paused;
+      turningOn = !enabled;
       if (!track) {
         const constraints = mediaConstraints({
           ...devicesRef.current,
@@ -754,7 +855,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
         if (epoch !== joinEpochRef.current || !socket?.connected)
           throw new Error("Cuộc họp đã kết thúc.");
         track = captured.getTracks()[0];
-        if (!track) throw new Error("Không tìm thấy thiết bị.");
+        if (!track) throw new DOMException("Không tìm thấy thiết bị.", "NotFoundError");
         stream ??= new MediaStream();
         stream.addTrack(track);
         streamsRef.current = [stream, ...streamsRef.current.slice(1)];
@@ -778,11 +879,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
       );
     } catch (error) {
       captured?.getTracks().forEach((item) => item.stop());
-      notify(
-        "Không thể đổi thiết bị",
-        error instanceof Error ? error.message : "Hãy kiểm tra quyền thiết bị.",
-        "warning",
-      );
+      notify(mediaErrorTitle(source, turningOn), mapMediaError(error), "warning");
     } finally {
       togglingRef.current.delete(source);
     }
@@ -830,12 +927,8 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       captured?.getTracks().forEach((track) => track.stop());
       ms.closeProducer("screen");
-      if (epoch === joinEpochRef.current)
-        notify(
-          "Chia sẻ màn hình",
-          error instanceof Error ? error.message : "Không mở được màn hình.",
-          "warning",
-        );
+      if (epoch === joinEpochRef.current && !isScreenPickerCancel(error))
+        notify(mediaErrorTitle("screen"), mapMediaError(error), "warning");
     } finally {
       togglingRef.current.delete("screen");
     }
@@ -918,6 +1011,10 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
         toggleScreenShare,
         exportQosCsv,
         exportQosJson,
+        setVideoDemand,
+        activeSpeakerId,
+        speakingIds,
+        lastSpokeAt,
       }}
     >
       {children}

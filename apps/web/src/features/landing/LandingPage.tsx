@@ -1,12 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { motion } from "motion/react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Video, MessageSquare, CheckSquare } from "lucide-react";
 import { useApp } from "../../app/providers/AppContext";
 import { NexoLogo } from "../../shared/ui/NexoLogo";
 import { ambientBridge } from "../../shared/motion/AmbientBackdrop";
-import { EASE_OUT, GSAP_EASE_OUT, prefersReducedMotion } from "../../shared/motion/tokens";
+import { GSAP_EASE_OUT } from "../../shared/motion/tokens";
 import "./editorial.css";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -21,7 +19,6 @@ const spacesList = [
     specs: "mediasoup SFU · Chia sẻ màn hình · Đo QoS",
     badge: "Truyền thông SFU",
     desc: "Phòng họp thời gian thực định tuyến qua SFU: mỗi người chỉ gửi một luồng lên máy chủ, có chia sẻ màn hình, chat trong cuộc họp và xuất báo cáo chất lượng kết nối.",
-    icon: Video,
   },
   {
     id: "chat",
@@ -30,7 +27,6 @@ const spacesList = [
     specs: "Socket.IO · Chủ đề & nhắc tên · Đính kèm tệp",
     badge: "Tin nhắn realtime",
     desc: "Trò chuyện phân kênh theo nhóm, trả lời theo chủ đề, ghim và đánh dấu tin nhắn; lịch sử được lưu trong PostgreSQL và đồng bộ tức thời tới mọi thành viên.",
-    icon: MessageSquare,
   },
   {
     id: "tasks",
@@ -39,7 +35,6 @@ const spacesList = [
     specs: "Kanban · Checklist · Bình luận",
     badge: "Cộng tác nhóm",
     desc: "Theo dõi tiến độ trên bảng Kanban theo kênh, phân công người phụ trách, hạn chót và mức ưu tiên; quyền thao tác theo vai trò trong nhóm.",
-    icon: CheckSquare,
   },
 ];
 
@@ -92,16 +87,12 @@ const navSections = [
   { id: "philosophy", label: "Triết lý" },
 ];
 
-const reveal = {
-  initial: { opacity: 0, y: 32 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, amount: 0.2 },
-};
-
 export function LandingPage() {
   const { openAuth, enterWorkspace, user } = useApp();
   const [isScrolled, setIsScrolled] = useState(false);
+  const shellRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
+  const scrollTweenRef = useRef<gsap.core.Tween | null>(null);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 40);
@@ -109,57 +100,231 @@ export function LandingPage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // GSAP owns the hero: a masked word reveal, then a scrubbed parallax that also lifts the
-  // three.js camera so the landscape and the copy move as one scene.
-  useLayoutEffect(() => {
-    const hero = heroRef.current;
-    if (!hero) return;
-    const reduced = prefersReducedMotion();
-    const ctx = gsap.context(() => {
-      if (!reduced) {
-        gsap
-          .timeline({ defaults: { ease: GSAP_EASE_OUT } })
-          .from(".hero-word > span", { yPercent: 110, duration: 1.1, stagger: 0.07 })
-          .from(".editorial-paragraph", { autoAlpha: 0, y: 18, duration: 0.9 }, "-=0.75")
-          .from(".hero-cta", { autoAlpha: 0, y: 14, duration: 0.8 }, "-=0.65");
-        gsap.to(".editorial-hero", {
-          yPercent: -14,
-          autoAlpha: 0.25,
-          ease: "none",
-          scrollTrigger: { trigger: hero, start: "top top", end: "bottom top", scrub: 0.6 },
-        });
+  useEffect(() => {
+    const stopProgrammaticScroll = () => {
+      if (scrollTweenRef.current) {
+        scrollTweenRef.current.kill();
+        scrollTweenRef.current = null;
       }
+    };
+    window.addEventListener("wheel", stopProgrammaticScroll, { passive: true });
+    window.addEventListener("touchstart", stopProgrammaticScroll, { passive: true });
+    return () => {
+      window.removeEventListener("wheel", stopProgrammaticScroll);
+      window.removeEventListener("touchstart", stopProgrammaticScroll);
+      stopProgrammaticScroll();
+    };
+  }, []);
+
+  // GSAP owns the hero entrance, scrubbed parallax, and scroll-triggered staggered text/card reveals.
+  useLayoutEffect(() => {
+    const shell = shellRef.current;
+    const hero = heroRef.current;
+    if (!shell || !hero) return;
+    const ctx = gsap.context(() => {
+      gsap
+        .timeline({ defaults: { ease: GSAP_EASE_OUT } })
+        .from(".hero-word > span", { yPercent: 110, autoAlpha: 0, duration: 1.05, stagger: 0.065 })
+        .from(".editorial-paragraph", { autoAlpha: 0, y: 24, duration: 0.9 }, "-=0.72")
+        .from(".hero-cta", { autoAlpha: 0, y: 20, duration: 0.8 }, "-=0.65");
+
+      gsap.to(".editorial-hero", {
+        yPercent: -14,
+        autoAlpha: 0.25,
+        ease: "none",
+        scrollTrigger: { trigger: hero, start: "top top", end: "bottom top", scrub: 0.6 },
+      });
+
       ScrollTrigger.create({
         trigger: hero,
         start: "top top",
         end: "bottom top",
         onUpdate: (self) => ambientBridge.setScroll(self.progress),
       });
-    }, hero);
+
+      // Staggered text rise for every section header (tag -> title -> subtitle)
+      gsap.utils.toArray<HTMLElement>(".editorial-section-head").forEach((head) => {
+        const items = head.querySelectorAll(".editorial-tag, .editorial-title, .editorial-subtitle");
+        gsap.fromTo(
+          items,
+          { autoAlpha: 0, y: 36 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.85,
+            stagger: 0.12,
+            ease: GSAP_EASE_OUT,
+            scrollTrigger: {
+              trigger: head,
+              start: "top 86%",
+              toggleActions: "play none none reverse",
+            },
+          },
+        );
+      });
+
+      // Staggered rise for residence cards and their inner text
+      gsap.fromTo(
+        ".editorial-residence-card",
+        { autoAlpha: 0, y: 48 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.9,
+          stagger: 0.14,
+          ease: GSAP_EASE_OUT,
+          scrollTrigger: {
+            trigger: ".editorial-residences-grid",
+            start: "top 84%",
+            toggleActions: "play none none reverse",
+          },
+        },
+      );
+
+      // Staggered rise for architecture pillars
+      gsap.fromTo(
+        ".editorial-arch-item",
+        { autoAlpha: 0, y: 44 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.85,
+          stagger: 0.14,
+          ease: GSAP_EASE_OUT,
+          scrollTrigger: {
+            trigger: ".editorial-arch-grid",
+            start: "top 84%",
+            toggleActions: "play none none reverse",
+          },
+        },
+      );
+
+      // Rise for benchmark metrics bar & note
+      gsap.fromTo(
+        [".editorial-metrics-bar", ".editorial-metrics-note"],
+        { autoAlpha: 0, y: 34, scale: 0.98 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.85,
+          stagger: 0.12,
+          ease: GSAP_EASE_OUT,
+          scrollTrigger: {
+            trigger: ".editorial-metrics-bar",
+            start: "top 88%",
+            toggleActions: "play none none reverse",
+          },
+        },
+      );
+
+      // Staggered rise for philosophy quote box (quote text -> author)
+      gsap.fromTo(
+        ".editorial-quote-box .editorial-quote-text, .editorial-quote-box .editorial-quote-author",
+        { autoAlpha: 0, y: 36 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.9,
+          stagger: 0.14,
+          ease: GSAP_EASE_OUT,
+          scrollTrigger: {
+            trigger: ".editorial-quote-box",
+            start: "top 85%",
+            toggleActions: "play none none reverse",
+          },
+        },
+      );
+
+      // Staggered rise for principle cards
+      gsap.fromTo(
+        ".editorial-principle-card",
+        { autoAlpha: 0, y: 40 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.85,
+          stagger: 0.13,
+          ease: GSAP_EASE_OUT,
+          scrollTrigger: {
+            trigger: ".editorial-principles",
+            start: "top 85%",
+            toggleActions: "play none none reverse",
+          },
+        },
+      );
+
+      // Closing CTA button rise
+      gsap.fromTo(
+        ".editorial-closing-cta",
+        { autoAlpha: 0, y: 30 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.8,
+          ease: GSAP_EASE_OUT,
+          scrollTrigger: {
+            trigger: ".editorial-closing-cta",
+            start: "top 90%",
+            toggleActions: "play none none reverse",
+          },
+        },
+      );
+    }, shell);
+
     return () => {
       ctx.revert();
       ambientBridge.setScroll(0);
     };
   }, []);
 
+  const smoothScrollTo = (targetY: number) => {
+    if (scrollTweenRef.current) {
+      scrollTweenRef.current.kill();
+      scrollTweenRef.current = null;
+    }
+    const startY = window.scrollY;
+    const clampedTarget = Math.max(
+      0,
+      Math.min(targetY, document.documentElement.scrollHeight - window.innerHeight),
+    );
+    const distance = Math.abs(clampedTarget - startY);
+    if (distance < 2) return;
+    const duration = Math.min(1.35, Math.max(0.75, distance / 1400));
+    const state = { y: startY };
+    scrollTweenRef.current = gsap.to(state, {
+      y: clampedTarget,
+      duration,
+      ease: "power3.inOut",
+      onUpdate: () => {
+        window.scrollTo(0, state.y);
+        ScrollTrigger.update();
+      },
+      onComplete: () => {
+        scrollTweenRef.current = null;
+        ScrollTrigger.update();
+      },
+    });
+  };
+
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (!el) return;
     const targetPos = el.getBoundingClientRect().top + window.scrollY - 80;
-    window.scrollTo({ top: targetPos, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    smoothScrollTo(targetPos);
   };
 
   const handleHeroCta = () => (user ? enterWorkspace() : openAuth("register"));
   const handleNavCta = () => (user ? enterWorkspace() : openAuth("login"));
 
   return (
-    <div className="editorial-shell">
+    <div className="editorial-shell" ref={shellRef}>
       <header className={`editorial-nav-bar ${isScrolled ? "is-scrolled" : ""}`}>
         <nav className="editorial-nav" aria-label="Điều hướng chính">
           <div className="editorial-nav-left">
             <button
               type="button"
-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              onClick={() => smoothScrollTo(0)}
               className="editorial-brand"
             >
               <NexoLogo />
@@ -219,98 +384,60 @@ export function LandingPage() {
       </div>
 
       <section id="residences" className="editorial-section">
-        <motion.div
-          className="editorial-section-head"
-          {...reveal}
-          transition={{ duration: 0.8, ease: EASE_OUT }}
-        >
+        <div className="editorial-section-head">
           <span className="editorial-tag">Hệ sinh thái cộng tác</span>
           <h2 className="editorial-title">Không gian chuyên biệt</h2>
           <p className="editorial-subtitle">
             Tập trung cao độ với các phân khu chức năng được thiết kế tinh giản, tối ưu hóa trải
             nghiệm tương tác nhóm mà không gây nhiễu loạn thị giác.
           </p>
-        </motion.div>
+        </div>
 
         <div className="editorial-residences-grid">
-          {spacesList.map((space, idx) => {
-            const IconComponent = space.icon;
-            return (
-              <motion.article
-                key={space.id}
-                className="editorial-residence-card"
-                initial={{ opacity: 0, y: 36 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.15 }}
-                transition={{ duration: 0.75, delay: idx * 0.12, ease: EASE_OUT }}
-              >
-                <div className="editorial-residence-media">
-                  <div className={`editorial-residence-img editorial-residence-img--${space.id}`}>
-                    <IconComponent aria-hidden="true" />
-                  </div>
-                  <span className="editorial-residence-badge">{space.badge}</span>
+          {spacesList.map((space) => (
+            <article key={space.id} className="editorial-residence-card">
+              <div className="editorial-residence-body">
+                <h3 className="editorial-residence-name">{space.name}</h3>
+                <p className="editorial-residence-desc">{space.desc}</p>
+                <div className="editorial-residence-specs">
+                  <span>{space.location}</span>
+                  <strong>{space.specs}</strong>
                 </div>
-
-                <div className="editorial-residence-body">
-                  <h3 className="editorial-residence-name">{space.name}</h3>
-                  <p className="editorial-residence-desc">{space.desc}</p>
-                  <div className="editorial-residence-specs">
-                    <span>{space.location}</span>
-                    <strong>{space.specs}</strong>
-                  </div>
-                </div>
-              </motion.article>
-            );
-          })}
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 
       <section id="architecture" className="editorial-section editorial-section--warm">
         <div className="editorial-section-inner">
-          <motion.div
-            className="editorial-section-head"
-            {...reveal}
-            transition={{ duration: 0.8, ease: EASE_OUT }}
-          >
+          <div className="editorial-section-head">
             <span className="editorial-tag">Nền tảng kỹ thuật</span>
             <h2 className="editorial-title">Kiến trúc phân tán SFU</h2>
             <p className="editorial-subtitle">
               Sự kết hợp giữa định tuyến WebRTC và kiến trúc phần mềm phân tầng của đồ án tốt
               nghiệp.
             </p>
-          </motion.div>
+          </div>
 
           <div className="editorial-arch-grid">
-            {architecturePillars.map((pillar, idx) => (
-              <motion.div
-                key={pillar.num}
-                className="editorial-arch-item"
-                initial={{ opacity: 0, y: 36 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{ duration: 0.75, delay: idx * 0.12, ease: EASE_OUT }}
-              >
+            {architecturePillars.map((pillar) => (
+              <div key={pillar.num} className="editorial-arch-item">
                 <span className="editorial-arch-num">{pillar.num}</span>
                 <h3 className="editorial-arch-title">{pillar.title}</h3>
                 <p className="editorial-arch-desc">{pillar.desc}</p>
-              </motion.div>
+              </div>
             ))}
           </div>
 
-          <motion.div
-            className="editorial-metrics-bar"
-            initial={{ opacity: 0, scale: 0.98 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true, amount: 0.25 }}
-            transition={{ duration: 0.8, ease: EASE_OUT }}
-          >
+          <div className="editorial-metrics-bar">
             {measuredMetrics.map((metric) => (
               <div key={metric.value}>
                 <div className="editorial-metric-val">{metric.value}</div>
                 <div className="editorial-metric-label">{metric.label}</div>
               </div>
             ))}
-          </motion.div>
+          </div>
           <p className="editorial-metrics-note">
             Số liệu đo trên máy chủ cục bộ (Ryzen 7 6800HS, loopback); chưa phản ánh mạng internet
             thực tế.
@@ -319,11 +446,7 @@ export function LandingPage() {
       </section>
 
       <section id="philosophy" className="editorial-section">
-        <motion.div
-          className="editorial-quote-box"
-          {...reveal}
-          transition={{ duration: 0.85, ease: EASE_OUT }}
-        >
+        <div className="editorial-quote-box">
           <p className="editorial-quote-text">
             “Sự tinh tế đỉnh cao không nằm ở việc thêm thắt tính năng, mà ở việc loại bỏ triệt để
             mọi tiếng ồn và sự xao nhãng.”
@@ -331,22 +454,15 @@ export function LandingPage() {
           <span className="editorial-quote-author">
             Triết lý thiết kế hệ thống nexo · Đồ án tốt nghiệp
           </span>
-        </motion.div>
+        </div>
 
         <div className="editorial-principles">
-          {principles.map((principle, idx) => (
-            <motion.div
-              key={principle.tag}
-              className="editorial-principle-card"
-              initial={{ opacity: 0, y: 28 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.7, delay: 0.1 + idx * 0.1, ease: EASE_OUT }}
-            >
+          {principles.map((principle) => (
+            <div key={principle.tag} className="editorial-principle-card">
               <div className="editorial-principle-tag">{principle.tag}</div>
               <h3 className="editorial-principle-heading">{principle.heading}</h3>
               <p className="editorial-principle-desc">{principle.desc}</p>
-            </motion.div>
+            </div>
           ))}
         </div>
 

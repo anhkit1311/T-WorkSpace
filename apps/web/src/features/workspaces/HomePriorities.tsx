@@ -3,8 +3,9 @@ import type { HomeSummary } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
 import { governanceApi } from "./api";
-import { Button } from "../../shared/ui/Primitives";
+import { Button, ListItem } from "../../shared/ui/Primitives";
 import "./home-priorities.css";
+
 export function HomePriorities() {
   const { accessToken, navigate } = useApp(),
     { socket } = useSocket();
@@ -50,7 +51,13 @@ export function HomePriorities() {
           <span className="editorial-tag editorial-tag--stacked">Nhiệm vụ & Sự kiện</span>
           <h2>Tiếp tục công việc</h2>
         </div>
-        <span className="home-priorities__subtitle">Những việc dành cho bạn</span>
+        <Button
+          variant="text"
+          className="home-priorities__view-all"
+          onClick={() => navigate({ view: "tasks" })}
+        >
+          Xem tất cả
+        </Button>
       </header>
       {error && (
         <p role="alert" className="home-priorities-error">
@@ -73,45 +80,40 @@ export function HomePriorities() {
               <p className="home-priority-empty">Chưa có công việc cần xử lý.</p>
             ) : (
               <ul className="home-priority-list">
-                {summary.tasks.map((task) => (
-                  <li key={task.id} className="home-priority-list-item">
-                    <button
-                      type="button"
-                      className="home-priority-item-btn"
-                      onClick={() =>
-                        navigate({
-                          view: "tasks",
-                          workspaceId: task.workspaceId,
-                          channelId: task.channelId,
-                          taskId: task.id,
-                        })
-                      }
-                    >
-                      <strong className="home-priority-item-title">{task.title}</strong>
-                      <div className="home-priority-meta-row">
-                        <span className="home-priority-pill home-priority-pill--channel">
-                          #{task.channelName}
-                        </span>
-                        <span className={`home-priority-pill home-priority-pill--${task.status}`}>
-                          {task.status === "doing" ? "Đang làm" : "Cần làm"}
-                        </span>
-                        {task.dueAt && (
-                          <span
-                            className={`home-priority-pill ${Date.parse(task.dueAt) < Date.now() ? "home-priority-pill--overdue" : "home-priority-pill--due"}`}
-                          >
-                            {Date.parse(task.dueAt) < Date.now() ? "Quá hạn: " : "Hạn: "}
-                            {new Date(task.dueAt).toLocaleDateString("vi-VN")}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  </li>
-                ))}
+                {summary.tasks.map((task) => {
+                  const dueDate = task.dueAt ? new Date(task.dueAt) : null;
+                  const metaPrimary = dueDate
+                    ? dueDate.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
+                    : task.status === "doing"
+                      ? "Đang làm"
+                      : "Cần làm";
+                  const metaSecondary = dueDate
+                    ? dueDate.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })
+                    : "Không hạn";
+                  return (
+                    <li key={task.id} className="home-priority-list-item">
+                      <ListItem
+                        icon="check-square"
+                        title={task.title}
+                        subtitle={`#${task.channelName} · ${task.status === "doing" ? "Đang làm" : "Cần làm"}`}
+                        metaPrimary={metaPrimary}
+                        metaSecondary={metaSecondary}
+                        onClick={() =>
+                          navigate({
+                            view: "tasks",
+                            workspaceId: task.workspaceId,
+                            channelId: task.channelId,
+                            taskId: task.id,
+                          })
+                        }
+                      />
+                    </li>
+                  );
+                })}
               </ul>
             )}
             <Button
-              size="sm"
-              variant="ghost"
+              variant="secondary"
               icon="tasks"
               onClick={() => navigate({ view: "tasks" })}
             >
@@ -124,40 +126,38 @@ export function HomePriorities() {
               <p className="home-priority-empty">Chưa có cuộc họp được lên lịch.</p>
             ) : (
               <ul className="home-priority-list">
-                {summary.meetings.map((meeting) => (
-                  <li key={meeting.id} className="home-priority-list-item">
-                    <button
-                      type="button"
-                      className="home-priority-item-btn"
-                      onClick={() =>
-                        navigate({
-                          view: "meetings",
-                          workspaceId: meeting.workspaceId,
-                          channelId: meeting.roomId,
-                          scheduleId: meeting.id,
-                        })
-                      }
-                    >
-                      <strong className="home-priority-item-title">{meeting.title}</strong>
-                      <div className="home-priority-meta-row">
-                        <span className="home-priority-pill home-priority-pill--time">
-                          {new Date(meeting.startsAt).toLocaleString("vi-VN", {
-                            dateStyle: "short",
-                            timeStyle: "short",
-                          })}
-                        </span>
-                        <span className="home-priority-pill home-priority-pill--channel">
-                          {meeting.roomName}
-                        </span>
-                      </div>
-                    </button>
-                  </li>
-                ))}
+                {summary.meetings.map((meeting) => {
+                  const startDate = new Date(meeting.startsAt);
+                  return (
+                    <li key={meeting.id} className="home-priority-list-item">
+                      <ListItem
+                        icon="video"
+                        title={meeting.title}
+                        subtitle={`Phòng #${meeting.roomName}`}
+                        metaPrimary={startDate.toLocaleTimeString("vi-VN", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                        metaSecondary={startDate.toLocaleDateString("vi-VN", {
+                          day: "2-digit",
+                          month: "2-digit",
+                        })}
+                        onClick={() =>
+                          navigate({
+                            view: "meetings",
+                            workspaceId: meeting.workspaceId,
+                            channelId: meeting.roomId,
+                            scheduleId: meeting.id,
+                          })
+                        }
+                      />
+                    </li>
+                  );
+                })}
               </ul>
             )}
             <Button
-              size="sm"
-              variant="ghost"
+              variant="secondary"
               icon="calendar"
               onClick={() => navigate({ view: "meetings" })}
             >
@@ -173,8 +173,7 @@ export function HomePriorities() {
               </p>
             </div>
             <Button
-              size="sm"
-              variant="ghost"
+              variant="secondary"
               icon="bell"
               onClick={() => navigate({ view: "notifications" })}
             >

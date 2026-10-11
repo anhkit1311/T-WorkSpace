@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { AuthResponse, AuthUser, GoogleAuthInput, RegisterResponse } from "@doan/shared";
@@ -18,8 +19,21 @@ import {
   verifyOtpApi,
 } from "../../features/auth/api";
 import type { AuthMode, PublicScreen, ToastMessage, ViewId } from "../types";
-import { appRouteUrl, readAppRoute, type AppRoute } from "../navigation";
+import {
+  appEntryRoute,
+  appRouteUrl,
+  isWorkspaceTabView,
+  readAppRoute,
+  selectWorkspaceRoute,
+  type AppRoute,
+  type WorkspaceTabId,
+} from "../navigation";
 import { clearAccountDrafts } from "../../shared/lib/drafts";
+import { readSessionHint, shouldTryRestore, writeSessionHint } from "../session-hint";
+
+// One restore request per page load, shared by StrictMode's double-mounted effect.
+let restoreRequest: ReturnType<typeof refreshSessionApi> | null = null;
+const restoreSessionOnce = () => (restoreRequest ??= refreshSessionApi());
 
 interface AppContextValue {
   screen: PublicScreen;
@@ -28,6 +42,7 @@ interface AppContextValue {
   setActiveView: (view: ViewId) => void;
   route: AppRoute;
   navigate: (route: AppRoute, replace?: boolean) => void;
+  openWorkspace: (workspaceId: string, tab?: WorkspaceTabId) => void;
   openChannel: (workspaceId: string, channelId?: string, meeting?: boolean) => void;
   chatNavigation: {
     workspaceId: string;
@@ -47,7 +62,8 @@ interface AppContextValue {
   mobileNavOpen: boolean;
   setMobileNavOpen: (value: boolean) => void;
   toasts: ToastMessage[];
-  notify: (title: string, description?: string, tone?: ToastMessage["tone"]) => void;
+  notify: (title: string, description?: string, tone?: ToastMessage["tone"], action?: ToastMessage["action"], extras?: Pick<ToastMessage, "icon" | "onOpen">) => void;
+  dismissToast: (id: number) => void;
   user: AuthUser | null;
   accessToken: string | null;
   isAuthChecking: boolean;
@@ -68,14 +84,15 @@ interface AppContextValue {
   loginWithGoogle: (
     input: GoogleAuthInput,
   ) => Promise<{ requireOtp?: boolean; email?: string } | void>;
-  logout: () => Promise<void>;
+  logout: (reason?: "password-changed") => Promise<void>;
   updateUser: (user: Partial<AuthUser>) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [screen, setScreen] = useState<PublicScreen>("landing");
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [screen, setScreen] = useState<PublicScreen>(() => /^\/(login|register)\/?$/.test(window.location.pathname) ? "login" : "landing");
   const [route, setRoute] = useState(() => readAppRoute(new URL(window.location.href)));
   const activeView = route.view;
   const navigate = useCallback((target: AppRoute, replace = false) => {
@@ -85,41 +102,80 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setRoute(target);
     setMobileNavOpen(false);
   }, []);
-  const setActiveView = (view: ViewId) => navigate({ view });
+  const setActiveView = useCallback(
+    (view: ViewId) => {
+      const keepWorkspace =
+        (isWorkspaceTabView(view) || view === "admin") && route.workspaceId
+          ? route.workspaceId
+          : undefined;
+      navigate({ view, workspaceId: keepWorkspace });
+    },
+    [navigate, route.workspaceId],
+  );
+  // Re-read the route whenever auth lands in the app; the initial route may come from /login.
+  const enterApp = useCallback(() => {
+    setRoute(appEntryRoute(new URL(window.location.href)));
+    setScreen("app");
+    writeSessionHint(true);
+  }, []);
   useEffect(() => {
-    const onPop = () => setRoute(readAppRoute(new URL(window.location.href)));
+    const onPop = () => {
+      setRoute(readAppRoute(new URL(window.location.href)));
+      const path = window.location.pathname;
+      if (/^\/(login|register)\/?$/.test(path)) { setAuthMode(path.startsWith("/register") ? "register" : "login"); setScreen("login"); }
+      else if (path === "/") setScreen("landing");
+      else if(path.startsWith("/app/")) setScreen(user ? "app" : "login");
+    };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, []);
+  }, [user]);
   const [chatNavigation, setChatNavigation] = useState<AppContextValue["chatNavigation"]>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const toastId = useRef(0);
+  const dismissToast = (id: number) => setToasts(items => items.filter(item => item.id !== id));
 
-  const [user, setUser] = useState<AuthUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
-  const [authMode, setAuthMode] = useState<AuthMode>("login");
+  const [authMode, setAuthMode] = useState<AuthMode>(() => window.location.pathname.startsWith("/register") ? "register" : "login");
+  useEffect(() => {
+    if (isAuthChecking) return;
+    const path = window.location.pathname;
+    // Retain an incoming protected deep link while authentication is required.
+    if(screen === "login" && path.startsWith("/app/")) return;
+    const destination = screen === "landing" ? "/" : screen === "login" ? `/${authMode}` : appRouteUrl(route);
+    if (`${path}${window.location.search}${window.location.hash}` !== destination)
+      window.history[screen === "app" ? "replaceState" : "pushState"]({},"",destination);
+  },[screen,authMode,isAuthChecking,route]);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = "dark";
-    document.documentElement.style.colorScheme = "dark";
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#0a0a0a");
+    // The editorial glass UI is light-only; a dark color-scheme turned native selects,
+    // date pickers and scrollbars black on top of light surfaces.
+    document.documentElement.dataset.theme = "light";
+    document.documentElement.style.colorScheme = "light";
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#e8eef6");
     localStorage.removeItem("collabspace-theme");
   }, []);
 
   useEffect(() => {
     let mounted = true;
     const checkSession = async () => {
+      // Never signed in here and not opening an app link: a refresh could only 401.
+      if (!shouldTryRestore(window.location.pathname, readSessionHint())) {
+        if (mounted) setIsAuthChecking(false);
+        return;
+      }
       try {
-        const result = await refreshSessionApi();
+        const result = await restoreSessionOnce();
         if (mounted) {
           setUser(result.user);
           setAccessToken(result.accessToken);
-          setScreen("app");
+          enterApp();
         }
       } catch {
         // Chưa đăng nhập hoặc phiên đã hết hạn
+        writeSessionHint(false);
         if (mounted && window.location.pathname.startsWith("/app/")) setScreen("login");
       } finally {
         if (mounted) {
@@ -131,12 +187,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [enterApp]);
 
-  const notify = (title: string, description?: string, tone: ToastMessage["tone"] = "success") => {
-    const id = Date.now();
-    setToasts((items) => [...items, { id, title, description, tone }]);
-    window.setTimeout(() => setToasts((items) => items.filter((item) => item.id !== id)), 3600);
+  const notify = (title: string, description?: string, tone: ToastMessage["tone"] = "success", action?: ToastMessage["action"], extras?: Pick<ToastMessage, "icon" | "onOpen">) => {
+    // Preserve the owner's previous request to hide login welcome banners.
+    if (["Chào mừng trở lại", "Xác thực thành công", "Đăng nhập Google thành công"].includes(title)) return;
+    const id = ++toastId.current;
+    setToasts((items) => [...items, { id, title, description, tone, action, ...extras }].slice(-3));
   };
 
   useEffect(() => {
@@ -155,6 +212,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             }
           })
           .catch(() => {
+            writeSessionHint(false);
             if (active) {
               setAccessToken(null);
               setUser(null);
@@ -188,7 +246,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const result = await loginApi(input);
     setUser(result.user);
     setAccessToken(result.accessToken);
-    setScreen("app");
+    enterApp();
     // Preserve an incoming channel/meeting link through authentication.
     notify("Chào mừng trở lại", `Đăng nhập thành công với ${result.user.displayName}.`);
   };
@@ -205,7 +263,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const result = await verifyOtpApi(input);
     setUser(result.user);
     setAccessToken(result.accessToken);
-    setScreen("app");
+    enterApp();
     // Preserve the destination after OTP verification.
     notify("Xác thực thành công", `Chào mừng ${result.user.displayName} đến với nexo!`);
   };
@@ -224,24 +282,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const authRes = result as AuthResponse;
     setUser(authRes.user);
     setAccessToken(authRes.accessToken);
-    setScreen("app");
+    enterApp();
     // Preserve the destination after Google authentication.
     notify("Đăng nhập Google thành công", `Chào mừng ${authRes.user.displayName} đã trở lại!`);
   };
 
-  const handleLogout = async () => {
+  const handleLogout = async (reason?: "password-changed") => {
     try {
       await logoutApi();
     } catch {
       // Bỏ qua lỗi mạng khi logout
     } finally {
+      writeSessionHint(false);
       if (user) await clearAccountDrafts(user.id);
       setUser(null);
       setAccessToken(null);
       setChatNavigation(null);
       setScreen("landing");
       setActiveView("overview");
-      notify("Đã đăng xuất", "Hẹn gặp lại bạn tại nexo.", "info");
+      if(reason === "password-changed") notify("Đã đổi mật khẩu", "Vui lòng đăng nhập lại.", "info");
+      else notify("Đã đăng xuất", "Hẹn gặp lại bạn tại nexo.", "info");
     }
   };
 
@@ -263,6 +323,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       activeView,
       route,
       navigate,
+      openWorkspace: (workspaceId, tab = "workspace") =>
+        navigate(selectWorkspaceRoute(workspaceId, tab)),
       openChannel: (workspaceId, channelId, meeting = false) =>
         navigate({ view: meeting ? "meetings" : "chat", workspaceId, channelId }),
       chatNavigation,
@@ -282,6 +344,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setMobileNavOpen,
       toasts,
       notify,
+      dismissToast,
       user,
       accessToken,
       isAuthChecking,

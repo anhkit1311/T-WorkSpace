@@ -1,0 +1,2653 @@
+diff --git a/apps/web/src/app/App.tsx b/apps/web/src/app/App.tsx
+index 6542530da47da4a90f0909a52f80b665b8b1d19f..16952405e5260727dfc4ba74a8102a67336e29c9 100644
+--- a/apps/web/src/app/App.tsx
++++ b/apps/web/src/app/App.tsx
+@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
+ import { AmbientBackdrop } from "../shared/motion/AmbientBackdrop";
+ import type { AmbientMood } from "../shared/motion/ambient-scene";
+ import { DURATION, EASE_OUT } from "../shared/motion/tokens";
++import { useMotionSafe, motionDebugEnabled } from "../shared/motion/MotionProvider";
+ import "./styles/screen-motion.css";
+ import { ToastViewport } from "../shared/ui/Primitives";
+ 
+@@ -15,6 +16,9 @@ const LoginPage = lazy(() =>
+   import("../features/auth/LoginPage").then((m) => ({ default: m.LoginPage })),
+ );
+ const AppShell = lazy(() => import("./layout/AppShell").then((m) => ({ default: m.AppShell })));
++// DEV diagnostics are entirely absent from the production dependency graph.
++const MotionDebug = motionDebugEnabled
++  ? lazy(() => import("../shared/motion/MotionDebug")) : null;
+ 
+ function ScreenFallback() {
+   return (
+@@ -27,6 +31,7 @@ function ScreenFallback() {
+ }
+ 
+ export function App() {
++  const safe = useMotionSafe();
+   const { screen, activeView } = useApp();
+   const { inCall } = useMeeting();
+   useEffect(() => {
+@@ -49,14 +54,14 @@ export function App() {
+           <motion.div
+             key={screen}
+             className={`screen-transition screen-transition--${screen}`}
+-            initial={{ opacity: 0, y: screen === "login" ? 12 : 0 }}
++            initial={safe.reduced ? false : { opacity: 0, y: screen === "login" ? 12 : 0 }}
+             animate={{ opacity: 1, y: 0 }}
+             exit={{
+-              opacity: 0,
+-              transition: { duration: DURATION.exit, ease: "easeOut" },
++              opacity: safe.reduced ? 1 : 0,
++              transition: { duration: safe.duration(DURATION.exit), ease: EASE_OUT },
+             }}
+             transition={{
+-              duration: screen === "login" ? 0.32 : DURATION.enter,
++              duration: safe.duration(screen === "login" ? 0.32 : DURATION.enter),
+               ease: EASE_OUT,
+             }}
+           >
+@@ -69,6 +74,7 @@ export function App() {
+         </AnimatePresence>
+       </div>
+       <ToastViewport />
++      {MotionDebug && <Suspense fallback={null}><MotionDebug /></Suspense>}
+     </>
+   );
+ }
+diff --git a/apps/web/src/app/layout/AppShell.tsx b/apps/web/src/app/layout/AppShell.tsx
+index 8512c1a0052729300f53f0edeab46e4fba1e7a10..0fc6c3b50656d017e0dbc4ed453d7c06bf7bb0ef 100644
+--- a/apps/web/src/app/layout/AppShell.tsx
++++ b/apps/web/src/app/layout/AppShell.tsx
+@@ -10,7 +10,8 @@ import { PageErrorBoundary } from "../../shared/ui/PageErrorBoundary";
+ import { usePanelDialog } from "../../shared/hooks/usePanelDialog";
+ import { governanceApi } from "../../features/workspaces/api";
+ import { ViewReveal } from "../../shared/motion/ViewReveal";
+-import { viewTransition } from "../../shared/motion/tokens";
++import { SPRING, DURATION } from "../../shared/motion/tokens";
++import { useMotionSafe } from "../../shared/motion/MotionProvider";
+ import type { IconName } from "../../shared/ui/Icon";
+ import type { ViewId } from "../types";
+ import { isWorkspaceTabView } from "../navigation";
+@@ -68,6 +69,7 @@ const dockItems: { id: ViewId; label: string; title?: string; icon: IconName; al
+ ];
+ 
+ export function AppShell() {
++  const safe = useMotionSafe();
+   const {
+     activeView,
+     route,
+@@ -259,10 +261,10 @@ export function AppShell() {
+                 <motion.span
+                   className="topbar-bell-dot"
+                   aria-hidden="true"
+-                  initial={{ scale: 0 }}
++                  initial={safe.reduced ? false : { scale: 0 }}
+                   animate={{ scale: 1 }}
+-                  exit={{ scale: 0 }}
+-                  transition={{ type: "spring", stiffness: 520, damping: 26 }}
++                  exit={{ scale: safe.reduced ? 1 : 0 }}
++                  transition={safe.reduced ? {duration:0} : SPRING.bouncy}
+                 />
+               )}
+             </AnimatePresence>
+@@ -289,10 +291,10 @@ export function AppShell() {
+               {profileOpen && (
+                 <motion.div
+                   className="sidebar-account-menu topbar-account-popover"
+-                  initial={{ opacity: 0, scale: 0.95, y: 8 }}
++                  initial={safe.reduced ? false : { opacity: 0, scale: 0.95, y: 8 }}
+                   animate={{ opacity: 1, scale: 1, y: 0 }}
+-                  exit={{ opacity: 0, scale: 0.95, y: 6 }}
+-                  transition={{ type: "spring", damping: 26, stiffness: 360 }}
++                  exit={{ opacity: safe.reduced ? 1 : 0, scale: safe.reduced ? 1 : 0.95, y: safe.reduced ? 0 : 6, transition: {duration:safe.duration(DURATION.panelExit)} }}
++                  transition={safe.reduced ? {duration:0} : SPRING.gentle}
+                 >
+                   <div className="sidebar-account-header">
+                     <img
+@@ -345,7 +347,7 @@ export function AppShell() {
+                 type="button"
+                 className={`dock-btn ${selected ? "is-active" : ""}`}
+                 aria-current={selected ? "page" : undefined}
+-                whileTap={{ scale: 0.94 }}
++                whileTap={safe.reduced ? undefined : { scale: 0.97 }}
+                 onClick={() => {
+                   setActiveView(target);
+                   setMobileNavOpen(false);
+@@ -356,7 +358,7 @@ export function AppShell() {
+                   <motion.span
+                     layoutId="dock-active-pill"
+                     className="dock-active-pill"
+-                    transition={{ type: "spring", stiffness: 450, damping: 32 }}
++                    transition={safe.reduced ? {duration:0} : SPRING.snappy}
+                   />
+                 )}
+                 <Icon name={item.icon} size={20} />
+@@ -405,9 +407,9 @@ export function AppShell() {
+               <motion.div
+                 key={shellViewKey}
+                 className="view-transition-wrapper"
+-                initial={viewTransition.initial}
+-                animate={viewTransition.animate}
+-                exit={viewTransition.exit}
++                initial={safe.view.initial}
++                animate={safe.view.animate}
++                exit={safe.view.exit}
+               >
+                 {renderPage()}
+               </motion.div>
+diff --git a/apps/web/src/app/styles/editorial-workspace.css b/apps/web/src/app/styles/editorial-workspace.css
+index d845cb818172810699c731a060205f74ba0e4eb3..0455291326c19f56aab5e64ca0a94075199521e2 100644
+--- a/apps/web/src/app/styles/editorial-workspace.css
++++ b/apps/web/src/app/styles/editorial-workspace.css
+@@ -156,7 +156,7 @@ body,
+   display: grid !important;
+   place-items: center !important;
+   position: relative !important;
+-  transition: all 150ms ease !important;
++  transition:transform 150ms ease , opacity 150ms ease , background-color 150ms ease , border-color 150ms ease , color 150ms ease !important;
+   outline: none !important;
+ }
+ 
+@@ -210,7 +210,7 @@ body,
+   border-radius: 9999px !important;
+   background: #94a3b8 !important;
+   border: 2px solid #ffffff !important;
+-  transition: background-color 240ms ease !important;
++  transition:background-color 240ms ease !important;
+ }
+ 
+ /* Presence: online only when connected and activity is shared. */
+@@ -329,7 +329,7 @@ body,
+   border-radius: 18px !important;
+   color: var(--editorial-text-muted, #3e4e66) !important;
+   cursor: pointer !important;
+-  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1) !important;
++  transition:transform 180ms cubic-bezier(0.16, 1, 0.3, 1) , opacity 180ms cubic-bezier(0.16, 1, 0.3, 1) , background-color 180ms cubic-bezier(0.16, 1, 0.3, 1) , border-color 180ms cubic-bezier(0.16, 1, 0.3, 1) , color 180ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+   padding: 6px 2px !important;
+   outline: none !important;
+ }
+@@ -507,7 +507,7 @@ body,
+   font-weight: 500 !important;
+   line-height: 1.5;
+   color: var(--editorial-text) !important;
+-  transition: background-color 150ms ease, color 150ms ease !important;
++  transition:background-color 150ms ease, color 150ms ease !important;
+ }
+ 
+ .sidebar-account-menu > button svg {
+@@ -634,7 +634,7 @@ body,
+   backdrop-filter: blur(var(--editorial-blur, 16px)) !important;
+   padding: 24px 26px !important;
+   box-shadow: var(--editorial-shadow) !important;
+-  transition: all 200ms ease !important;
++  transition:transform 200ms ease , opacity 200ms ease , background-color 200ms ease , border-color 200ms ease , color 200ms ease !important;
+ }
+ 
+ .meeting-room-card:hover {
+@@ -696,7 +696,7 @@ body,
+ .meeting-dock-btn,
+ .meeting-control-btn {
+   border-radius: var(--editorial-radius-pill) !important;
+-  transition: transform 180ms ease !important;
++  transition:transform 180ms ease !important;
+ }
+ 
+ .meeting-dock-btn:hover:not(:disabled),
+@@ -759,8 +759,7 @@ body,
+   padding: 16px !important;
+   color: #0f172a !important;
+   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
+-  transition:
+-    transform 180ms ease,
++  transition:transform 180ms ease,
+     border-color 180ms ease,
+     box-shadow 180ms ease !important;
+ }
+@@ -874,8 +873,7 @@ body,
+   font-family: var(--font-body) !important;
+   font-weight: 500 !important;
+   border: 1px solid #263450 !important;
+-  transition:
+-    transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
++  transition:transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+     background-color 150ms ease,
+     box-shadow 150ms ease !important;
+   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15) !important;
+@@ -883,11 +881,16 @@ body,
+ 
+ .editorial-workspace-shell .button--primary:hover:not(:disabled),
+ .editorial-workspace-shell .button-primary:hover:not(:disabled) {
+-  transform: scale(1.03) !important;
+   background-color: var(--primary-strong) !important;
+ }
++.editorial-workspace-shell .button--primary:hover:not(:disabled):not([data-motion-control]),
++.editorial-workspace-shell .button-primary:hover:not(:disabled):not([data-motion-control]) {
++  transform: scale(1.03) !important;
++}
+ 
+ .editorial-workspace-shell .button:active:not(:disabled) {
++}
++.editorial-workspace-shell .button:active:not(:disabled):not([data-motion-control]) {
+   transform: scale(0.98) !important;
+ }
+ 
+@@ -980,7 +983,7 @@ body,
+   font-size: 12px !important;
+   font-weight: 500 !important;
+   cursor: pointer !important;
+-  transition: transform 150ms ease !important;
++  transition:transform 150ms ease !important;
+ }
+ 
+ .network-reconnect-btn:hover {
+diff --git a/apps/web/src/app/styles/styles.css b/apps/web/src/app/styles/styles.css
+index 7120d0dfc11f80a81e241f0353430c66f72341bc..4326b5bd399e63dad9d35e2e8d034b4cfc695d6b 100644
+--- a/apps/web/src/app/styles/styles.css
++++ b/apps/web/src/app/styles/styles.css
+@@ -315,12 +315,16 @@ svg {
+     color var(--duration-fast) var(--ease-out);
+ }
+ .button:hover:not(:disabled) {
++}
++.button:hover:not(:disabled):not([data-motion-control]) {
+   transform: translateY(-1px);
+ }
+ .button:active:not(:disabled) {
+-  transform: scale(0.975);
+   transition-duration: var(--duration-instant);
+ }
++.button:active:not(:disabled):not([data-motion-control]) {
++  transform: scale(0.975);
++}
+ .button--primary {
+   background: var(--primary);
+   color: white;
+@@ -412,12 +416,17 @@ svg {
+ .icon-button.is-active {
+   color: var(--primary);
+   background: var(--primary-soft);
++}
++.icon-button:hover:not(:disabled):not([data-motion-control]),
++.icon-button.is-active:not([data-motion-control]) {
+   transform: translateY(-1px);
+ }
+ .icon-button:active:not(:disabled) {
+-  transform: scale(0.94);
+   transition-duration: var(--duration-instant);
+ }
++.icon-button:active:not(:disabled):not([data-motion-control]) {
++  transform: scale(0.94);
++}
+ @media (pointer: coarse) {
+   .icon-button::before {
+     content: "";
+@@ -589,7 +598,7 @@ svg {
+   background: var(--backdrop);
+   backdrop-filter: blur(8px) saturate(160%);
+   -webkit-backdrop-filter: blur(8px) saturate(160%);
+-  will-change: opacity;
++
+ }
+ .modal {
+   width: min(520px, 100%);
+@@ -601,7 +610,7 @@ svg {
+   box-shadow:
+     inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
+     var(--shadow-lg);
+-  will-change: transform, opacity;
++
+   transform: translateZ(0);
+ }
+ [data-theme="dark"] .modal {
+@@ -701,7 +710,7 @@ svg {
+   border-radius: var(--radius-full);
+   background: var(--slate-300);
+   transition: background var(--motion-duration-micro) var(--motion-ease-out);
+-  will-change: background;
++
+ }
+ .toggle-row > i::before {
+   content: "";
+@@ -712,7 +721,7 @@ svg {
+   background: white;
+   box-shadow: var(--shadow-sm);
+   transition: transform var(--motion-duration-micro) var(--motion-ease-spring);
+-  will-change: transform;
++
+   transform: translateZ(0);
+ }
+ .toggle-row input:checked + i {
+@@ -740,7 +749,7 @@ svg {
+   border-radius: var(--radius-lg);
+   background: var(--surface-raised);
+   box-shadow: var(--shadow-lg);
+-  will-change: transform, opacity;
++
+   transform: translateZ(0);
+ }
+ .toast__icon {
+@@ -947,7 +956,7 @@ svg {
+     background var(--motion-duration-micro) var(--motion-ease-out),
+     border-color var(--motion-duration-micro) var(--motion-ease-out),
+     box-shadow var(--motion-duration-micro) var(--motion-ease-spring);
+-  will-change: transform;
++
+   transform: translateZ(0);
+ }
+ .feature-card:hover {
+@@ -1189,7 +1198,7 @@ svg {
+     transform var(--motion-duration-micro) var(--motion-ease-spring),
+     box-shadow var(--motion-duration-micro) var(--motion-ease-spring),
+     border-color var(--motion-duration-micro) var(--motion-ease-out);
+-  will-change: transform;
++
+   transform: translateZ(0);
+ }
+ .pricing-card:hover {
+@@ -1721,16 +1730,7 @@ svg {
+   font-size: 11px;
+ }
+ 
+-@keyframes revealUp {
+-  from {
+-    opacity: 0;
+-    transform: translate3d(0, 16px, 0);
+-  }
+-  to {
+-    opacity: 1;
+-    transform: translate3d(0, 0, 0);
+-  }
+-}
++
+ .reveal {
+   animation: revealUp var(--motion-duration-page) var(--motion-ease-out) both;
+ }
+@@ -1865,7 +1865,7 @@ svg {
+   box-shadow:
+     inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
+     var(--shadow-lg);
+-  will-change: transform, opacity;
++
+   transform: translateZ(0);
+ }
+ .workspace-menu > span {
+@@ -2216,7 +2216,7 @@ svg {
+   box-shadow:
+     inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
+     var(--shadow-lg);
+-  will-change: transform, opacity;
++
+   transform: translateZ(0);
+ }
+ .quick-menu {
+@@ -2406,15 +2406,7 @@ svg {
+   background: var(--surface-soft);
+   animation: suspenseShimmer 1.4s ease-in-out infinite;
+ }
+-@keyframes suspenseShimmer {
+-  0%,
+-  100% {
+-    opacity: 0.5;
+-  }
+-  50% {
+-    opacity: 0.9;
+-  }
+-}
++
+ .network-reconnect-bar {
+   display: flex;
+   align-items: center;
+@@ -2457,17 +2449,7 @@ svg {
+   background: currentColor;
+   animation: pulseDot 1.5s infinite;
+ }
+-@keyframes pulseDot {
+-  0%,
+-  100% {
+-    opacity: 1;
+-    transform: scale(1);
+-  }
+-  50% {
+-    opacity: 0.3;
+-    transform: scale(0.75);
+-  }
+-}
++
+ .network-reconnect-btn {
+   background: transparent;
+   border: 1px solid currentColor;
+@@ -2522,7 +2504,7 @@ svg {
+     transform var(--motion-duration-micro) var(--motion-ease-spring),
+     box-shadow var(--motion-duration-micro) var(--motion-ease-spring),
+     border-color var(--motion-duration-micro) var(--motion-ease-out);
+-  will-change: transform;
++
+   transform: translateZ(0);
+ }
+ .panel:hover {
+@@ -2581,7 +2563,7 @@ svg {
+     transform var(--motion-duration-micro) var(--motion-ease-spring),
+     box-shadow var(--motion-duration-micro) var(--motion-ease-spring),
+     border-color var(--motion-duration-micro) var(--motion-ease-out);
+-  will-change: transform;
++
+   transform: translateZ(0);
+ }
+ .metric-card:hover {
+diff --git a/apps/web/src/app/styles/unified-surfaces.css b/apps/web/src/app/styles/unified-surfaces.css
+index c3ac698758d099db3773774eb2b50bcf9d4fc0e7..519a9f8665e53c49e0ce6f8882d642271451b1b0 100644
+--- a/apps/web/src/app/styles/unified-surfaces.css
++++ b/apps/web/src/app/styles/unified-surfaces.css
+@@ -243,11 +243,7 @@
+   }
+ }
+ 
+-@media (prefers-reduced-motion: reduce) {
+-  .ambient-backdrop__veil {
+-    transition: none;
+-  }
+-}
++/* Reduced-motion policy is centralized in shared/motion/motion.css. */
+ 
+ .editorial-tag--stacked {
+   display: block;
+diff --git a/apps/web/src/features/auth/LoginPage.tsx b/apps/web/src/features/auth/LoginPage.tsx
+index 14792b02f6538ae0fc532e8e7f1f8dc1d67fd1da..05b26c09ac189afd6547b6686c455bbfddcc0c32 100644
+--- a/apps/web/src/features/auth/LoginPage.tsx
++++ b/apps/web/src/features/auth/LoginPage.tsx
+@@ -17,6 +17,7 @@ import { useApp } from "../../app/providers/AppContext";
+ import { NexoLogo } from "../../shared/ui/NexoLogo";
+ import "./editorial-auth.css";
+ import { focusFirstInvalid, withPending } from "../../shared/lib/interaction";
++import { useMotionSafe } from "../../shared/motion/MotionProvider";
+ 
+ declare global {
+   interface Window {
+@@ -151,6 +152,7 @@ function GoogleSignInButton({
+ }
+ 
+ export function LoginPage() {
++  const safe = useMotionSafe();
+   const {
+     setScreen,
+     notify,
+@@ -401,10 +403,10 @@ export function LoginPage() {
+         <AnimatePresence mode="wait" initial={false}>
+           <motion.div
+             key={authStep === "form" ? authMode : authStep}
+-            initial={{ opacity: 0, y: 12 }}
++            initial={safe.reduced ? false : { opacity: 0, y: 12 }}
+             animate={{ opacity: 1, y: 0 }}
+-            exit={{ opacity: 0, y: -8, transition: { duration: 0.15 } }}
+-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
++            exit={{ opacity: safe.reduced ? 1 : 0, y: safe.reduced ? 0 : -8, transition: { duration: safe.duration(0.15) } }}
++            transition={{ duration: safe.duration(0.22), ease: [0.16, 1, 0.3, 1] }}
+           >
+             {/* Step: Password Reset */}
+             {authStep === "reset-request" || authStep === "reset-confirm" ? (
+diff --git a/apps/web/src/features/chat/chat-media.css b/apps/web/src/features/chat/chat-media.css
+index 24875f52629ffb1a45eac757c1c0eb11d43bcc8b..e522231f961df207508d568d085172f35213d5f1 100644
+--- a/apps/web/src/features/chat/chat-media.css
++++ b/apps/web/src/features/chat/chat-media.css
+@@ -113,11 +113,7 @@
+   color: inherit;
+   cursor: pointer;
+ }
+-@keyframes chat-record-pulse {
+-  to {
+-    opacity: 0.3;
+-  }
+-}
++
+ .chat-media-button.is-recording {
+   color: #dc2626;
+ }
+diff --git a/apps/web/src/features/chat/LiveChatPage.tsx b/apps/web/src/features/chat/LiveChatPage.tsx
+index b43506a5ab5a4e069c88f2baf2734d0fdaf8eb46..a5f99036741dc391e74c64bad3b850defb5b3b20 100644
+--- a/apps/web/src/features/chat/LiveChatPage.tsx
++++ b/apps/web/src/features/chat/LiveChatPage.tsx
+@@ -9,7 +9,13 @@ import {
+   type SetStateAction,
+ } from "react";
+ import { useDraft } from "../../shared/hooks/useDraft";
+-import { AnimatePresence } from "motion/react";
++import { AnimatePresence, motion } from "motion/react";
++import { useMotionSafe } from "../../shared/motion/MotionProvider";
++import { DURATION, EASE } from "../../shared/motion/tokens";
++import { ReactionCount } from "../../shared/motion/AnimatedCount";
++import { ambientBridge } from "../../shared/motion/AmbientBackdrop";
++import { useSendFeedback } from "../../shared/motion/useControlMotion";
++import { usePanelDialog } from "../../shared/hooks/usePanelDialog";
+ import { channelScroll, rememberChannelScroll } from "../../shared/lib/channel-scroll";
+ import { formatFileSize } from "../../shared/lib/file-size";
+ import type { ChannelItem, ChatMessageItem, GroupMemberItem, WorkspaceItem } from "@doan/shared";
+@@ -107,6 +113,7 @@ type OutgoingMessage = {
+ const reactionEmojis = ["👍", "❤️", "😂", "😮", "😢", "🔥", "🎉", "✅"] as const;
+ 
+ export function ChatPage() {
++  const safe = useMotionSafe();
+   const {
+     accessToken,
+     user,
+@@ -149,6 +156,9 @@ export function ChatPage() {
+   // The details panel defaults to closed so the reading and composing area remains spacious.
+   const [showInfoPanel, setShowInfoPanel] = useState(false);
+   const [mobileChannelDrawerOpen, setMobileChannelDrawerOpen] = useState(false);
++  const [wideInfoLayout, setWideInfoLayout] = useState(() => window.matchMedia("(min-width: 961px)").matches);
++  const infoPanelRef = usePanelDialog(() => setShowInfoPanel(false), showInfoPanel && !wideInfoLayout, ".live-chat-info-backdrop");
++  const channelsPanelRef = usePanelDialog(() => setMobileChannelDrawerOpen(false), mobileChannelDrawerOpen, ".live-chat-mobile-backdrop");
+   const [deleteTarget, setDeleteTarget] = useState<ChatMessageItem | null>(null);
+   const [deleting, setDeleting] = useState(false);
+   const [reactionPickerId, setReactionPickerId] = useState("");
+@@ -196,6 +206,7 @@ export function ChatPage() {
+   const [loading, setLoading] = useState(true);
+   const [busy, setBusy] = useState(false);
+   const [sending, setSending] = useState(false);
++  const sendRef = useSendFeedback(sending);
+   const [showMembers, setShowMembers] = useState(false);
+   const [revision, setRevision] = useState(0);
+   const end = useRef<HTMLDivElement>(null);
+@@ -882,6 +893,7 @@ export function ChatPage() {
+         );
+       }
+       setChannelPreviews((previous) => ({ ...previous, [draft.channelId]: message }));
++      ambientBridge.pulse();
+     } catch (reason) {
+       const error = reason instanceof Error ? reason.message : "Không thể gửi tin.";
+       setOutbox((previous) =>
+@@ -1108,6 +1120,7 @@ export function ChatPage() {
+   useEffect(() => {
+     const wide = window.matchMedia("(min-width: 961px)");
+     const sync = () => {
++      setWideInfoLayout(wide.matches);
+       if (!wide.matches) setShowInfoPanel(false);
+       if (window.matchMedia("(min-width: 681px)").matches) setMobileChannelDrawerOpen(false);
+     };
+@@ -1194,7 +1207,10 @@ export function ChatPage() {
+       )}
+       <aside
+         className={`live-chat-nav ${mobileChannelDrawerOpen ? "is-mobile-open" : ""}`}
++        ref={channelsPanelRef}
+         aria-label="Danh sách kênh trong nhóm"
++        role={mobileChannelDrawerOpen ? "dialog" : undefined}
++        aria-modal={mobileChannelDrawerOpen || undefined}
+       >
+         <div className="live-chat-nav__header">
+           <div className="chat-nav-title-stack">
+@@ -1683,7 +1699,7 @@ export function ChatPage() {
+                                 }).catch(fail)
+                               }
+                             >
+-                              <span>{reaction.emoji}</span> <b>{reaction.count}</b>
++                              <span>{reaction.emoji}</span> <ReactionCount value={reaction.count} />
+                             </button>
+                           ))}
+                         <div className="chat-reaction-picker-anchor">
+@@ -1700,14 +1716,20 @@ export function ChatPage() {
+                           >
+                             <Icon name="smile" size={13} />
+                           </button>
+-                          {reactionPickerId === m.id && (
+-                            <div
++                          <AnimatePresence>{reactionPickerId === m.id && (
++                            <motion.div
+                               className="chat-reaction-picker"
++                              initial={safe.reduced ? false : { opacity:0, scale:0.95, y:4 }}
++                              animate={{opacity:1,scale:1,y:0}} exit={{opacity:0}}
++                              transition={{duration:safe.duration(DURATION.micro),ease:EASE.out}}
++                              style={{transformOrigin:"bottom left"}}
+                               role="group"
+                               aria-label="Chọn biểu cảm"
+                             >
+-                              {reactionEmojis.map((emoji) => (
+-                                <button
++                              {reactionEmojis.map((emoji, index) => (
++                                <motion.button
++                                  initial={safe.reduced ? false : {opacity:0,y:3}} animate={{opacity:1,y:0}}
++                                  transition={{duration:safe.duration(DURATION.micro),delay:safe.duration(index * 0.02)}}
+                                   type="button"
+                                   key={emoji}
+                                   aria-label={`Thả cảm xúc ${emoji}`}
+@@ -1720,10 +1742,10 @@ export function ChatPage() {
+                                   }}
+                                 >
+                                   {emoji}
+-                                </button>
++                                </motion.button>
+                               ))}
+-                            </div>
+-                          )}
++                            </motion.div>
++                          )}</AnimatePresence>
+                         </div>
+                       </div>
+ 
+@@ -2022,6 +2044,7 @@ export function ChatPage() {
+               <button
+                 type="submit"
+                 className="chat-dock-send-btn"
++                ref={sendRef}
+                 title="Gửi tin nhắn"
+                 disabled={
+                   !isConnected ||
+@@ -2037,7 +2060,7 @@ export function ChatPage() {
+           </form>
+         </fieldset>
+ 
+-        {route.threadId && (
++        <AnimatePresence mode="wait" initial={false}>{route.threadId && (
+           <ThreadPanel
+             key={route.threadId}
+             rootId={route.threadId}
+@@ -2046,7 +2069,7 @@ export function ChatPage() {
+             readOnly={readOnly}
+             onClose={() => navigate({ ...route, threadId: undefined })}
+           />
+-        )}
++        )}</AnimatePresence>
+       </div>
+ 
+       {/* 3. Panel: Right Info Card — Distinguishes Channel Info vs Group Info */}
+@@ -2059,7 +2082,7 @@ export function ChatPage() {
+         />
+       )}
+       {showInfoPanel && workspace && (
+-        <aside className="live-chat-info-panel" aria-label="Thông tin kênh và nhóm">
++        <motion.aside {...safe.panel} ref={infoPanelRef} role={wideInfoLayout ? undefined : "dialog"} aria-modal={wideInfoLayout ? undefined : true} tabIndex={-1} className="live-chat-info-panel" aria-label="Thông tin kênh và nhóm">
+           <div className="chat-info-head">
+             <h3>{channel ? "Thông tin kênh" : "Thông tin nhóm"}</h3>
+             <button
+@@ -2285,7 +2308,7 @@ export function ChatPage() {
+               </button>
+             </div>
+           </div>
+-        </aside>
++        </motion.aside>
+       )}
+ 
+       <AnimatePresence>{deleteTarget && (
+diff --git a/apps/web/src/features/chat/team-conversations.css b/apps/web/src/features/chat/team-conversations.css
+index 93f0ab658c2c26bc67307c822e59f28c52d80764..7e920e9f59285c5d67e9225082b72ec4468ee2da 100644
+--- a/apps/web/src/features/chat/team-conversations.css
++++ b/apps/web/src/features/chat/team-conversations.css
+@@ -49,7 +49,7 @@
+   font-size: 13px;
+   font-weight: 500;
+   cursor: pointer;
+-  transition: all 150ms ease;
++  transition: transform 150ms ease, opacity 150ms ease, background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+   outline: none !important;
+ }
+ 
+@@ -156,7 +156,7 @@
+   background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
+   font-size: 12px;
+   cursor: pointer;
+-  transition: all 150ms ease;
++  transition: transform 150ms ease, opacity 150ms ease, background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+   outline: none !important;
+ }
+ 
+diff --git a/apps/web/src/features/chat/ThreadPanel.tsx b/apps/web/src/features/chat/ThreadPanel.tsx
+index 46b2362047eb282a8d539d30dbbe74ba6132ecc7..8a73a3c177508cd4d2f8874a76a2b73b9b8f8aa3 100644
+--- a/apps/web/src/features/chat/ThreadPanel.tsx
++++ b/apps/web/src/features/chat/ThreadPanel.tsx
+@@ -9,6 +9,8 @@ import "./team-conversations.css";
+ import { AttachmentView } from "./ChatAttachment";
+ import { useDraft } from "../../shared/hooks/useDraft";
+ import { usePanelDialog } from "../../shared/hooks/usePanelDialog";
++import { motion, useIsPresent } from "motion/react";
++import { useMotionSafe } from "../../shared/motion/MotionProvider";
+ 
+ export interface ChannelMember {
+   userId: string;
+@@ -34,6 +36,8 @@ export function ThreadPanel({
+   onClose: () => void;
+   members: ChannelMember[];
+ }) {
++  const safe = useMotionSafe();
++  const present = useIsPresent();
+   const { accessToken, user } = useApp();
+   const panelRef = usePanelDialog(onClose);
+   const { socket, sendMessage, isConnected } = useSocket();
+@@ -200,7 +204,10 @@ export function ThreadPanel({
+     }
+   };
+   return (
+-    <aside
++    <motion.aside
++      {...safe.panel}
++      inert={!present}
++      style={present ? undefined : {pointerEvents:"none"}}
+       ref={panelRef}
+       role="dialog"
+       aria-modal="true"
+@@ -331,6 +338,6 @@ export function ThreadPanel({
+           </form>
+         </>
+       )}
+-    </aside>
++    </motion.aside>
+   );
+ }
+diff --git a/apps/web/src/features/landing/editorial.css b/apps/web/src/features/landing/editorial.css
+index 61ad22217af1fef4338658de22450baa4e8ca08d..45162fe4951f3f628fc81ca6c89262d010d86e39 100644
+--- a/apps/web/src/features/landing/editorial.css
++++ b/apps/web/src/features/landing/editorial.css
+@@ -311,7 +311,7 @@ html {
+ 
+ .hero-word > span {
+   display: inline-block;
+-  will-change: transform;
++
+ }
+ 
+ .hero-word + .hero-word {
+diff --git a/apps/web/src/features/landing/LandingPage.tsx b/apps/web/src/features/landing/LandingPage.tsx
+index b0dbe9fea8de53577d3df729dedd7af2537dc755..34ca87c87b82257044681d6a51c75f7aace1b3f4 100644
+--- a/apps/web/src/features/landing/LandingPage.tsx
++++ b/apps/web/src/features/landing/LandingPage.tsx
+@@ -7,6 +7,7 @@ import { useApp } from "../../app/providers/AppContext";
+ import { NexoLogo } from "../../shared/ui/NexoLogo";
+ import { ambientBridge } from "../../shared/motion/AmbientBackdrop";
+ import { EASE_OUT, GSAP_EASE_OUT, prefersReducedMotion } from "../../shared/motion/tokens";
++import { useMotionSafe } from "../../shared/motion/MotionProvider";
+ import "./editorial.css";
+ 
+ gsap.registerPlugin(ScrollTrigger);
+@@ -99,6 +100,8 @@ const reveal = {
+ };
+ 
+ export function LandingPage() {
++  const safe = useMotionSafe();
++  const revealSafe = safe.reduced ? { ...reveal, initial: false as const } : reveal;
+   const { openAuth, enterWorkspace, user } = useApp();
+   const [isScrolled, setIsScrolled] = useState(false);
+   const heroRef = useRef<HTMLDivElement>(null);
+@@ -114,9 +117,9 @@ export function LandingPage() {
+   useLayoutEffect(() => {
+     const hero = heroRef.current;
+     if (!hero) return;
+-    const reduced = prefersReducedMotion();
+-    const ctx = gsap.context(() => {
+-      if (!reduced) {
++    const media = gsap.matchMedia();
++    media.add({ full: "(prefers-reduced-motion: no-preference)", reduced: "(prefers-reduced-motion: reduce)" }, () => {
++      if (!safe.reduced) {
+         gsap
+           .timeline({ defaults: { ease: GSAP_EASE_OUT } })
+           .from(".hero-word > span", { yPercent: 110, duration: 1.1, stagger: 0.07 })
+@@ -129,7 +132,7 @@ export function LandingPage() {
+           scrollTrigger: { trigger: hero, start: "top top", end: "bottom top", scrub: 0.6 },
+         });
+       }
+-      ScrollTrigger.create({
++      if (!safe.reduced) ScrollTrigger.create({
+         trigger: hero,
+         start: "top top",
+         end: "bottom top",
+@@ -137,10 +140,10 @@ export function LandingPage() {
+       });
+     }, hero);
+     return () => {
+-      ctx.revert();
++      media.revert();
+       ambientBridge.setScroll(0);
+     };
+-  }, []);
++  }, [safe.reduced]);
+ 
+   const scrollToSection = (id: string) => {
+     const el = document.getElementById(id);
+@@ -159,7 +162,7 @@ export function LandingPage() {
+           <div className="editorial-nav-left">
+             <button
+               type="button"
+-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
++              onClick={() => window.scrollTo({ top: 0, behavior: safe.reduced ? "auto" : "smooth" })}
+               className="editorial-brand"
+             >
+               <NexoLogo />
+@@ -221,8 +224,8 @@ export function LandingPage() {
+       <section id="residences" className="editorial-section">
+         <motion.div
+           className="editorial-section-head"
+-          {...reveal}
+-          transition={{ duration: 0.8, ease: EASE_OUT }}
++          {...revealSafe}
++          transition={{ duration: safe.duration(0.8), ease: EASE_OUT }}
+         >
+           <span className="editorial-tag">Hệ sinh thái cộng tác</span>
+           <h2 className="editorial-title">Không gian chuyên biệt</h2>
+@@ -239,10 +242,10 @@ export function LandingPage() {
+               <motion.article
+                 key={space.id}
+                 className="editorial-residence-card"
+-                initial={{ opacity: 0, y: 36 }}
++                initial={safe.reduced ? false : { opacity: 0, y: 36 }}
+                 whileInView={{ opacity: 1, y: 0 }}
+                 viewport={{ once: true, amount: 0.15 }}
+-                transition={{ duration: 0.75, delay: idx * 0.12, ease: EASE_OUT }}
++                transition={{ duration: safe.duration(0.75), delay: safe.duration(idx * 0.12), ease: EASE_OUT }}
+               >
+                 <div className="editorial-residence-media">
+                   <div className={`editorial-residence-img editorial-residence-img--${space.id}`}>
+@@ -269,8 +272,8 @@ export function LandingPage() {
+         <div className="editorial-section-inner">
+           <motion.div
+             className="editorial-section-head"
+-            {...reveal}
+-            transition={{ duration: 0.8, ease: EASE_OUT }}
++            {...revealSafe}
++            transition={{ duration: safe.duration(0.8), ease: EASE_OUT }}
+           >
+             <span className="editorial-tag">Nền tảng kỹ thuật</span>
+             <h2 className="editorial-title">Kiến trúc phân tán SFU</h2>
+@@ -285,10 +288,10 @@ export function LandingPage() {
+               <motion.div
+                 key={pillar.num}
+                 className="editorial-arch-item"
+-                initial={{ opacity: 0, y: 36 }}
++                initial={safe.reduced ? false : { opacity: 0, y: 36 }}
+                 whileInView={{ opacity: 1, y: 0 }}
+                 viewport={{ once: true, amount: 0.2 }}
+-                transition={{ duration: 0.75, delay: idx * 0.12, ease: EASE_OUT }}
++                transition={{ duration: safe.duration(0.75), delay: safe.duration(idx * 0.12), ease: EASE_OUT }}
+               >
+                 <span className="editorial-arch-num">{pillar.num}</span>
+                 <h3 className="editorial-arch-title">{pillar.title}</h3>
+@@ -299,10 +302,10 @@ export function LandingPage() {
+ 
+           <motion.div
+             className="editorial-metrics-bar"
+-            initial={{ opacity: 0, scale: 0.98 }}
++            initial={safe.reduced ? false : { opacity: 0, scale: 0.98 }}
+             whileInView={{ opacity: 1, scale: 1 }}
+             viewport={{ once: true, amount: 0.25 }}
+-            transition={{ duration: 0.8, ease: EASE_OUT }}
++            transition={{ duration: safe.duration(0.8), ease: EASE_OUT }}
+           >
+             {measuredMetrics.map((metric) => (
+               <div key={metric.value}>
+@@ -321,8 +324,8 @@ export function LandingPage() {
+       <section id="philosophy" className="editorial-section">
+         <motion.div
+           className="editorial-quote-box"
+-          {...reveal}
+-          transition={{ duration: 0.85, ease: EASE_OUT }}
++          {...revealSafe}
++          transition={{ duration: safe.duration(0.85), ease: EASE_OUT }}
+         >
+           <p className="editorial-quote-text">
+             “Sự tinh tế đỉnh cao không nằm ở việc thêm thắt tính năng, mà ở việc loại bỏ triệt để
+@@ -338,10 +341,10 @@ export function LandingPage() {
+             <motion.div
+               key={principle.tag}
+               className="editorial-principle-card"
+-              initial={{ opacity: 0, y: 28 }}
++              initial={safe.reduced ? false : { opacity: 0, y: 28 }}
+               whileInView={{ opacity: 1, y: 0 }}
+               viewport={{ once: true, amount: 0.2 }}
+-              transition={{ duration: 0.7, delay: 0.1 + idx * 0.1, ease: EASE_OUT }}
++              transition={{ duration: safe.duration(0.7), delay: safe.duration(0.1 + idx * 0.1), ease: EASE_OUT }}
+             >
+               <div className="editorial-principle-tag">{principle.tag}</div>
+               <h3 className="editorial-principle-heading">{principle.heading}</h3>
+diff --git a/apps/web/src/features/meetings/meeting-ui.css b/apps/web/src/features/meetings/meeting-ui.css
+index 845c1bbe125fa7ae11810d7c969226d285ceb9f8..3e7198db15e656c47f2d78306a51ac3a3dbade53 100644
+--- a/apps/web/src/features/meetings/meeting-ui.css
++++ b/apps/web/src/features/meetings/meeting-ui.css
+@@ -182,7 +182,7 @@
+   border-radius: 18px;
+   background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
+   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+-  transition: all 180ms ease;
++  transition: transform 180ms ease, opacity 180ms ease, background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+ }
+ 
+ .meeting-history-item:hover {
+@@ -301,7 +301,7 @@
+   font-size: 13.5px;
+   font-weight: 550;
+   cursor: pointer;
+-  transition: all 180ms ease;
++  transition: transform 180ms ease, opacity 180ms ease, background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+   outline: none !important;
+   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+ }
+@@ -487,10 +487,7 @@
+   animation-delay: 0.36s;
+ }
+ 
+-@keyframes speaking-pulse {
+-  0% { transform: scaleY(0.3); }
+-  100% { transform: scaleY(1.3); }
+-}
++
+ 
+ .meeting-reconnecting-overlay {
+   position: absolute;
+diff --git a/apps/web/src/features/search/NotionSearchModal.tsx b/apps/web/src/features/search/NotionSearchModal.tsx
+index 12f0f897db892de47010220361e4b688645d5d37..ceab1f479d42b861759ce0ebd4550921e0d2f089 100644
+--- a/apps/web/src/features/search/NotionSearchModal.tsx
++++ b/apps/web/src/features/search/NotionSearchModal.tsx
+@@ -1,6 +1,7 @@
+ import { useEffect, useRef, useState } from "react";
+-import { AnimatePresence, motion } from "motion/react";
++import { AnimatePresence, motion, useIsPresent, type HTMLMotionProps } from "motion/react";
+ import { prefersReducedMotion } from "../../shared/motion/tokens";
++import { useMotionSafe, useSceneCover } from "../../shared/motion/MotionProvider";
+ import type {
+   GlobalMessageSearchItem,
+   WorkspaceItem,
+@@ -28,6 +29,13 @@ interface Props {
+ 
+ const termKey = (value: string) => value.trim();
+ 
++// The fading surface must release input immediately so fast reopen clicks reach the trigger.
++function SearchBackdrop(props: HTMLMotionProps<"div">) {
++  const present = useIsPresent();
++  return <motion.div {...props} inert={!present} aria-hidden={!present || undefined}
++    style={{...props.style, pointerEvents: present ? undefined : "none"}} />;
++}
++
+ // Titles match the dock labels; descriptions carry synonyms so either wording is searchable.
+ const pages: { id: ViewId; title: string; desc: string; icon: IconName }[] = [
+   {
+@@ -93,6 +101,8 @@ export function NotionSearchModal({
+   onSelectView,
+   onSelectMessage,
+ }: Props) {
++  const safe = useMotionSafe();
++  useSceneCover(isOpen);
+   const [query, setQuery] = useState("");
+   const [results, setResults] = useState<GlobalMessageSearchItem[]>([]);
+   const [loading, setLoading] = useState(false);
+@@ -159,11 +169,11 @@ export function NotionSearchModal({
+       document.activeElement instanceof HTMLElement ? document.activeElement : null;
+     const previousOverflow = document.body.style.overflow;
+     document.body.style.overflow = "hidden";
+-    const frame = window.requestAnimationFrame(() => inputRef.current?.focus());
++    const frame = window.requestAnimationFrame(() => inputRef.current?.focus({preventScroll: true}));
+     return () => {
+       window.cancelAnimationFrame(frame);
+       document.body.style.overflow = previousOverflow;
+-      if (previousFocus?.isConnected) previousFocus.focus();
++      if (previousFocus?.isConnected) previousFocus.focus({preventScroll: true});
+     };
+   }, [isOpen]);
+ 
+@@ -294,13 +304,13 @@ export function NotionSearchModal({
+   return (
+     <AnimatePresence>
+       {isOpen && (
+-        <motion.div
++        <SearchBackdrop
+           className="notion-search-backdrop"
+           onClick={onClose}
+           initial={{ opacity: 0 }}
+           animate={{ opacity: 1 }}
+           exit={{ opacity: 0 }}
+-          transition={{ duration: 0.18 }}
++          transition={{ duration: safe.duration(0.16) }}
+         >
+           <motion.div
+             ref={dialogRef}
+@@ -309,10 +319,10 @@ export function NotionSearchModal({
+             aria-modal="true"
+             aria-label="Tìm kiếm toàn bộ tin nhắn và trang"
+             onClick={(event) => event.stopPropagation()}
+-            initial={{ opacity: 0, scale: 0.96, y: -16 }}
++            initial={safe.reduced ? false : { opacity: 0, scale: 0.96, y: -16 }}
+             animate={{ opacity: 1, scale: 1, y: 0 }}
+-            exit={{ opacity: 0, scale: 0.96, y: -12 }}
+-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
++            exit={{ opacity: safe.reduced ? 1 : 0, scale: safe.reduced ? 1 : 0.96, y: safe.reduced ? 0 : -12 }}
++            transition={{ duration: safe.duration(0.22), ease: [0.16, 1, 0.3, 1] }}
+           >
+             {/* Search Header Bar */}
+             <div className="notion-search-head">
+@@ -388,7 +398,7 @@ export function NotionSearchModal({
+                   initial={{ opacity: 0 }}
+                   animate={{ opacity: 1 }}
+                   exit={{ opacity: 0 }}
+-                  transition={{ duration: 0.2 }}
++                  transition={{ duration: safe.duration(0.2) }}
+                 >
+                   <div className="notion-search-filters-header">
+                     <span className="notion-search-filters-title">BỘ LỌC TÌM KIẾM NÂNG CAO</span>
+@@ -674,7 +684,7 @@ export function NotionSearchModal({
+               <span className="notion-search-brand">nexo Quick Search</span>
+             </div>
+           </motion.div>
+-        </motion.div>
++        </SearchBackdrop>
+       )}
+     </AnimatePresence>
+   );
+diff --git a/apps/web/src/features/search/search-enhancements.css b/apps/web/src/features/search/search-enhancements.css
+index cc430dd68710369947edc2772acfd255cb373f11..0d9a59be102e381c0a99d72840cd3d48d024a391 100644
+--- a/apps/web/src/features/search/search-enhancements.css
++++ b/apps/web/src/features/search/search-enhancements.css
+@@ -76,7 +76,7 @@
+   font-size: 14.5px !important;
+   font-family: var(--font-body) !important;
+   outline: none !important;
+-  transition: all 180ms ease !important;
++  transition: transform 180ms ease !important, opacity 180ms ease !important, background-color 180ms ease !important, border-color 180ms ease !important, color 180ms ease !important;
+ }
+ 
+ .notion-search-input::placeholder {
+@@ -102,7 +102,7 @@
+   place-items: center !important;
+   color: #475569 !important;
+   cursor: pointer !important;
+-  transition: all 150ms ease !important;
++  transition: transform 150ms ease !important, opacity 150ms ease !important, background-color 150ms ease !important, border-color 150ms ease !important, color 150ms ease !important;
+ }
+ 
+ .notion-search-clear-btn:hover {
+@@ -137,7 +137,7 @@
+   font-size: 13.5px !important;
+   font-weight: 500 !important;
+   cursor: pointer !important;
+-  transition: all 150ms ease !important;
++  transition: transform 150ms ease !important, opacity 150ms ease !important, background-color 150ms ease !important, border-color 150ms ease !important, color 150ms ease !important;
+   outline: none !important;
+   flex-shrink: 0 !important;
+ }
+@@ -173,7 +173,7 @@
+   display: grid !important;
+   place-items: center !important;
+   cursor: pointer !important;
+-  transition: all 150ms ease !important;
++  transition: transform 150ms ease !important, opacity 150ms ease !important, background-color 150ms ease !important, border-color 150ms ease !important, color 150ms ease !important;
+   outline: none !important;
+   flex-shrink: 0 !important;
+ }
+@@ -216,7 +216,7 @@
+   cursor: pointer !important;
+   padding: 2px 6px !important;
+   border-radius: 6px !important;
+-  transition: all 150ms ease !important;
++  transition: transform 150ms ease !important, opacity 150ms ease !important, background-color 150ms ease !important, border-color 150ms ease !important, color 150ms ease !important;
+ }
+ 
+ .notion-search-reset-filters-btn:hover {
+@@ -252,7 +252,7 @@
+   color: #0f172a !important;
+   font-size: 12.5px !important;
+   outline: none !important;
+-  transition: all 150ms ease !important;
++  transition: transform 150ms ease !important, opacity 150ms ease !important, background-color 150ms ease !important, border-color 150ms ease !important, color 150ms ease !important;
+ }
+ 
+ .search-filter-field select:focus,
+@@ -338,11 +338,7 @@
+   animation: search-spin 600ms linear infinite;
+ }
+ 
+-@keyframes search-spin {
+-  to {
+-    transform: rotate(360deg);
+-  }
+-}
++
+ 
+ /* 6. Quick Navigation Row */
+ .notion-search-pages-list {
+@@ -361,7 +357,7 @@
+   color: #0f172a !important;
+   cursor: pointer !important;
+   text-align: left !important;
+-  transition: all 140ms ease !important;
++  transition: transform 140ms ease !important, opacity 140ms ease !important, background-color 140ms ease !important, border-color 140ms ease !important, color 140ms ease !important;
+   outline: none !important;
+ }
+ 
+@@ -384,7 +380,7 @@
+   place-items: center !important;
+   color: #0f172a !important;
+   flex-shrink: 0 !important;
+-  transition: all 140ms ease !important;
++  transition: transform 140ms ease !important, opacity 140ms ease !important, background-color 140ms ease !important, border-color 140ms ease !important, color 140ms ease !important;
+ }
+ 
+ .notion-search-page-info {
+@@ -418,7 +414,7 @@
+   font-size: 12px !important;
+   font-weight: 500 !important;
+   color: #94a3b8 !important;
+-  transition: all 140ms ease !important;
++  transition: transform 140ms ease !important, opacity 140ms ease !important, background-color 140ms ease !important, border-color 140ms ease !important, color 140ms ease !important;
+ }
+ 
+ /* Row Selected State (Spotlight Active Item) */
+@@ -552,7 +548,7 @@
+   font-size: 13px !important;
+   font-weight: 500 !important;
+   cursor: pointer !important;
+-  transition: all 150ms ease !important;
++  transition: transform 150ms ease !important, opacity 150ms ease !important, background-color 150ms ease !important, border-color 150ms ease !important, color 150ms ease !important;
+ }
+ 
+ .notion-search-more-btn:hover:not(:disabled) {
+diff --git a/apps/web/src/features/tasks/TaskBoardPage.tsx b/apps/web/src/features/tasks/TaskBoardPage.tsx
+index 9e802b2c82fe0c1ec4cecc0228139d27c2ba7bf9..28ad5f5a1cebd46d6d6138e500b4eaabce3cbaf7 100644
+--- a/apps/web/src/features/tasks/TaskBoardPage.tsx
++++ b/apps/web/src/features/tasks/TaskBoardPage.tsx
+@@ -5,7 +5,9 @@ import { governanceApi } from "../workspaces/api";
+ import { useApp } from "../../app/providers/AppContext";
+ import { useSocket } from "../../app/providers/SocketContext";
+ import { Button, IconButton, ConfirmDialog } from "../../shared/ui/Primitives";
+-import { AnimatePresence } from "motion/react";
++import { AnimatePresence, motion, useIsPresent } from "motion/react";
++import { useMotionSafe } from "../../shared/motion/MotionProvider";
++import { ambientBridge } from "../../shared/motion/AmbientBackdrop";
+ import { beforeTaskAt } from "../../shared/lib/interaction";
+ import { AttachmentView } from "../chat/ChatAttachment";
+ import type { ChannelMember } from "../chat/ThreadPanel";
+@@ -28,6 +30,7 @@ export function TaskBoardPage() {
+     [busy, setBusy] = useState(false),
+     [revision, setRevision] = useState(0);
+   const [boardRevision, setBoardRevision] = useState(0);
++  const [createSuccess, setCreateSuccess] = useState(0);
+   const [loadedBoardRevision, setLoadedBoardRevision] = useState(-1);
+   const [creation, setCreation, creationReady] = useDraft<{ title: string; id: string }>(
+     `${user?.id ?? "anonymous"}:task-create:${route.channelId ?? ""}`,
+@@ -196,6 +199,8 @@ export function TaskBoardPage() {
+       setCreation({ title: "", id: crypto.randomUUID() });
+       focusCreateRef.current = true;
+       setBoardRevision((n) => n + 1);
++      setCreateSuccess(n => n + 1);
++      ambientBridge.pulse();
+       notify("Đã tạo nhiệm vụ", undefined, "success", {label:"Mở",onClick:() => navigate({...route,taskId:data.task.id})});
+     } catch (reason) {
+       fail(reason);
+@@ -292,7 +297,7 @@ export function TaskBoardPage() {
+                 required
+               />
+             </label>
+-            <Button type="submit" loading={busy} disabled={busy || readOnly || !title.trim()}>
++            <Button successFlash={createSuccess} type="submit" loading={busy} disabled={busy || readOnly || !title.trim()}>
+               Tạo nhiệm vụ
+             </Button>
+           </form>
+@@ -447,7 +452,7 @@ export function TaskBoardPage() {
+           </div>
+         </>
+       )}
+-      {route.taskId && accessToken && (
++      <AnimatePresence mode="wait" initial={false}>{route.taskId && accessToken && (
+         <TaskPanel
+           key={route.taskId}
+           taskId={route.taskId}
+@@ -457,7 +462,7 @@ export function TaskBoardPage() {
+           onClose={() => navigate({ ...route, taskId: undefined })}
+           onSaved={() => setBoardRevision((n) => n + 1)}
+         />
+-      )}
++      )}</AnimatePresence>
+     </section>
+   );
+ }
+@@ -477,6 +482,8 @@ function TaskPanel({
+   onClose: () => void;
+   onSaved: () => void;
+ }) {
++  const safe = useMotionSafe();
++  const present = useIsPresent();
+   const { socket } = useSocket();
+   const { route, navigate, user } = useApp();
+   const panelRef = usePanelDialog(onClose, true, ".task-panel-scrim");
+@@ -683,11 +690,16 @@ function TaskPanel({
+       <button
+         type="button"
+         className="task-panel-scrim"
++        inert={!present}
++        style={present ? undefined : {pointerEvents:"none"}}
+         aria-label="Đóng chi tiết nhiệm vụ"
+         tabIndex={-1}
+         onClick={onClose}
+       />
+-      <aside
++      <motion.aside
++        {...safe.panel}
++        inert={!present}
++        style={present ? undefined : {pointerEvents:"none"}}
+         aria-description={dirty ? "Lưu thay đổi trước khi thêm checklist, tệp hoặc bình luận." : undefined}
+         ref={panelRef}
+         role="dialog"
+@@ -977,7 +989,7 @@ function TaskPanel({
+           </>
+         )}
+         <AnimatePresence>{confirmation && <ConfirmDialog title={confirmation.title} description={confirmation.description} confirmLabel={confirmation.title} loading={busy} onClose={() => setConfirmation(null)} onConfirm={() => void patch(confirmation.body).then(ok => {if(ok)setConfirmation(null);})} />}</AnimatePresence>
+-      </aside>
++      </motion.aside>
+     </>
+   );
+ }
+diff --git a/apps/web/src/features/workspaces/home-priorities.css b/apps/web/src/features/workspaces/home-priorities.css
+index 6f78edcd1fc50b15be1e3e025c14d37701097eb4..d1d866f1170a0c59febf4b658165703ad7a4a959 100644
+--- a/apps/web/src/features/workspaces/home-priorities.css
++++ b/apps/web/src/features/workspaces/home-priorities.css
+@@ -80,7 +80,7 @@
+   display: flex;
+   flex-direction: column;
+   transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), border-color 200ms ease, box-shadow 200ms ease;
+-  will-change: transform;
++
+ }
+ 
+ .home-priority-card:hover {
+@@ -255,6 +255,8 @@
+ }
+ 
+ .home-priority-card .button:hover:not(:disabled) {
++}
++.home-priority-card .button:hover:not(:disabled):not([data-motion-control]) {
+   transform: scale(1.03);
+ }
+ 
+diff --git a/apps/web/src/features/workspaces/workspace-admin.css b/apps/web/src/features/workspaces/workspace-admin.css
+index 7352e4f6c2a5c0e0107ae234d3666c4c1ab77b0f..3be7348b3e40a1bcffc40ce84c3f6efefa597bdb 100644
+--- a/apps/web/src/features/workspaces/workspace-admin.css
++++ b/apps/web/src/features/workspaces/workspace-admin.css
+@@ -84,7 +84,7 @@
+   font: inherit;
+   font-size: 13.5px;
+   outline: none !important;
+-  transition: all 180ms ease;
++  transition: transform 180ms ease, opacity 180ms ease, background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+   box-sizing: border-box;
+ }
+ 
+diff --git a/apps/web/src/features/workspaces/workspace-home.css b/apps/web/src/features/workspaces/workspace-home.css
+index e5658a1041bf2b1d035a15344fcb1a9615744c62..ce208dda66652a16646b421dde81c3035d50b9a3 100644
+--- a/apps/web/src/features/workspaces/workspace-home.css
++++ b/apps/web/src/features/workspaces/workspace-home.css
+@@ -174,16 +174,22 @@
+   font-size: 14px;
+   white-space: nowrap;
+   transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms ease, box-shadow 150ms ease;
+-  will-change: transform;
++
+ }
+ 
+ .workspace-home__quick-actions .button:hover:not(:disabled),
+ .workspace-home .button:hover:not(:disabled) {
++}
++.workspace-home__quick-actions .button:hover:not(:disabled):not([data-motion-control]),
++.workspace-home .button:hover:not(:disabled):not([data-motion-control]) {
+   transform: scale(1.03);
+ }
+ 
+ .workspace-home__quick-actions .button:active:not(:disabled),
+ .workspace-home .button:active:not(:disabled) {
++}
++.workspace-home__quick-actions .button:active:not(:disabled):not([data-motion-control]),
++.workspace-home .button:active:not(:disabled):not([data-motion-control]) {
+   transform: scale(0.98);
+ }
+ 
+@@ -252,7 +258,7 @@
+   display: flex;
+   flex-direction: column;
+   transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), border-color 200ms ease, box-shadow 200ms ease;
+-  will-change: transform;
++
+ }
+ 
+ .workspace-group-card:hover {
+@@ -389,7 +395,7 @@
+   color: #0f172a !important;
+   cursor: pointer !important;
+   text-align: left !important;
+-  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1) !important;
++  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1) !important, opacity 180ms cubic-bezier(0.16, 1, 0.3, 1) !important, background-color 180ms cubic-bezier(0.16, 1, 0.3, 1) !important, border-color 180ms cubic-bezier(0.16, 1, 0.3, 1) !important, color 180ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+   outline: none !important;
+   width: 100% !important;
+   box-sizing: border-box !important;
+diff --git a/apps/web/src/features/workspaces/workspace-shell.css b/apps/web/src/features/workspaces/workspace-shell.css
+index 3a1a85f360f56faf008f180004c9d92f6717653a..259659e1da47990d3c1e51ad964776aabaea53c3 100644
+--- a/apps/web/src/features/workspaces/workspace-shell.css
++++ b/apps/web/src/features/workspaces/workspace-shell.css
+@@ -311,15 +311,7 @@
+   animation: wsPulse 1.5s ease-in-out infinite;
+ }
+ 
+-@keyframes wsPulse {
+-  0%,
+-  100% {
+-    opacity: 0.55;
+-  }
+-  50% {
+-    opacity: 0.9;
+-  }
+-}
++
+ 
+ /* --------------------------------------------------------------------------
+    2. WORKSPACE STAGE & HEADER + TABS
+diff --git a/apps/web/src/features/workspaces/WorkspaceHomePage.tsx b/apps/web/src/features/workspaces/WorkspaceHomePage.tsx
+index 06571e861515ef15c86e60762ca2cb345419b923..5a227ed20354124c5fc574140b7bbb61258e78ef 100644
+--- a/apps/web/src/features/workspaces/WorkspaceHomePage.tsx
++++ b/apps/web/src/features/workspaces/WorkspaceHomePage.tsx
+@@ -10,6 +10,8 @@ import "./workspace-home.css";
+ import { HomePriorities } from "./HomePriorities";
+ import { CreateWorkspaceModal, workspaceNameError } from "./CreateWorkspaceModal";
+ import { focusFirstInvalid } from "../../shared/lib/interaction";
++import { CountUp } from "../../shared/motion/AnimatedCount";
++import { ambientBridge } from "../../shared/motion/AmbientBackdrop";
+ 
+ type Group = WorkspaceItem & { channels: ChannelItem[] };
+ 
+@@ -103,6 +105,7 @@ export function WorkspaceHomePage() {
+         setError("Đã tạo nhóm nhưng chưa tải được danh sách kênh. Hãy thử tải lại.");
+       }
+       setGroups((prev) => [{ ...created, channels: initialChannels }, ...prev]);
++      ambientBridge.pulse();
+       notify("Thành công", `Đã tạo nhóm "${created.name}".`, "success");
+       setCreateModalOpen(false);
+       setNewWorkspaceName("");
+@@ -154,9 +157,7 @@ export function WorkspaceHomePage() {
+           <div className="workspace-home__metrics-strip" aria-label="Thống kê tóm tắt">
+             <div className="workspace-metric-chip" title="Số nhóm làm việc bạn đang tham gia">
+               <span className="workspace-metric-chip__indicator workspace-metric-chip__indicator--blue" />
+-              <strong className="workspace-metric-chip__count">
+-                {loading ? "…" : stats.totalGroups}
+-              </strong>
++              {loading ? <strong className="workspace-metric-chip__count">…</strong> : <CountUp className="workspace-metric-chip__count" value={stats.totalGroups} />}
+               <span className="workspace-metric-chip__text">nhóm làm việc</span>
+             </div>
+             <span className="workspace-metric-chip__sep" aria-hidden="true">
+@@ -164,9 +165,7 @@ export function WorkspaceHomePage() {
+             </span>
+             <div className="workspace-metric-chip" title="Tổng số kênh trao đổi và thảo luận">
+               <span className="workspace-metric-chip__indicator workspace-metric-chip__indicator--violet" />
+-              <strong className="workspace-metric-chip__count">
+-                {loading ? "…" : stats.totalChannels}
+-              </strong>
++              {loading ? <strong className="workspace-metric-chip__count">…</strong> : <CountUp className="workspace-metric-chip__count" value={stats.totalChannels} />}
+               <span className="workspace-metric-chip__text">kênh trao đổi</span>
+             </div>
+             <span className="workspace-metric-chip__sep" aria-hidden="true">
+@@ -174,9 +173,7 @@ export function WorkspaceHomePage() {
+             </span>
+             <div className="workspace-metric-chip" title="Phòng họp video SFU trực tuyến">
+               <span className="workspace-metric-chip__indicator workspace-metric-chip__indicator--emerald" />
+-              <strong className="workspace-metric-chip__count">
+-                {loading ? "…" : stats.videoRooms}
+-              </strong>
++              {loading ? <strong className="workspace-metric-chip__count">…</strong> : <CountUp className="workspace-metric-chip__count" value={stats.videoRooms} />}
+               <span className="workspace-metric-chip__text">phòng họp khả dụng</span>
+             </div>
+             {stats.adminGroups > 0 && (
+@@ -189,9 +186,7 @@ export function WorkspaceHomePage() {
+                   title="Nhóm bạn giữ quyền Quản trị viên hoặc Chủ nhóm"
+                 >
+                   <span className="workspace-metric-chip__indicator workspace-metric-chip__indicator--amber" />
+-                  <strong className="workspace-metric-chip__count">
+-                    {loading ? "…" : stats.adminGroups}
+-                  </strong>
++                  {loading ? <strong className="workspace-metric-chip__count">…</strong> : <CountUp className="workspace-metric-chip__count" value={stats.adminGroups} />}
+                   <span className="workspace-metric-chip__text">vai trò quản trị</span>
+                 </div>
+               </>
+@@ -495,7 +490,6 @@ export function WorkspaceHomePage() {
+                   <Icon name="users" size={16} className="editorial-input-icon" />
+                   <input
+                     type="text"
+-                    autoFocus
+                     required
+                     maxLength={80}
+                     placeholder="Nhập tên nhóm làm việc…"
+diff --git a/apps/web/src/features/workspaces/WorkspaceShell.tsx b/apps/web/src/features/workspaces/WorkspaceShell.tsx
+index 7238d989b290da031f9335bfa2c4bbc5917390da..a15087899ff8f52e1563ccbc2e7d75b5f0aa9fa7 100644
+--- a/apps/web/src/features/workspaces/WorkspaceShell.tsx
++++ b/apps/web/src/features/workspaces/WorkspaceShell.tsx
+@@ -1,4 +1,4 @@
+-import { type FormEvent, type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
++import { type FormEvent, type KeyboardEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+ import type {
+   GroupMemberItem,
+   WorkspaceFileItem,
+@@ -26,7 +26,9 @@ import {
+   governanceApi,
+ } from "./api";
+ import { Avatar, Badge, Button, Field, IconButton, Modal, ConfirmDialog } from "../../shared/ui/Primitives";
+-import { AnimatePresence } from "motion/react";
++import { AnimatePresence, useAnimate } from "motion/react";
++import { useMotionSafe } from "../../shared/motion/MotionProvider";
++import { DURATION, EASE, tabDirection } from "../../shared/motion/tokens";
+ import { CreateWorkspaceModal, workspaceNameError } from "./CreateWorkspaceModal";
+ import { Icon, type IconName } from "../../shared/ui/Icon";
+ import { usePanelDialog } from "../../shared/hooks/usePanelDialog";
+@@ -122,6 +124,18 @@ export function WorkspaceShell() {
+   const mobileDrawerRef = usePanelDialog(() => setMobileDrawerOpen(false), mobileDrawerOpen);
+ 
+   const activeTab: WorkspaceTabId = isWorkspaceTabView(route.view) ? route.view : "workspace";
++  const safe = useMotionSafe();
++  const [bodyRef, animateBody] = useAnimate<HTMLDivElement>();
++  const previousTab = useRef(activeTab);
++  useLayoutEffect(() => {
++    const direction = tabDirection(WORKSPACE_TABS.findIndex(tab => tab.id === previousTab.current), WORKSPACE_TABS.findIndex(tab => tab.id === activeTab));
++    previousTab.current = activeTab;
++    if (!bodyRef.current) return;
++    if (!direction || safe.reduced) { void animateBody(bodyRef.current, {opacity:1,x:0}, {duration:0}); return; }
++    // Only the incoming panel exists. Cancel a superseded entry before a rapid tab change.
++    const animation = animateBody(bodyRef.current, { opacity: [0, 1], x: [direction * 6, 0] }, { duration:DURATION.overlay, ease:EASE.out });
++    return () => animation.stop();
++  }, [activeTab, safe.reduced, animateBody, bodyRef]);
+ 
+   const refreshWorkspaces = useCallback(
+     async (signal?: AbortSignal) => {
+@@ -912,6 +926,7 @@ export function WorkspaceShell() {
+ 
+             {/* Tab Panel Body */}
+             <div
++              ref={bodyRef}
+               className={`ws-body ws-body--${activeTab}`}
+               id={`ws-panel-${activeTab}`}
+               role="tabpanel"
+@@ -1023,7 +1038,6 @@ export function WorkspaceShell() {
+                 onChange={(e) => { setNewWorkspaceName(e.target.value); setCreateError(""); }}
+                 maxLength={80}
+                 required
+-                autoFocus
+               />
+             </Field>
+           </form>
+@@ -1036,6 +1050,7 @@ export function WorkspaceShell() {
+       {showJoinModal && (
+         <Modal
+           title="Tham gia nhóm bằng lời mời"
++          initialFocus="input:not(:disabled)"
+           eyebrow="LỜI MỜI NHÓM"
+           onClose={() => setShowJoinModal(false)}
+           footer={
+@@ -1065,7 +1080,6 @@ export function WorkspaceShell() {
+                 value={inviteTokenInput}
+                 onChange={(e) => setInviteTokenInput(e.target.value)}
+                 required
+-                autoFocus
+               />
+             </Field>
+           </form>
+diff --git a/apps/web/src/main.tsx b/apps/web/src/main.tsx
+index 2ab53b763ae5a6942fa02263454ced57846bdbd5..bf9c4258ef409288cbfc3ac851517be454837433 100644
+--- a/apps/web/src/main.tsx
++++ b/apps/web/src/main.tsx
+@@ -1,6 +1,7 @@
+ import { StrictMode } from "react";
+ import { createRoot } from "react-dom/client";
+-import { MotionConfig } from "motion/react";
++import { MotionProvider, motionDebugEnabled } from "./shared/motion/MotionProvider";
++import { ControlFeedback } from "./shared/motion/ControlFeedback";
+ import { App } from "./app/App";
+ import { AppProvider } from "./app/providers/AppContext";
+ import { SocketProvider } from "./app/providers/SocketContext";
+@@ -8,10 +9,20 @@ import { MeetingProvider } from "./app/providers/MeetingContext";
+ import "./app/styles/styles.css";
+ import "./app/styles/editorial-workspace.css";
+ import "./app/styles/unified-surfaces.css";
++import "./shared/motion/motion.css";
++
++// Consume only the DEV diagnostic flag before the product router reads the URL.
++// Every product query parameter and the current route/hash remain intact.
++if (motionDebugEnabled) {
++  const url = new URL(window.location.href);
++  url.searchParams.delete("motion-debug");
++  window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
++}
+ 
+ createRoot(document.getElementById("root")!).render(
+   <StrictMode>
+-    <MotionConfig reducedMotion="user">
++    <MotionProvider>
++      <ControlFeedback />
+       <AppProvider>
+         <SocketProvider>
+           <MeetingProvider>
+@@ -19,6 +30,6 @@ createRoot(document.getElementById("root")!).render(
+           </MeetingProvider>
+         </SocketProvider>
+       </AppProvider>
+-    </MotionConfig>
++    </MotionProvider>
+   </StrictMode>,
+ );
+diff --git a/apps/web/src/shared/hooks/usePanelDialog.ts b/apps/web/src/shared/hooks/usePanelDialog.ts
+index 7bf9ef9ed64ab7585243200164e4db360071210b..b040392e0e315a3d2807bf8e9834f9231364ed28 100644
+--- a/apps/web/src/shared/hooks/usePanelDialog.ts
++++ b/apps/web/src/shared/hooks/usePanelDialog.ts
+@@ -1,13 +1,15 @@
+ import { useEffect, useRef } from "react";
+ import { isSelectPickerEvent } from "../lib/select-picker";
++import { useIsPresent } from "motion/react";
+ // Panels behave as dialogs: trap focus, Escape closes, restore prior inert/focus state.
+ export function usePanelDialog(onClose: () => void, enabled = true, excludeSibling?: string) {
++  const present = useIsPresent();
+   const ref = useRef<HTMLElement>(null),
+     close = useRef(onClose);
+   close.current = onClose;
+   useEffect(() => {
+     const panel = ref.current;
+-    if (!enabled || !panel) return;
++    if (!enabled || !present || !panel) return;
+     const previous = document.activeElement as HTMLElement | null;
+     const siblings: { element: HTMLElement; inert: boolean }[] = [];
+     let current: HTMLElement = panel;
+@@ -29,7 +31,7 @@ export function usePanelDialog(onClose: () => void, enabled = true, excludeSibli
+           'button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select:not(:disabled),a[href],[tabindex="0"]',
+         ),
+       ].filter((item) => item.offsetParent !== null);
+-    (items()[0] ?? panel).focus();
++    (items()[0] ?? panel).focus({preventScroll: true});
+     const key = (event: KeyboardEvent) => {
+       // A nested confirmation owns focus/Tab/Escape until it closes.
+       if (event.target instanceof Element && event.target.closest(".modal")) return;
+@@ -61,8 +63,8 @@ export function usePanelDialog(onClose: () => void, enabled = true, excludeSibli
+     return () => {
+       document.removeEventListener("keydown", key);
+       for (const item of siblings) item.element.inert = item.inert;
+-      if (previous?.isConnected) previous.focus();
++      if (previous?.isConnected) previous.focus({preventScroll: true});
+     };
+-  }, [enabled, excludeSibling]);
++  }, [enabled, present, excludeSibling]);
+   return ref;
+ }
+diff --git a/apps/web/src/shared/motion/ambient-scene.ts b/apps/web/src/shared/motion/ambient-scene.ts
+index 3c0318b0359af15239b629da5c6697554e835ef9..709ab61b326974ec1029ebd36a0ae8eeb668d35e 100644
+--- a/apps/web/src/shared/motion/ambient-scene.ts
++++ b/apps/web/src/shared/motion/ambient-scene.ts
+@@ -14,6 +14,7 @@ import {
+ } from "three";
+ import { gsap } from "gsap";
+ import { DURATION, GSAP_EASE_INOUT, GSAP_EASE_OUT } from "./tokens";
++import { nextQualitySample } from "./quality";
+ 
+ /*
+  * Atmospheric layer drawn over the landscape video: drifting light motes plus a slow valley mist.
+@@ -169,6 +170,10 @@ export class AmbientScene {
+   private active = true;
+   private elapsed = 0;
+   private disposed = false;
++  private slowMs = 0;
++  private qualityReduced = false;
++  private renders = 0;
++  debugState() { return { running: this.running, renders: this.renders, quality: this.qualityReduced ? "adaptive-half" : "base" }; }
+ 
+   constructor(
+     private readonly canvas: HTMLCanvasElement,
+@@ -287,7 +292,7 @@ export class AmbientScene {
+ 
+   /** Short forward drift of the motes, synchronised with the DOM fade between tabs. */
+   pulse() {
+-    if (this.disposed || this.reducedMotion) return;
++    if (this.disposed || this.reducedMotion || !this.active || document.hidden) return;
+     const warps = [this.mist.material.uniforms.uWarp, this.motes.material.uniforms.uWarp];
+     gsap.killTweensOf(warps);
+     gsap
+@@ -298,8 +303,8 @@ export class AmbientScene {
+ 
+   /** 0..1 scroll progress for public pages; the camera rises gently with the page. */
+   setScroll(progress: number) {
++    if (this.reducedMotion) return;
+     this.rig.scroll = Math.min(1, Math.max(0, progress));
+-    if (this.reducedMotion) this.renderFrame();
+   }
+ 
+   /** Stops drawing (e.g. while a call decodes video) without tearing down GPU resources. */
+@@ -367,7 +372,7 @@ export class AmbientScene {
+   }
+ 
+   private readonly handlePointer = (event: PointerEvent) => {
+-    if (!this.pointerTo || event.pointerType === "touch") return;
++    if (!this.active || document.hidden || !this.pointerTo || event.pointerType === "touch") return;
+     this.pointerTo.x((event.clientX / window.innerWidth) * 2 - 1);
+     this.pointerTo.y(-((event.clientY / window.innerHeight) * 2 - 1));
+   };
+@@ -375,6 +380,14 @@ export class AmbientScene {
+   private readonly handleVisibility = () => this.syncLoop();
+ 
+   private readonly tick = (_time: number, deltaMs: number) => {
++    if (!this.qualityReduced) {
++      const sample = nextQualitySample(this.slowMs, deltaMs);
++      this.slowMs = sample.slowMs;
++      if (sample.downgrade) {
++        this.motes.geometry.setDrawRange(0, Math.floor(this.motes.geometry.attributes.position.count / 2));
++        this.qualityReduced = true;
++      }
++    }
+     // Clamp long frames (tab restore, GC) so motion never jumps.
+     this.elapsed += Math.min(deltaMs, 50) / 1000;
+     this.renderFrame();
+@@ -395,6 +408,7 @@ export class AmbientScene {
+   }
+ 
+   private stopLoop() {
++    this.slowMs = 0;
+     if (!this.running) return;
+     gsap.ticker.remove(this.tick);
+     this.running = false;
+@@ -402,6 +416,7 @@ export class AmbientScene {
+ 
+   private renderFrame() {
+     if (this.disposed) return;
++    this.renders++;
+     const { rig } = this;
+     this.camera.position.x = rig.baseX + rig.pointerX * 0.45;
+     this.camera.position.y = rig.baseY + rig.pointerY * 0.3 + rig.scroll * 1.6;
+diff --git a/apps/web/src/shared/motion/AmbientBackdrop.tsx b/apps/web/src/shared/motion/AmbientBackdrop.tsx
+index 4c7290567a339dae5efcad4b40e1c1c699ec9b33..048bb2132d2e3491a6159f2a4563d55ad7719099 100644
+--- a/apps/web/src/shared/motion/AmbientBackdrop.tsx
++++ b/apps/web/src/shared/motion/AmbientBackdrop.tsx
+@@ -1,7 +1,7 @@
+ import { useEffect, useRef, useState } from "react";
+ import { gsap } from "gsap";
+ import type { AmbientMood, AmbientScene } from "./ambient-scene";
+-import { prefersReducedMotion } from "./tokens";
++import { useMotionSafe, useSceneCovered } from "./MotionProvider";
+ 
+ const VIDEO_SRC = "https://designerstephen.github.io/public-assets/videos/serene-art-hero.mp4";
+ // TODO(asset): owner must supply licensed local WebM/MP4 + a matching poster.
+@@ -16,6 +16,7 @@ export const ambientBridge = {
+   pulse() {
+     liveScene?.pulse();
+   },
++  debugState() { return liveScene?.debugState(); },
+ };
+ 
+ interface AmbientBackdropProps {
+@@ -33,14 +34,16 @@ interface AmbientBackdropProps {
+ export function AmbientBackdrop({ mood, tone, active = true }: AmbientBackdropProps) {
+   const canvasRef = useRef<HTMLCanvasElement>(null);
+   const videoRef = useRef<HTMLVideoElement>(null);
+-  const [reduced, setReduced] = useState(prefersReducedMotion);
++  const { reduced } = useMotionSafe();
++  const covered = useSceneCovered();
++  const drawing = active && !covered;
+   const saveData = Boolean((navigator as Navigator & {connection?:{saveData?:boolean}}).connection?.saveData);
+   const sceneRef = useRef<AmbientScene | null>(null);
+   const moodRef = useRef(mood);
+   const activeRef = useRef(active);
+   const [webgl, setWebgl] = useState(true);
+   moodRef.current = mood;
+-  activeRef.current = active;
++  activeRef.current = drawing;
+ 
+   useEffect(() => {
+     const canvas = canvasRef.current;
+@@ -64,36 +67,31 @@ export function AmbientBackdrop({ mood, tone, active = true }: AmbientBackdropPr
+     return () => {
+       cancelled = true;
+       gsap.killTweensOf(canvas);
++      gsap.set(canvas, { clearProps: "opacity,visibility" });
+       if (liveScene === sceneRef.current) liveScene = null;
+       sceneRef.current?.dispose();
+       sceneRef.current = null;
+     };
+   }, [reduced]);
+ 
+-  useEffect(() => {
+-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+-    const change = () => setReduced(media.matches);
+-    media.addEventListener("change", change);
+-    return () => media.removeEventListener("change", change);
+-  }, []);
+   useEffect(() => {
+     const sync = () => {
+       if (!videoRef.current) return;
+-      if (reduced || saveData || !active || document.hidden) videoRef.current.pause();
++      if (reduced || saveData || !drawing || document.hidden) videoRef.current.pause();
+       else void videoRef.current.play().catch(() => { /* Autoplay denied: retain the loaded first frame. */ });
+     };
+     sync();
+     document.addEventListener("visibilitychange",sync);
+     return () => document.removeEventListener("visibilitychange",sync);
+-  },[active,reduced,saveData]);
++  },[drawing,reduced,saveData]);
+ 
+   useEffect(() => {
+     sceneRef.current?.setMood(mood);
+   }, [mood]);
+ 
+   useEffect(() => {
+-    sceneRef.current?.setActive(active);
+-  }, [active]);
++    sceneRef.current?.setActive(drawing);
++  }, [drawing]);
+ 
+   return (
+     <div className={`ambient-backdrop ambient-backdrop--${tone}`} aria-hidden="true">
+@@ -101,7 +99,7 @@ export function AmbientBackdrop({ mood, tone, active = true }: AmbientBackdropPr
+         ref={videoRef}
+         className="ambient-backdrop__video"
+         src={VIDEO_SRC}
+-        autoPlay={!reduced && !saveData && active}
++        autoPlay={!reduced && !saveData && drawing}
+         loop
+         muted
+         playsInline
+diff --git a/apps/web/src/shared/motion/AnimatedCount.tsx b/apps/web/src/shared/motion/AnimatedCount.tsx
+new file mode 100644
+--- /dev/null
++++ b/apps/web/src/shared/motion/AnimatedCount.tsx
+@@ -0,0 +1,31 @@
++import { useEffect, useRef, useState, type HTMLAttributes } from "react";
++import { motion } from "motion/react";
++import { DURATION, EASE, interpolateCount } from "./tokens";
++import { useMotionSafe } from "./MotionProvider";
++
++export function CountUp({ value, ...props }: HTMLAttributes<HTMLElement> & {value: number}) {
++  const { reduced } = useMotionSafe();
++  const [display, setDisplay] = useState(reduced ? value : 0);
++  const previous = useRef(reduced ? value : 0);
++  useEffect(() => {
++    if (reduced || !Number.isFinite(value)) { setDisplay(value); previous.current = value; return; }
++    const from = previous.current;
++    let start = 0, frame = 0;
++    const tick = (now: number) => {
++      start ||= now;
++      const progress = (now - start) / (DURATION.count * 1000);
++      setDisplay(interpolateCount(from, value, progress));
++      if (progress < 1) frame = requestAnimationFrame(tick);
++    };
++    frame = requestAnimationFrame(tick);
++    previous.current = value;
++    return () => cancelAnimationFrame(frame);
++  }, [value, reduced]);
++  return <strong {...props} aria-label={String(value)}>{display}</strong>;
++}
++
++// Same <b> and final text dimensions as the original reaction count; no duplicate measuring text.
++export function ReactionCount({ value }: {value:number}) {
++  const { reduced } = useMotionSafe();
++  return <motion.b key={value} initial={reduced ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduced ? 0 : DURATION.micro, ease: EASE.out }}>{value}</motion.b>;
++}
+diff --git a/apps/web/src/shared/motion/ControlFeedback.tsx b/apps/web/src/shared/motion/ControlFeedback.tsx
+new file mode 100644
+--- /dev/null
++++ b/apps/web/src/shared/motion/ControlFeedback.tsx
+@@ -0,0 +1,48 @@
++import { useEffect } from "react";
++import { animate } from "motion/react";
++import { useMotionSafe } from "./MotionProvider";
++import { DURATION, EASE } from "./tokens";
++
++/** Presentation only: observe existing aria-pressed state, never intercept a business event. */
++export function ControlFeedback() {
++  const { reduced } = useMotionSafe();
++  useEffect(() => {
++    if (reduced) return;
++    const animations = new Map<Element, ReturnType<typeof animate>>();
++    const observer = new MutationObserver(records => {
++      for (const record of records) {
++        if (record.attributeName === "aria-label" && record.oldValue && record.target instanceof HTMLButtonElement && record.target.matches(".topbar-bell-btn")) {
++          const bell = record.target.querySelector("svg");
++          if (bell) {
++            animations.get(bell)?.stop();
++            const animation = animate(bell, {rotate:[0,-10,8,-4,0]}, {duration:.4,ease:EASE.out});
++            animations.set(bell, animation);
++            void animation.then(() => { if (animations.get(bell) === animation) animations.delete(bell); });
++          }
++          continue;
++        }
++        if (record.attributeName === "aria-invalid" && (record.target instanceof HTMLInputElement || record.target instanceof HTMLTextAreaElement)) {
++          if (!record.target.closest(".field") && record.oldValue !== "true" && record.target.getAttribute("aria-invalid") === "true") {
++            const input = record.target;
++            animations.get(input)?.stop();
++            const animation = animate(input, {x:[0,-4,4,-2,0]}, {duration:DURATION.page,ease:EASE.inOut});
++            animations.set(input, animation);
++            void animation.then(() => { if (animations.get(input) === animation) animations.delete(input); });
++          }
++          continue;
++        }
++        if (!(record.target instanceof HTMLButtonElement) || record.oldValue === null || record.oldValue === record.target.getAttribute("aria-pressed")) continue;
++        const icon = record.target.querySelector("svg");
++        if (!icon) continue;
++        animations.get(icon)?.stop();
++        const animation = animate(icon, {scale:[1,1.18,1]}, {duration:DURATION.page,ease:EASE.out});
++        animations.set(icon, animation);
++        void animation.then(() => { if (animations.get(icon) === animation) animations.delete(icon); });
++      }
++    });
++    const root = document.getElementById("root");
++    if (root) observer.observe(root, {subtree:true,attributes:true,attributeFilter:["aria-pressed", "aria-invalid", "aria-label"],attributeOldValue:true});
++    return () => { observer.disconnect(); animations.forEach((animation, element) => { animation.stop(); void animate(element, {x:0,scale:1,rotate:0}, {duration:0}); }); animations.clear(); };
++  }, [reduced]);
++  return null;
++}
+diff --git a/apps/web/src/shared/motion/ControlTooltip.tsx b/apps/web/src/shared/motion/ControlTooltip.tsx
+new file mode 100644
+--- /dev/null
++++ b/apps/web/src/shared/motion/ControlTooltip.tsx
+@@ -0,0 +1,33 @@
++import { useEffect, useId, useRef, useState, type RefObject } from "react";
++import { createPortal } from "react-dom";
++import { AnimatePresence, motion } from "motion/react";
++import { useMotionSafe } from "./MotionProvider";
++import { DURATION, EASE } from "./tokens";
++
++export function useControlTooltip(ref: RefObject<HTMLButtonElement | null>, label: string, shortcut?: string) {
++  const [position, setPosition] = useState<{x:number;y:number} | null>(null);
++  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
++  const id = useId();
++  const { reduced } = useMotionSafe();
++  const close = () => { clearTimeout(timer.current); setPosition(null); };
++  const show = () => {
++    const box = ref.current?.getBoundingClientRect();
++    if (box) setPosition({ x: Math.max(125, Math.min(innerWidth - 125, box.x + box.width / 2)), y: box.bottom + 8 > innerHeight - 45 ? box.top - 36 : box.bottom + 8 });
++  };
++  const later = () => { clearTimeout(timer.current); timer.current = setTimeout(show, 400); };
++  useEffect(() => {
++    window.addEventListener("scroll", close, true);
++    window.addEventListener("resize", close);
++    return () => { clearTimeout(timer.current); window.removeEventListener("scroll", close, true); window.removeEventListener("resize", close); };
++  }, []);
++  return {
++    id: position ? id : undefined,
++    handlers: {
++      onPointerEnter: later, onPointerLeave: close,
++      onPointerDown: later, onPointerUp: close, onPointerCancel: close,
++      onFocus: () => { if (ref.current?.matches(":focus-visible")) show(); else later(); },
++      onBlur: close, onKeyDown: (event: {key:string}) => { if (event.key === "Escape") close(); },
++    },
++    tooltip: createPortal(<AnimatePresence>{position && <motion.span id={id} role="tooltip" className="motion-tooltip" style={{left:position.x,top:position.y,translate:"-50% 0"}} initial={reduced ? false : {opacity:0,y:3}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:reduced?0:DURATION.micro,ease:EASE.out}}>{label}{shortcut && <kbd>{shortcut}</kbd>}</motion.span>}</AnimatePresence>, document.body),
++  };
++}
+diff --git a/apps/web/src/shared/motion/keyframes.css b/apps/web/src/shared/motion/keyframes.css
+new file mode 100644
+--- /dev/null
++++ b/apps/web/src/shared/motion/keyframes.css
+@@ -0,0 +1,62 @@
++/* Shared CSS-only animations. Motion/GSAP own different elements/properties. */
++@keyframes revealUp {
++  from {
++    opacity: 0;
++    transform: translate3d(0, 16px, 0);
++  }
++  to {
++    opacity: 1;
++    transform: translate3d(0, 0, 0);
++  }
++}
++
++@keyframes suspenseShimmer {
++  0%,
++  100% {
++    opacity: 0.5;
++  }
++  50% {
++    opacity: 0.9;
++  }
++}
++
++@keyframes pulseDot {
++  0%,
++  100% {
++    opacity: 1;
++    transform: scale(1);
++  }
++  50% {
++    opacity: 0.3;
++    transform: scale(0.75);
++  }
++}
++
++@keyframes chat-record-pulse {
++  to {
++    opacity: 0.3;
++  }
++}
++
++@keyframes speaking-pulse {
++  0% { transform: scaleY(0.3); }
++  100% { transform: scaleY(1.3); }
++}
++
++@keyframes search-spin {
++  to {
++    transform: rotate(360deg);
++  }
++}
++
++@keyframes wsPulse {
++  0%,
++  100% {
++    opacity: 0.55;
++  }
++  50% {
++    opacity: 0.9;
++  }
++}
++
++@keyframes spin { to { transform: rotate(360deg); } }
+diff --git a/apps/web/src/shared/motion/motion-debug.css b/apps/web/src/shared/motion/motion-debug.css
+new file mode 100644
+--- /dev/null
++++ b/apps/web/src/shared/motion/motion-debug.css
+@@ -0,0 +1,2 @@
++.motion-debug { position:fixed; z-index:9999; right:12px; bottom:12px; max-width:min(380px,calc(100vw - 24px)); padding:12px; border:1px solid #263450; border-radius:12px; background:#f6f8fc; color:#17233e; font:12px/1.5 Inter,sans-serif; display:grid; gap:4px; }
++.motion-debug button { justify-self:start; padding:5px 12px; border:1px solid #263450; border-radius:9999px; color:inherit; background:transparent; cursor:pointer; }
+diff --git a/apps/web/src/shared/motion/motion.css b/apps/web/src/shared/motion/motion.css
+new file mode 100644
+--- /dev/null
++++ b/apps/web/src/shared/motion/motion.css
+@@ -0,0 +1,40 @@
++/* Generated from tokens.ts by npm run motion:css. Do not edit timings here. */
++@import "./keyframes.css";
++:root {
++  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
++  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
++  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
++  --dur-micro: 0.12s;
++  --dur-overlay: 0.22s;
++  --dur-page: 0.3s;
++  --dur-story: 0.9s;
++  --dur-panel: 0.26s;
++  --dur-panel-exit: 0.16s;
++  --dur-count: 0.6s;
++  --dur-exit: 0.14s;
++  --dur-enter: 0.22s;
++  --dur-reveal: 0.55s;
++  --dur-stagger: 0.05s;
++  --dur-scene: 1.1s;
++  --motion-duration-micro: var(--dur-micro);
++  --motion-duration-component: var(--dur-overlay);
++  --motion-duration-page: var(--dur-page);
++  --motion-ease-out: var(--ease-out);
++  --motion-ease-spring: var(--ease-emphasized);
++}
++html[data-motion="reduced"] *, html[data-motion="reduced"] *::before, html[data-motion="reduced"] *::after {
++  animation: none !important;
++  transition-duration: 0s !important;
++  scroll-behavior: auto !important;
++}
++@media (prefers-reduced-motion: reduce) {
++  html:not([data-motion-preview="full"]) *, html:not([data-motion-preview="full"]) *::before, html:not([data-motion-preview="full"]) *::after {
++    animation: none !important;
++    transition-duration: 0s !important;
++    scroll-behavior: auto !important;
++  }
++}
++/* Motion owns these controls' transform; CSS retains the incumbent colors/borders. */
++[data-motion-control] { transition-property: background-color, border-color, color, opacity !important; }
++.motion-tooltip { position: fixed; z-index: 1000; pointer-events: none; max-width: 240px; padding: 7px 11px; border-radius: 12px; color: var(--text, #17213b); background: var(--bg-card, #edf2f8); border: 1px solid var(--border, #b9c5d5); box-shadow: 0 4px 16px #17213b1c; font: 12px/1.4 Inter, sans-serif; }
++.motion-tooltip kbd { margin-left: 6px; opacity: .7; }
+diff --git a/apps/web/src/shared/motion/MotionDebug.tsx b/apps/web/src/shared/motion/MotionDebug.tsx
+new file mode 100644
+--- /dev/null
++++ b/apps/web/src/shared/motion/MotionDebug.tsx
+@@ -0,0 +1,72 @@
++import {useEffect,useRef,useState} from "react";
++import "./motion-debug.css";
++import { setMotionPreview, useMotionSafe } from "./MotionProvider";
++import { ambientBridge } from "./AmbientBackdrop";
++import { ScrollTrigger } from "gsap/ScrollTrigger";
++
++type Sample={fps:number;frames:number;longTasks:number;maxTask:number;cls:number;blurNodes:number;blurDepth:number};
++const empty:Sample={fps:0,frames:0,longTasks:0,maxTask:0,cls:0,blurNodes:0,blurDepth:0};
++
++/** Diagnostic only, dynamically imported behind DEV + ?motion-debug=1. Never a production loop. */
++export default function MotionDebug(){
++  const safe = useMotionSafe();
++  const [sample,setSample]=useState(empty);
++  const [epoch,setEpoch]=useState(0);
++  const current=useRef({...empty});
++  useEffect(()=>{
++    let frame=0,previous=0,start=0,count=0,lastBlur=0;
++    current.current={...empty};
++    const observer=new PerformanceObserver(list=>{
++      for(const entry of list.getEntries()){
++        if(entry.entryType==="longtask"){
++          current.current.longTasks++;
++          current.current.maxTask=Math.max(current.current.maxTask,entry.duration);
++        }else if(entry.entryType==="layout-shift"){
++          const shift=entry as PerformanceEntry & {value:number;hadRecentInput:boolean};
++          if(!shift.hadRecentInput)current.current.cls+=shift.value;
++        }
++      }
++    });
++    const supported=PerformanceObserver.supportedEntryTypes;
++    observer.observe({entryTypes:["longtask","layout-shift"].filter(type=>supported.includes(type))});
++    const inspectBlur=()=>{
++      let nodes=0,depth=0;
++      const blurred=new Set<Element>();
++      for(const el of document.querySelectorAll("body *")){
++        if(el.closest("[data-motion-debug]"))continue;
++        const style=getComputedStyle(el),box=el.getBoundingClientRect();
++        if(style.backdropFilter!=="none"&&style.visibility!=="hidden"&&box.width&&box.height&&box.bottom>0&&box.top<innerHeight)blurred.add(el);
++      }
++      nodes=blurred.size;
++      for(const el of blurred){let n=0;for(let p:Element|null=el;p;p=p.parentElement)if(blurred.has(p))n++;depth=Math.max(depth,n);}
++      current.current.blurNodes=nodes;current.current.blurDepth=depth;
++    };
++    const tick=(time:number)=>{
++      if(document.hidden){frame=0;return;}
++      if(!start)start=time;
++      if(previous)count++;
++      previous=time;
++      current.current.frames++;
++      if(time-start>=1000){
++        current.current.fps=Math.round(count*1000/(time-start));
++        if(time-lastBlur>3000){inspectBlur();lastBlur=time;}
++        setSample({...current.current});start=time;count=0;
++      }
++      frame=requestAnimationFrame(tick);
++    };
++    const visibility=()=>{cancelAnimationFrame(frame);previous=0;start=0;count=0;if(!document.hidden)frame=requestAnimationFrame(tick);};
++    visibility();document.addEventListener("visibilitychange",visibility);
++    return()=>{cancelAnimationFrame(frame);observer.disconnect();document.removeEventListener("visibilitychange",visibility);};
++  },[epoch]);
++  return <aside className="motion-debug" data-motion-debug aria-label="Motion debug — chỉ môi trường phát triển">
++    <strong>Motion debug · DEV</strong>
++    <output>FPS rAF: {sample.fps} · frames: {sample.frames}</output>
++    <output>Long tasks: {sample.longTasks} · max: {sample.maxTask.toFixed(1)}ms · CLS: {sample.cls.toFixed(4)}</output>
++    <output>Blur DOM: {sample.blurNodes} · depth: {sample.blurDepth}</output>
++    <output>Motion: {safe.reduced ? "reduced" : "full"} · canvases: {document.querySelectorAll("canvas").length} · triggers: {ScrollTrigger.getAll().length}</output>
++    <output>Scene: {ambientBridge.debugState()?.running ? "running" : "paused"} · renders: {ambientBridge.debugState()?.renders ?? 0} · quality: {ambientBridge.debugState()?.quality ?? "—"}</output>
++    <button type="button" onClick={()=>setEpoch(n=>n+1)}>Đo lại</button>
++    <div><button onClick={()=>setMotionPreview("system")}>Theo máy</button><button onClick={()=>setMotionPreview("reduced")}>Giảm</button><button onClick={()=>setMotionPreview("full")}>Đầy đủ</button></div>
++    <small>rAF không phải GPU FPS; blur là cây DOM, không phải layer compositor.</small>
++  </aside>;
++}
+diff --git a/apps/web/src/shared/motion/MotionProvider.tsx b/apps/web/src/shared/motion/MotionProvider.tsx
+new file mode 100644
+--- /dev/null
++++ b/apps/web/src/shared/motion/MotionProvider.tsx
+@@ -0,0 +1,48 @@
++import { createContext, useContext, useEffect, useMemo, useSyncExternalStore, type ReactNode } from "react";
++import { MotionConfig } from "motion/react";
++import { getMotionPreset } from "./tokens";
++
++type Preview = "system" | "full" | "reduced";
++export const motionDebugEnabled = import.meta.env.DEV && typeof window !== "undefined"
++  && new URLSearchParams(window.location.search).has("motion-debug");
++let preview: Preview = "system";
++const subscribers = new Set<() => void>();
++const media = () => typeof window === "undefined" ? null : window.matchMedia("(prefers-reduced-motion: reduce)");
++const read = () => preview === "system" ? Boolean(media()?.matches) : preview === "reduced";
++function subscribe(callback: () => void) {
++  subscribers.add(callback);
++  const query = media();
++  query?.addEventListener("change", callback);
++  return () => { subscribers.delete(callback); query?.removeEventListener("change", callback); };
++}
++export function setMotionPreview(value: Preview) {
++  if (!import.meta.env.DEV) return;
++  preview = value;
++  if (value === "system") delete document.documentElement.dataset.motionPreview;
++  else document.documentElement.dataset.motionPreview = value;
++  subscribers.forEach(callback => callback());
++}
++const context = createContext(getMotionPreset(false));
++export function MotionProvider({ children }: { children: ReactNode }) {
++  const reduced = useSyncExternalStore(subscribe, read, () => true);
++  const preset = useMemo(() => getMotionPreset(reduced), [reduced]);
++  useEffect(() => {
++    document.documentElement.dataset.motion = reduced ? "reduced" : "full";
++  }, [reduced]);
++  return <context.Provider value={preset}><MotionConfig reducedMotion={reduced ? "always" : "never"}>{children}</MotionConfig></context.Provider>;
++}
++export function useMotionSafe() { return useContext(context); }
++
++// A covered decorative scene has no reason to draw. Leases handle nested dialogs independently.
++const covers = new Set<symbol>();
++const coverSubscribers = new Set<() => void>();
++export function useSceneCovered() {
++  return useSyncExternalStore(callback => { coverSubscribers.add(callback); return () => { coverSubscribers.delete(callback); }; }, () => covers.size > 0, () => false);
++}
++export function useSceneCover(covered: boolean) {
++  useEffect(() => {
++    if (!covered) return;
++    const key = Symbol(); covers.add(key); coverSubscribers.forEach(fn => fn());
++    return () => { covers.delete(key); coverSubscribers.forEach(fn => fn()); };
++  }, [covered]);
++}
+diff --git a/apps/web/src/shared/motion/quality.ts b/apps/web/src/shared/motion/quality.ts
+new file mode 100644
+--- /dev/null
++++ b/apps/web/src/shared/motion/quality.ts
+@@ -0,0 +1,6 @@
++/** Downgrade once after two continuous seconds below 50Hz; transient frames do not count. */
++export function nextQualitySample(slowMs: number, deltaMs: number) {
++  if (!Number.isFinite(deltaMs) || deltaMs <= 0 || deltaMs > 250) return {slowMs:0, downgrade:false};
++  const next = deltaMs > 20 ? slowMs + deltaMs : 0;
++  return {slowMs: next >= 2000 ? 0 : next, downgrade: next >= 2000};
++}
+diff --git a/apps/web/src/shared/motion/tokens.ts b/apps/web/src/shared/motion/tokens.ts
+index 84a650395b4d69f8318dfb488d95b2ffaaa40e6f..566e21b65f49b55f8b7d29e3bf12ed2583d73581 100644
+--- a/apps/web/src/shared/motion/tokens.ts
++++ b/apps/web/src/shared/motion/tokens.ts
+@@ -1,9 +1,26 @@
+ // One timing vocabulary for Motion (React presence/layout) and GSAP (timelines, WebGL uniforms).
+-export const EASE_OUT = [0.16, 1, 0.3, 1] as const;
++export const EASE = {
++  out: [0.16, 1, 0.3, 1],
++  inOut: [0.65, 0, 0.35, 1],
++  emphasized: [0.2, 0, 0, 1],
++} as const;
++export const EASE_OUT = EASE.out;
++export const SPRING = {
++  snappy: { type: "spring", stiffness: 520, damping: 38, mass: 0.7 },
++  gentle: { type: "spring", stiffness: 260, damping: 30, mass: 0.9 },
++  bouncy: { type: "spring", stiffness: 420, damping: 24, mass: 0.7 },
++} as const;
+ export const GSAP_EASE_OUT = "expo.out";
+ export const GSAP_EASE_INOUT = "power2.inOut";
+ 
+ export const DURATION = {
++  micro: 0.12,
++  overlay: 0.22,
++  page: 0.3,
++  story: 0.9,
++  panel: 0.26,
++  panelExit: 0.16,
++  count: 0.6,
+   exit: 0.14,
+   enter: 0.22,
+   reveal: 0.55,
+@@ -11,6 +28,34 @@ export const DURATION = {
+   scene: 1.1,
+ } as const;
+ 
++export function getMotionPreset(reduced: boolean) {
++  return {
++    reduced,
++    duration: (seconds: number) => reduced ? 0 : seconds,
++    gesture: reduced ? {} : { whileHover: { y: -1 }, whileTap: { scale: 0.97 }, transition: SPRING.snappy },
++    panel: {
++      initial: reduced ? false as const : { opacity: 0, x: 24 },
++      animate: { opacity: 1, x: 0 },
++      exit: { opacity: reduced ? 1 : 0, x: reduced ? 0 : 16, transition: { duration: reduced ? 0 : DURATION.panelExit } },
++      transition: { duration: reduced ? 0 : DURATION.panel, ease: EASE.out },
++    },
++    view: {
++      initial: reduced ? false as const : { opacity: 0, y: 8 },
++      animate: { opacity: 1, y: 0, transition: { duration: reduced ? 0 : DURATION.page, ease: EASE.out } },
++      exit: { opacity: reduced ? 1 : 0, y: reduced ? 0 : -6, transition: { duration: reduced ? 0 : DURATION.exit } },
++    },
++  };
++}
++
++export function tabDirection(previous: number, next: number): -1 | 0 | 1 {
++  return next === previous ? 0 : next > previous ? 1 : -1;
++}
++
++export function interpolateCount(from: number, to: number, progress: number) {
++  const clamped = Math.min(1, Math.max(0, progress));
++  return Math.round(from + (to - from) * (1 - (1 - clamped) ** 3));
++}
++
+ export const viewTransition = {
+   initial: { opacity: 0, y: 8 },
+   animate: { opacity: 1, y: 0, transition: { duration: DURATION.enter, ease: EASE_OUT } },
+@@ -18,6 +63,10 @@ export const viewTransition = {
+ } as const;
+ 
+ export function prefersReducedMotion() {
++  // Only the DEV diagnostic can override a preference for comparison; production follows the OS.
++  if (typeof document !== "undefined" && document.documentElement.dataset.motionPreview) {
++    return document.documentElement.dataset.motionPreview === "reduced";
++  }
+   return (
+     typeof window !== "undefined" &&
+     window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true
+diff --git a/apps/web/src/shared/motion/useControlMotion.ts b/apps/web/src/shared/motion/useControlMotion.ts
+new file mode 100644
+--- /dev/null
++++ b/apps/web/src/shared/motion/useControlMotion.ts
+@@ -0,0 +1,57 @@
++import { useEffect, useRef, type PointerEvent, type KeyboardEvent, type MutableRefObject } from "react";
++import { useAnimate } from "motion/react";
++import { SPRING, DURATION, EASE } from "./tokens";
++import { useMotionSafe } from "./MotionProvider";
++
++/** Motion owns only this control's transform. CSS owns its color, border and focus ring. */
++export function useControlMotion(disabled = false) {
++  const [ref, animate] = useAnimate<HTMLButtonElement>();
++  const { reduced } = useMotionSafe();
++  const hovered = useRef(false);
++  const reset = () => { if (ref.current) void animate(ref.current, { scale: 1, y: hovered.current && !disabled && !reduced ? -1 : 0 }, SPRING.snappy); };
++  useEffect(() => {
++    if (ref.current && (disabled || reduced)) void animate(ref.current, { scale: 1, y: 0 }, { duration: 0 });
++  }, [disabled, reduced, animate, ref]);
++  const press = () => { if (ref.current && !disabled && !reduced) void animate(ref.current, { scale: 0.97, y: 0 }, SPRING.snappy); };
++  return { ref, setRef: (node: HTMLButtonElement | null) => { (ref as MutableRefObject<HTMLButtonElement | null>).current = node; }, handlers: {
++    onPointerEnter: (event: PointerEvent<HTMLButtonElement>) => { hovered.current = event.pointerType !== "touch"; if (hovered.current) reset(); },
++    onPointerLeave: () => { hovered.current = false; reset(); },
++    onPointerDown: press,
++    onPointerUp: reset,
++    onPointerCancel: reset,
++    onBlur: () => { hovered.current = false; reset(); },
++    onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => { if (event.key === " " || event.key === "Enter") press(); },
++    onKeyUp: reset,
++  }};
++}
++
++/** Pop only a changed state, never the initial value or a remounted message history. */
++export function useStatePop(value: unknown) {
++  const [ref, animate] = useAnimate<HTMLElement>();
++  const previous = useRef(value);
++  const { reduced } = useMotionSafe();
++  useEffect(() => {
++    if (previous.current !== value && ref.current && !reduced) {
++      void animate(ref.current, { scale: [1, 1.18, 1] }, { duration: DURATION.page, ease: EASE.out });
++    }
++    previous.current = value;
++  }, [value, reduced, animate, ref]);
++  return ref;
++}
++
++/** The current send glyph moves; its button and composer retain their existing geometry. */
++export function useSendFeedback(sending: boolean) {
++  const [ref, animate] = useAnimate<HTMLButtonElement>();
++  const previous = useRef(sending);
++  const { reduced } = useMotionSafe();
++  useEffect(() => {
++    if (ref.current && reduced) void animate("svg", {x:0,y:0,opacity:1}, {duration:0});
++    if (sending && !previous.current && ref.current && !reduced) {
++      const animation = animate("svg", {x:[0,5,0],y:[0,-5,0],opacity:[1,0,1]}, {duration:DURATION.page,ease:EASE.out});
++      previous.current = sending;
++      return () => { animation.stop(); if(ref.current) void animate("svg", {x:0,y:0,opacity:1}, {duration:0}); };
++    }
++    previous.current = sending;
++  }, [sending, reduced, ref, animate]);
++  return ref;
++}
+diff --git a/apps/web/src/shared/motion/ViewReveal.tsx b/apps/web/src/shared/motion/ViewReveal.tsx
+index 6838c97a8b5cd8a620dead88a04fccd109ed7745..4a0e89484e9462d8d85721a20ea95f8f96619cc8 100644
+--- a/apps/web/src/shared/motion/ViewReveal.tsx
++++ b/apps/web/src/shared/motion/ViewReveal.tsx
+@@ -1,6 +1,7 @@
+ import { useLayoutEffect, useRef, type ReactNode } from "react";
+ import { gsap } from "gsap";
+-import { DURATION, GSAP_EASE_OUT, prefersReducedMotion } from "./tokens";
++import { DURATION, GSAP_EASE_OUT } from "./tokens";
++import { useMotionSafe } from "./MotionProvider";
+ 
+ const MAX_TARGETS = 8;
+ 
+@@ -12,10 +13,11 @@ const MAX_TARGETS = 8;
+  */
+ export function ViewReveal({ children }: { children: ReactNode }) {
+   const hostRef = useRef<HTMLDivElement>(null);
++  const { reduced } = useMotionSafe();
+ 
+   useLayoutEffect(() => {
+     const host = hostRef.current;
+-    if (!host?.firstElementChild || prefersReducedMotion()) return;
++    if (!host?.firstElementChild || reduced) return;
+     const blocks = (parent: Element) =>
+       Array.from(parent.children).filter(
+         (node): node is HTMLElement =>
+@@ -31,7 +33,8 @@ export function ViewReveal({ children }: { children: ReactNode }) {
+     targets = targets.slice(0, MAX_TARGETS);
+     if (!targets.length) return;
+ 
+-    const ctx = gsap.context(() => {
++    const media = gsap.matchMedia();
++    media.add({ full: "(prefers-reduced-motion: no-preference)", reduced: "(prefers-reduced-motion: reduce)" }, () => {
+       gsap.fromTo(
+         targets,
+         { autoAlpha: 0, y: 16 },
+@@ -45,8 +48,8 @@ export function ViewReveal({ children }: { children: ReactNode }) {
+         },
+       );
+     }, host);
+-    return () => ctx.revert();
+-  }, []);
++    return () => media.revert();
++  }, [reduced]);
+ 
+   return (
+     <div ref={hostRef} className="view-reveal">
+diff --git a/apps/web/src/shared/ui/interaction.css b/apps/web/src/shared/ui/interaction.css
+index c611ab8c666b4bc5c03bd7cde1273833e24af7a0..01d53954eaf0e940e2220287d7ab45ddef9f7cb0 100644
+--- a/apps/web/src/shared/ui/interaction.css
++++ b/apps/web/src/shared/ui/interaction.css
+@@ -1,5 +1,5 @@
+ /* Interaction states only. The approved static colors, sizes and layout are untouched. */
+-@keyframes spin { to { transform: rotate(360deg); } }
++
+ .button-spinner, .editorial-otp-resending { animation: spin .8s linear infinite; }
+ :root :is(button,a,input,textarea,select,summary,[tabindex]):focus-visible {
+   outline: 2px solid #263450 !important;
+@@ -16,6 +16,4 @@
+ .editorial-sublink, .editorial-nav-link, .chat-header-icon-btn, .icon-button { position:relative; }
+ .editorial-sublink::after, .editorial-nav-link::after { content:""; position:absolute; inset:50% 0 auto; min-height:40px; transform:translateY(-50%); }
+ .chat-header-icon-btn::after, .icon-button::after { content:""; position:absolute; width:40px; height:40px; left:50%; top:50%; transform:translate(-50%,-50%); }
+-@media (prefers-reduced-motion: reduce) {
+-  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior:auto !important; }
+-}
++/* Reduced-motion policy is centralized in shared/motion/motion.css. */
+diff --git a/apps/web/src/shared/ui/Primitives.tsx b/apps/web/src/shared/ui/Primitives.tsx
+index 5aa6d4e7a652749d8826fada5ccad68fdfb2a382..e2d32fd504f1fdd637ae6f045f84c7c7f37b66e2 100644
+--- a/apps/web/src/shared/ui/Primitives.tsx
++++ b/apps/web/src/shared/ui/Primitives.tsx
+@@ -17,6 +17,11 @@ import { NexoLogo } from "./NexoLogo";
+ import { isSelectPickerEvent } from "../lib/select-picker";
+ import { toastDuration } from "../lib/interaction";
+ import "./interaction.css";
++import { useControlMotion } from "../motion/useControlMotion";
++import { useControlTooltip } from "../motion/ControlTooltip";
++import { useMotionSafe, useSceneCover } from "../motion/MotionProvider";
++import { DURATION, EASE } from "../motion/tokens";
++import { useAnimate } from "motion/react";
+ 
+ export function Brand({ className = "", onClick }: { className?: string; onClick?: () => void }) {
+   return (
+@@ -49,6 +54,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+   size?: "sm" | "md" | "lg" | "icon";
+   icon?: IconName;
+   loading?: boolean;
++  /** Change only after a confirmed successful action. Does not infer success from loading=false. */
++  successFlash?: unknown;
+ }
+ 
+ export function Button({
+@@ -59,9 +66,20 @@ export function Button({
+   loading = false,
+   disabled,
+   className = "",
++  successFlash,
+   ...props
+ }: ButtonProps) {
+-  const buttonRef = useRef<HTMLButtonElement>(null);
++  const control = useControlMotion(Boolean(disabled || loading));
++  const buttonRef = control.ref;
++  const { reduced } = useMotionSafe();
++  const lastSuccess = useRef(successFlash);
++  const [, flash] = useAnimate<HTMLButtonElement>();
++  useEffect(() => {
++    if (lastSuccess.current !== successFlash && successFlash && buttonRef.current && !reduced) {
++      void flash(buttonRef.current, { opacity: [1, 0.72, 1] }, { duration: DURATION.count });
++    }
++    lastSuccess.current = successFlash;
++  }, [successFlash, reduced, flash, buttonRef]);
+   const widthRef = useRef<number | undefined>(undefined);
+   useLayoutEffect(() => {
+     if (loading || !buttonRef.current) return;
+@@ -76,7 +94,16 @@ export function Button({
+       className={`button button--${variant} button--${size} ${loading ? "button--loading" : ""} ${className}`}
+       disabled={disabled || loading}
+       {...props}
+-      ref={buttonRef}
++      data-motion-control
++      ref={control.setRef}
++      onPointerEnter={event => { control.handlers.onPointerEnter(event); props.onPointerEnter?.(event); }}
++      onPointerLeave={event => { control.handlers.onPointerLeave(); props.onPointerLeave?.(event); }}
++      onPointerDown={event => { control.handlers.onPointerDown(); props.onPointerDown?.(event); }}
++      onPointerUp={event => { control.handlers.onPointerUp(); props.onPointerUp?.(event); }}
++      onPointerCancel={event => { control.handlers.onPointerCancel(); props.onPointerCancel?.(event); }}
++      onBlur={event => { control.handlers.onBlur(); props.onBlur?.(event); }}
++      onKeyDown={event => { control.handlers.onKeyDown(event); props.onKeyDown?.(event); }}
++      onKeyUp={event => { control.handlers.onKeyUp(); props.onKeyUp?.(event); }}
+       aria-busy={loading || undefined}
+       style={loading && widthRef.current ? { ...props.style, width: widthRef.current } : props.style}
+     >
+@@ -109,17 +136,36 @@ export function IconButton({
+   icon,
+   active = false,
+   className = "",
++  shortcut,
++  ref: externalRef,
+   ...props
+-}: ComponentProps<"button"> & { label: string; icon: IconName; active?: boolean }) {
++}: ComponentProps<"button"> & { label: string; icon: IconName; active?: boolean; shortcut?: string }) {
++  const control = useControlMotion(props.disabled);
++  const tooltip = useControlTooltip(control.ref, label, shortcut);
+   return (
++    <>
+     <button
+       aria-label={label}
+-      title={label}
++      title={tooltip.id ? undefined : label}
+       className={`icon-button ${active ? "is-active" : ""} ${className}`}
+       {...props}
++      data-motion-control
++      ref={node => { control.setRef(node); if(typeof externalRef === "function") externalRef(node); else if(externalRef) externalRef.current=node; }}
++      aria-describedby={tooltip.id ?? props["aria-describedby"]}
++      onPointerEnter={event => { control.handlers.onPointerEnter(event); tooltip.handlers.onPointerEnter(); props.onPointerEnter?.(event); }}
++      onPointerLeave={event => { control.handlers.onPointerLeave(); tooltip.handlers.onPointerLeave(); props.onPointerLeave?.(event); }}
++      onPointerDown={event => { control.handlers.onPointerDown(); tooltip.handlers.onPointerDown(); props.onPointerDown?.(event); }}
++      onPointerUp={event => { control.handlers.onPointerUp(); tooltip.handlers.onPointerUp(); props.onPointerUp?.(event); }}
++      onPointerCancel={event => { control.handlers.onPointerCancel(); tooltip.handlers.onPointerCancel(); props.onPointerCancel?.(event); }}
++      onFocus={event => { tooltip.handlers.onFocus(); props.onFocus?.(event); }}
++      onBlur={event => { control.handlers.onBlur(); tooltip.handlers.onBlur(); props.onBlur?.(event); }}
++      onKeyDown={event => { control.handlers.onKeyDown(event); tooltip.handlers.onKeyDown(event); props.onKeyDown?.(event); }}
++      onKeyUp={event => { control.handlers.onKeyUp(); props.onKeyUp?.(event); }}
+     >
+       <Icon name={icon} />
+     </button>
++    {tooltip.tooltip}
++    </>
+   );
+ }
+ 
+@@ -184,6 +230,8 @@ export function Modal({
+   const onCloseRef = useRef(onClose);
+   const titleId = useId();
+   const isPresent = useIsPresent();
++  const safe = useMotionSafe();
++  useSceneCover(true);
+   onCloseRef.current = onClose;
+   useEffect(() => {
+     if (!isPresent) return;
+@@ -195,7 +243,7 @@ export function Modal({
+       const first = (initialFocus ? dialogRef.current?.querySelector<HTMLElement>(initialFocus) : null) ?? dialogRef.current?.querySelector<HTMLElement>(
+         "button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [href]",
+       );
+-      (first ?? dialogRef.current)?.focus();
++      (first ?? dialogRef.current)?.focus({preventScroll: true});
+     });
+     const handleKey = (event: KeyboardEvent) => {
+       if (event.key === "Escape") {
+@@ -229,7 +277,7 @@ export function Modal({
+       window.cancelAnimationFrame(focusFrame);
+       document.body.style.overflow = originalOverflow;
+       document.removeEventListener("keydown", handleKey);
+-      if (previouslyFocused?.isConnected) previouslyFocused.focus();
++      if (previouslyFocused?.isConnected) previouslyFocused.focus({preventScroll: true});
+     };
+   }, [isPresent]);
+ 
+@@ -242,7 +290,7 @@ export function Modal({
+       initial={{ opacity: 0 }}
+       animate={{ opacity: 1 }}
+       exit={{ opacity: 0 }}
+-      transition={{ duration: 0.16, ease: "easeOut" }}
++      transition={{ duration: safe.duration(DURATION.panelExit), ease: EASE.out }}
+       onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+     >
+       <motion.section
+@@ -252,10 +300,10 @@ export function Modal({
+         aria-modal="true"
+         aria-labelledby={titleId}
+         tabIndex={-1}
+-        initial={{ opacity: 0, scale: 0.98, y: 8 }}
++        initial={safe.reduced ? false : { opacity: 0, scale: 0.98, y: 8 }}
+         animate={{ opacity: 1, scale: 1, y: 0 }}
+-        exit={{ opacity: 0, scale: 0.98, y: 6 }}
+-        transition={{ duration: 0.24, ease: "easeOut" }}
++        exit={{ opacity: safe.reduced ? 1 : 0, scale: safe.reduced ? 1 : 0.98, y: safe.reduced ? 0 : 6, transition: {duration: safe.duration(DURATION.panelExit)} }}
++        transition={{ duration: safe.duration(DURATION.overlay), ease: EASE.out }}
+       >
+         <header className="modal__header">
+           <div>
+@@ -283,6 +331,16 @@ export function Field({
+   error?: string;
+ }) {
+   const generatedId = useId();
++  const [fieldRef, animateField] = useAnimate<HTMLLabelElement>();
++  const previousError = useRef(error);
++  const safe = useMotionSafe();
++  useEffect(() => {
++    if (safe.reduced && fieldRef.current) void animateField(fieldRef.current, {x:0}, {duration:0});
++    if (error && error !== previousError.current && fieldRef.current && !safe.reduced) {
++      void animateField(fieldRef.current, {x:[0,-4,4,-2,0]}, {duration:DURATION.page,ease:EASE.inOut});
++    }
++    previousError.current = error;
++  }, [error, safe.reduced, animateField, fieldRef]);
+   let controlIndex = 0;
+   let firstId: string | undefined;
+   const messageId = `${generatedId}-message`;
+@@ -306,7 +364,7 @@ export function Field({
+   });
+   const controls = attach(children);
+   return (
+-    <label className="field" htmlFor={firstId}>
++    <label ref={fieldRef} className="field" htmlFor={firstId}>
+       <span id={`${generatedId}-label`}>{label}</span>
+       {controls}
+       {error ? (
+@@ -332,6 +390,7 @@ export function ToastViewport() {
+ }
+ 
+ function TimedToast({ toast, dismiss }: {toast: ReturnType<typeof useApp>["toasts"][number]; dismiss: () => void}) {
++  const safe = useMotionSafe();
+   const remaining = useRef(toastDuration(toast.tone));
+   const started = useRef(0);
+   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+@@ -353,8 +412,10 @@ function TimedToast({ toast, dismiss }: {toast: ReturnType<typeof useApp>["toast
+   useEffect(() => { resume(); return pause; }, []);
+   return <motion.article layout="position" className={`toast toast--${toast.tone}`}
+     role={toast.tone === "warning" ? "alert" : "status"} aria-atomic="true"
+-    initial={{opacity:0,x:20}} animate={{opacity:1,x:0,scale:1}} exit={{opacity:0,x:16}}
+-    transition={{duration:0.18,ease:[0.22,1,0.36,1]}}
++    initial={safe.reduced ? false : {opacity:0,x:20}} animate={{opacity:1,x:0,scale:1}} exit={{opacity:safe.reduced?1:0,x:safe.reduced?0:16}}
++    transition={{duration:safe.duration(DURATION.overlay),ease:EASE.out}}
++    drag={safe.reduced ? false : "x"} dragConstraints={{left:0,right:0}} dragElastic={0.15} dragSnapToOrigin
++    onDragEnd={(_event, info) => { if(Math.abs(info.offset.x)>100 || Math.abs(info.velocity.x)>600) dismiss(); }}
+     onMouseEnter={() => {hovered.current=true; pause();}} onMouseLeave={() => {hovered.current=false; resume();}}
+     onFocusCapture={() => {focused.current=true; pause();}}
+     onBlurCapture={e => {if(!e.currentTarget.contains(e.relatedTarget)){focused.current=false;resume();}}}>
+diff --git a/apps/web/test/motion.test.js b/apps/web/test/motion.test.js
+new file mode 100644
+--- /dev/null
++++ b/apps/web/test/motion.test.js
+@@ -0,0 +1,37 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import {readFile} from 'node:fs/promises';
++import {DURATION,EASE,SPRING,getMotionPreset,interpolateCount,tabDirection,prefersReducedMotion} from '../src/shared/motion/tokens.ts';
++import {nextQualitySample} from '../src/shared/motion/quality.ts';
++
++test('motion tokens use bounded timing and damped springs',()=>{
++ assert.equal(DURATION.micro,.12);assert.equal(DURATION.overlay,.22);assert.equal(DURATION.page,.3);assert.equal(DURATION.story,.9);
++ assert.ok(DURATION.panelExit<DURATION.panel);
++ for(const ease of Object.values(EASE)){assert.equal(ease.length,4);assert.ok(ease[0]>=0&&ease[0]<=1&&ease[2]>=0&&ease[2]<=1);}
++ for(const spring of Object.values(SPRING)){assert.ok(spring.stiffness>0&&spring.damping>0&&spring.mass>0);}
++});
++test('useMotionSafe preset keeps the complete presentation without displacement',()=>{
++ const safe=getMotionPreset(true),full=getMotionPreset(false);
++ assert.equal(safe.panel.initial,false);assert.equal(safe.view.initial,false);
++ assert.equal(safe.duration(100),0);assert.deepEqual(safe.gesture,{});
++ assert.equal(safe.panel.exit.x,0);assert.equal(safe.panel.exit.opacity,1);assert.equal(safe.panel.transition.duration,0);
++ assert.equal(safe.view.exit.y,0);assert.equal(full.duration(.22),.22);assert.equal(full.gesture.whileTap.scale,.97);
++});
++test('count interpolation clamps progress and remains monotonic in both directions',()=>{
++ assert.equal(interpolateCount(0,25,-1),0);assert.equal(interpolateCount(0,25,2),25);
++ for(const[from,to]of[[0,123],[100,4]]){let last=from;for(let i=0;i<=100;i++){const value=interpolateCount(from,to,i/100);assert.ok(to>from?value>=last:value<=last);last=value;}assert.equal(last,to);}
++});
++test('tab direction has no initial/same-tab displacement',()=>{
++ assert.equal(tabDirection(2,2),0);assert.equal(tabDirection(0,4),1);assert.equal(tabDirection(4,0),-1);
++});
++test('adaptive scene quality requires sustained slow frames and resets after recovery',()=>{
++ let slow=0,result;for(let i=0;i<79;i++){result=nextQualitySample(slow,25);slow=result.slowMs;assert.equal(result.downgrade,false);}
++ assert.equal(nextQualitySample(slow,25).downgrade,true);
++ assert.equal(nextQualitySample(1500,16).slowMs,0);assert.equal(nextQualitySample(1500,900).downgrade,false);
++});
++test('non-browser preference read is safe',()=>{assert.equal(prefersReducedMotion(),false);});
++test('generated CSS and JS timings remain synchronized',async()=>{
++ const css=await readFile(new URL('../src/shared/motion/motion.css',import.meta.url),'utf8');
++ for(const[key,value]of Object.entries(DURATION)){const name=key.replace(/[A-Z]/g,c=>'-'+c.toLowerCase());assert.ok(css.includes(`--dur-${name}: ${value}s;`));}
++ assert.ok(css.includes('html[data-motion="reduced"]'));
++});
+diff --git a/design-system/realtime-workspace/MASTER.md b/design-system/realtime-workspace/MASTER.md
+index cce1ff1a4a720affc7c95343aaf45b68768128a0..e8a1e48e85188b204c6b9a74e769c439946a662a 100644
+--- a/design-system/realtime-workspace/MASTER.md
++++ b/design-system/realtime-workspace/MASTER.md
+@@ -8,7 +8,7 @@
+ 
+ **Project:** nexo — Realtime Collaborative Workspace
+ **Revised:** 2026-10 — rewritten to match the shipped Editorial Glass interface
+-**Design Dials:** Variance 5/10 (Balanced) | Motion 5/10 (Calm, 60 fps) | Density 7/10 (Workspace)
++**Design Dials:** Variance 5/10 (Balanced) | Motion 6/10 (Calm; 60 fps target, not a measured guarantee) | Density 7/10 (Workspace)
+ 
+ **Source of truth in code**
+ 
+@@ -142,16 +142,29 @@ Use for every confirmation (no `window.confirm`). Footer layout helpers: `.modal
+ 
+ ## Motion
+ 
+-Timing lives in `shared/motion/tokens.ts` and is shared by both libraries.
++Timing lives in `shared/motion/tokens.ts`. Run `npm run motion:css --workspace @doan/web` after changing tokens to regenerate `shared/motion/motion.css`. CSS keyframes live only in `shared/motion/keyframes.css`.
+ 
+ | Layer      | Library    | Behaviour                                                         |
+ | ---------- | ---------- | ----------------------------------------------------------------- |
+-| Presence   | Motion     | Tab cross-fade (enter 220ms, exit 140ms), modals, dock pill       |
++| Presence   | Motion     | Views (300ms / 140ms), panels (260ms / 160ms), modals, existing dock pill |
+ | Reveal     | GSAP       | Stagger of first-level page blocks (550ms, `expo.out`, 50ms each) |
+ | Atmosphere | three.js   | Motes + valley mist over the video; mood per view, paused in-call |
+ 
+-- Animate only `transform` and `opacity`; clear inline transforms after reveal.
+-- Respect `prefers-reduced-motion`: skip reveals, render one static WebGL frame.
++- Animate only `transform` and `opacity`; clear inline transforms after reveal. Do not use permanent `will-change` or `transition: all`.
++- Motion owns controls, presence, panels and view wrappers. GSAP owns first-level reveal children and Three.js uniforms. CSS owns spinner/reveal keyframes and color/border feedback. Never animate the same property on the same element from two owners.
++- `useMotionSafe()` supplies complete static presets under `prefers-reduced-motion`: duration 0, opacity 1, no displacement/gesture/stagger. `MotionProvider` synchronizes `html[data-motion]`, CSS and GSAP matchMedia. Video pauses; decorative Three.js renders only its static presentation, with no running scene ticker.
++- Workspace tabs replace content immediately, then animate only the new `.ws-body` contents by 6px / 220ms. Cancel superseded animation on rapid navigation; do not keep outgoing tab content behind it.
++- Allowed micro patterns: native Button press .97 / hover -1px (snappy), tooltip (400ms pointer, immediate keyboard), existing pressed icon pop, bell notification shake, field error shake ≤4px once, numeric count 600ms, existing reaction picker stagger 20ms, send icon feedback, Toast swipe dismissal. Keep all current labels/icons/static geometry.
++- Panels trap focus where modal, release it when exit begins, and make exiting layers inert. Normal-flow chat info closes immediately to avoid reserving an empty column during exit. Preserve current desktop/mobile panel shapes; bottom sheets and new UI blocks require owner approval.
++- Full overlays acquire a scene-cover lease. Nested overlays release independently; hidden tabs and meetings pause decorative drawing. Dispose ticker/listeners/observers/geometry/materials/renderer on unmount. Adaptive motes halve once after a continuous 2s below 50Hz; no second scene loop.
++
++| Token | Values |
++| --- | --- |
++| DURATION (seconds) | micro .12; overlay .22; page .30; story .90; panel .26; panelExit .16; count .60; enter .22; exit .14; reveal .55; stagger .05; scene 1.10 |
++| EASE | out [.16,1,.3,1]; inOut [.65,0,.35,1]; emphasized [.2,0,0,1] |
++| SPRING (stiffness / damping / mass) | snappy 520 / 38 / .7; gentle 260 / 30 / .9; bouncy 420 / 24 / .7 |
++
++DEV-only `?motion-debug=1` samples rAF callbacks, long tasks, CLS and blurred DOM depth. Its preview buttons test full/reduced presentation without changing the OS preference. rAF Hz is not compositor/GPU FPS; blur DOM depth is not a compositor layer count. This probe is excluded from the production bundle. Evidence and limitations: [motion review](../../docs/ui-review-2026-10-04/motion/README.md).
+ 
+ ---
+ 
+diff --git a/apps/web/scripts/generate-motion-css.mjs b/apps/web/scripts/generate-motion-css.mjs
+new file mode 100644
+--- /dev/null
++++ b/apps/web/scripts/generate-motion-css.mjs
+@@ -0,0 +1,31 @@
++import { writeFile } from 'node:fs/promises';
++import { DURATION, EASE } from '../src/shared/motion/tokens.ts';
++const css = `/* Generated from tokens.ts by npm run motion:css. Do not edit timings here. */
++@import "./keyframes.css";
++:root {
++${Object.entries(EASE).map(([key, value]) => `  --ease-${key.replace(/[A-Z]/g, c => '-'+c.toLowerCase())}: cubic-bezier(${value.join(', ')});`).join('\n')}
++${Object.entries(DURATION).map(([key, value]) => `  --dur-${key.replace(/[A-Z]/g, c => '-'+c.toLowerCase())}: ${value}s;`).join('\n')}
++  --motion-duration-micro: var(--dur-micro);
++  --motion-duration-component: var(--dur-overlay);
++  --motion-duration-page: var(--dur-page);
++  --motion-ease-out: var(--ease-out);
++  --motion-ease-spring: var(--ease-emphasized);
++}
++html[data-motion="reduced"] *, html[data-motion="reduced"] *::before, html[data-motion="reduced"] *::after {
++  animation: none !important;
++  transition-duration: 0s !important;
++  scroll-behavior: auto !important;
++}
++@media (prefers-reduced-motion: reduce) {
++  html:not([data-motion-preview="full"]) *, html:not([data-motion-preview="full"]) *::before, html:not([data-motion-preview="full"]) *::after {
++    animation: none !important;
++    transition-duration: 0s !important;
++    scroll-behavior: auto !important;
++  }
++}
++/* Motion owns these controls' transform; CSS retains the incumbent colors/borders. */
++[data-motion-control] { transition-property: background-color, border-color, color, opacity !important; }
++.motion-tooltip { position: fixed; z-index: 1000; pointer-events: none; max-width: 240px; padding: 7px 11px; border-radius: 12px; color: var(--text, #17213b); background: var(--bg-card, #edf2f8); border: 1px solid var(--border, #b9c5d5); box-shadow: 0 4px 16px #17213b1c; font: 12px/1.4 Inter, sans-serif; }
++.motion-tooltip kbd { margin-left: 6px; opacity: .7; }
++`;
++await writeFile(new URL('../src/shared/motion/motion.css', import.meta.url), css);

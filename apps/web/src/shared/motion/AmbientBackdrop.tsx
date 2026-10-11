@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import type { AmbientMood, AmbientScene } from "./ambient-scene";
-import { prefersReducedMotion } from "./tokens";
 
 const VIDEO_SRC = "https://designerstephen.github.io/public-assets/videos/serene-art-hero.mp4";
+const VIDEO_POSTER =
+  "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=2000&q=80";
 
 // Pages outside React's prop flow (scroll-driven landing) reach the live scene through this bridge.
 let liveScene: AmbientScene | null = null;
@@ -13,6 +14,9 @@ export const ambientBridge = {
   },
   pulse() {
     liveScene?.pulse();
+  },
+  debugState() {
+    return liveScene?.debugState();
   },
 };
 
@@ -30,6 +34,7 @@ interface AmbientBackdropProps {
  */
 export function AmbientBackdrop({ mood, tone, active = true }: AmbientBackdropProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const sceneRef = useRef<AmbientScene | null>(null);
   const moodRef = useRef(mood);
   const activeRef = useRef(active);
@@ -45,7 +50,7 @@ export function AmbientBackdrop({ mood, tone, active = true }: AmbientBackdropPr
     void import("./ambient-scene")
       .then(({ AmbientScene }) => {
         if (cancelled) return;
-        const scene = new AmbientScene(canvas, { reducedMotion: prefersReducedMotion() });
+        const scene = new AmbientScene(canvas, { reducedMotion: false });
         sceneRef.current = scene;
         liveScene = scene;
         scene.setMood(moodRef.current, false);
@@ -59,11 +64,41 @@ export function AmbientBackdrop({ mood, tone, active = true }: AmbientBackdropPr
     return () => {
       cancelled = true;
       gsap.killTweensOf(canvas);
+      gsap.set(canvas, { clearProps: "opacity,visibility" });
       if (liveScene === sceneRef.current) liveScene = null;
       sceneRef.current?.dispose();
       sceneRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = true;
+    video.defaultMuted = true;
+    const sync = () => {
+      const el = videoRef.current;
+      if (!el) return;
+      el.muted = true;
+      el.defaultMuted = true;
+      if (!active || document.hidden) {
+        el.pause();
+      } else {
+        void el.play().catch(() => {
+          /* Autoplay blocked until interaction: poster/first frame remains visible. */
+        });
+      }
+    };
+    sync();
+    video.addEventListener("loadeddata", sync);
+    video.addEventListener("canplay", sync);
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      video.removeEventListener("loadeddata", sync);
+      video.removeEventListener("canplay", sync);
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, [active]);
 
   useEffect(() => {
     sceneRef.current?.setMood(mood);
@@ -76,8 +111,10 @@ export function AmbientBackdrop({ mood, tone, active = true }: AmbientBackdropPr
   return (
     <div className={`ambient-backdrop ambient-backdrop--${tone}`} aria-hidden="true">
       <video
+        ref={videoRef}
         className="ambient-backdrop__video"
         src={VIDEO_SRC}
+        poster={VIDEO_POSTER}
         autoPlay
         loop
         muted

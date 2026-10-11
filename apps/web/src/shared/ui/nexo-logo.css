@@ -16,7 +16,7 @@
 }
 
 .nexo-wordmark {
-  font-family: var(--font-display, "Playfair Display", Georgia, serif);
+  font-family: var(--font-brand, "Playfair Display", Georgia, serif);
   font-weight: 500;
   font-style: normal;
   letter-spacing: -0.045em;

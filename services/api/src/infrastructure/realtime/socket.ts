@@ -8,6 +8,7 @@ import { query, pool } from "../database/db.js";
 import { createAdapter } from "@socket.io/postgres-adapter";
 import { addPresence, onlinePeers, startPresence } from "./presence.js";
 import { roomManager } from "../../modules/meetings/media/room-manager.js";
+import { publishMeetingSummary } from "../../modules/meetings/outcome-events.js";
 import { limitActor } from "../../shared/http/rate-limit.js";
 import {
   enterSession,
@@ -179,6 +180,20 @@ export function initSocketServer(
   };
   roomManager.events.on("media_failure", mediaFailure);
   httpServer.on("close", () => roomManager.events.off("media_failure", mediaFailure));
+  const activeSpeaker = (data: {
+    roomId: string;
+    socketId: string | null;
+    userId: string | null;
+    at: number;
+  }) => io.to(`meeting:${data.roomId}`).emit("active_speaker", data);
+  const audioLevels = (data: { roomId: string; levels: { socketId: string; volume: number }[] }) =>
+    io.to(`meeting:${data.roomId}`).emit("audio_levels", data);
+  roomManager.events.on("active_speaker", activeSpeaker);
+  roomManager.events.on("audio_levels", audioLevels);
+  httpServer.on("close", () => {
+    roomManager.events.off("active_speaker", activeSpeaker);
+    roomManager.events.off("audio_levels", audioLevels);
+  });
   const closeRoom = (roomId: string, reason: string, targetUserId?: string) => {
     for (const closer of meetingClosers.values())
       if (closer.room() === roomId && (!targetUserId || closer.userId === targetUserId))
@@ -219,11 +234,18 @@ export function initSocketServer(
           io.to(`meeting:${result.channelId}`).emit("meeting_state_changed", {
             roomId: result.channelId,
           });
-          if (result.ended)
+          if (result.ended) {
             closeRoom(
               result.channelId,
               "Phiên họp đã kết thúc vì host rời phòng và không còn người có thể tiếp quản.",
             );
+            return publishMeetingSummary(
+              io,
+              result.channelId,
+              result.sessionId,
+              result.summaryMessageId,
+            );
+          }
         })
         .catch(console.error);
     };
@@ -274,6 +296,7 @@ export function initSocketServer(
             "produce",
             "consume",
             "resume_consumer",
+            "pause_consumer",
             "close_producer",
             "restart_ice",
             "consumer_layer",
@@ -511,8 +534,16 @@ export function initSocketServer(
     });
     socket.on("meeting_action", async (data, callback) => {
       try {
-        await meetingAction(user.id, data.roomId, socket.id, data);
-        if (data.action === "end") closeRoom(data.roomId, "Host đã kết thúc cuộc họp.");
+        const acted = await meetingAction(user.id, data.roomId, socket.id, data);
+        if (data.action === "end") {
+          closeRoom(data.roomId, "Host đã kết thúc cuộc họp.");
+          void publishMeetingSummary(
+            io,
+            data.roomId,
+            acted.sessionId,
+            acted.summaryMessageId,
+          ).catch(console.error);
+        }
         if (data.action === "kick")
           closeRoom(data.roomId, "Bạn đã bị host loại khỏi cuộc họp.", data.targetUserId);
         if (data.action === "mute" && data.targetUserId) {
@@ -598,6 +629,7 @@ export function initSocketServer(
           sessionId: admission.sessionId,
           routerRtpCapabilities: result.routerRtpCapabilities,
           existingProducers: result.existingProducers,
+          activeSpeakerSocketId: roomManager.activeSpeaker(data.roomId),
         });
       } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : "Lỗi tham gia phòng họp";
@@ -681,6 +713,16 @@ export function initSocketServer(
         callback?.({ success: true });
       } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : "Lỗi mở consumer";
+        callback?.({ success: false, error: msg });
+      }
+    });
+
+    socket.on("pause_consumer", async (data, callback) => {
+      try {
+        await roomManager.pauseConsumer(data.roomId, socket.id, data.consumerId);
+        callback?.({ success: true });
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : "Lỗi tạm dừng consumer";
         callback?.({ success: false, error: msg });
       }
     });

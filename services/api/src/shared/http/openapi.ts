@@ -251,6 +251,41 @@ add(
   object,
 );
 add(
+  "/api/meetings/sessions/{sessionId}/outcomes",
+  ["get"],
+  "Meetings",
+  "Agenda, shared notes, meeting tasks and summary of one session",
+);
+add(
+  "/api/meetings/sessions/{sessionId}/notes",
+  ["patch"],
+  "Meetings",
+  "Save shared notes with baseVersion; 409 NOTES_CONFLICT when stale",
+  object,
+);
+add("/api/meetings/sessions/{sessionId}/agenda", ["post"], "Meetings", "Add agenda item", object);
+add(
+  "/api/meetings/sessions/{sessionId}/agenda/{itemId}",
+  ["patch", "delete"],
+  "Meetings",
+  "Tick / rename or remove an ad-hoc agenda item",
+  object,
+);
+add(
+  "/api/meetings/sessions/{sessionId}/outcome-channel",
+  ["patch"],
+  "Meetings",
+  "Host/co-host picks the text channel for tasks and summary",
+  object,
+);
+add(
+  "/api/meetings/sessions/{sessionId}/tasks",
+  ["post"],
+  "Meetings",
+  "Create a Kanban task linked to the session",
+  object,
+);
+add(
   "/api/channels/{channelId}/attachments",
   ["post"],
   "Files",

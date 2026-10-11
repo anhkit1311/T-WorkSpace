@@ -1,0 +1,1484 @@
+/* ==========================================================================
+   WORKSPACE SHELL — Workspace-Centric Navigation & Group Collaboration Hub
+   Reuses nexo editorial glass tokens (--editorial-*, --font-display, --font-body)
+   ========================================================================== */
+
+.ws-shell {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  gap: 0;
+  height: 100%;
+  margin-top: 0;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
+  color: var(--nexo-text-primary, #1C1B19);
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif);
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.ws-shell.is-sidebar-collapsed {
+  grid-template-columns: 76px minmax(0, 1fr);
+}
+
+/* --------------------------------------------------------------------------
+   1. WORKSPACE SIDEBAR ("Nhóm của bạn" — Divided Left Column Inside Unified Card)
+   -------------------------------------------------------------------------- */
+.ws-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 0;
+  border-right: 1.5px solid var(--nexo-border-beige, #E6E2DA);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 14px 10px;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.ws-sidebar__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px 8px;
+  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA);
+}
+
+.ws-sidebar__title-wrap {
+  min-width: 0;
+}
+
+.ws-sidebar__eyebrow {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--nexo-text-muted, #8A8780);
+  margin-bottom: 2px;
+}
+
+.ws-sidebar__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ws-sidebar__title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--nexo-text-primary, #1C1B19);
+  white-space: nowrap;
+}
+
+.ws-sidebar__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(28, 27, 25, 0.08);
+  color: var(--nexo-text-primary, #1C1B19);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ws-shell.is-sidebar-collapsed .ws-sidebar:not(.ws-sidebar--drawer) .ws-sidebar__title-wrap {
+  display: none;
+}
+
+.ws-shell.is-sidebar-collapsed .ws-sidebar:not(.ws-sidebar--drawer) .ws-sidebar__head {
+  justify-content: center;
+}
+
+.ws-sidebar__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--nexo-border-beige, #E6E2DA);
+  color: var(--nexo-text-muted, #8A8780);
+}
+
+.ws-sidebar__search input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--nexo-text-primary, #1C1B19);
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.ws-sidebar__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 2px;
+}
+
+.ws-sidebar__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 7px 10px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--nexo-text-primary, #1C1B19);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.ws-sidebar__item:hover {
+  background: var(--nexo-bg-subtle, #EEECE7);
+}
+
+.ws-sidebar__item:active {
+  transform: scale(0.97);
+}
+
+.ws-sidebar__item:focus-visible {
+  outline: 2px solid var(--nexo-text-primary, #1C1B19);
+  outline-offset: 2px;
+}
+
+.ws-sidebar__item.is-active {
+  background: var(--nexo-bg-subtle, #EEECE7);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.ws-shell.is-sidebar-collapsed .ws-sidebar:not(.ws-sidebar--drawer) .ws-sidebar__item {
+  justify-content: center;
+  padding: 8px;
+}
+
+.ws-sidebar__avatar {
+  flex-shrink: 0;
+}
+
+.ws-sidebar__item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ws-sidebar__item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.ws-sidebar__name {
+  font-size: 0.91rem;
+  font-weight: 600;
+  color: var(--nexo-text-primary, #1C1B19);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ws-sidebar__item.is-active .ws-sidebar__name {
+  color: var(--nexo-text-primary, #1C1B19);
+  font-weight: 700;
+}
+
+.ws-sidebar__item-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.76rem;
+  color: var(--nexo-text-muted, #8A8780);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ws-sidebar__archived-tag {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.ws-sidebar__unread {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ws-sidebar__unread--dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 17px;
+  height: 17px;
+  font-size: 0.65rem;
+}
+
+.ws-sidebar__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--nexo-border-beige, #E6E2DA);
+}
+
+.ws-sidebar__create-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: var(--nexo-radius-primary, 16px);
+  border: 1px solid var(--nexo-text-primary, #1C1B19);
+  background: var(--nexo-text-primary, #1C1B19);
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+  box-shadow: var(--nexo-shadow-primary, 0 4px 14px rgba(0, 0, 0, 0.15));
+}
+
+.ws-sidebar__create-btn:hover {
+  background: var(--nexo-btn-primary-hover, #2C2A27);
+  border-color: var(--nexo-btn-primary-hover, #2C2A27);
+}
+
+.ws-sidebar__create-btn:active {
+  transform: scale(0.97);
+}
+
+.ws-sidebar__create-btn:focus-visible {
+  outline: 2px solid var(--nexo-text-primary, #1C1B19);
+  outline-offset: 2px;
+}
+
+.ws-sidebar__invite-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 16px;
+  border-radius: var(--nexo-radius-pill, 9999px);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--nexo-text-primary, #1C1B19);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.ws-sidebar__invite-btn:hover {
+  background: var(--nexo-bg-subtle, #EEECE7);
+}
+
+.ws-sidebar__invite-btn:active {
+  transform: scale(0.97);
+}
+
+.ws-sidebar__invite-btn:focus-visible {
+  outline: 2px solid var(--nexo-text-primary, #1C1B19);
+  outline-offset: 2px;
+}
+
+.ws-sidebar__empty {
+  padding: 18px 10px;
+  text-align: center;
+  font-size: 0.84rem;
+  color: var(--nexo-text-muted, #8A8780);
+}
+
+.ws-sidebar__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ws-skeleton-row {
+  height: 54px;
+  border-radius: 14px;
+  background: rgba(28, 27, 25, 0.04);
+  animation: wsPulse 1.5s ease-in-out infinite;
+}
+
+/* --------------------------------------------------------------------------
+   2. WORKSPACE STAGE & HEADER + TABS (Divided Inside Unified Frame)
+   -------------------------------------------------------------------------- */
+.ws-stage {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  gap: 0;
+}
+
+.ws-header {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 20px 6px;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 0;
+  border-bottom: 1.5px solid var(--nexo-border-beige, #E6E2DA);
+  border-radius: 0;
+  box-shadow: none;
+  z-index: 5;
+}
+
+.ws-header__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.ws-header__identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.ws-header__avatar {
+  flex-shrink: 0;
+}
+
+.ws-header__titles {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ws-header__title-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.ws-header__title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: clamp(1.05rem, 1.3vw, 1.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--nexo-text-primary, #1C1B19);
+}
+
+.ws-header__meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--nexo-text-muted, #8A8780);
+}
+
+.ws-header__desc {
+  max-width: 44ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 400;
+}
+
+.ws-header__online {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ws-header__online i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.ws-header__online i.is-online {
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+}
+
+.ws-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ws-header__menu-wrap {
+  position: relative;
+}
+
+.ws-actions-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 230px;
+  padding: 6px;
+  border-radius: 16px;
+  background: rgba(250, 249, 246, 0.96);
+  backdrop-filter: blur(22px);
+  border: 1px solid var(--nexo-border-beige, #E6E2DA);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 40;
+}
+
+.ws-actions-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--nexo-text-primary, #1C1B19);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 150ms ease;
+}
+
+.ws-actions-menu__item:hover {
+  background: var(--nexo-bg-subtle, #EEECE7);
+}
+
+.ws-actions-menu__item:active {
+  transform: scale(0.97);
+}
+
+.ws-actions-menu__item:focus-visible {
+  outline: 2px solid var(--nexo-text-primary, #1C1B19);
+  outline-offset: 2px;
+}
+
+.ws-actions-menu__item.is-danger {
+  color: #dc2626;
+}
+
+.ws-actions-menu__item.is-danger:hover {
+  background: rgba(220, 38, 38, 0.08);
+}
+
+/* Function Tabs inside Workspace Header */
+.ws-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--nexo-border-beige, #E6E2DA);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ws-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.ws-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--nexo-text-muted, #8A8780);
+  font-size: 0.88rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease;
+}
+
+.ws-tab:hover {
+  background: var(--nexo-bg-subtle, #EEECE7);
+  color: var(--nexo-text-primary, #1C1B19);
+}
+
+.ws-tab:active {
+  transform: scale(0.97);
+}
+
+.ws-tab:focus-visible {
+  outline: 2px solid var(--nexo-text-primary, #1C1B19);
+  outline-offset: 2px;
+}
+
+.ws-tab.is-active {
+  background: var(--nexo-bg-subtle, #EEECE7);
+  border-color: transparent;
+  color: var(--nexo-text-primary, #1C1B19);
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.ws-tab__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 19px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(28, 27, 25, 0.08);
+  color: var(--nexo-text-primary, #1C1B19);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.ws-tab__badge.is-unread {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   3. WORKSPACE BODY & TAB CONTAINERS
+   -------------------------------------------------------------------------- */
+.ws-body {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.ws-body--chat {
+  overflow: hidden;
+}
+
+.ws-body--chat > .live-chat {
+  height: 100%;
+  min-height: 0;
+}
+
+/* --------------------------------------------------------------------------
+   4. TAB 1 — TỔNG QUAN NHÓM (Divided 2-Column Group Overview — No Separate Boxes)
+   -------------------------------------------------------------------------- */
+.ws-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-bottom: 0;
+  flex: 1;
+}
+
+.ws-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.95fr);
+  gap: 0;
+  align-items: stretch;
+  flex: 1;
+}
+
+.ws-overview-main,
+.ws-overview-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.ws-overview-side {
+  border-left: 1px solid var(--nexo-border-beige, #E6E2DA);
+}
+
+.ws-overview-card {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 0;
+  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ws-overview-main > .ws-overview-card:last-child,
+.ws-overview-side > .ws-overview-card:last-child {
+  border-bottom: 0;
+}
+
+.ws-overview-card--skeleton {
+  min-height: 210px;
+  animation: wsPulse 1.5s ease-in-out infinite;
+}
+
+.ws-overview-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ws-overview-card__title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ws-overview-card__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ws-overview-card__title-group h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.06rem;
+  font-weight: 700;
+  color: var(--editorial-text);
+}
+
+.ws-overview-card__title-group p {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--editorial-text-secondary);
+}
+
+.ws-overview-empty {
+  padding: 18px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.52);
+  border: 1px dashed rgba(15, 23, 42, 0.14);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.ws-overview-empty p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--editorial-text-secondary);
+}
+
+.ws-overview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-top: 1px solid var(--nexo-border-beige, #E6E2DA);
+}
+
+.ws-channel-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(28, 27, 25, 0.06);
+  color: var(--nexo-text-primary, #1C1B19);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+/* Task rows in Overview */
+.ws-task-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 8px;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA);
+  transition: background 0.15s ease;
+}
+
+.ws-task-item:hover {
+  background: rgba(28, 27, 25, 0.03);
+}
+
+.ws-task-item__main {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ws-task-item__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ws-task-item__title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--nexo-text-primary, #1C1B19);
+}
+
+.ws-task-item__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: var(--nexo-text-muted, #8A8780);
+}
+
+.ws-task-item__meta .is-overdue {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.ws-task-status-select {
+  padding: 5px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--nexo-border-beige, #E6E2DA);
+  background: var(--nexo-bg-ivory, #FAF9F6);
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--nexo-text-primary, #1C1B19);
+  cursor: pointer;
+}
+
+.ws-task-status-select.is-in_progress {
+  border-color: rgba(37, 99, 235, 0.35);
+  color: #1d4ed8;
+}
+
+.ws-task-status-select.is-done {
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #047857;
+}
+
+/* Recent Message rows in Overview */
+.ws-message-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 8px;
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA);
+  background: transparent;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.ws-message-item:hover {
+  background: rgba(28, 27, 25, 0.03);
+}
+
+.ws-message-item__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ws-message-item__top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+}
+
+.ws-message-item__top time {
+  margin-left: auto;
+  font-size: 0.74rem;
+  color: var(--nexo-text-muted, #8A8780);
+}
+
+.ws-message-item__excerpt {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--nexo-text-muted, #8A8780);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Meeting & File rows in Overview */
+.ws-meeting-item,
+.ws-file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 8px;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA);
+}
+
+.ws-meeting-item__body,
+.ws-file-item__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ws-meeting-item__top,
+.ws-file-item__top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.ws-file-item__top strong {
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 210px;
+}
+
+.ws-meeting-item__meta,
+.ws-file-item__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 0.76rem;
+  color: var(--nexo-text-muted, #8A8780);
+}
+
+.ws-file-item__icon,
+.ws-file-row__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  background: var(--nexo-bg-subtle, #EEECE7);
+  color: var(--nexo-text-primary, #1C1B19);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ws-file-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--nexo-bg-subtle, #EEECE7);
+  color: var(--nexo-text-muted, #8A8780);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.ws-file-tag.is-pinned {
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+}
+
+/* --------------------------------------------------------------------------
+   5. TAB 5 — TÀI LIỆU NHÓM (WorkspaceFilesTab — Divided Inside Unified Frame)
+   -------------------------------------------------------------------------- */
+.ws-files-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-bottom: 18px;
+}
+
+.ws-files-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 20px 26px;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  border: 0;
+  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA);
+  box-shadow: none;
+}
+
+.ws-files-toolbar__left h2 {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.ws-files-toolbar__left p {
+  margin: 3px 0 0;
+  font-size: 0.84rem;
+  color: var(--nexo-text-muted, #8A8780);
+}
+
+.ws-files-toolbar__controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ws-files-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 9999px;
+  background: var(--nexo-bg-ivory, #FAF9F6);
+  border: 1px solid var(--nexo-border-beige, #E6E2DA);
+  min-width: 240px;
+}
+
+.ws-files-search input {
+  border: 0;
+  background: transparent;
+  width: 100%;
+  font-size: 0.85rem;
+  color: var(--nexo-text-primary, #1C1B19);
+  outline: none;
+}
+
+.ws-files-filters {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 9999px;
+  background: var(--nexo-bg-subtle, #EEECE7);
+  border: 1px solid var(--nexo-border-beige, #E6E2DA);
+}
+
+.ws-files-filter-btn {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--nexo-text-muted, #8A8780);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.ws-files-filter-btn:hover {
+  color: var(--nexo-text-primary, #1C1B19);
+}
+
+.ws-files-filter-btn:active {
+  transform: scale(0.97);
+}
+
+.ws-files-filter-btn:focus-visible {
+  outline: 2px solid var(--nexo-text-primary, #1C1B19);
+  outline-offset: 2px;
+}
+
+.ws-files-filter-btn.is-active {
+  background: var(--nexo-bg-ivory, #FAF9F6);
+  color: var(--nexo-text-primary, #1C1B19);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.ws-files-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.ws-files-empty-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.ws-file-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 16px;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  border: 0;
+  box-shadow: none;
+  transition: background-color 150ms ease;
+}
+
+.ws-file-row::after {
+  content: "";
+  position: absolute;
+  left: 72px;
+  right: 16px;
+  bottom: 0;
+  height: 1px;
+  background: var(--nexo-border-beige, #E6E2DA);
+  pointer-events: none;
+}
+
+.ws-file-row:hover {
+  background: var(--nexo-bg-subtle, #EEECE7);
+}
+
+.ws-file-row__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ws-file-row__title-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ws-file-row__name {
+  font-size: 0.94rem;
+  font-weight: 600;
+  color: var(--nexo-text-primary, #1C1B19);
+  word-break: break-word;
+}
+
+.ws-file-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 0.81rem;
+  color: var(--nexo-text-muted, #8A8780);
+}
+
+.ws-file-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ws-files-empty,
+.ws-empty-stage__card {
+  padding: 28px 24px;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  border: 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.ws-empty-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 20px;
+}
+
+.ws-empty-stage__card {
+  max-width: 520px;
+}
+
+.ws-empty-stage__card h1 {
+  margin: 4px 0;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+}
+
+.ws-empty-stage__card p {
+  margin: 0;
+  color: var(--nexo-text-muted, #8A8780);
+  font-size: 0.9rem;
+}
+
+.ws-empty-stage__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.ws-files-more {
+  display: flex;
+  justify-content: center;
+  padding-top: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   6. MODALS (Members & Invite)
+   -------------------------------------------------------------------------- */
+.ws-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ws-members-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ws-members-modal__invite-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--nexo-bg-ivory, #FAF9F6);
+  border: 1px solid var(--nexo-border-beige, #E6E2DA);
+}
+
+.ws-members-modal__add-form,
+.ws-members-modal__link-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ws-members-modal__add-form input,
+.ws-members-modal__link-row input {
+  flex: 1;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  border: 1px solid var(--nexo-border-beige, #E6E2DA);
+  background: #ffffff;
+  font-size: 0.85rem;
+  color: var(--nexo-text-primary, #1C1B19);
+}
+
+.ws-members-modal__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  border-top: 1px solid var(--nexo-border-beige, #E6E2DA);
+}
+
+.ws-members-modal__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 16px;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  transition: background-color 150ms ease;
+}
+
+.ws-members-modal__item::after {
+  content: "";
+  position: absolute;
+  left: 72px;
+  right: 16px;
+  bottom: 0;
+  height: 1px;
+  background: var(--nexo-border-beige, #E6E2DA);
+  pointer-events: none;
+}
+
+.ws-members-modal__item:hover {
+  background: var(--nexo-bg-subtle, #EEECE7);
+}
+
+.ws-members-modal__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ws-members-modal__info strong {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--nexo-text-primary, #1C1B19);
+}
+
+.ws-members-modal__info span {
+  font-size: 0.78rem;
+  color: var(--nexo-text-muted, #8A8780);
+}
+
+.ws-members-modal__presence {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: var(--nexo-text-muted, #8A8780);
+}
+
+.ws-members-modal__presence i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.ws-members-modal__presence.is-online {
+  color: #047857;
+  font-weight: 600;
+}
+
+.ws-members-modal__presence.is-online i {
+  background: #10b981;
+}
+
+/* --------------------------------------------------------------------------
+   7. RESPONSIVE (Tablet & Mobile)
+   -------------------------------------------------------------------------- */
+@media (max-width: 1120px) {
+  .ws-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .ws-shell,
+  .ws-shell.is-sidebar-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ws-sidebar:not(.ws-sidebar--drawer) {
+    display: none;
+  }
+
+  .ws-mobile-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(28, 27, 25, 0.36);
+    backdrop-filter: blur(4px);
+    z-index: 90;
+    display: flex;
+    padding: 12px;
+  }
+
+  .ws-sidebar--drawer {
+    width: min(310px, 88vw);
+    height: 100%;
+    background: var(--nexo-bg-ivory, #FAF9F6);
+    z-index: 91;
+  }
+}
+
+@media (max-width: 640px) {
+  .ws-header {
+    padding: 12px 12px 8px;
+  }
+
+  .ws-header__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .ws-file-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ws-file-row__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   8. CHANNEL SUB-NAVIGATION INSIDE TRAO ĐỔI TAB (# kênh hierarchy)
+   -------------------------------------------------------------------------- */
+.chat-nav-title-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chat-nav-eyebrow {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--nexo-text-muted, #8A8780);
+}
+
+.chat-convo-hash,
+.chat-header-hash {
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  background: var(--nexo-bg-subtle, #EEECE7);
+  border: 1px solid var(--nexo-border-beige, #E6E2DA);
+  color: var(--nexo-text-primary, #1C1B19);
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chat-conversation-card.is-active .chat-convo-hash {
+  background: var(--nexo-text-primary, #1C1B19);
+  border-color: var(--nexo-text-primary, #1C1B19);
+  color: #ffffff;
+}
+
+.chat-convo-indicators {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.chat-muted-icon {
+  color: var(--nexo-text-muted, #8A8780);
+}
+
+.chat-info-hash-large {
+  width: 56px;
+  height: 56px;
+  border-radius: 9999px;
+  background: var(--nexo-bg-subtle, #EEECE7);
+  border: 1px solid var(--nexo-border-beige, #E6E2DA);
+  color: var(--nexo-text-primary, #1C1B19);
+  font-size: 1.55rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.chat-info-section-label {
+  padding: 10px 6px 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--nexo-text-muted, #8A8780);
+}
+
+
+/* Compact workspace chrome so the active tab (especially chat) gets more room. */
+.ws-sidebar__avatar .avatar {
+  width: 34px;
+  height: 34px;
+  font-size: 11px;
+}
+
+.ws-header__avatar .avatar {
+  width: 40px;
+  height: 40px;
+  font-size: 12px;
+}

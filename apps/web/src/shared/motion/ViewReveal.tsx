@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { gsap } from "gsap";
-import { DURATION, GSAP_EASE_OUT, prefersReducedMotion } from "./tokens";
+import { DURATION, GSAP_EASE_OUT } from "./tokens";
 
 const MAX_TARGETS = 8;
 
@@ -15,7 +15,7 @@ export function ViewReveal({ children }: { children: ReactNode }) {
 
   useLayoutEffect(() => {
     const host = hostRef.current;
-    if (!host?.firstElementChild || prefersReducedMotion()) return;
+    if (!host?.firstElementChild) return;
     const blocks = (parent: Element) =>
       Array.from(parent.children).filter(
         (node): node is HTMLElement =>

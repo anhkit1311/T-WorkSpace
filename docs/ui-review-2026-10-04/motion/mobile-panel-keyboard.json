@@ -1,0 +1,39 @@
+{
+  "focus": [
+    {
+      "inside": true,
+      "overflow": false,
+      "width": 375
+    },
+    {
+      "inside": true,
+      "overflow": false,
+      "width": 375
+    },
+    {
+      "inside": true,
+      "overflow": false,
+      "width": 375
+    },
+    {
+      "inside": true,
+      "overflow": false,
+      "width": 375
+    },
+    {
+      "inside": true,
+      "overflow": false,
+      "width": 375
+    },
+    {
+      "inside": true,
+      "overflow": false,
+      "width": 375
+    }
+  ],
+  "afterEscape": {
+    "canvasCount": 1,
+    "dialog": false,
+    "restored": "Thông tin kênh"
+  }
+}

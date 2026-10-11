@@ -1,0 +1,4 @@
+{
+  "canvas": 1,
+  "debug": "Motion debug · DEVFPS rAF: 200 · frames: 7606524Long tasks: 6 · max: 63.0ms · CLS: 0.2236Blur DOM: 2 · depth: 1Motion: full · canvases: 1 · triggers: 0Scene: running · renders: 7539791 · quality: baseĐo lạiTheo máyGiảmĐầy đủrAF không phải GPU FPS; blur là cây DOM, không phải layer compositor."
+}

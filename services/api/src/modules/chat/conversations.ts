@@ -84,7 +84,7 @@ export async function createConversationNotifications(
 }
 
 // All message views share the same projection and current permission check.
-const messageProjection = `SELECT m.id,m.client_message_id AS "clientMessageId",m.channel_id AS "channelId",m.author_id AS "authorId",u.display_name AS "authorName",m.content,m.created_at AS "createdAt",m.edited_at AS "editedAt",m.reply_to_id AS "replyToId",reply.content AS "replyToContent",m.thread_root_id AS "threadRootId",
+const messageProjection = `SELECT m.id,m.client_message_id AS "clientMessageId",m.channel_id AS "channelId",m.author_id AS "authorId",u.display_name AS "authorName",m.content,m.created_at AS "createdAt",m.edited_at AS "editedAt",m.reply_to_id AS "replyToId",reply.content AS "replyToContent",m.thread_root_id AS "threadRootId",m.kind,m.meeting_session_id AS "meetingSessionId",
   (SELECT count(*)::integer FROM messages child WHERE child.thread_root_id=m.id AND child.deleted_at IS NULL) AS "replyCount",
   (SELECT count(*)::integer FROM messages child WHERE child.thread_root_id=m.id AND child.deleted_at IS NULL AND child.author_id<>$1 AND child.created_at>COALESCE((SELECT last_read_at FROM thread_reads WHERE root_id=m.id AND user_id=$1),'epoch'::timestamptz)) AS "threadUnreadCount",
   EXISTS(SELECT 1 FROM message_pins WHERE message_id=m.id) AS pinned,
@@ -94,6 +94,15 @@ const messageProjection = `SELECT m.id,m.client_message_id AS "clientMessageId",
   COALESCE((SELECT json_agg(json_build_object('userId',mention.user_id,'displayName',mentioned.display_name)) FROM message_mentions mention JOIN users mentioned ON mentioned.id=mention.user_id WHERE mention.message_id=m.id),'[]'::json) AS mentions,
   CASE WHEN a.id IS NULL THEN NULL ELSE json_build_object('id',a.id,'fileName',a.file_name,'mimeType',a.mime_type,'fileSize',a.file_size) END AS attachment
   FROM messages m JOIN users u ON u.id=m.author_id JOIN channel_access access ON access.channel_id=m.channel_id AND access.user_id=$1 AND (m.thread_root_id IS NULL OR EXISTS(SELECT 1 FROM messages active_root WHERE active_root.id=m.thread_root_id AND active_root.deleted_at IS NULL)) LEFT JOIN messages reply ON reply.id=m.reply_to_id AND reply.deleted_at IS NULL LEFT JOIN message_attachments a ON a.id=m.attachment_id`;
+
+export async function getMessageItem(userId: string, messageId: string) {
+  validateId(messageId);
+  const result = await query<ChatMessageItem>(`${messageProjection} WHERE m.id=$2 AND m.deleted_at IS NULL`, [
+    userId,
+    messageId,
+  ]);
+  return result.rows[0] ?? null;
+}
 
 export async function getMessageContext(userId: string, messageId: string) {
   validateId(messageId);

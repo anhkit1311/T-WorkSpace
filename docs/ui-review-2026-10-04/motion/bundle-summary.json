@@ -1,0 +1,12 @@
+{
+  "before": {
+    "js": 440304,
+    "css": 42315
+  },
+  "after": {
+    "js": 447956,
+    "css": 42781
+  },
+  "diagnosticChunkPresent": false,
+  "delta": 8118
+}

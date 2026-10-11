@@ -1,10 +1,12 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { AnimatePresence } from "motion/react";
 import { useApp } from "../../app/providers/AppContext";
-import { Badge, Button, Field, Modal } from "../../shared/ui/Primitives";
+import { Button, Chip, Field, ListItem } from "../../shared/ui/Primitives";
+import { LogoutConfirmDialog } from "../auth/LogoutConfirmDialog";
 import { Icon } from "../../shared/ui/Icon";
 import { changePasswordApi } from "../auth/api";
 import "./profile.css";
+import { focusFirstInvalid, shouldResetProfile } from "../../shared/lib/interaction";
 
 export function ProfilePage() {
   const { user, accessToken, updateUser, notify, logout } = useApp();
@@ -28,14 +30,24 @@ export function ProfilePage() {
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [errorField, setErrorField] = useState("displayName");
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [passwordErrorField, setPasswordErrorField] = useState("newPassword");
   const [changingPassword, setChangingPassword] = useState(false);
+  const formValues = JSON.stringify([displayName,bio,contactText,statusText,pronouns,location,interestsText,favoriteMusic,avatarUrl,coverUrl,profileVisibility,showActivity,showContact,notificationsEnabled]);
+  const savedValues = useRef(formValues);
+  const previousUserId = useRef(user?.id);
+  const dirtyRef = useRef(false);
+  dirtyRef.current = formValues !== savedValues.current;
 
   useEffect(() => {
+    if (!shouldResetProfile(previousUserId.current,user?.id,dirtyRef.current)) return;
+    previousUserId.current = user?.id;
+    savedValues.current = JSON.stringify([user?.displayName || "",user?.bio || "",user?.contactText || "",user?.statusText || "",user?.pronouns || "",user?.location || "",(user?.interests || []).join(", "),user?.favoriteMusic || "",user?.avatarUrl || "",user?.coverUrl || "",user?.profileVisibility || "workspace",user?.showActivity !== false,user?.showContact === true,user?.notificationsEnabled !== false]);
     setDisplayName(user?.displayName || "");
     setBio(user?.bio || "");
     setContactText(user?.contactText || "");
@@ -55,6 +67,7 @@ export function ProfilePage() {
   const chooseImage = (file: File | undefined, kind: "avatar" | "cover") => {
     if (!file) return;
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 2_000_000) {
+      setErrorField(kind);
       setError("Chọn ảnh PNG, JPEG hoặc WebP dưới 2 MB.");
       return;
     }
@@ -73,7 +86,9 @@ export function ProfilePage() {
     event.preventDefault();
     const trimmed = displayName.trim();
     if (!trimmed || trimmed.length < 2) {
+      setErrorField("displayName");
       setError("Tên hiển thị cần có ít nhất 2 ký tự.");
+      focusFirstInvalid(event.currentTarget);
       return;
     }
     const interests = Array.from(
@@ -85,7 +100,9 @@ export function ProfilePage() {
       ),
     );
     if (interests.length > 8 || interests.some((item) => item.length > 40)) {
+      setErrorField("interests");
       setError("Nhập tối đa 8 sở thích, ngăn cách bằng dấu phẩy; mỗi mục tối đa 40 ký tự.");
+      focusFirstInvalid(event.currentTarget);
       return;
     }
 
@@ -108,8 +125,10 @@ export function ProfilePage() {
         showContact,
         notificationsEnabled,
       });
+      savedValues.current = formValues;
       notify("Thành công", "Đã cập nhật thông tin hồ sơ của bạn.", "success");
     } catch (cause: unknown) {
+      setErrorField("profile");
       setError(cause instanceof Error ? cause.message : "Không thể cập nhật hồ sơ.");
     } finally {
       setSaving(false);
@@ -120,11 +139,15 @@ export function ProfilePage() {
     event.preventDefault();
     if (!accessToken) return;
     if (newPassword.length < 8 || newPassword.length > 128) {
+      setPasswordErrorField("newPassword");
       setPasswordError("Mật khẩu mới phải có từ 8 đến 128 ký tự.");
+      focusFirstInvalid(event.currentTarget);
       return;
     }
     if (newPassword !== confirmPassword) {
+      setPasswordErrorField("confirmPassword");
       setPasswordError("Hai lần nhập mật khẩu mới chưa khớp.");
+      focusFirstInvalid(event.currentTarget);
       return;
     }
     setChangingPassword(true);
@@ -134,8 +157,9 @@ export function ProfilePage() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      await logout();
+      await logout("password-changed");
     } catch (cause) {
+      setPasswordErrorField("currentPassword");
       setPasswordError(cause instanceof Error ? cause.message : "Không thể đổi mật khẩu.");
     } finally {
       setChangingPassword(false);
@@ -146,9 +170,12 @@ export function ProfilePage() {
     <div className="profile-page">
       <header className="profile-header">
         <div>
-          <h1>Hồ sơ cá nhân</h1>
-          <p>Quản lý thông tin tài khoản và bảo mật của bạn.</p>
+          <h1>Cài đặt trang cá nhân</h1>
+          <p>Quản lý thông tin hồ sơ, quyền riêng tư và bảo mật tài khoản của bạn.</p>
         </div>
+        <Chip icon="lock">
+          {profileVisibility === "workspace" ? "Hiển thị cùng nhóm" : "Chỉ mình tôi"}
+        </Chip>
       </header>
 
       {/* Identity preview */}
@@ -165,13 +192,19 @@ export function ProfilePage() {
         >
           <span>KHÔNG GIAN CỦA BẠN</span>
           <label className="profile-cover-upload">
-            Đổi ảnh bìa
+            <Icon name="image" size={16} />
+            <span>Đổi ảnh bìa</span>
             <input
+              id="profile-cover"
+              name="cover"
+              aria-invalid={Boolean(error && errorField === "cover") || undefined}
+              aria-describedby={error && errorField === "cover" ? "profile-cover-error" : undefined}
               type="file"
               accept="image/png,image/jpeg,image/webp"
               onChange={(event) => chooseImage(event.target.files?.[0], "cover")}
             />
           </label>
+          {error && errorField === "cover" && <p className="field__error" role="alert" id="profile-cover-error">{error}</p>}
         </div>
         <div className="profile-avatar-wrap">
           <div className="profile-avatar-large">
@@ -182,29 +215,31 @@ export function ProfilePage() {
             )}
           </div>
           <label className="profile-avatar-upload">
-            Đổi ảnh đại diện
+            <Icon name="camera" size={16} />
+            <span>Đổi ảnh đại diện</span>
             <input
+              id="profile-avatar"
+              name="avatar"
+              aria-invalid={Boolean(error && errorField === "avatar") || undefined}
+              aria-describedby={error && errorField === "avatar" ? "profile-avatar-error" : undefined}
               type="file"
               accept="image/png,image/jpeg,image/webp"
               onChange={(event) => chooseImage(event.target.files?.[0], "avatar")}
             />
           </label>
+          {error && errorField === "avatar" && <p className="field__error" role="alert" id="profile-avatar-error">{error}</p>}
         </div>
         <div className="profile-identity">
           <div className="profile-name-row">
             <h2>{displayName || "Chưa cập nhật thông tin"}</h2>
-            {user?.email && (
-              <Badge tone="blue">
-                <Icon name="check" size={12} /> Đã đăng nhập
-              </Badge>
-            )}
+            {user?.email && <Chip icon="check">Đã đăng nhập</Chip>}
           </div>
           <p className="profile-email">{user?.email || "Chưa cập nhật email"}</p>
           <p className="profile-bio-preview">
             {bio || "Thêm một lời giới thiệu ngắn để đồng đội hiểu hơn về bạn."}
           </p>
           {statusText && <p className="profile-bio-preview">{statusText}</p>}
-          <span className="profile-activity">
+          <span className={`profile-activity ${showActivity ? "" : "is-hidden"}`}>
             <i /> {showActivity ? "Hiển thị hoạt động" : "Ẩn hoạt động"}
           </span>
           {!user?.displayName && (
@@ -220,12 +255,13 @@ export function ProfilePage() {
         <h3 className="profile-section-title">
           <Icon name="settings" size={16} /> Thông tin cá nhân
         </h3>
-        <form onSubmit={handleUpdateProfile} className="profile-form">
+        <form onSubmit={handleUpdateProfile} className="profile-form" onInput={() => setError("")}>
+          {error && errorField === "profile" && <p className="field__error" role="alert">{error}</p>}
           <div className="profile-input-row">
             <Field
               label="Tên hiển thị"
               hint="Tên này sẽ hiển thị với các thành viên khác trong nhóm và cuộc họp."
-              error={error}
+              error={errorField === "displayName" ? error : undefined}
             >
               <input
                 type="text"
@@ -306,7 +342,7 @@ export function ProfilePage() {
               />
             </Field>
           </div>
-          <Field label="Sở thích" hint="Tối đa 8 mục, ngăn cách bằng dấu phẩy.">
+          <Field label="Sở thích" hint="Tối đa 8 mục, ngăn cách bằng dấu phẩy." error={errorField === "interests" ? error : undefined}>
             <input
               className="profile-field-input"
               value={interestsText}
@@ -385,7 +421,13 @@ export function ProfilePage() {
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <Button type="submit" loading={saving} disabled={saving || !displayName.trim()}>
+            <Button
+              type="submit"
+              variant="primary"
+              icon="check"
+              loading={saving}
+              disabled={saving || !displayName.trim()}
+            >
               Lưu thay đổi
             </Button>
           </div>
@@ -401,13 +443,14 @@ export function ProfilePage() {
           <p className="profile-password-hint">
             Sau khi đổi mật khẩu, các phiên đăng nhập sẽ bị thu hồi và bạn cần đăng nhập lại.
           </p>
-          <form onSubmit={handleChangePassword} className="profile-form profile-password-form">
+          <form onSubmit={handleChangePassword} className="profile-form profile-password-form" onInput={() => setPasswordError("")}>
             <Field label="Mật khẩu hiện tại">
               <input
                 className="profile-field-input"
                 type="password"
                 autoComplete="current-password"
                 value={currentPassword}
+                name="currentPassword" aria-invalid={Boolean(passwordError && passwordErrorField === "currentPassword")} aria-describedby={passwordError ? "profile-password-error" : undefined}
                 onChange={(event) => setCurrentPassword(event.target.value)}
                 required
               />
@@ -418,6 +461,7 @@ export function ProfilePage() {
                 type="password"
                 autoComplete="new-password"
                 value={newPassword}
+                name="newPassword" aria-invalid={Boolean(passwordError && passwordErrorField === "newPassword")} aria-describedby={passwordError ? "profile-password-error" : undefined}
                 onChange={(event) => setNewPassword(event.target.value)}
                 minLength={8}
                 maxLength={128}
@@ -430,22 +474,27 @@ export function ProfilePage() {
                 type="password"
                 autoComplete="new-password"
                 value={confirmPassword}
+                name="confirmPassword" aria-invalid={Boolean(passwordError && passwordErrorField === "confirmPassword")} aria-describedby={passwordError ? "profile-password-error" : undefined}
                 onChange={(event) => setConfirmPassword(event.target.value)}
                 required
               />
             </Field>
             {passwordError && (
-              <p className="profile-password-error" role="alert">
+              <p className="profile-password-error" id="profile-password-error" role="alert">
                 {passwordError}
               </p>
             )}
-            <Button
-              type="submit"
-              loading={changingPassword}
-              disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
-            >
-              Đổi mật khẩu
-            </Button>
+            <div>
+              <Button
+                type="submit"
+                variant="primary"
+                icon="lock"
+                loading={changingPassword}
+                disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
+              >
+                Đổi mật khẩu
+              </Button>
+            </div>
           </form>
         </section>
       )}
@@ -455,69 +504,40 @@ export function ProfilePage() {
         <h3 className="profile-section-title">
           <Icon name="lock" size={16} /> Thông tin tài khoản
         </h3>
-        <div className="profile-meta-list">
-          <div className="profile-meta-item">
-            <span>Mã tài khoản</span>
-            <strong>{user?.id || "—"}</strong>
-          </div>
-          <div className="profile-meta-item">
-            <span>Email đăng nhập</span>
-            <strong>{user?.email || "Chưa có thông tin"}</strong>
-          </div>
+        <div className="nexo-list-group profile-meta-list" role="list">
+          <ListItem
+            role="listitem"
+            icon="profile"
+            title="Mã tài khoản"
+            subtitle="Định danh phiên đăng nhập hiện tại"
+            metaPrimary={user?.id || "—"}
+            metaSecondary="Tài khoản Nexo"
+          />
+          <ListItem
+            role="listitem"
+            icon="mail"
+            title="Email đăng nhập"
+            subtitle="Địa chỉ xác thực chính của tài khoản"
+            metaPrimary={user?.email || "Chưa có thông tin"}
+            metaSecondary="Đã xác thực"
+          />
         </div>
       </section>
 
       {/* Danger Zone */}
       <section className="profile-card profile-danger-zone">
         <h3 className="profile-section-title">Đăng xuất tài khoản</h3>
-        <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: "0 0 16px" }}>
+        <p style={{ fontSize: "14px", color: "var(--nexo-text-muted, #8A8780)", margin: "0 0 16px" }}>
           Đăng xuất sẽ xóa phiên làm việc hiện tại trên trình duyệt này.
         </p>
-        <Button variant="danger" icon="logout" onClick={() => setLogoutConfirmOpen(true)}>
+        <Button variant="secondary" icon="logout" onClick={() => setLogoutConfirmOpen(true)}>
           Đăng xuất khỏi thiết bị
         </Button>
       </section>
 
-      {/* Logout Confirmation Modal */}
+      {/* Logout Confirmation (shared with the account menu) */}
       <AnimatePresence>
-        {logoutConfirmOpen && (
-          <Modal
-            title="Xác nhận đăng xuất"
-            eyebrow="TÀI KHOẢN"
-            onClose={() => setLogoutConfirmOpen(false)}
-            footer={
-              <div
-                style={{ display: "flex", justifyContent: "flex-end", gap: "10px", width: "100%" }}
-              >
-                <Button variant="ghost" onClick={() => setLogoutConfirmOpen(false)}>
-                  Hủy bỏ
-                </Button>
-                <Button
-                  variant="danger"
-                  icon="logout"
-                  onClick={() => {
-                    setLogoutConfirmOpen(false);
-                    void logout();
-                  }}
-                >
-                  Đăng xuất ngay
-                </Button>
-              </div>
-            }
-          >
-            <p
-              style={{
-                fontSize: "14px",
-                color: "var(--text-secondary)",
-                margin: 0,
-                lineHeight: 1.5,
-              }}
-            >
-              Bạn có chắc chắn muốn đăng xuất khỏi tài khoản <strong>{user?.displayName}</strong> (
-              {user?.email}) không? Bạn sẽ cần đăng nhập lại để tiếp tục làm việc.
-            </p>
-          </Modal>
-        )}
+        {logoutConfirmOpen && <LogoutConfirmDialog onClose={() => setLogoutConfirmOpen(false)} />}
       </AnimatePresence>
     </div>
   );

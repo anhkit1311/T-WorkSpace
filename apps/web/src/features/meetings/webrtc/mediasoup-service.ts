@@ -115,6 +115,7 @@ export class MediasoupClientService {
       iceCandidates: options.iceCandidates as types.IceCandidate[],
       dtlsParameters: options.dtlsParameters as types.DtlsParameters,
       iceServers: options.iceServers,
+      iceTransportPolicy: options.iceTransportPolicy,
     });
 
     transport.on("connect", ({ dtlsParameters }, callback, errback) => {
@@ -144,6 +145,7 @@ export class MediasoupClientService {
       iceCandidates: options.iceCandidates as types.IceCandidate[],
       dtlsParameters: options.dtlsParameters as types.DtlsParameters,
       iceServers: options.iceServers,
+      iceTransportPolicy: options.iceTransportPolicy,
     });
 
     transport.on("connect", ({ dtlsParameters }, callback, errback) => {
@@ -220,6 +222,9 @@ export class MediasoupClientService {
 
   getProducer(source: ProducerSource): types.Producer | undefined {
     return this.producers.get(source);
+  }
+  videoConsumerIdForTrack(trackId: string) {
+    return [...this.consumers.values()].find((consumer) => consumer.track.id === trackId)?.id;
   }
   getVideoConsumerIds() {
     return [...this.consumers.values()]

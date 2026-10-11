@@ -5,6 +5,7 @@ import { query, withTransaction } from "../../infrastructure/database/db.js";
 import { HttpError } from "../../shared/http/http-error.js";
 import { requireChannelAccess, validateId } from "../workspaces/service.js";
 import { config } from "../../config/config.js";
+import { defaultOutcomeChannel, finishSession } from "./outcomes.js";
 
 async function lock(client: PoolClient, userId: string, channelId: string) {
   validateId(channelId);
@@ -56,8 +57,7 @@ export async function enterSession(
           "MEDIA_ROUTING_REQUIRED",
           `Phòng đang chạy trên máy chủ media khác${owner.media_url ? `: ${owner.media_url}` : ". Kiểm tra cấu hình định tuyến SFU."}`,
         );
-      await client.query(`UPDATE meeting_sessions SET ended_at=now() WHERE id=$1`, [session.id]);
-      await client.query(`DELETE FROM meeting_connections WHERE session_id=$1`, [session.id]);
+      await finishSession(client, session.id);
       session = null;
     }
     if (scheduleId) {
@@ -76,8 +76,15 @@ export async function enterSession(
       const id = randomUUID();
       session = (
         await client.query(
-          `INSERT INTO meeting_sessions(id,channel_id,host_id,schedule_id,media_instance_id) VALUES($1,$2,$3,$4,$5) RETURNING *`,
-          [id, channelId, userId, scheduleId ?? null, affinity ? instanceId : null],
+          `INSERT INTO meeting_sessions(id,channel_id,host_id,schedule_id,media_instance_id,outcome_channel_id) VALUES($1,$2,$3,$4,$5,$6) RETURNING *`,
+          [
+            id,
+            channelId,
+            userId,
+            scheduleId ?? null,
+            affinity ? instanceId : null,
+            await defaultOutcomeChannel(client, channelId),
+          ],
         )
       ).rows[0];
     }
@@ -186,6 +193,7 @@ export async function meetingAction(
     ).rows[0];
     if (actor?.state !== "admitted")
       throw new HttpError(403, "FORBIDDEN", "Bạn chưa được vào phòng.");
+    let summaryMessageId: string | null = null;
     if (body.action === "hand") {
       if (typeof body.enabled !== "boolean")
         throw new HttpError(400, "INVALID_ACTION", "Trạng thái giơ tay không hợp lệ.");
@@ -207,8 +215,7 @@ export async function meetingAction(
     } else if (body.action === "end") {
       if (actor.role !== "host")
         throw new HttpError(403, "FORBIDDEN", "Chỉ host kết thúc cuộc họp.");
-      await client.query(`UPDATE meeting_sessions SET ended_at=now() WHERE id=$1`, [session.id]);
-      await client.query(`DELETE FROM meeting_connections WHERE session_id=$1`, [session.id]);
+      summaryMessageId = await finishSession(client, session.id);
     } else if (["admit", "kick", "cohost", "mute", "transfer"].includes(body.action)) {
       validateId(body.targetUserId);
       const target = (
@@ -264,7 +271,7 @@ export async function meetingAction(
         ]);
       }
     } else throw new HttpError(400, "INVALID_ACTION", "Thao tác điều hành không hợp lệ.");
-    return { sessionId: session.id as string };
+    return { sessionId: session.id as string, summaryMessageId };
   });
 }
 // A host's last connection leaving transfers to a present co-host, then earliest member.
@@ -292,6 +299,7 @@ export async function leaveSession(socketId: string) {
       [session.id, session.host_id],
     );
     let ended = false;
+    let summaryMessageId: string | null = null;
     if (!hostPresent.rowCount && !session.ended_at) {
       const next = (
         await client.query(
@@ -310,13 +318,14 @@ export async function leaveSession(socketId: string) {
         ]);
       } else {
         ended = true;
-        await client.query(
-          `UPDATE meeting_sessions SET ended_at=COALESCE(ended_at,now()) WHERE id=$1`,
-          [session.id],
-        );
-        await client.query(`DELETE FROM meeting_connections WHERE session_id=$1`, [session.id]);
+        summaryMessageId = await finishSession(client, session.id);
       }
     }
-    return { channelId: session.channel_id as string, sessionId: session.id as string, ended };
+    return {
+      channelId: session.channel_id as string,
+      sessionId: session.id as string,
+      ended,
+      summaryMessageId,
+    };
   });
 }

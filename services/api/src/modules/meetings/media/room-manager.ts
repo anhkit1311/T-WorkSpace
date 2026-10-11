@@ -8,6 +8,8 @@ import type {
 import * as mediasoup from "mediasoup";
 import {EventEmitter} from 'node:events';
 import type {
+  ActiveSpeakerObserver,
+  AudioLevelObserver,
   Consumer,
   DtlsParameters,
   Producer,
@@ -38,7 +40,17 @@ interface Room {
   router: Router;
   worker: MediasoupWorker;
   peers: Map<string, Peer>; // key: socketId
+  speakerObserver: ActiveSpeakerObserver | null;
+  levelObserver: AudioLevelObserver | null;
+  dominantSocketId: string | null;
 }
+
+// Dominant-speaker video gets a higher share of the downlink when the estimate is tight.
+const SPEAKER_PRIORITY = 2;
+const DEFAULT_PRIORITY = 1;
+export const SPEAKER_OBSERVER_INTERVAL_MS = 300;
+export const AUDIO_LEVEL_INTERVAL_MS = 400;
+export const AUDIO_LEVEL_THRESHOLD_DB = -60;
 
 class MediasoupRoomManager {
   readonly events=new EventEmitter();
@@ -97,10 +109,79 @@ class MediasoupRoomManager {
         router,
         worker,
         peers: new Map(),
+        speakerObserver: null,
+        levelObserver: null,
+        dominantSocketId: null,
       };
       this.rooms.set(roomId, room);
+      await this.observeSpeakers(room);
     }
     return room;
+  }
+
+  // Observers are an enhancement: a failure here must not block the call itself.
+  private async observeSpeakers(room: Room) {
+    try {
+      room.speakerObserver = await room.router.createActiveSpeakerObserver({
+        interval: SPEAKER_OBSERVER_INTERVAL_MS,
+      });
+      room.levelObserver = await room.router.createAudioLevelObserver({
+        maxEntries: 16,
+        threshold: AUDIO_LEVEL_THRESHOLD_DB,
+        interval: AUDIO_LEVEL_INTERVAL_MS,
+      });
+    } catch (error) {
+      console.error(
+        JSON.stringify({ level: "warn", event: "speaker_observer_failed", message: String(error) }),
+      );
+      return;
+    }
+    room.speakerObserver.on("dominantspeaker", ({ producer }) => {
+      const peer = this.peerOfProducer(room, producer.id);
+      if (!peer || room.dominantSocketId === peer.socketId) return;
+      const previous = room.dominantSocketId;
+      room.dominantSocketId = peer.socketId;
+      void this.applySpeakerPriority(room, previous, peer.socketId);
+      this.events.emit("active_speaker", {
+        roomId: room.id,
+        socketId: peer.socketId,
+        userId: peer.userId,
+        at: Date.now(),
+      });
+    });
+    room.levelObserver.on("volumes", (volumes) => {
+      const levels = volumes
+        .map(({ producer, volume }) => ({
+          socketId: this.peerOfProducer(room, producer.id)?.socketId,
+          volume,
+        }))
+        .filter((item): item is { socketId: string; volume: number } => Boolean(item.socketId));
+      this.events.emit("audio_levels", { roomId: room.id, levels });
+    });
+    room.levelObserver.on("silence", () =>
+      this.events.emit("audio_levels", { roomId: room.id, levels: [] }),
+    );
+  }
+
+  private peerOfProducer(room: Room, producerId: string) {
+    for (const peer of room.peers.values()) if (peer.producers.has(producerId)) return peer;
+    return undefined;
+  }
+
+  private async applySpeakerPriority(room: Room, previous: string | null, next: string | null) {
+    for (const peer of room.peers.values())
+      for (const consumer of peer.consumers.values()) {
+        if (consumer.kind !== "video" || consumer.closed) continue;
+        const owner = this.peerOfProducer(room, consumer.producerId)?.socketId;
+        if (owner !== previous && owner !== next) continue;
+        await consumer
+          .setPriority(owner === next ? SPEAKER_PRIORITY : DEFAULT_PRIORITY)
+          .catch(() => {});
+      }
+  }
+
+  activeSpeaker(roomId: string) {
+    return this.rooms.get(roomId)?.dominantSocketId ?? null;
   }
 
   getPeer(roomId: string, socketId: string): Peer | undefined {
@@ -253,6 +334,11 @@ class MediasoupRoomManager {
     }
 
     peer.producers.set(producer.id, producer);
+    if (kind === "audio") {
+      const room = this.rooms.get(roomId);
+      for (const observer of [room?.speakerObserver, room?.levelObserver])
+        await observer?.addProducer({ producerId: producer.id }).catch(() => {});
+    }
 
     producer.on("transportclose", () => {
       producer.close();
@@ -320,6 +406,8 @@ class MediasoupRoomManager {
     if(this.getPeer(roomId,consumerSocketId)!==consumerPeer||targetProducer.closed){consumer.close();throw new Error('Peer or producer left during consume');}
 
     consumerPeer.consumers.set(consumer.id, consumer);
+    if (consumer.kind === "video" && room.dominantSocketId === producerPeer.socketId)
+      await consumer.setPriority(SPEAKER_PRIORITY).catch(() => {});
 
     consumer.on("transportclose", () => {
       consumer.close();
@@ -343,6 +431,12 @@ class MediasoupRoomManager {
       displayName: producerPeer.displayName,
       source,
     };
+  }
+
+  // Paused consumers stop SFU -> client forwarding (off-page tiles in the dynamic grid).
+  async pauseConsumer(roomId: string, socketId: string, consumerId: string): Promise<void> {
+    const consumer = this.getPeer(roomId, socketId)?.consumers.get(consumerId);
+    if (consumer && !consumer.paused) await consumer.pause();
   }
 
   async resumeConsumer(roomId: string, socketId: string, consumerId: string): Promise<void> {
@@ -391,6 +485,10 @@ class MediasoupRoomManager {
     peer.transports.clear();
 
     room.peers.delete(socketId);
+    if (room.dominantSocketId === socketId) {
+      room.dominantSocketId = null;
+      this.events.emit("active_speaker", { roomId, socketId: null, userId: null, at: Date.now() });
+    }
 
     // Nếu phòng không còn ai, đóng router
     if (room.peers.size === 0) {

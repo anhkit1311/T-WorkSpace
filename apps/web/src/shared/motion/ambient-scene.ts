@@ -14,6 +14,7 @@ import {
 } from "three";
 import { gsap } from "gsap";
 import { DURATION, GSAP_EASE_INOUT, GSAP_EASE_OUT } from "./tokens";
+import { nextQualitySample } from "./quality";
 
 /*
  * Atmospheric layer drawn over the landscape video: drifting light motes plus a slow valley mist.
@@ -25,8 +26,10 @@ export type AmbientMood =
   | "landing"
   | "login"
   | "overview"
+  | "workspace"
   | "chat"
   | "meetings"
+  | "files"
   | "tasks"
   | "profile"
   | "admin"
@@ -46,8 +49,10 @@ const MOODS: Record<AmbientMood, MoodSpec> = {
   landing: { tint: "#f2c6b2", mist: 0.34, motes: 1, camX: 0, camY: 0 },
   login: { tint: "#d6cdf0", mist: 0.4, motes: 0.85, camX: 0.7, camY: -0.25 },
   overview: { tint: "#f0d0c2", mist: 0.24, motes: 0.8, camX: 0, camY: 0.25 },
+  workspace: { tint: "#e5d5cb", mist: 0.16, motes: 0.55, camX: -0.15, camY: 0.15 },
   chat: { tint: "#cdd7ec", mist: 0.1, motes: 0.38, camX: -0.55, camY: 0.1 },
   meetings: { tint: "#c8d2ea", mist: 0.16, motes: 0.5, camX: 0.55, camY: -0.2 },
+  files: { tint: "#d8dee9", mist: 0.12, motes: 0.42, camX: 0.2, camY: -0.15 },
   tasks: { tint: "#ead5c4", mist: 0.12, motes: 0.42, camX: -0.35, camY: -0.3 },
   profile: { tint: "#e6cfe0", mist: 0.2, motes: 0.6, camX: 0.35, camY: 0.3 },
   admin: { tint: "#d3d9e6", mist: 0.14, motes: 0.45, camX: 0.25, camY: -0.1 },
@@ -165,6 +170,10 @@ export class AmbientScene {
   private active = true;
   private elapsed = 0;
   private disposed = false;
+  private slowMs = 0;
+  private qualityReduced = false;
+  private renders = 0;
+  debugState() { return { running: this.running, renders: this.renders, quality: this.qualityReduced ? "adaptive-half" : "base" }; }
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -283,7 +292,7 @@ export class AmbientScene {
 
   /** Short forward drift of the motes, synchronised with the DOM fade between tabs. */
   pulse() {
-    if (this.disposed || this.reducedMotion) return;
+    if (this.disposed || this.reducedMotion || !this.active || document.hidden) return;
     const warps = [this.mist.material.uniforms.uWarp, this.motes.material.uniforms.uWarp];
     gsap.killTweensOf(warps);
     gsap
@@ -294,8 +303,8 @@ export class AmbientScene {
 
   /** 0..1 scroll progress for public pages; the camera rises gently with the page. */
   setScroll(progress: number) {
+    if (this.reducedMotion) return;
     this.rig.scroll = Math.min(1, Math.max(0, progress));
-    if (this.reducedMotion) this.renderFrame();
   }
 
   /** Stops drawing (e.g. while a call decodes video) without tearing down GPU resources. */
@@ -363,7 +372,7 @@ export class AmbientScene {
   }
 
   private readonly handlePointer = (event: PointerEvent) => {
-    if (!this.pointerTo || event.pointerType === "touch") return;
+    if (!this.active || document.hidden || !this.pointerTo || event.pointerType === "touch") return;
     this.pointerTo.x((event.clientX / window.innerWidth) * 2 - 1);
     this.pointerTo.y(-((event.clientY / window.innerHeight) * 2 - 1));
   };
@@ -371,6 +380,14 @@ export class AmbientScene {
   private readonly handleVisibility = () => this.syncLoop();
 
   private readonly tick = (_time: number, deltaMs: number) => {
+    if (!this.qualityReduced) {
+      const sample = nextQualitySample(this.slowMs, deltaMs);
+      this.slowMs = sample.slowMs;
+      if (sample.downgrade) {
+        this.motes.geometry.setDrawRange(0, Math.floor(this.motes.geometry.attributes.position.count / 2));
+        this.qualityReduced = true;
+      }
+    }
     // Clamp long frames (tab restore, GC) so motion never jumps.
     this.elapsed += Math.min(deltaMs, 50) / 1000;
     this.renderFrame();
@@ -391,6 +408,7 @@ export class AmbientScene {
   }
 
   private stopLoop() {
+    this.slowMs = 0;
     if (!this.running) return;
     gsap.ticker.remove(this.tick);
     this.running = false;
@@ -398,6 +416,7 @@ export class AmbientScene {
 
   private renderFrame() {
     if (this.disposed) return;
+    this.renders++;
     const { rig } = this;
     this.camera.position.x = rig.baseX + rig.pointerX * 0.45;
     this.camera.position.y = rig.baseY + rig.pointerY * 0.3 + rig.scroll * 1.6;

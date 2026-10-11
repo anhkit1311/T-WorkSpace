@@ -1,6 +1,5 @@
 /* ==========================================================================
-   Editorial Profile Page Styles (Minimalist Editorial / Cinematic Aesthetic)
-   Matching Login & Landing Page (Luminous Frosted Glass & Deep Slate Palette)
+   Editorial Profile Page Styles — Shared Warm Palette & Touch Targets
    ========================================================================== */
 
 .profile-page {
@@ -9,12 +8,12 @@
   margin: 0 auto;
   width: 100%;
   font-family: var(--font-body, 'Inter', sans-serif);
-  color: #0f172a;
+  color: var(--nexo-text-primary, #1C1B19);
 }
 
 .profile-incomplete-hint {
   margin: 8px 0 0;
-  color: hsl(215, 25%, 32%);
+  color: var(--nexo-text-muted, #8A8780);
   font-size: 13.5px;
 }
 
@@ -23,38 +22,35 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
-  margin-bottom: 36px;
+  padding: clamp(24px, 2.8vw, 32px) clamp(28px, 3.2vw, 44px);
+  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA);
+  margin-bottom: 0;
   flex-wrap: wrap;
 }
 
 .profile-header h1 {
-  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
+  font-family: var(--font-display);
   font-style: normal;
-  font-size: clamp(2.2rem, 3.5vw, 3rem);
-  font-weight: 500;
-  letter-spacing: -0.015em;
-  color: #0f172a;
-  margin: 0 0 8px;
+  font-size: var(--nexo-fs-section, clamp(28px, 2.8vw, 32px));
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--nexo-text-primary, #1C1B19);
+  margin: 0 0 6px;
 }
 
 .profile-header p {
   font-size: 14.5px;
-  color: hsl(215, 25%, 32%);
+  color: var(--nexo-text-muted, #8A8780);
   margin: 0;
 }
 
 /* --------------------------------------------------------------------------
-   Profile Hero Card (Tactile Frosted Glass)
+   Profile Hero Card
    -------------------------------------------------------------------------- */
 .profile-card {
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
-  border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36));
+  background: var(--nexo-card-surface, rgba(250, 249, 246, 0.88));
+  border: 1px solid var(--nexo-border-beige, #E6E2DA);
   border-radius: 28px;
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
-  backdrop-filter: blur(var(--editorial-blur, 16px));
-  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px));
   padding: 28px;
   margin-bottom: 28px;
   overflow: hidden;
@@ -71,48 +67,70 @@
 }
 
 .profile-cover {
-  flex: 0 0 calc(100% + 56px);
-  margin: 0 -28px -2px;
+  flex: 0 0 100%;
+  width: 100%;
+  margin: 0 0 -2px;
   height: 160px;
-  padding: 20px 28px;
+  padding: 20px clamp(28px, 3.2vw, 44px);
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  background: radial-gradient(ellipse at 73% 12%, rgba(59, 130, 246, 0.25), transparent 45%),
-              radial-gradient(ellipse at 20% 90%, rgba(30, 41, 59, 0.15), transparent 60%),
-              #e2e8f0;
+  background: radial-gradient(ellipse at 73% 12%, rgba(28, 27, 25, 0.08), transparent 45%),
+              radial-gradient(ellipse at 20% 90%, rgba(138, 135, 128, 0.14), transparent 60%),
+              var(--nexo-bg-subtle, #EEECE7);
   background-position: center;
   background-size: cover;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
-  color: #0f172a;
+  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA);
+  color: var(--nexo-text-primary, #1C1B19);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.15em;
   text-transform: uppercase;
+  box-sizing: border-box;
 }
 
+/* Secondary Button style for Cover & Avatar Upload */
 .profile-cover-upload,
 .profile-avatar-upload {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--nexo-touch-min, 44px);
   cursor: pointer;
-  padding: 8px 16px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  border-radius: 9999px;
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
-  backdrop-filter: blur(10px);
-  color: #0f172a;
-  font-size: 12px;
-  font-weight: 550;
+  padding: 0 20px;
+  border: 1px solid var(--nexo-border-beige, #E6E2DA);
+  border-radius: var(--nexo-btn-radius-pill, 9999px);
+  background: var(--nexo-bg-ivory, #FAF9F6);
+  color: var(--nexo-text-primary, #1C1B19);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
   white-space: nowrap;
-  transition: all 180ms ease;
-  outline: none !important;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+  box-shadow: none;
+  transition:
+    transform 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease;
 }
 
 .profile-cover-upload:hover,
 .profile-avatar-upload:hover {
-  background: #ffffff;
-  transform: scale(1.03);
+  background: var(--nexo-bg-subtle, #EEECE7);
+}
+
+.profile-cover-upload:active,
+.profile-avatar-upload:active {
+  transform: scale(0.97);
+}
+
+.profile-cover-upload:focus-within,
+.profile-avatar-upload:focus-within {
+  outline: 2px solid var(--nexo-text-primary, #1C1B19);
+  outline-offset: 2px;
 }
 
 .profile-cover-upload input,
@@ -129,17 +147,18 @@
   justify-items: center;
   gap: 10px;
   margin-top: -42px;
+  margin-left: clamp(28px, 3.2vw, 44px);
   z-index: 2;
 }
 
 .profile-avatar-large {
-  background: #0f172a;
-  border: 4px solid #ffffff;
+  background: var(--nexo-text-primary, #1C1B19);
+  border: 4px solid var(--nexo-bg-ivory, #FAF9F6);
   width: 88px;
   height: 88px;
   border-radius: 28px;
   overflow: hidden;
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.18);
+  box-shadow: 0 12px 28px rgba(28, 27, 25, 0.14);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -157,6 +176,7 @@
 .profile-identity {
   flex: 1;
   min-width: 240px;
+  padding-right: clamp(28px, 3.2vw, 44px);
 }
 
 .profile-name-row {
@@ -168,33 +188,40 @@
 }
 
 .profile-name-row h2 {
-  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
+  font-family: var(--font-display);
   font-style: normal;
   font-size: 24px;
-  font-weight: 500;
-  color: #0f172a;
+  font-weight: 600;
+  color: var(--nexo-text-primary, #1C1B19);
   margin: 0;
 }
 
 .profile-email {
   font-size: 14px;
-  color: hsl(215, 25%, 32%);
+  color: var(--nexo-text-muted, #8A8780);
   margin: 0 0 10px;
 }
 
 .profile-bio-preview {
   margin: 0 0 10px;
-  color: #0f172a;
-  font-size: 13.5px;
+  color: var(--nexo-text-primary, #1C1B19);
+  font-size: 14px;
   line-height: 1.55;
 }
 
+/* Display Chip style for activity indicator */
 .profile-activity {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
-  color: var(--editorial-text-muted, #3e4e66);
+  height: var(--nexo-chip-height, 36px);
+  padding: 0 var(--nexo-chip-px, 16px);
+  border-radius: var(--nexo-btn-radius-pill, 9999px);
+  background: var(--nexo-bg-ivory, #FAF9F6);
+  border: 1px solid var(--nexo-border-beige, #E6E2DA);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--nexo-text-primary, #1C1B19);
 }
 
 .profile-activity i {
@@ -202,18 +229,23 @@
   height: 7px;
   border-radius: 9999px;
   background: #10b981;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.profile-activity.is-hidden i {
+  background: var(--nexo-text-muted, #8A8780);
+  box-shadow: none;
 }
 
 /* --------------------------------------------------------------------------
    Settings Form & Sections
    -------------------------------------------------------------------------- */
 .profile-section-title {
-  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
+  font-family: var(--font-display);
   font-style: normal;
   font-size: 20px;
-  font-weight: 500;
-  color: #0f172a;
+  font-weight: 600;
+  color: var(--nexo-text-primary, #1C1B19);
   margin: 0 0 20px;
   display: flex;
   align-items: center;
@@ -234,46 +266,53 @@
 
 .profile-field-input {
   width: 100%;
+  min-height: var(--nexo-touch-min, 44px);
   padding: 10px 18px;
   border-radius: 9999px;
-  border: 1.5px solid rgba(15, 23, 42, 0.12);
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
-  color: #0f172a;
+  border: 1px solid var(--nexo-border-beige, #E6E2DA);
+  background: var(--nexo-bg-ivory, #FAF9F6);
+  color: var(--nexo-text-primary, #1C1B19);
   font-size: 14px;
   outline: none !important;
-  transition: all 180ms ease;
+  transition: border-color 150ms ease, background-color 150ms ease;
   box-sizing: border-box;
 }
 
 .profile-field-input:is(textarea) {
-  border-radius: 20px;
+  border-radius: 18px;
   min-height: 90px;
   resize: vertical;
   padding: 14px 18px;
 }
 
 .profile-field-input:focus {
-  border-color: #0f172a;
+  border-color: var(--nexo-text-primary, #1C1B19);
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 0 0 2px rgba(28, 27, 25, 0.08);
   outline: none !important;
 }
 
 /* --------------------------------------------------------------------------
-   Settings Grid & Blocks
+   Settings Grid & Blocks (Divided Columns inside Unified Frame)
    -------------------------------------------------------------------------- */
 .profile-settings-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  gap: 0;
+  border-top: 1px solid var(--nexo-border-beige, #E6E2DA);
+  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA);
 }
 
 .profile-settings-block {
-  padding: 22px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 22px;
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  padding: 22px 24px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.profile-settings-block + .profile-settings-block {
+  border-left: 1px solid var(--nexo-border-beige, #E6E2DA);
 }
 
 .profile-settings-block h3 {
@@ -283,93 +322,88 @@
   gap: 10px;
   font-size: 15px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--nexo-text-primary, #1C1B19);
 }
 
 .profile-settings-block label:not(.profile-toggle) {
   display: grid;
   gap: 8px;
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: rgba(15, 23, 42, 0.6);
+  color: var(--nexo-text-muted, #8A8780);
 }
 
 .profile-settings-block select {
-  min-height: 40px;
-  padding: 8px 14px;
-  color: #0f172a;
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
-  border: 1.5px solid rgba(15, 23, 42, 0.12);
+  min-height: var(--nexo-touch-min, 44px);
+  padding: 8px 16px;
+  color: var(--nexo-text-primary, #1C1B19);
+  background: var(--nexo-bg-ivory, #FAF9F6);
+  border: 1px solid var(--nexo-border-beige, #E6E2DA);
   border-radius: 9999px;
   outline: none !important;
   font: inherit;
-  font-size: 13.5px;
+  font-size: 14px;
 }
 
 .profile-settings-block select option {
   background: #ffffff;
-  color: #0f172a;
+  color: var(--nexo-text-primary, #1C1B19);
 }
 
 .profile-settings-block .profile-toggle {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 14px;
-  color: #0f172a;
-  font-size: 13px;
+  gap: 12px;
+  min-height: var(--nexo-touch-min, 44px);
+  padding: 6px 12px;
+  margin-top: 8px;
+  border-radius: 12px;
+  color: var(--nexo-text-primary, #1C1B19);
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+  transition: background-color 150ms ease, transform 150ms ease;
+}
+
+.profile-settings-block .profile-toggle:hover {
+  background: var(--nexo-bg-subtle, #EEECE7);
+}
+
+.profile-settings-block .profile-toggle:active {
+  transform: scale(0.97);
 }
 
 .profile-settings-block p {
   margin: 14px 0 0;
-  color: var(--editorial-text-muted, #3e4e66);
-  font-size: 12px;
+  color: var(--nexo-text-muted, #8A8780);
+  font-size: 13px;
   line-height: 1.55;
 }
 
 /* --------------------------------------------------------------------------
-   Security & Account Info
+   Security & Account Info (Shared ListItem Rows with Inset Divider)
    -------------------------------------------------------------------------- */
 .profile-meta-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0;
 }
 
-.profile-meta-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 18px;
-  background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 16px;
-  font-size: 13.5px;
-  gap: 12px;
-  min-width: 0;
-}
-
-.profile-meta-item span {
-  color: var(--editorial-text-muted, #3e4e66);
-}
-
-.profile-meta-item strong {
-  color: #0f172a;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-  text-align: right;
-}
-
-.profile-danger-zone {
-  border-color: rgba(239, 68, 68, 0.25);
-  background: rgba(254, 242, 242, 0.6);
+.profile-meta-list > .nexo-list-item + .nexo-list-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 72px;
+  right: 16px;
+  height: 1px;
+  background: var(--nexo-border-beige, #E6E2DA);
+  pointer-events: none;
 }
 
 .profile-danger-zone .profile-section-title {
-  color: #dc2626;
+  color: var(--nexo-text-primary, #1C1B19);
 }
 
 .profile-password-form {
@@ -377,7 +411,7 @@
 }
 
 .profile-password-hint {
-  color: hsl(215, 25%, 32%);
+  color: var(--nexo-text-muted, #8A8780);
   font-size: 13.5px;
   line-height: 1.55;
 }
@@ -405,8 +439,12 @@
   .profile-settings-grid {
     grid-template-columns: 1fr;
   }
+  .profile-settings-block + .profile-settings-block {
+    border-left: 0;
+    border-top: 1px solid var(--nexo-border-beige, #E6E2DA);
+  }
   .profile-page {
-    padding: 20px 16px 40px;
+    padding: 0;
   }
   .profile-hero {
     flex-direction: column;
