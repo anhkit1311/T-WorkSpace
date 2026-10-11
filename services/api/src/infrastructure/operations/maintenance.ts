@@ -1,4 +1,4 @@
-import {query,withTransaction} from '../database/db.js';
+import {withTransaction} from '../database/db.js';
 import {deleteObject} from '../../modules/files/storage.js';
 export async function runMaintenance(workspaceId?:string){
   return withTransaction(async client=>{
@@ -21,4 +21,3 @@ export function startMaintenance(){
   let running=false;const tick=()=>{if(running)return;running=true;void runMaintenance().catch(error=>console.error(JSON.stringify({level:'error',event:'maintenance_error',message:error.message}))).finally(()=>{running=false;});};
   const timer=setInterval(tick,600000);timer.unref();return ()=>clearInterval(timer);
 }
-export async function maintenanceStatus(){return (await query(`SELECT count(*)::integer AS pending_objects FROM storage_cleanup`)).rows[0];}

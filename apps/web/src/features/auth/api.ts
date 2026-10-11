@@ -1,7 +1,6 @@
 import type {
   ApiErrorResponse,
   AuthResponse,
-  AuthUser,
   GoogleAuthInput,
   RegisterResponse,
   ResendOtpInput,
@@ -157,14 +156,3 @@ export async function logoutApi(): Promise<void> {
   await handleResponse<void>(response);
 }
 
-export async function getCurrentUserApi(accessToken: string): Promise<AuthUser> {
-  const response = await fetch(`${API_BASE}/auth/me`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-    credentials: "include",
-  });
-  const data = await handleResponse<{ user: AuthUser }>(response);
-  return data.user;
-}

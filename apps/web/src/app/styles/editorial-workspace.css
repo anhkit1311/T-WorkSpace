@@ -584,19 +584,6 @@ body,
   padding: 10px;
 }
 
-.sidebar-account-header .notion-profile-square {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
-  background: var(--primary-soft);
-  border: 1px solid var(--editorial-border-soft);
-  color: var(--primary);
-  font-size: 14px;
-  font-weight: 600;
-}
-
 .sidebar-account-header :is(strong, small) {
   display: block;
   overflow-wrap: anywhere;
@@ -836,7 +823,6 @@ body,
   -webkit-backdrop-filter: none !important;
 }
 
-.meeting-tile,
 .video-tile {
   border-radius: var(--editorial-radius-card) !important;
   overflow: hidden !important;
@@ -844,7 +830,6 @@ body,
   border: 2px solid rgba(255, 255, 255, 0.5) !important;
 }
 
-.meeting-tile.is-speaking,
 .video-tile.is-speaking {
   border-color: #0f172a !important;
   box-shadow:
@@ -864,19 +849,16 @@ body,
   color: #ffffff !important;
 }
 
-.meeting-dock-btn,
-.meeting-control-btn {
+.meeting-dock-btn {
   border-radius: var(--editorial-radius-pill) !important;
   transition:transform 180ms ease !important;
 }
 
-.meeting-dock-btn:hover:not(:disabled),
-.meeting-control-btn:hover:not(:disabled) {
+.meeting-dock-btn:hover:not(:disabled) {
   transform: scale(1.08) !important;
 }
 
-.meeting-dock-btn.is-leave,
-.meeting-leave-btn {
+.meeting-dock-btn.is-leave {
   border-radius: var(--editorial-radius-pill) !important;
   padding: 0 22px !important;
   height: 42px !important;
@@ -904,8 +886,7 @@ body,
   margin: 0 0 6px !important;
 }
 
-.task-column,
-.task-lane {
+.task-column {
   border-radius: 0 !important;
   background: transparent !important;
   border: 0 !important;
@@ -915,8 +896,7 @@ body,
   padding: 24px 28px !important;
 }
 
-.task-column + .task-column,
-.task-lane + .task-lane {
+.task-column + .task-column {
   border-left: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
 }
 
@@ -1038,9 +1018,7 @@ body,
   -webkit-backdrop-filter: blur(8px) !important;
 }
 
-.modal-window,
-.modal,
-.dialog-content {
+.modal {
   border-radius: 28px !important;
   background: var(--editorial-surface-popup, rgba(250, 249, 246, 0.96)) !important;
   backdrop-filter: blur(var(--editorial-blur, 20px)) saturate(140%) !important;
@@ -1054,9 +1032,7 @@ body,
   font-family: var(--font-body) !important;
 }
 
-.modal__header h2,
-.modal-window h2,
-.dialog-content h2 {
+.modal__header h2 {
   font-family: var(--font-display) !important;
   font-style: normal !important;
   font-size: 20px !important;
@@ -1261,8 +1237,7 @@ body,
 }
 
 /* 1. Primary Button: near-black #1C1B19, white 600 text, ~52px height, ~24px px, ~16px radius, soft shadow */
-:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--primary,
-:is(.editorial-workspace-shell, .modal, .toast-viewport) .button-primary {
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--primary {
   border-radius: var(--nexo-btn-radius-primary, 16px) !important;
   background-color: var(--nexo-text-primary, #1C1B19) !important;
   color: #ffffff !important;
@@ -1271,8 +1246,7 @@ body,
   box-shadow: var(--nexo-btn-shadow-primary, 0 4px 14px rgba(0, 0, 0, 0.15)) !important;
 }
 
-:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--primary:hover:not(:disabled),
-:is(.editorial-workspace-shell, .modal, .toast-viewport) .button-primary:hover:not(:disabled) {
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--primary:hover:not(:disabled) {
   background-color: var(--nexo-primary-hover, #2C2A27) !important;
   border-color: var(--nexo-primary-hover, #2C2A27) !important;
 }
@@ -1293,8 +1267,7 @@ body,
 }
 
 /* 2. Secondary Button: transparent at rest (like ListItem), subtle #EEECE7 on hover, pill radius, no border/shadow */
-:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--secondary,
-:is(.editorial-workspace-shell, .modal, .toast-viewport) .button-secondary {
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--secondary {
   border-radius: var(--nexo-btn-radius-pill, 9999px) !important;
   background: transparent !important;
   color: var(--nexo-text-primary, #1C1B19) !important;
@@ -1303,8 +1276,7 @@ body,
   box-shadow: none !important;
 }
 
-:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--secondary:hover:not(:disabled),
-:is(.editorial-workspace-shell, .modal, .toast-viewport) .button-secondary:hover:not(:disabled) {
+:is(.editorial-workspace-shell, .modal, .toast-viewport) .button--secondary:hover:not(:disabled) {
   background: var(--nexo-bg-subtle, #EEECE7) !important;
   border-color: transparent !important;
   color: var(--nexo-text-primary, #1C1B19) !important;
@@ -1427,6 +1399,14 @@ body,
 
 .nexo-list-item:hover:not(:disabled) {
   background: var(--nexo-bg-subtle, #EEECE7);
+}
+
+.nexo-list-item.is-static {
+  cursor: default;
+}
+
+.nexo-list-item.is-static:hover {
+  background: transparent;
 }
 
 .nexo-list-item__icon {

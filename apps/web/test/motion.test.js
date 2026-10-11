@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {DURATION,EASE,SPRING,getMotionPreset,interpolateCount,tabDirection,prefersReducedMotion} from '../src/shared/motion/tokens.ts';
+import {DURATION,EASE,SPRING,getMotionPreset,tabDirection,prefersReducedMotion} from '../src/shared/motion/tokens.ts';
 import {nextQualitySample} from '../src/shared/motion/quality.ts';
 
 test('motion tokens use bounded timing and damped springs',()=>{
@@ -16,10 +16,6 @@ test('useMotionSafe preset always provides full smooth animations',()=>{
  assert.equal(safe.duration(.22),.22);assert.equal(full.duration(.22),.22);
  assert.equal(safe.gesture.whileTap.scale,.97);assert.equal(full.gesture.whileTap.scale,.97);
  assert.equal(safe.panel.exit.opacity,0);assert.equal(safe.view.exit.y,-6);
-});
-test('count interpolation clamps progress and remains monotonic in both directions',()=>{
- assert.equal(interpolateCount(0,25,-1),0);assert.equal(interpolateCount(0,25,2),25);
- for(const[from,to]of[[0,123],[100,4]]){let last=from;for(let i=0;i<=100;i++){const value=interpolateCount(from,to,i/100);assert.ok(to>from?value>=last:value<=last);last=value;}assert.equal(last,to);}
 });
 test('tab direction has no initial/same-tab displacement',()=>{
  assert.equal(tabDirection(2,2),0);assert.equal(tabDirection(0,4),1);assert.equal(tabDirection(4,0),-1);

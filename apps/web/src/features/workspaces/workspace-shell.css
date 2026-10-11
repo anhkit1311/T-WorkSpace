@@ -397,10 +397,6 @@
   flex: 1;
 }
 
-.ws-header__mobile-trigger {
-  display: none;
-}
-
 .ws-header__avatar {
   flex-shrink: 0;
 }
@@ -1357,10 +1353,6 @@
 
   .ws-sidebar:not(.ws-sidebar--drawer) {
     display: none;
-  }
-
-  .ws-header__mobile-trigger {
-    display: inline-flex;
   }
 
   .ws-mobile-drawer-backdrop {

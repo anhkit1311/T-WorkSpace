@@ -1330,31 +1330,7 @@ export function MeetingPage() {
                 Đang tải lịch họp…
               </p>
             ) : visibleSchedules.length === 0 ? (
-              <div className="meeting-schedule-empty-wrap">
-                <div className="meeting-schedule-list" role="list" aria-label="Lịch họp mẫu xem trước">
-                  <ListItem
-                    role="listitem"
-                    icon="calendar"
-                    title="Đồng bộ tiến độ Sprint 4"
-                    subtitle="Đồ án tốt nghiệp • Phòng họp chung"
-                    metaPrimary="09:00"
-                    metaSecondary="07/10"
-                    onClick={() => {}}
-                  />
-                  <ListItem
-                    role="listitem"
-                    icon="video"
-                    title="Review giao diện nexo Web"
-                    subtitle="Nhóm Thiết kế • Phòng họp 1"
-                    metaPrimary="15:00"
-                    metaSecondary="08/10"
-                    onClick={() => {}}
-                  />
-                </div>
-                <p className="meeting-schedule-empty">
-                  Chưa có lịch họp sắp tới trong nhóm này.
-                </p>
-              </div>
+              <p className="meeting-schedule-empty">Chưa có lịch họp sắp tới trong nhóm này.</p>
             ) : (
               <div className="meeting-schedule-list">
                 {visibleSchedules.map((item) => {
@@ -1436,29 +1412,7 @@ export function MeetingPage() {
             ) : historyError ? (
               <p role="alert">{historyError}</p>
             ) : history.length === 0 ? (
-              <div className="meeting-history-empty-wrap">
-                <div className="meeting-history-list" role="list" aria-label="Lịch sử cuộc họp mẫu">
-                  <ListItem
-                    role="listitem"
-                    icon="video"
-                    title="Phòng họp chung — Đồ án tốt nghiệp"
-                    subtitle="Đã kết thúc • Thời lượng 42 phút"
-                    metaPrimary="10:30"
-                    metaSecondary="Hôm qua"
-                    onClick={() => {}}
-                  />
-                  <ListItem
-                    role="listitem"
-                    icon="video"
-                    title="Thảo luận kiến trúc Backend SFU"
-                    subtitle="Đã kết thúc • Thời lượng 28 phút"
-                    metaPrimary="14:15"
-                    metaSecondary="04/10"
-                    onClick={() => {}}
-                  />
-                </div>
-                <p>Bạn chưa tham gia cuộc họp nào.</p>
-              </div>
+              <p>Bạn chưa tham gia cuộc họp nào.</p>
             ) : (
               <div className="meeting-history-list" role="list">
                 {history.map((item) => {
@@ -1485,7 +1439,6 @@ export function MeetingPage() {
                       subtitle={item.leftAt ? "Đã kết thúc phiên họp" : "Chưa ghi nhận rời phòng"}
                       metaPrimary={timeStr || (item.leftAt ? "Đã kết thúc" : "Đang mở")}
                       metaSecondary={dateStr}
-                      onClick={() => {}}
                     />
                   );
                 })}

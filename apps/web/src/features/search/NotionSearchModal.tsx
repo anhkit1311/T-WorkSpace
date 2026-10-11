@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useIsPresent, type HTMLMotionProps } from "motion/react";
 import { prefersReducedMotion } from "../../shared/motion/tokens";
-import { useMotionSafe, useSceneCover } from "../../shared/motion/MotionProvider";
+import { useMotionSafe } from "../../shared/motion/MotionProvider";
 import type {
   GlobalMessageSearchItem,
   WorkspaceItem,
@@ -102,7 +102,6 @@ export function NotionSearchModal({
   onSelectMessage,
 }: Props) {
   const safe = useMotionSafe();
-  useSceneCover(isOpen);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GlobalMessageSearchItem[]>([]);
   const [loading, setLoading] = useState(false);

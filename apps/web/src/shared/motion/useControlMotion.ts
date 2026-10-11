@@ -25,20 +25,6 @@ export function useControlMotion(disabled = false) {
   }};
 }
 
-/** Pop only a changed state, never the initial value or a remounted message history. */
-export function useStatePop(value: unknown) {
-  const [ref, animate] = useAnimate<HTMLElement>();
-  const previous = useRef(value);
-  const { reduced } = useMotionSafe();
-  useEffect(() => {
-    if (previous.current !== value && ref.current && !reduced) {
-      void animate(ref.current, { scale: [1, 1.18, 1] }, { duration: DURATION.page, ease: EASE.out });
-    }
-    previous.current = value;
-  }, [value, reduced, animate, ref]);
-  return ref;
-}
-
 /** The current send glyph moves; its button and composer retain their existing geometry. */
 export function useSendFeedback(sending: boolean) {
   const [ref, animate] = useAnimate<HTMLButtonElement>();

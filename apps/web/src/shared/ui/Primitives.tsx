@@ -20,7 +20,7 @@ import { toastDuration } from "../lib/interaction";
 import "./interaction.css";
 import { useControlMotion } from "../motion/useControlMotion";
 import { useControlTooltip } from "../motion/ControlTooltip";
-import { useMotionSafe, useSceneCover } from "../motion/MotionProvider";
+import { useMotionSafe } from "../motion/MotionProvider";
 import { DURATION, EASE } from "../motion/tokens";
 import { useAnimate } from "motion/react";
 
@@ -169,6 +169,33 @@ export function ListItem({
   ...props
 }: ListItemProps) {
   const control = useControlMotion(Boolean(disabled));
+  const body = (
+    <>
+      <span className="nexo-list-item__icon" aria-hidden="true">
+        <Icon name={icon} size={18} />
+      </span>
+      <span className="nexo-list-item__body">
+        <span className="nexo-list-item__content">
+          <strong className="nexo-list-item__title">{title}</strong>
+          {subtitle && <span className="nexo-list-item__subtitle">{subtitle}</span>}
+        </span>
+        {(metaPrimary || metaSecondary) && (
+          <span className="nexo-list-item__meta">
+            {metaPrimary && <strong className="nexo-list-item__meta-primary">{metaPrimary}</strong>}
+            {metaSecondary && <span className="nexo-list-item__meta-secondary">{metaSecondary}</span>}
+          </span>
+        )}
+      </span>
+    </>
+  );
+  // Rows without an action are information, not controls.
+  if (!props.onClick) {
+    return (
+      <div role={props.role} className={`nexo-list-item is-static ${className}`.trim()}>
+        {body}
+      </div>
+    );
+  }
   return (
     <button
       type="button"
@@ -186,21 +213,7 @@ export function ListItem({
       onKeyDown={event => { control.handlers.onKeyDown(event); props.onKeyDown?.(event); }}
       onKeyUp={event => { control.handlers.onKeyUp(); props.onKeyUp?.(event); }}
     >
-      <span className="nexo-list-item__icon" aria-hidden="true">
-        <Icon name={icon} size={18} />
-      </span>
-      <span className="nexo-list-item__body">
-        <span className="nexo-list-item__content">
-          <strong className="nexo-list-item__title">{title}</strong>
-          {subtitle && <span className="nexo-list-item__subtitle">{subtitle}</span>}
-        </span>
-        {(metaPrimary || metaSecondary) && (
-          <span className="nexo-list-item__meta">
-            {metaPrimary && <strong className="nexo-list-item__meta-primary">{metaPrimary}</strong>}
-            {metaSecondary && <span className="nexo-list-item__meta-secondary">{metaSecondary}</span>}
-          </span>
-        )}
-      </span>
+      {body}
     </button>
   );
 }
@@ -317,7 +330,6 @@ export function Modal({
   const titleId = useId();
   const isPresent = useIsPresent();
   const safe = useMotionSafe();
-  useSceneCover(true);
   onCloseRef.current = onClose;
   useEffect(() => {
     if (!isPresent) return;

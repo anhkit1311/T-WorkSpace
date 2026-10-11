@@ -52,17 +52,6 @@ export function tabDirection(previous: number, next: number): -1 | 0 | 1 {
   return next === previous ? 0 : next > previous ? 1 : -1;
 }
 
-export function interpolateCount(from: number, to: number, progress: number) {
-  const clamped = Math.min(1, Math.max(0, progress));
-  return Math.round(from + (to - from) * (1 - (1 - clamped) ** 3));
-}
-
-export const viewTransition = {
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0, transition: { duration: DURATION.enter, ease: EASE_OUT } },
-  exit: { opacity: 0, y: -6, transition: { duration: DURATION.exit, ease: "easeOut" } },
-} as const;
-
 export function prefersReducedMotion() {
   return false;
 }

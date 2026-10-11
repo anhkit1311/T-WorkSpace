@@ -222,23 +222,6 @@ export async function getWorkspaceMembersApi(
   return data.members;
 }
 
-export async function approveMemberApi(
-  accessToken: string,
-  workspaceId: string,
-  userId: string,
-): Promise<void> {
-  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/members/approve`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-    credentials: "include",
-    body: JSON.stringify({ userId }),
-  });
-  await handleResponse<{ ok: boolean }>(response);
-}
-
 export async function rejectMemberApi(
   accessToken: string,
   workspaceId: string,

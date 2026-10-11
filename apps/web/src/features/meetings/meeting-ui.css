@@ -183,8 +183,7 @@
   font-weight: 600;
 }
 
-.meeting-history > p,
-.meeting-history-empty-wrap > p {
+.meeting-history > p {
   color: var(--nexo-text-muted, #8A8780);
   font-size: 14px;
   margin: 16px 0 0;

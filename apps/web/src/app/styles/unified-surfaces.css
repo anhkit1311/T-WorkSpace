@@ -160,13 +160,6 @@
 /* --------------------------------------------------------------------------
    Modal helpers (replaces inline layout styles)
    -------------------------------------------------------------------------- */
-.modal-footer-split {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-}
 
 .modal-footer-actions {
   display: flex;
@@ -175,48 +168,11 @@
   width: 100%;
 }
 
-.modal-footer-split .modal-footer-actions {
-  width: auto;
-}
-
 .modal-lead {
   margin: 0 0 16px;
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.5;
-}
-
-.identity-summary {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 18px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--bg-subtle);
-}
-
-.identity-summary__avatar {
-  flex-shrink: 0;
-  width: 48px !important;
-  height: 48px !important;
-  border-radius: 12px !important;
-  font-size: 1.1rem !important;
-}
-
-.identity-summary__text {
-  min-width: 0;
-}
-
-.identity-summary__text strong {
-  display: block;
-  font-size: 0.95rem;
-}
-
-.identity-summary__text small {
-  color: var(--text-muted);
-  word-break: break-all;
 }
 
 .editorial-workspace-shell input:disabled {
