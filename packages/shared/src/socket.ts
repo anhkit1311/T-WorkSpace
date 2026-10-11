@@ -32,6 +32,15 @@ export interface ServerToClientEvents {
   new_producer: (producer: ProducerInfo) => void;
   producer_closed: (data: { producerId: string }) => void;
   peer_left: (data: { socketId: string; userId: string }) => void;
+  // Dominant speaker chosen by the SFU; null when the speaker left.
+  active_speaker: (data: {
+    roomId: string;
+    socketId: string | null;
+    userId: string | null;
+    at: number;
+  }) => void;
+  // Producers above the level threshold, loudest first; empty on silence. Volume in dBov.
+  audio_levels: (data: { roomId: string; levels: { socketId: string; volume: number }[] }) => void;
 }
 
 export interface ClientToServerEvents {
@@ -96,6 +105,7 @@ export interface ClientToServerEvents {
       error?: string;
       waiting?: boolean;
       sessionId?: string;
+      activeSpeakerSocketId?: string | null;
     }) => void,
   ) => void;
   create_webrtc_transport: (

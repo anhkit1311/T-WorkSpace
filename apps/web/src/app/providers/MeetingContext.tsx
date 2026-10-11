@@ -65,6 +65,12 @@ interface MeetingContextValue {
    * reports (falls back to the participant-count policy).
    */
   setVideoDemand: (socketId: string, layer: number | null | undefined) => void;
+  /** Dominant speaker chosen by the SFU; "local" when it is this connection. */
+  activeSpeakerId: string | null;
+  /** Peers above the SFU audio-level threshold right now ("local" for this connection). */
+  speakingIds: string[];
+  /** Last time each peer was heard, in Date.now() milliseconds. Read on demand. */
+  lastSpokeAt: () => Record<string, number>;
 }
 
 const MeetingContext = createContext<MeetingContextValue | null>(null);
@@ -176,6 +182,40 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
       dropped("replaced");
     };
   }, [socket]);
+
+  const [activeSpeakerId, setActiveSpeakerId] = useState<string | null>(null);
+  const [speakingIds, setSpeakingIds] = useState<string[]>([]);
+  const lastSpokeAtRef = useRef<Record<string, number>>({});
+  const lastSpokeAt = useCallback(() => lastSpokeAtRef.current, []);
+  useEffect(() => {
+    if (!socket || !inCall) {
+      setActiveSpeakerId(null);
+      setSpeakingIds([]);
+      lastSpokeAtRef.current = {};
+      return;
+    }
+    const tileId = (socketId: string) => (socketId === socket.id ? "local" : socketId);
+    const speaker = (data: { roomId: string; socketId: string | null }) => {
+      if (data.roomId !== roomIdRef.current) return;
+      const id = data.socketId ? tileId(data.socketId) : null;
+      if (id) lastSpokeAtRef.current[id] = Date.now();
+      setActiveSpeakerId(id);
+    };
+    const levels = (data: { roomId: string; levels: { socketId: string }[] }) => {
+      if (data.roomId !== roomIdRef.current) return;
+      const now = Date.now();
+      const ids = data.levels.map((level) => tileId(level.socketId)).sort();
+      for (const id of ids) lastSpokeAtRef.current[id] = now;
+      // Levels arrive every 400 ms; skip renders while the set of speakers is unchanged.
+      setSpeakingIds((previous) => (previous.join("|") === ids.join("|") ? previous : ids));
+    };
+    socket.on("active_speaker", speaker);
+    socket.on("audio_levels", levels);
+    return () => {
+      socket.off("active_speaker", speaker);
+      socket.off("audio_levels", levels);
+    };
+  }, [socket, inCall]);
 
   const [videoDemand, setVideoDemandState] = useState<Record<string, number | null>>({});
   const appliedDemandRef = useRef(new Map<string, number | null>());
@@ -485,6 +525,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
         existingProducers?: ProducerInfo[];
         error?: string;
         waiting?: boolean;
+        activeSpeakerSocketId?: string | null;
       }>((resolve, reject) => {
         request("join_meeting", { roomId: targetRoomId, scheduleId })
           .then((value) => resolve(value as Parameters<typeof resolve>[0]))
@@ -506,6 +547,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
 
       // 2. Nạp router capabilities vào Device
       roomIdRef.current = targetRoomId;
+      setActiveSpeakerId(joinResult.activeSpeakerSocketId ?? null);
       await mediaOperation(ms.loadDevice(joinResult.routerRtpCapabilities), joinAbort.signal);
       ensureCurrent();
 
@@ -970,6 +1012,9 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
         exportQosCsv,
         exportQosJson,
         setVideoDemand,
+        activeSpeakerId,
+        speakingIds,
+        lastSpokeAt,
       }}
     >
       {children}

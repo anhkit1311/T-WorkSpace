@@ -180,6 +180,20 @@ export function initSocketServer(
   };
   roomManager.events.on("media_failure", mediaFailure);
   httpServer.on("close", () => roomManager.events.off("media_failure", mediaFailure));
+  const activeSpeaker = (data: {
+    roomId: string;
+    socketId: string | null;
+    userId: string | null;
+    at: number;
+  }) => io.to(`meeting:${data.roomId}`).emit("active_speaker", data);
+  const audioLevels = (data: { roomId: string; levels: { socketId: string; volume: number }[] }) =>
+    io.to(`meeting:${data.roomId}`).emit("audio_levels", data);
+  roomManager.events.on("active_speaker", activeSpeaker);
+  roomManager.events.on("audio_levels", audioLevels);
+  httpServer.on("close", () => {
+    roomManager.events.off("active_speaker", activeSpeaker);
+    roomManager.events.off("audio_levels", audioLevels);
+  });
   const closeRoom = (roomId: string, reason: string, targetUserId?: string) => {
     for (const closer of meetingClosers.values())
       if (closer.room() === roomId && (!targetUserId || closer.userId === targetUserId))
@@ -615,6 +629,7 @@ export function initSocketServer(
           sessionId: admission.sessionId,
           routerRtpCapabilities: result.routerRtpCapabilities,
           existingProducers: result.existingProducers,
+          activeSpeakerSocketId: roomManager.activeSpeaker(data.roomId),
         });
       } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : "Lỗi tham gia phòng họp";

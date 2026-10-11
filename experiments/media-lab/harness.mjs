@@ -33,6 +33,10 @@ const tiers = String(args.clients ?? "2,4,6")
 const seconds = Math.min(600, Math.max(10, Number(args.seconds ?? 60)));
 const warmup = Math.min(120, Math.max(5, Number(args.warmup ?? 15)));
 const layer = args.layer === undefined ? null : Number(args.layer);
+// --selection=visible|speaker|combined: stream-selection policy on a virtual 1280x720 gallery.
+const selection = ["visible", "speaker", "combined"].includes(args.selection) ? args.selection : null;
+// --speak=<seconds>: scripted talkers, each peer speaks for one slot of a round-robin cycle.
+const speakSlotMs = args.speak ? Math.max(2, Number(args.speak)) * 1000 : null;
 const label =
   args.label ??
   [
@@ -41,6 +45,8 @@ const label =
     args.simulcast === "0" ? "nosimulcast" : null,
     args.render === "0" ? "norender" : null,
     args.policy === "relay" ? "relay" : null,
+    selection ? `sel-${selection}` : null,
+    speakSlotMs ? `speak${speakSlotMs / 1000}s` : null,
   ]
     .filter(Boolean)
     .join("-");
@@ -276,8 +282,18 @@ async function runTier(n) {
       for (const id of users.slice(1)) await addWorkspaceMember(workspace.id, id);
       room = (await getWorkspaceChannels(users[0], workspace.id)).find((c) => c.type === "video");
     }
+    // Talk schedule starts once every client should be connected; until then all are silent.
+    const speakEpoch = speakSlotMs ? Date.now() + n * 1500 + 5000 : null;
     for (let i = 0; i < n; i++) {
       const query = new URLSearchParams({ mode, peer: `p${i}`, room: mode === "sfu" ? room.id : runId });
+      if (selection) query.set("selection", selection);
+      if (speakSlotMs) {
+        query.set("speak", "1");
+        query.set("epoch", String(speakEpoch));
+        query.set("slot", String(speakSlotMs));
+        query.set("index", String(i));
+        query.set("count", String(n));
+      }
       if (args.render === "0") query.set("render", "0");
       if (mode === "sfu") {
         query.set("api", joinMode ? (args.api ?? "http://localhost:3001") : `http://127.0.0.1:${apiPort}`);
@@ -313,6 +329,7 @@ async function runTier(n) {
     await delay(warmup * 1000);
 
     const windowStart = await Promise.all(clients.map((c) => evaluate(c, "performance.now()")));
+    const wallStart = Date.now();
     const cpuSamples = clients.map(() => []);
     const serverSamples = [];
     let lastCpu = await Promise.all(clients.map(cpuSeconds));
@@ -369,6 +386,9 @@ async function runTier(n) {
         },
       });
     }
+    const speaker = speakSlotMs
+      ? await speakerMetrics(clients, n, speakEpoch, speakSlotMs, wallStart, Date.now())
+      : null;
     const pick = (key) => perClient.map((c) => c.mean[key]);
     const summary = {
       clients: n,
@@ -389,6 +409,11 @@ async function runTier(n) {
       serverWorkerCpuPct: round(mean(serverSamples.map((s) => s.workerCpuPct))),
       serverNodeCpuPct: round(mean(serverSamples.map((s) => s.nodeCpuPct))),
       serverRssMiB: round(Math.max(...serverSamples.map((s) => s.rssMiB))),
+      downVideoKbps: {
+        mean: round(mean(pick("downVideoKbps"))),
+        p95: round(percentile(pick("downVideoKbps"), 95)),
+      },
+      ...(speaker ? { speaker } : {}),
     };
     if (args.diag && mode === "sfu") {
       const legs = { producer: [], consumer: [] };
@@ -432,7 +457,7 @@ async function runTier(n) {
       }
     }
     console.log(`[${label}] ${n} clients`, JSON.stringify(summary));
-    return { runId, summary, perClient, server: serverSamples };
+    return { runId, summary, perClient, server: serverSamples, speakerDetail: speaker?.detail };
   } finally {
     for (const client of clients) {
       await client.browser.send("Browser.close").catch(() => undefined);
@@ -459,6 +484,48 @@ async function runTier(n) {
   }
 }
 
+// Speaker detection against the known schedule. For each slot fully inside the window and
+// each client: latency = first active_speaker event naming the scheduled talker minus the
+// slot start; a slot with no such event before it ends is missed. Events naming someone else
+// while a talker is scheduled are counted as wrong (late or spurious switches).
+async function speakerMetrics(clients, n, epoch, slot, from, to) {
+  const states = await Promise.all(
+    clients.map((c) => evaluate(c, "({socketId: __lab.socketId, events: __lab.speakerEvents, layerRequests: __lab.layerRequests})")),
+  );
+  const indexOf = new Map(states.map((state, i) => [state.socketId, i]));
+  const latencies = [];
+  let missed = 0,
+    wrong = 0,
+    slots = 0;
+  const firstSlot = Math.ceil((from - epoch) / slot);
+  const lastSlot = Math.floor((to - epoch) / slot) - 1;
+  for (let k = firstSlot; k <= lastSlot; k++) {
+    const start = epoch + k * slot;
+    const talker = k % n;
+    for (const state of states) {
+      slots++;
+      const events = state.events.filter((e) => e.at >= start && e.at < start + slot);
+      const hit = events.find((e) => indexOf.get(e.socketId) === talker);
+      if (hit) latencies.push(hit.at - start);
+      else missed++;
+      wrong += events.filter((e) => e.socketId && indexOf.get(e.socketId) !== talker).length;
+    }
+  }
+  return {
+    slotSeconds: slot / 1000,
+    slots,
+    detectionMs: {
+      mean: round(mean(latencies), 0),
+      p50: round(percentile(latencies, 50), 0),
+      p95: round(percentile(latencies, 95), 0),
+    },
+    missedShare: round(slots ? missed / slots : null, 3),
+    wrongEventsPerSlot: round(slots ? wrong / slots : null, 3),
+    layerRequestsPerClient: round(mean(states.map((state) => state.layerRequests)), 1),
+    detail: { latencies },
+  };
+}
+
 const environment = {
   date: new Date().toISOString(),
   node: process.version,
@@ -472,7 +539,13 @@ const environment = {
   remoteRendering: args.render === "0" ? "off (decode only)" : "160x90 <video> per remote track",
   sfuEncodings: "simulcast q/h/f 150/400/1200 kbps (production client)",
   meshEncodings: "single encoding, maxBitrate 1200 kbps per peer connection",
-  consumerLayer: layer ?? "auto (app policy: >6 consumers -> 0, >2 -> 1, else 2)",
+  consumerLayer: selection
+    ? `${selection} policy on a virtual 1280x720 gallery (apps/web speaker-policy.ts)`
+    : layer ?? "auto (app policy: >6 consumers -> 0, >2 -> 1, else 2)",
+  talkers: speakSlotMs
+    ? `scripted: 180 Hz tone, 4 Hz syllable modulation, round-robin ${speakSlotMs / 1000}s slots`
+    : "Chromium fake microphone (continuous beep)",
+  speakerObserver: "mediasoup ActiveSpeakerObserver 300 ms, AudioLevelObserver 400 ms / -60 dBov",
   sfuAnnouncedIp: mode === "sfu" ? announcedIp : null,
   icePolicy: args.policy === "relay" ? `relay only via ${process.env.TURN_URLS}` : "all",
   warmupSeconds: warmup,

@@ -4,6 +4,17 @@
 import { io, type Socket } from "socket.io-client";
 import { MediasoupClientService } from "../../../apps/web/src/features/meetings/webrtc/mediasoup-service";
 import type { TransportOptions } from "../../../packages/shared/src/index";
+import {
+  bestGridLayout,
+  layerForTile,
+  pageSizeFor,
+  paginate,
+} from "../../../apps/web/src/features/meetings/grid-layout";
+import {
+  applyLayerPolicy,
+  isLayerPolicy,
+  type LayerDemand,
+} from "../../../apps/web/src/features/meetings/speaker-policy";
 
 type Mode = "sfu" | "mesh";
 interface Sample {
@@ -36,6 +47,10 @@ interface LabState {
   firstFrames: Record<string, number>;
   samples: Sample[];
   logs: string[];
+  socketId: string | null;
+  /** active_speaker events as received, wall clock (shared with the harness on one host). */
+  speakerEvents: { socketId: string | null; at: number; serverAt: number }[];
+  layerRequests: number;
 }
 
 const params = new URLSearchParams(location.search);
@@ -49,6 +64,9 @@ const state: LabState = {
   firstFrames: {},
   samples: [],
   logs: [],
+  socketId: null,
+  speakerEvents: [],
+  layerRequests: 0,
 };
 (window as unknown as { __lab: LabState }).__lab = state;
 const started = performance.now();
@@ -59,16 +77,55 @@ const log = (text: string) => {
   document.getElementById("log")?.append(line);
 };
 
+// ?speak=1&epoch=<ms>&slot=<ms>&index=i&count=n: a scripted talker. Peer i "speaks" during
+// slot i of every n-slot cycle counted from a wall-clock epoch shared by all clients, so the
+// harness knows who should be the dominant speaker at any moment. The voice is a 180 Hz tone
+// amplitude-modulated at 4 Hz (syllable rate) and gated to silence outside the slot.
+function scriptedVoice(): MediaStreamTrack {
+  const context = new AudioContext();
+  const voice = context.createOscillator();
+  voice.frequency.value = 180;
+  const syllables = context.createOscillator();
+  syllables.frequency.value = 4;
+  const depth = context.createGain();
+  depth.gain.value = 0.35;
+  const envelope = context.createGain();
+  envelope.gain.value = 0.5;
+  syllables.connect(depth).connect(envelope.gain);
+  const gate = context.createGain();
+  gate.gain.value = 0;
+  const output = context.createMediaStreamDestination();
+  voice.connect(envelope).connect(gate).connect(output);
+  voice.start();
+  syllables.start();
+  void context.resume();
+  const epoch = Number(params.get("epoch"));
+  const slot = Number(params.get("slot"));
+  const index = Number(params.get("index"));
+  const count = Number(params.get("count"));
+  let speaking = false;
+  setInterval(() => {
+    const now = Date.now();
+    const active = now >= epoch && Math.floor((now - epoch) / slot) % count === index;
+    if (active === speaking) return;
+    speaking = active;
+    gate.gain.setTargetAtTime(active ? 1 : 0, context.currentTime, 0.01);
+  }, 10);
+  return output.stream.getAudioTracks()[0];
+}
+
 async function captureLocal(): Promise<MediaStream> {
   const begin = performance.now();
+  const scripted = params.get("speak") === "1";
   const stream = await navigator.mediaDevices.getUserMedia({
-    audio: true,
+    audio: !scripted,
     video: {
       width: { ideal: Number(params.get("width") ?? 960) },
       height: { ideal: Number(params.get("height") ?? 540) },
       frameRate: { ideal: 30 },
     },
   });
+  if (scripted) stream.addTrack(scriptedVoice());
   log(`getUserMedia ${Math.round(performance.now() - begin)}ms`);
   stream.getTracks().forEach((track) => track.addEventListener("ended", () => log(`local ${track.kind} ended`)));
   return stream;
@@ -270,6 +327,7 @@ async function runSfu() {
     socket.once("connect", () => resolve());
     socket.once("connect_error", reject);
   });
+  state.socketId = socket.id ?? null;
   const local = await captureLocal();
   const service = new MediasoupClientService();
   // Listen before joining: a producer created while our transports are still being set up
@@ -328,13 +386,58 @@ async function runSfu() {
       rtpCapabilities: service.rtpCapabilities,
     });
     const consumer = await service.consume(response.params);
+    if (consumer.kind === "video")
+      videoOwners.set(consumer.id, (response.params as { producerSocketId: string }).producerSocketId);
     attachRemote(producerId, consumer.track);
     await ack(socket, "resume_consumer", { roomId, consumerId: consumer.id });
     if (consumer.kind === "video") await applyLayers();
   };
+  // ?selection=visible|speaker|combined runs the app's stream-selection policy on a virtual
+  // 1280x720 gallery (the page itself renders nothing with render=0).
+  const selection = params.get("selection");
+  const videoOwners = new Map<string, string>();
+  const applied = new Map<string, number | null>();
+  const lastSpokeAt: Record<string, number> = {};
+  let speakerId: string | null = null;
+  const applySelection = async () => {
+    if (!isLayerPolicy(selection)) return;
+    const owners = [...videoOwners.entries()].filter(([id]) =>
+      service.getVideoConsumerIds().includes(id),
+    );
+    const page = paginate(owners, pageSizeFor(1280), 0).items;
+    const grid = bestGridLayout(page.length, 1280, 720, 16);
+    const base: LayerDemand = Object.fromEntries(
+      owners.map(([, owner]) => [owner, page.some(([, o]) => o === owner) ? layerForTile(grid.tileWidth) : null]),
+    );
+    const target = applyLayerPolicy(base, selection, speakerId, lastSpokeAt, Date.now());
+    for (const [consumerId, owner] of owners) {
+      const next = target[owner] ?? null;
+      const before = applied.has(consumerId) ? applied.get(consumerId)! : 2;
+      if (applied.has(consumerId) && before === next) continue;
+      applied.set(consumerId, next);
+      state.layerRequests++;
+      if (next === null) await ack(socket, "pause_consumer", { roomId, consumerId });
+      else {
+        if (before === null) await ack(socket, "resume_consumer", { roomId, consumerId });
+        await ack(socket, "consumer_layer", { roomId, consumerId, spatialLayer: next });
+      }
+    }
+  };
+  socket.on("active_speaker", (data: { socketId: string | null; at: number }) => {
+    state.speakerEvents.push({ socketId: data.socketId, at: Date.now(), serverAt: data.at });
+    speakerId = data.socketId;
+    if (data.socketId) lastSpokeAt[data.socketId] = Date.now();
+    void applySelection().catch((error) => log(`selection ${String(error)}`));
+  });
+  socket.on("audio_levels", (data: { levels: { socketId: string }[] }) => {
+    for (const level of data.levels) lastSpokeAt[level.socketId] = Date.now();
+  });
+  if (isLayerPolicy(selection))
+    setInterval(() => void applySelection().catch((error) => log(`selection ${String(error)}`)), 2000);
   // Same policy as MeetingContext: >6 video consumers -> layer 0, >2 -> 1, else 2.
   // A numeric ?layer= forces one layer for every consumer instead.
   const applyLayers = async () => {
+    if (isLayerPolicy(selection)) return applySelection();
     const consumers = service.getVideoConsumerIds();
     const spatialLayer =
       layer !== null && layer !== "auto"

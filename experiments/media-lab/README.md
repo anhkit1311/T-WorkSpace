@@ -27,6 +27,8 @@ node experiments/media-lab/summarize.mjs
 | `--simulcast=0` | SFU: phát camera bằng một encoding duy nhất |
 | `--layer=0\|1\|2` | SFU: ép mọi consumer dùng một lớp; mặc định là chính sách của ứng dụng |
 | `--announcedIp=<ip>` | Ghi đè IP SFU announce (mặc định: IP LAN của máy) |
+| `--selection=visible\|speaker\|combined` | SFU: chạy chính sách chọn luồng của ứng dụng (`apps/web/src/features/meetings/speaker-policy.ts`) trên một lưới ảo 1280×720 |
+| `--speak=5` | Người nói theo kịch bản: mỗi client lần lượt "nói" 5 s theo vòng tròn bằng giọng tổng hợp WebAudio |
 | `--diag` | In số liệu producer/consumer phía SFU và raw `inbound-rtp` phía client |
 | `--chrome=<path>` | Đường dẫn trình duyệt |
 
@@ -37,6 +39,18 @@ Số liệu gốc được ghi vào `docs/evidence/media-lab/<label>-<thời đi
 - **Client (`getStats()` mỗi 2 s):** uplink/downlink (byte payload + header RTP), số encoder video đang phát, RTT của cặp ICE, jitter audio/video, tỉ lệ mất gói theo cửa sổ, FPS nhận, độ trễ jitter buffer, số NACK, giao thức của candidate (UDP/TCP), `qualityLimitationReason`.
 - **CPU trình duyệt:** tổng `cpuTime` mọi tiến trình của một instance qua CDP `SystemInfo.getProcessInfo`; 100% tương ứng một lõi.
 - **Server:** CPU của worker mediasoup (`getResourceUsage`: utime + stime), CPU và RSS của tiến trình Node.
+
+## Thực nghiệm chọn luồng theo người nói
+
+```bash
+npm run lab -- --mode=sfu --clients=4,6,8,10 --seconds=60 --warmup=30 --render=0 --selection=combined --speak=5 --label=speaker-combined
+```
+
+Chạy lại với `--selection=visible` và `--selection=speaker` (nhãn `speaker-visible`, `speaker-speaker`) rồi `node experiments/media-lab/summarize.mjs`.
+
+- **Giọng nói theo kịch bản:** file wav của camera giả không dùng được, vì mỗi Chrome khởi động lệch nhau nên vòng lặp file không đồng bộ. Thay vào đó, client tạo một âm 180 Hz điều biên 4 Hz (nhịp âm tiết) bằng WebAudio và mở/tắt theo một mốc thời gian chung `epoch`. Mọi tiến trình chạy trên cùng một máy nên dùng chung đồng hồ.
+- **Độ trễ phát hiện:** với mỗi slot nằm trọn trong cửa sổ đo và mỗi client, lấy thời điểm nhận sự kiện `active_speaker` đầu tiên trỏ đúng người được xếp lịch, trừ thời điểm bắt đầu slot. Slot không có sự kiện đúng được tính là **lỡ**; sự kiện trỏ sai người được đếm là **sự kiện sai**.
+- **Lệnh đổi lớp:** số lần client gửi `consumer_layer`/`pause_consumer`/`resume_consumer`, phản ánh chi phí tín hiệu của chính sách.
 
 ## Ba sai lệch đo lường đã gặp và cách xử lý
 

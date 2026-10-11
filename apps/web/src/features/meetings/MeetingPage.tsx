@@ -11,6 +11,12 @@ import {
 import { useApp } from "../../app/providers/AppContext";
 import { useMeeting, type RemotePeer } from "../../app/providers/MeetingContext";
 import { bestGridLayout, layerForTile, pageSizeFor, paginate } from "./grid-layout";
+import {
+  applyLayerPolicy,
+  isLayerPolicy,
+  spotlightDelay,
+  type LayerPolicy,
+} from "./speaker-policy";
 import { handToastTitle, raisedHandUserIds } from "./hand-raise";
 import { MeetingControls } from "./MeetingControls";
 import { MeetingOutcomesPanel } from "./MeetingOutcomesPanel";
@@ -190,6 +196,8 @@ function ParticipantTile({
   muted = false,
   pinned = false,
   raisedHand = false,
+  speaking,
+  dominant = false,
   onPin,
   outputDeviceId,
 }: {
@@ -201,14 +209,18 @@ function ParticipantTile({
   muted?: boolean;
   pinned?: boolean;
   raisedHand?: boolean;
+  /** Server-side audio level for remote peers; local tiles analyse their own track. */
+  speaking?: boolean;
+  dominant?: boolean;
   onPin?: () => void;
   outputDeviceId?: string;
 }) {
-  const isSpeaking = useAudioActivity(stream, hasAudio);
+  const analysed = useAudioActivity(stream, hasAudio && speaking === undefined);
+  const isSpeaking = speaking ?? analysed;
 
   return (
     <article
-      className={`video-tile ${isSpeaking ? "is-speaking" : ""} ${pinned ? "is-pinned" : ""}`}
+      className={`video-tile ${isSpeaking ? "is-speaking" : ""} ${dominant ? "is-dominant" : ""} ${pinned ? "is-pinned" : ""}`}
     >
       {hasVideo && stream ? (
         <Video stream={stream} muted={muted} />
@@ -294,7 +306,26 @@ export function MeetingPage() {
   const [videoInputId, setVideoInputId] = useState("");
   const [outputDeviceId, setOutputDeviceId] = useState("");
   const [quality, setQuality] = useState<"low" | "standard" | "high">("standard");
-  const [layout, setLayout] = useState<"grid" | "spotlight">("grid");
+  const [layout, setLayout] = useState<"grid" | "spotlight" | "auto">("grid");
+  const [layerPolicy, setLayerPolicy] = useState<LayerPolicy>(() => {
+    try {
+      const saved = localStorage.getItem("nexo:layerPolicy");
+      return isLayerPolicy(saved) ? saved : "combined";
+    } catch {
+      return "combined";
+    }
+  });
+  const changeLayerPolicy = (next: LayerPolicy) => {
+    setLayerPolicy(next);
+    try {
+      localStorage.setItem("nexo:layerPolicy", next);
+    } catch {
+      // Storage may be blocked; the choice still applies to this call.
+    }
+  };
+  const [autoSpotlightId, setAutoSpotlightId] = useState("");
+  const lastSpotlightSwitch = useRef(0);
+  const [policyTick, setPolicyTick] = useState(0);
   const [pinnedId, setPinnedId] = useState("");
   const gridRef = useRef<HTMLDivElement>(null);
   const [gridSize, setGridSize] = useState({ width: 0, height: 0 });
@@ -763,13 +794,23 @@ export function MeetingPage() {
     { id: "local", peer: null },
     ...meeting.remotePeers.map((peer) => ({ id: peer.socketId, peer })),
   ];
+  const staged = layout !== "grid";
+  const remoteFallback = meeting.remotePeers[0]?.socketId ?? "local";
   const spotlightId =
-    layout === "spotlight" ? (allTiles.some((tile) => tile.id === pinnedId) ? pinnedId : "local") : "";
+    layout === "spotlight"
+      ? allTiles.some((tile) => tile.id === pinnedId)
+        ? pinnedId
+        : "local"
+      : layout === "auto"
+        ? allTiles.some((tile) => tile.id === autoSpotlightId)
+          ? autoSpotlightId
+          : remoteFallback
+        : "";
   const spotlightTile = allTiles.find((tile) => tile.id === spotlightId) ?? null;
-  const stripTiles = layout === "spotlight" ? allTiles.filter((tile) => tile.id !== spotlightId) : allTiles;
+  const stripTiles = staged ? allTiles.filter((tile) => tile.id !== spotlightId) : allTiles;
   const pagedTiles = paginate(
     stripTiles,
-    layout === "spotlight" ? FILMSTRIP_PAGE_SIZE : pageSizeFor(gridSize.width || window.innerWidth),
+    staged ? FILMSTRIP_PAGE_SIZE : pageSizeFor(gridSize.width || window.innerWidth),
     gridPage,
   );
   const gridLayout = bestGridLayout(pagedTiles.items.length, gridSize.width, gridSize.height, GRID_GAP);
@@ -779,22 +820,56 @@ export function MeetingPage() {
   ]);
   // One string per render keeps the demand effect stable until a layer actually changes.
   const devicePixelRatio = window.devicePixelRatio || 1;
+  const tileLayers = Object.fromEntries(
+    meeting.remotePeers.map((peer) => {
+      const width = !visibleTileIds.has(peer.socketId)
+        ? 0
+        : peer.socketId === spotlightId
+          ? gridSize.width
+          : staged
+            ? FILMSTRIP_TILE_WIDTH
+            : gridLayout.tileWidth;
+      return [peer.socketId, layerForTile(width, devicePixelRatio)];
+    }),
+  );
+  // policyTick re-evaluates "quiet for 10 s" even when nobody starts or stops speaking.
+  void policyTick;
+  const policyLayers = applyLayerPolicy(
+    tileLayers,
+    layerPolicy,
+    meeting.activeSpeakerId,
+    meeting.lastSpokeAt(),
+    Date.now(),
+  );
   const demandKey =
     gridSize.width > 0
       ? meeting.remotePeers
-          .map((peer) => {
-            const width = !visibleTileIds.has(peer.socketId)
-              ? 0
-              : peer.socketId === spotlightId
-                ? gridSize.width
-                : layout === "spotlight"
-                  ? FILMSTRIP_TILE_WIDTH
-                  : gridLayout.tileWidth;
-            return `${peer.socketId}=${layerForTile(width, devicePixelRatio) ?? "off"}`;
-          })
+          .map((peer) => `${peer.socketId}=${policyLayers[peer.socketId] ?? "off"}`)
           .join("|")
       : "";
-  const { setVideoDemand } = meeting;
+  const { setVideoDemand, activeSpeakerId, inCall } = meeting;
+  useEffect(() => {
+    if (!inCall || layerPolicy !== "combined") return;
+    const timer = window.setInterval(() => setPolicyTick((tick) => tick + 1), 2000);
+    return () => window.clearInterval(timer);
+  }, [inCall, layerPolicy]);
+  // Auto layout follows the SFU's dominant speaker (never yourself), with a hold time.
+  const speakerCandidate = activeSpeakerId && activeSpeakerId !== "local" ? activeSpeakerId : null;
+  useEffect(() => {
+    if (layout !== "auto") return;
+    const delay = spotlightDelay(
+      autoSpotlightId || null,
+      speakerCandidate,
+      lastSpotlightSwitch.current,
+      Date.now(),
+    );
+    if (delay === null) return;
+    const timer = window.setTimeout(() => {
+      lastSpotlightSwitch.current = Date.now();
+      setAutoSpotlightId(speakerCandidate!);
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [layout, speakerCandidate, autoSpotlightId]);
   useEffect(() => {
     const entries = demandKey ? demandKey.split("|").map((item) => item.split("=")) : [];
     for (const [socketId, layer] of entries)
@@ -818,6 +893,8 @@ export function MeetingPage() {
         hasAudio={Boolean(tile.peer.audioTrack)}
         pinned={main || pinnedId === tile.id}
         raisedHand={raisedHands.has(tile.peer.userId)}
+        speaking={meeting.speakingIds.includes(tile.id)}
+        dominant={meeting.activeSpeakerId === tile.id && meeting.remotePeers.length > 1}
         onPin={() => togglePin(tile.id)}
         outputDeviceId={outputDeviceId}
       />
@@ -832,6 +909,7 @@ export function MeetingPage() {
         muted={true}
         pinned={main || pinnedId === "local"}
         raisedHand={Boolean(user && raisedHands.has(user.id))}
+        dominant={meeting.activeSpeakerId === "local" && meeting.remotePeers.length > 1}
         onPin={() => togglePin("local")}
       />
     );
@@ -1483,23 +1561,33 @@ export function MeetingPage() {
               >
                 Tiêu điểm
               </Button>
+              <Button
+                size="sm"
+                variant={layout === "auto" ? "primary" : "ghost"}
+                icon="mic"
+                aria-pressed={layout === "auto"}
+                title="Tự đưa người đang nói lên khung chính"
+                onClick={() => setLayout("auto")}
+              >
+                Người nói
+              </Button>
             </div>
           </div>
           <div className={`meeting-stage-layout ${sidePanel !== "none" ? "has-panel" : ""}`}>
             {/* Dynamic video grid: best-fit columns, paging, demand-driven SFU layers */}
             <div
               ref={gridRef}
-              className={`meeting-video-grid ${layout === "spotlight" ? "is-spotlight" : ""} ${meeting.localScreenStream || meeting.remotePeers.some((peer) => peer.screenStream) ? "has-share" : ""}`}
+              className={`meeting-video-grid ${staged ? "is-spotlight" : ""} ${meeting.localScreenStream || meeting.remotePeers.some((peer) => peer.screenStream) ? "has-share" : ""}`}
               style={
                 layout === "grid" && gridLayout.tileWidth > 0
                   ? { gridTemplateColumns: `repeat(${gridLayout.columns}, ${Math.floor(gridLayout.tileWidth)}px)` }
                   : undefined
               }
             >
-              {layout === "spotlight" && spotlightTile && (
+              {staged && spotlightTile && (
                 <div className="meeting-spotlight-main">{renderTile(spotlightTile, true)}</div>
               )}
-              {layout === "spotlight" ? (
+              {staged ? (
                 <div className="meeting-filmstrip">{pagedTiles.items.map((tile) => renderTile(tile))}</div>
               ) : (
                 pagedTiles.items.map((tile) => renderTile(tile))
@@ -1717,6 +1805,18 @@ export function MeetingPage() {
               </p>
             </div>
             <div className="meeting-qos-actions">
+              <label className="meeting-policy-select">
+                Chọn luồng
+                <select
+                  value={layerPolicy}
+                  onChange={(event) => changeLayerPolicy(event.target.value as LayerPolicy)}
+                  title="Chính sách chọn lớp simulcast cho các ô video"
+                >
+                  <option value="combined">Kết hợp</option>
+                  <option value="visible">Theo ô hiển thị</option>
+                  <option value="speaker">Theo người nói</option>
+                </select>
+              </label>
               <Button
                 size="sm"
                 variant="secondary"

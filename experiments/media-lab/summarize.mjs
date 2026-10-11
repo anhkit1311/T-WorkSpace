@@ -15,6 +15,12 @@ const SERIES = [
   { label: "sfu-nosimulcast-norender", name: "SFU, 1 encoding", color: "#1baf7a", marker: "triangle" },
 ];
 const EXTRA = [{ label: "sfu-layer0-norender", name: "SFU, mọi ô lớp 0" }];
+// Stream-selection experiment (scripted talkers, --selection=..., --speak=5).
+const POLICIES = [
+  { label: "speaker-visible", name: "Theo ô hiển thị", color: "#2a78d6", marker: "circle" },
+  { label: "speaker-speaker", name: "Theo người nói", color: "#eb6834", marker: "square" },
+  { label: "speaker-combined", name: "Kết hợp", color: "#1baf7a", marker: "triangle" },
+];
 
 // Every run of a label is aggregated per N (mean ± sample SD across runs).
 const files = (await readdir(evidenceDir)).filter((f) => f.endsWith(".json")).sort();
@@ -35,6 +41,12 @@ const METRICS = {
   recvFps: (r) => r.recvFps,
   jitterBufferMs: (r) => r.jitterBufferMs,
   serverWorkerCpuPct: (r) => r.serverWorkerCpuPct,
+  downVideoKbps: (r) => r.downVideoKbps?.mean,
+  detectionMs: (r) => r.speaker?.detectionMs?.mean,
+  detectionP95Ms: (r) => r.speaker?.detectionMs?.p95,
+  missedShare: (r) => r.speaker?.missedShare,
+  wrongEventsPerSlot: (r) => r.speaker?.wrongEventsPerSlot,
+  layerRequests: (r) => r.speaker?.layerRequestsPerClient,
 };
 const stats = (values) => {
   const v = values.filter((x) => typeof x === "number" && Number.isFinite(x));
@@ -84,9 +96,9 @@ function table(label) {
 }
 
 // ---------- SVG line chart (one axis, direct labels, shaped markers) ----------
-function chart({ title, unit, metric, log = false, file }) {
+function chart({ title, unit, metric, log = false, file, lines = SERIES }) {
   const W = 640, H = 360, L = 64, R = 140, T = 44, B = 48;
-  const series = SERIES.map((s) => ({
+  const series = lines.map((s) => ({
     ...s,
     points: rowsOf(s.label)
       .filter((r) => r.runs && r.m[metric])
@@ -163,6 +175,35 @@ const figures = [
   await chart({ title: "RTT theo số người", unit: "ms", metric: "rttMs", log: true, file: "fig-5-rtt.svg" }),
   await chart({ title: "Tốc độ khung hình nhận theo số người", unit: "khung/giây (nguồn phát 20 fps)", metric: "recvFps", file: "fig-5-fps.svg" }),
 ];
+const policyRuns = POLICIES.filter((s) => runsByLabel.has(s.label));
+if (policyRuns.length)
+  figures.push(
+    await chart({
+      title: "Downlink video theo chính sách chọn luồng",
+      unit: "kbps mỗi client (trung bình)",
+      metric: "downVideoKbps",
+      file: "fig-5-selection-downlink.svg",
+      lines: policyRuns,
+    }),
+  );
+
+// One table for the selection experiment: rows N x policy.
+const policyTable = () => {
+  const rows = [];
+  for (const s of policyRuns)
+    for (const r of rowsOf(s.label))
+      rows.push(
+        !r.runs
+          ? `| ${r.clients} | ${s.name} | không hoàn thành |  |  |  |  |  |  |`
+          : `| ${r.clients} | ${s.name} | ${cell(r.m.downVideoKbps)} | ${cell(r.m.clientCpuPct, 1)} | ${cell(r.m.detectionMs)} | ${cell(r.m.detectionP95Ms)} | ${cell(r.m.missedShare, 3)} | ${cell(r.m.wrongEventsPerSlot, 3)} | ${cell(r.m.layerRequests, 1)} |`,
+      );
+  rows.sort((a, b) => Number(a.split("|")[1]) - Number(b.split("|")[1]));
+  return [
+    "| N | Chính sách | Downlink video (kbps) | CPU client (%) | Phát hiện người nói TB (ms) | p95 (ms) | Tỉ lệ lỡ slot | Sự kiện sai / slot | Lệnh đổi lớp / client |",
+    "| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+    ...rows,
+  ].join("\n");
+};
 
 const env = [...runsByLabel.values()][0]?.[0]?.data.environment ?? {};
 const sections = [...SERIES, ...EXTRA]
@@ -183,10 +224,25 @@ Trình duyệt: ${env.browser ?? ""}. ${env.network ?? ""}. Thu: ${env.capture ?
 Ô có dạng "trung bình ± độ lệch chuẩn" khi có từ 2 lượt; cột "Lượt" là số lượt thành công (/tổng nếu có lượt lỗi). Mỗi lượt, mỗi mức N: khởi động ${env.warmupSeconds ?? "?"} s, đo ${env.measureSeconds ?? "?"} s, lấy mẫu \`getStats()\` mỗi 2 s, CPU mỗi trình duyệt qua CDP \`SystemInfo.getProcessInfo\`.
 
 ${sections.join("\n\n")}
-
 ## Hình
 
 ${figures.map((f) => `![${f}](../thesis/figures/${f})`).join("\n\n")}
 `;
 await writeFile(join(root, "docs/benchmarks/media-lab-summary.md"), md);
+if (policyRuns.length)
+  await writeFile(
+    join(root, "docs/benchmarks/media-lab-selection.md"),
+    `# Chính sách chọn luồng với người nói theo kịch bản
+
+Sinh tự động bởi \`node experiments/media-lab/summarize.mjs\`. Mỗi client phát một giọng tổng hợp và lần lượt nói 5 s theo vòng tròn; chính sách chạy trên lưới ảo 1280×720 với tối đa 9 ô; mỗi lượt khởi động ${env.warmupSeconds ?? "?"} s, đo ${env.measureSeconds ?? "?"} s; mọi client và SFU trên một máy.
+
+Nguồn: ${policyRuns
+      .flatMap((s) => runsByLabel.get(s.label).map(({ file }) => `[${file}](../evidence/media-lab/${file})`))
+      .join(", ")}
+
+${policyTable()}
+
+![Downlink video theo chính sách](../thesis/figures/fig-5-selection-downlink.svg)
+`,
+  );
 console.log(`wrote docs/benchmarks/media-lab-summary.md and ${figures.length} figures`);
