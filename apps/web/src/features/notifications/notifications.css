@@ -116,3 +116,57 @@
   display: flex;
   justify-content: center;
 }
+
+.notifications-unread-channels {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.notifications-unread-channels button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--nexo-border-beige, #E6E2DA);
+  border-radius: 12px;
+  background: var(--nexo-bg-ivory, #FAF9F6);
+  color: var(--nexo-text-primary, #1C1B19);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notifications-unread-channels button:hover,
+.notifications-unread-channels button:focus-visible {
+  border-color: var(--nexo-text-primary, #1C1B19);
+}
+
+.notifications-unread-channels span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.notifications-unread-channels small {
+  color: var(--nexo-text-muted, #8A8780);
+  font-size: 12px;
+}
+
+.notifications-unread-channels b {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  background: var(--nexo-text-primary, #1C1B19);
+  color: #fff;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { WorkspaceItem } from "@doan/shared";
+import type { HomeSummary, WorkspaceItem } from "@doan/shared";
 import { governanceApi } from "../workspaces/api";
 import { getWorkspacesApi } from "../chat/api";
 import { Button, Chip, ListItem } from "../../shared/ui/Primitives";
@@ -58,6 +58,34 @@ export function NotificationsPage() {
   const [workspaceId, setWorkspaceId] = useState("");
   const [muted, setMuted] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Plain messages create no notification rows; list them so the bell badge and this page agree.
+  const [unreadChannels, setUnreadChannels] = useState<HomeSummary["unreadChannels"]>([]);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  useEffect(() => {
+    if (!accessToken) return;
+    let active = true;
+    let timer: number | undefined;
+    const load = () =>
+      void governanceApi<HomeSummary>(accessToken, "home")
+        .then((data) => {
+          if (active) {
+            setUnreadChannels(data.unreadChannels);
+            setUnreadMessages(data.unreadMessages);
+          }
+        })
+        .catch(() => undefined);
+    const refresh = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(load, 200);
+    };
+    load();
+    for (const event of ["new_message", "channel_read", "connect"]) socket?.on(event, refresh);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+      for (const event of ["new_message", "channel_read", "connect"]) socket?.off(event, refresh);
+    };
+  }, [accessToken, socket]);
   useEffect(() => {
     if (!accessToken) return;
     let active = true;
@@ -140,12 +168,14 @@ export function NotificationsPage() {
         <div className="notifications-page__title-row">
           <h1>Thông báo</h1>
           <Chip icon="bell">
-            {page.unreadCount > 0 ? `${page.unreadCount} chưa đọc` : "Đã xem hết"}
+            {page.unreadCount + unreadMessages > 0
+              ? `${page.unreadCount + unreadMessages} chưa đọc`
+              : "Đã xem hết"}
           </Chip>
         </div>
         <p>
-          Nhắc tên và phản hồi trong chủ đề bạn tham gia. Nội dung chỉ hiển thị khi bạn còn quyền
-          đọc kênh.
+          Tin nhắn chưa đọc theo kênh, cùng các lượt nhắc tên và phản hồi trong chủ đề bạn tham gia.
+          Nội dung chỉ hiển thị khi bạn còn quyền đọc kênh.
         </p>
         <div className="admin-actions">
           <Button
@@ -181,6 +211,45 @@ export function NotificationsPage() {
           {error}
         </p>
       )}
+      <section aria-label="Tin nhắn chưa đọc">
+        <div className="notifications-section-head">
+          <h2>Tin nhắn chưa đọc</h2>
+          {unreadChannels.length > 0 && (
+            <Chip icon="messages">
+              {unreadMessages} tin
+            </Chip>
+          )}
+        </div>
+        {unreadChannels.length ? (
+          <ul className="notifications-unread-channels">
+            {unreadChannels.map((channel) => (
+              <li key={channel.channelId}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate({
+                      view: "chat",
+                      workspaceId: channel.workspaceId,
+                      channelId: channel.channelId,
+                    })
+                  }
+                >
+                  <span>
+                    <strong>#{channel.channelName}</strong>
+                    <small>
+                      {channel.workspaceName} · {formatNotificationTime(channel.lastMessageAt).time}{" "}
+                      {formatNotificationTime(channel.lastMessageAt).day}
+                    </small>
+                  </span>
+                  <b aria-label={`${channel.unreadCount} tin chưa đọc`}>{channel.unreadCount}</b>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="loading-note">Không có tin nhắn chưa đọc.</p>
+        )}
+      </section>
       <section>
         <div className="notifications-section-head">
           <h2>Tùy chọn theo nhóm</h2>

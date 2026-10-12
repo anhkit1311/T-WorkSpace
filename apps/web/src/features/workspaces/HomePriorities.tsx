@@ -6,6 +6,16 @@ import { governanceApi } from "./api";
 import { Button, ListItem } from "../../shared/ui/Primitives";
 import "./home-priorities.css";
 
+// new_message / channel_read keep the unread-message count live, not only mentions.
+const REFRESH_EVENTS = [
+  "task_changed",
+  "notifications_changed",
+  "new_message",
+  "channel_read",
+  "connect",
+  "access_revoked",
+];
+
 export function HomePriorities() {
   const { accessToken, navigate } = useApp(),
     { socket } = useSocket();
@@ -35,13 +45,11 @@ export function HomePriorities() {
       timer = window.setTimeout(load, 200);
     };
     load();
-    for (const event of ["task_changed", "notifications_changed", "connect", "access_revoked"])
-      socket?.on(event, refresh);
+    for (const event of REFRESH_EVENTS) socket?.on(event, refresh);
     return () => {
       active = false;
       window.clearTimeout(timer);
-      for (const event of ["task_changed", "notifications_changed", "connect", "access_revoked"])
-        socket?.off(event, refresh);
+      for (const event of REFRESH_EVENTS) socket?.off(event, refresh);
     };
   }, [accessToken, socket, revision]);
   return (
@@ -167,11 +175,44 @@ export function HomePriorities() {
           <article className="home-priority-card home-priority-card--notif">
             <h3>Thông báo</h3>
             <div className="home-priority-notif-body">
-              <strong className="home-notification-count">{summary.unreadNotifications}</strong>
-              <p>
-                {summary.unreadNotifications ? "thông báo chưa đọc" : "Bạn đã xem hết thông báo."}
-              </p>
+              <strong className="home-notification-count">
+                {summary.unreadNotifications + summary.unreadMessages}
+              </strong>
+              {summary.unreadNotifications + summary.unreadMessages ? (
+                <p>
+                  {summary.unreadMessages} tin nhắn chưa đọc · {summary.unreadNotifications} lượt
+                  nhắc tên/trả lời
+                </p>
+              ) : (
+                <p>Bạn đã xem hết tin nhắn và thông báo.</p>
+              )}
             </div>
+            {summary.unreadChannels.length > 0 && (
+              <ul className="home-unread-channels" aria-label="Kênh có tin nhắn chưa đọc">
+                {summary.unreadChannels.map((channel) => (
+                  <li key={channel.channelId}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        navigate({
+                          view: "chat",
+                          workspaceId: channel.workspaceId,
+                          channelId: channel.channelId,
+                        })
+                      }
+                    >
+                      <span>
+                        #{channel.channelName}
+                        <small>{channel.workspaceName}</small>
+                      </span>
+                      <b aria-label={`${channel.unreadCount} tin chưa đọc`}>
+                        {channel.unreadCount}
+                      </b>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
             <Button
               variant="secondary"
               icon="bell"

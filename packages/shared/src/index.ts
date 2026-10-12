@@ -329,6 +329,9 @@ export interface HomeSummary {
  tasks:{id:string;title:string;status:'todo'|'doing';priority:'low'|'normal'|'high'|'urgent';dueAt:string|null;channelId:string;channelName:string;workspaceId:string}[];
  meetings:MeetingScheduleItem[];
  unreadNotifications:number;
+ /** Unread messages in text channels (same rule as the channel list badge). */
+ unreadMessages:number;
+ unreadChannels:{channelId:string;channelName:string;workspaceId:string;workspaceName:string;unreadCount:number;lastMessageAt:string}[];
 }
 
 export interface WorkspaceFileItem {

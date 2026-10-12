@@ -11,18 +11,36 @@ import type {
 } from "@doan/shared";
 
 export async function homeSummary(userId: string): Promise<HomeSummary> {
-  const [tasks, schedules, notifications] = await Promise.all([
+  const [tasks, schedules, notifications, unreadChannels] = await Promise.all([
     query<HomeSummary["tasks"][number]>(
       `SELECT t.id,t.title,t.status,t.priority,t.due_at AS "dueAt",c.id AS "channelId",c.name AS "channelName",c.workspace_id AS "workspaceId" FROM tasks t JOIN channels c ON c.id=t.channel_id JOIN channel_access a ON a.channel_id=c.id AND a.user_id=$1 AND a.can_write WHERE t.assignee_id=$1 AND t.archived_at IS NULL AND t.status<>'done' ORDER BY (t.due_at<now()) DESC NULLS LAST,CASE t.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 ELSE 2 END,t.due_at NULLS LAST,t.updated_at DESC LIMIT 6`,
       [userId],
     ),
     listMeetingSchedules(userId),
     listNotifications(userId, undefined, true),
+    // Plain channel messages create no notification rows (only mentions and thread replies
+    // do), so unread messages are reported separately, matching the channel list badge.
+    query<HomeSummary["unreadChannels"][number]>(
+      `SELECT c.id AS "channelId", c.name AS "channelName", w.id AS "workspaceId", w.name AS "workspaceName",
+         count(*)::integer AS "unreadCount", max(m.created_at) AS "lastMessageAt"
+       FROM messages m
+       JOIN channels c ON c.id = m.channel_id AND c.type = 'text' AND c.archived_at IS NULL
+       JOIN workspaces w ON w.id = c.workspace_id AND w.archived_at IS NULL
+       JOIN channel_access access ON access.channel_id = c.id AND access.user_id = $1
+       LEFT JOIN channel_preferences cp ON cp.channel_id = c.id AND cp.user_id = $1
+       WHERE m.deleted_at IS NULL AND m.author_id <> $1
+         AND m.created_at > COALESCE(cp.last_read_at, 'epoch'::timestamptz)
+       GROUP BY c.id, w.id
+       ORDER BY max(m.created_at) DESC`,
+      [userId],
+    ),
   ]);
   return {
     tasks: tasks.rows,
     meetings: schedules.slice(0, 4),
     unreadNotifications: notifications.unreadCount,
+    unreadMessages: unreadChannels.rows.reduce((total, row) => total + row.unreadCount, 0),
+    unreadChannels: unreadChannels.rows.slice(0, 5),
   };
 }
 
