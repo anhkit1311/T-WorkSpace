@@ -1,9 +1,0 @@
-{
-  "at": "2026-10-04T19:00:01.085Z",
-  "debug": "Motion debug · DEVFPS rAF: 200 · frames: 17402Long tasks: 0 · max: 0.0ms · CLS: 0.0505Blur DOM: 6 · depth: 1Đo lạirAF không phải GPU FPS; blur là cây DOM, không phải layer compositor.",
-  "height": 900,
-  "reduced": true,
-  "url": "http://localhost:5176/app/overview",
-  "videoPaused": true,
-  "width": 1440
-}

@@ -1,4 +1,0 @@
-{
-  "debug": "Motion debug · DEVFPS rAF: 200 · frames: 6821Long tasks: 0 · max: 0.0ms · CLS: 0.0005Blur DOM: 2 · depth: 1Motion: reduced · canvases: 1 · triggers: 0Scene: paused · renders: 4 · quality: baseĐo lạiTheo máyGiảmĐầy đủrAF không phải GPU FPS; blur là cây DOM, không phải layer compositor.",
-  "mode": "reduced"
-}

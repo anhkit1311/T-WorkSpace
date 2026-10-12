@@ -1,2 +1,0 @@
-Tệp QA chỉ dùng để kiểm tra upload và khôi phục bản nháp.
-Không chứa dữ liệu cá nhân hoặc thông tin đăng nhập.
