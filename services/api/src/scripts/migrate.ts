@@ -28,9 +28,7 @@ async function migrate(): Promise<void> {
   for (const file of files) {
     const sql = await readFile(`${migrationsDirectory}/${file}`, "utf8");
     // Hash LF-normalized text so a Windows CRLF checkout matches the LF blob stored in git.
-    const checksum = createHash("sha256").update(sql.replace(/
-/g, "
-")).digest("hex");
+    const checksum = createHash("sha256").update(sql.replace(/\r\n/g, "\n")).digest("hex");
     const existing = await runner.query<{ checksum: string }>(
       `SELECT checksum FROM schema_migrations WHERE name = $1`,
       [file],
