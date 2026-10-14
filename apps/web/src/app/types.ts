@@ -10,7 +10,8 @@ export type ViewId =
   | "admin"
   | "invitation"
   | "notifications"
-  | "tasks";
+  | "tasks"
+  | "thesis";
 
 export type PublicScreen = "landing" | "login" | "app";
 export type AuthMode = "login" | "register";

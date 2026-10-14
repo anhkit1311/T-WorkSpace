@@ -13,6 +13,7 @@
     "test:sfu": "npm run build --workspace @doan/api && node scripts/testing/test-integration.mjs --sfu",
     "benchmark": "npm run build --workspace @doan/api && node scripts/benchmarks/benchmark-realtime.mjs",
     "benchmark:chat": "npm run build --workspace @doan/api && node scripts/benchmarks/benchmark-chat-load.mjs",
+    "seed:academic": "npm run build --workspace @doan/api && node scripts/database/seed-academic.mjs",
     "verify:restore": "npm run build --workspace @doan/api && node scripts/database/verify-restore.mjs",
     "dev": "npm run build --workspace @doan/shared && concurrently -k -n api,web -c cyan,magenta \"npm:dev:api\" \"npm:dev:web\"",
     "dev:api": "npm --workspace @doan/api run dev",

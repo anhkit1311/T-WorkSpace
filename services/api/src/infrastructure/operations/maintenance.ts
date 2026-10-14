@@ -4,7 +4,7 @@ export async function runMaintenance(workspaceId?:string){
   return withTransaction(async client=>{
     if(!(await client.query(`SELECT pg_try_advisory_xact_lock(778921403) AS locked`)).rows[0].locked)return {skipped:true};
     // Pending uploads retain a full day for a lost ACK/retry. Attached files are never removed here.
-    const files=await client.query(`DELETE FROM message_attachments a WHERE ($1::uuid IS NULL OR EXISTS(SELECT 1 FROM channels c WHERE c.id=a.channel_id AND c.workspace_id=$1)) AND a.created_at<now()-interval '24 hours' AND NOT EXISTS(SELECT 1 FROM messages m WHERE m.attachment_id=a.id) AND NOT EXISTS(SELECT 1 FROM task_attachments t WHERE t.attachment_id=a.id)`,[workspaceId??null]);
+    const files=await client.query(`DELETE FROM message_attachments a WHERE ($1::uuid IS NULL OR EXISTS(SELECT 1 FROM channels c WHERE c.id=a.channel_id AND c.workspace_id=$1)) AND a.created_at<now()-interval '24 hours' AND NOT EXISTS(SELECT 1 FROM messages m WHERE m.attachment_id=a.id) AND NOT EXISTS(SELECT 1 FROM task_attachments t WHERE t.attachment_id=a.id) AND NOT EXISTS(SELECT 1 FROM thesis_submissions s WHERE s.attachment_id=a.id)`,[workspaceId??null]);
     await client.query(`DELETE FROM email_otps WHERE expires_at<now()-interval '1 day'`);
     await client.query(`DELETE FROM refresh_sessions WHERE expires_at<now()-interval '7 days'`);
     await client.query(`DELETE FROM request_rate_limits WHERE window_start<now()-interval '1 day'`);

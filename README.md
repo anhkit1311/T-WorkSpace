@@ -17,6 +17,22 @@ React/TypeScript + Node/Socket.IO + PostgreSQL + mediasoup. Cập nhật **01/10
 - URL định danh; home ưu tiên công việc/lịch/thông báo; bản nháp/outbox qua reload; retry chat không tạo trùng.
 - Storage DB/S3, PostgreSQL adapter/presence TTL, readiness/metrics/logs, migration lock và retention.
 
+**Phân hệ quản lý & hướng dẫn đồ án tốt nghiệp** (`/app/thesis`, migration 022–024). Đặc tả: [docs/academic/01-dac-ta-nghiep-vu.md](docs/academic/01-dac-ta-nghiep-vu.md).
+
+- **Vai trò:** quản trị hệ thống, giáo vụ khoa, lãnh đạo khoa, giảng viên, sinh viên. Có phân tách trách nhiệm giữa các vai trò.
+- **Vòng đời đợt đồ án** (7 giai đoạn) có điều kiện chuyển giai đoạn:
+  - nhập danh sách SV và tự xét điều kiện;
+  - đề tài có quy trình duyệt và kiểm tra trùng lặp;
+  - nhóm đăng ký nguyện vọng có thứ tự;
+  - GV nhận nhóm có kiểm tra sức chứa và định mức, và tự tạo không gian làm việc cho đồ án.
+- **Thực hiện đồ án:**
+  - máy trạng thái kiểm soát bằng trigger PostgreSQL;
+  - bản nộp có phiên bản và SHA-256, không sửa được;
+  - nhật ký hướng dẫn phải được hai phía xác nhận.
+- **Phản biện và bảo vệ:** hội đồng 3–5 thành viên (chủ tịch phải là TS); lịch bảo vệ chống trùng giờ bằng `EXCLUDE USING gist`, có thuật toán xếp lịch tự động.
+- **Chấm điểm:** rubric có trọng số; điểm hội đồng lệch nhiều thì chủ tịch phải giải trình; khóa điểm sau khi chốt; sổ cái điểm hash-chain chống sửa; có quy trình phúc khảo.
+- **Báo cáo:** dashboard, cảnh báo đồ án có nguy cơ, xuất CSV, thông báo realtime.
+
 Chat/gọi diễn ra trong kênh nhóm; chưa có direct message một-một. Âm nhạc trên profile là thông tin cá nhân, chưa tích hợp dịch vụ streaming.
 
 ## Chạy local
@@ -61,6 +77,8 @@ npm run benchmark:chat
 node scripts/benchmarks/summarize-chat-load.mjs
 npm run verify:restore
 ```
+
+Dữ liệu demo phân hệ đồ án: đặt `SEED_ACADEMIC_PASSWORD` trong `.env` rồi chạy `npm run seed:academic` (thêm `-- --reset` để tạo lại). Tài khoản `giaovu@demo.nexo.test` là quản trị hệ thống kiêm giáo vụ; `truongkhoa@…`, `gv.son@…` là lãnh đạo khoa; `gv.*@…` là giảng viên; `sv01…sv30@…` là sinh viên.
 
 Benchmark local50/100/200 socket,2 API process,4tin/giây,30s ×2/mức:732tin,0lỗi/trùng trong kịch bản. Raw, phân vị và giới hạn ở [báo cáo20](docs/benchmarks/20-benchmark-va-nghiem-thu.md). Restore dùng hai DB QA mới, kiểm20 migration/dữ liệu Unicode và dọn đúng fixtures.
 

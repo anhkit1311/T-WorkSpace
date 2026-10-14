@@ -38,6 +38,9 @@ const WorkspaceAdminPage = lazy(() =>
 const InvitationPage = lazy(() =>
   import("../../features/workspaces/InvitationPage").then((m) => ({ default: m.InvitationPage })),
 );
+const ThesisPage = lazy(() =>
+  import("../../features/thesis/ThesisPage").then((m) => ({ default: m.ThesisPage })),
+);
 const NotificationsPage = lazy(() =>
   import("../../features/notifications/NotificationsPage").then((m) => ({
     default: m.NotificationsPage,
@@ -63,6 +66,7 @@ const dockItems: { id: ViewId; label: string; title?: string; icon: IconName; al
     icon: "users",
     also: ["chat", "tasks", "meetings", "files"],
   },
+  { id: "thesis", label: "Đồ án", title: "Quản lý đồ án tốt nghiệp", icon: "book" },
   { id: "notifications", label: "Thông báo", icon: "bell" },
   {
     id: "profile",
@@ -201,6 +205,7 @@ export function AppShell() {
     else if (activeView === "admin") Component = <WorkspaceAdminPage />;
     else if (activeView === "invitation") Component = <InvitationPage />;
     else if (activeView === "notifications") Component = <NotificationsPage />;
+    else if (activeView === "thesis") Component = <ThesisPage />;
     else Component = <WorkspaceHomePage />;
 
     return (

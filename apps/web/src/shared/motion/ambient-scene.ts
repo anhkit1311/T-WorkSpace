@@ -34,7 +34,8 @@ export type AmbientMood =
   | "profile"
   | "admin"
   | "notifications"
-  | "invitation";
+  | "invitation"
+  | "thesis";
 
 interface MoodSpec {
   tint: string;
@@ -58,6 +59,7 @@ const MOODS: Record<AmbientMood, MoodSpec> = {
   admin: { tint: "#d3d9e6", mist: 0.14, motes: 0.45, camX: 0.25, camY: -0.1 },
   notifications: { tint: "#dcd4ee", mist: 0.16, motes: 0.5, camX: -0.2, camY: 0.2 },
   invitation: { tint: "#f0d0c2", mist: 0.26, motes: 0.75, camX: 0, camY: 0 },
+  thesis: { tint: "#d9dcc8", mist: 0.12, motes: 0.42, camX: 0.1, camY: -0.2 },
 };
 
 const mistVertex = /* glsl */ `

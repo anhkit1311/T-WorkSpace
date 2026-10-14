@@ -8,6 +8,8 @@ export interface AppRoute {
   threadId?: string;
   taskId?: string;
   scheduleId?: string;
+  termId?: string;
+  projectId?: string;
   query?: string;
   invitationToken?: string;
   invalid?: boolean;
@@ -24,6 +26,7 @@ const views = new Set([
   "invitation",
   "notifications",
   "tasks",
+  "thesis",
 ]);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -77,6 +80,8 @@ export function readAppRoute(url: URL): AppRoute {
     ["threadId", "thread"],
     ["taskId", "task"],
     ["scheduleId", "schedule"],
+    ["termId", "term"],
+    ["projectId", "project"],
   ] as const) {
     const value = url.searchParams.get(param);
     if (value) {
@@ -105,6 +110,8 @@ export function appRouteUrl(route: AppRoute): string {
   if (route.threadId) params.set("thread", route.threadId);
   if (route.taskId) params.set("task", route.taskId);
   if (route.scheduleId) params.set("schedule", route.scheduleId);
+  if (route.termId) params.set("term", route.termId);
+  if (route.projectId) params.set("project", route.projectId);
   if (route.query) params.set("q", route.query);
   return `/app/${route.view}${params.size ? `?${params}` : ""}${route.invitationToken ? `#token=${encodeURIComponent(route.invitationToken)}` : ""}`;
 }

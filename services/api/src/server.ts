@@ -11,6 +11,7 @@ import { authRoutes } from "./modules/auth/routes.js";
 import { profileRoutes } from "./modules/profiles/routes.js";
 import { meetingRoutes } from "./modules/meetings/routes.js";
 import { fileRoutes } from "./modules/files/routes.js";
+import { academicRoutes } from "./modules/academic/routes.js";
 import { randomUUID } from "node:crypto";
 import { pool, query } from "./infrastructure/database/db.js";
 import { roomManager } from "./modules/meetings/media/room-manager.js";
@@ -102,7 +103,7 @@ async function handleRequest(
     ).catch(() => {
       throw new HttpError(503, "NOT_READY", "Máy chủ chưa sẵn sàng.");
     });
-    if (version.rows[0]?.name !== "021_meeting_outcomes.sql")
+    if (version.rows[0]?.name !== "024_thesis_evaluation.sql")
       throw new HttpError(503, "NOT_READY", "Cần chạy migration trước khi phục vụ.");
     sendJson(response, 200, { status: "ready" });
     return;
@@ -141,6 +142,7 @@ async function handleRequest(
     profileRoutes,
     meetingRoutes,
     fileRoutes,
+    academicRoutes,
   ]) {
     await route(context);
     if (response.writableEnded) return;
