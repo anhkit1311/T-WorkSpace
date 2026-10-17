@@ -3,7 +3,6 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useApp } from "../../app/providers/AppContext";
 import { NexoLogo } from "../../shared/ui/NexoLogo";
-import { ambientBridge } from "../../shared/motion/AmbientBackdrop";
 import { GSAP_EASE_OUT } from "../../shared/motion/tokens";
 import "./editorial.css";
 
@@ -133,13 +132,6 @@ export function LandingPage() {
         autoAlpha: 0.25,
         ease: "none",
         scrollTrigger: { trigger: hero, start: "top top", end: "bottom top", scrub: 0.6 },
-      });
-
-      ScrollTrigger.create({
-        trigger: hero,
-        start: "top top",
-        end: "bottom top",
-        onUpdate: (self) => ambientBridge.setScroll(self.progress),
       });
 
       // Staggered text rise for every section header (tag -> title -> subtitle)
@@ -274,7 +266,6 @@ export function LandingPage() {
 
     return () => {
       ctx.revert();
-      ambientBridge.setScroll(0);
     };
   }, []);
 

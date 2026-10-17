@@ -1,19 +1,14 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { AnimatePresence } from "motion/react";
 import { useApp } from "../providers/AppContext";
 import { useSocket } from "../providers/SocketContext";
 import { useMeeting } from "../providers/MeetingContext";
-import { Icon } from "../../shared/ui/Icon";
-import { Brand, Button } from "../../shared/ui/Primitives";
+import { Icon, type IconName } from "../../shared/ui/Icon";
+import { TdtuLogo } from "../../shared/ui/TdtuLogo";
 import { NotionSearchModal } from "../../features/search/NotionSearchModal";
 import { LogoutConfirmDialog } from "../../features/auth/LogoutConfirmDialog";
 import { PageErrorBoundary } from "../../shared/ui/PageErrorBoundary";
-import { usePanelDialog } from "../../shared/hooks/usePanelDialog";
 import { governanceApi } from "../../features/workspaces/api";
-import { ViewReveal } from "../../shared/motion/ViewReveal";
-import { SPRING, DURATION } from "../../shared/motion/tokens";
-import { useMotionSafe } from "../../shared/motion/MotionProvider";
-import type { IconName } from "../../shared/ui/Icon";
 import type { ViewId } from "../types";
 import { isWorkspaceTabView } from "../navigation";
 
@@ -46,6 +41,21 @@ const NotificationsPage = lazy(() =>
     default: m.NotificationsPage,
   })),
 );
+const CallCenterWorkspace = lazy(() =>
+  import("../../features/call-center/CallCenterWorkspace").then((m) => ({
+    default: m.CallCenterWorkspace,
+  })),
+);
+const CallDirectoryPage = lazy(() =>
+  import("../../features/call-center/CallDirectoryPage").then((m) => ({
+    default: m.CallDirectoryPage,
+  })),
+);
+const ELearningPage = lazy(() =>
+  import("../../features/elearning/ELearningPage").then((m) => ({
+    default: m.ELearningPage,
+  })),
+);
 
 function ViewFallback() {
   return (
@@ -57,35 +67,36 @@ function ViewFallback() {
   );
 }
 
-const dockItems: { id: ViewId; label: string; title?: string; icon: IconName; also?: ViewId[] }[] = [
-  { id: "overview", label: "Trang chủ", icon: "home" },
-  {
-    id: "workspace",
-    label: "Nhóm",
-    title: "Nhóm làm việc",
-    icon: "users",
-    also: ["chat", "tasks", "meetings", "files"],
-  },
-  { id: "thesis", label: "Đồ án", title: "Quản lý đồ án tốt nghiệp", icon: "book" },
-  { id: "notifications", label: "Thông báo", icon: "bell" },
-  {
-    id: "profile",
-    label: "Cài đặt",
-    title: "Cài đặt trang cá nhân",
-    icon: "settings",
-    also: ["admin"],
-  },
+interface SidebarMenuItem {
+  id: string;
+  label: string;
+  icon: IconName;
+  targetView: ViewId;
+  badgeKey?: "notifications" | "messages";
+}
+
+const SIDEBAR_MENU_ITEMS: SidebarMenuItem[] = [
+  { id: "home", label: "Trang chủ", icon: "home", targetView: "overview" },
+  { id: "schedule", label: "Thời khóa biểu", icon: "calendar", targetView: "thesis" },
+  { id: "tasks", label: "Bảng phân công", icon: "table", targetView: "tasks" },
+  { id: "switchboard", label: "Tổng đài", icon: "grid", targetView: "call-center" },
+  { id: "call-list", label: "Danh sách cuộc gọi", icon: "phone-call", targetView: "call-directory" },
+  { id: "messages", label: "Nhắn tin", icon: "message", targetView: "chat", badgeKey: "messages" },
+  { id: "meetings", label: "Hội nghị", icon: "video", targetView: "meetings" },
+  { id: "elearning", label: "Đào tạo (E-Learning)", icon: "graduation-cap", targetView: "elearning" },
+  { id: "staff", label: "Danh sách nhân sự", icon: "users", targetView: "workspace" },
+  { id: "departments", label: "Khoa / Phòng ban", icon: "building", targetView: "admin" },
+  { id: "notifications", label: "Quản lý thông báo", icon: "bell", targetView: "notifications", badgeKey: "notifications" },
+  { id: "roles", label: "Tài khoản & phân quyền", icon: "shield", targetView: "admin" },
+  { id: "profile", label: "Trang cá nhân", icon: "profile", targetView: "profile" },
+  { id: "settings", label: "Cài đặt", icon: "settings", targetView: "profile" },
 ];
 
 export function AppShell() {
-  const safe = useMotionSafe();
   const {
     activeView,
     route,
     setActiveView,
-    sidebarCollapsed,
-    mobileNavOpen,
-    setMobileNavOpen,
     user,
     accessToken,
     openChatSearchResult,
@@ -93,19 +104,16 @@ export function AppShell() {
   } = useApp();
   const { connectionStatus, reconnect, unreadCount, socket } = useSocket();
   const meeting = useMeeting();
-  // The call keeps running off the meetings view; remember its workspace for the way back.
+
+  const [activeMenuId, setActiveMenuId] = useState<string>("home");
   const [meetingWorkspaceId, setMeetingWorkspaceId] = useState("");
   useEffect(() => {
     if (!meeting.inCall) setMeetingWorkspaceId("");
     else if (activeView === "meetings" && route.workspaceId) setMeetingWorkspaceId(route.workspaceId);
   }, [meeting.inCall, activeView, route.workspaceId]);
   const showMeetingChip = meeting.inCall && activeView !== "meetings";
-  const mobileNavRef = usePanelDialog(
-    () => setMobileNavOpen(false),
-    mobileNavOpen,
-    ".mobile-overlay",
-  );
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  const [unreadNotifications, setUnreadNotifications] = useState(1);
   useEffect(() => {
     if (!accessToken) return;
     let active = true;
@@ -114,7 +122,7 @@ export function AppShell() {
         .then((page) => {
           if (active) setUnreadNotifications(page.unreadCount);
         })
-        .catch(() => { /* The bell badge is advisory; reconnect/event refresh retries. The full inbox has a visible error state. */ });
+        .catch(() => {});
     refresh();
     socket?.on("notifications_changed", refresh);
     socket?.on("connect", refresh);
@@ -124,28 +132,50 @@ export function AppShell() {
       socket?.off("connect", refresh);
     };
   }, [accessToken, socket]);
+
+  // Keep activeMenuId synced with current view
+  useEffect(() => {
+    if (activeView === "overview") setActiveMenuId("home");
+    else if (activeView === "call-center") setActiveMenuId("switchboard");
+    else if (activeView === "call-directory") setActiveMenuId("call-list");
+    else if (activeView === "chat") setActiveMenuId("messages");
+    else if (activeView === "tasks") setActiveMenuId("tasks");
+    else if (activeView === "meetings") setActiveMenuId("meetings");
+    else if (activeView === "notifications") setActiveMenuId("notifications");
+    else if (activeView === "elearning") setActiveMenuId("elearning");
+    else if (activeView === "thesis") setActiveMenuId("schedule");
+    else if (activeView === "admin") setActiveMenuId("roles");
+    else if (activeView === "profile") setActiveMenuId("profile");
+    else if (activeView === "workspace") setActiveMenuId("staff");
+  }, [activeView]);
+
+  const [lang, setLang] = useState<"VI" | "EN">("VI");
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+  });
+
+  const toggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    document.documentElement.setAttribute("data-theme", nextTheme);
+  };
+
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const avatarButtonRef = useRef<HTMLButtonElement>(null);
 
-  const displayName = user?.displayName?.trim() || "Chưa cập nhật hồ sơ";
+  const displayName = user?.displayName?.trim() || "Nguyễn Đăng Khoa";
   const userEmail = user?.email || "";
-  // Presence mirrors what teammates see: hidden activity always reads as offline.
   const presence =
     user?.showActivity === false || connectionStatus === "disconnected"
       ? "offline"
       : connectionStatus === "connected"
         ? "online"
         : "connecting";
-  const presenceLabel = {
-    online: "Đang trực tuyến",
-    connecting: "Đang kết nối",
-    offline: user?.showActivity === false ? "Đang ẩn hoạt động" : "Ngoại tuyến",
-  }[presence];
 
-  // Account popover closes on outside click or Escape.
+  // Account popover closes on outside click or Escape
   useEffect(() => {
     if (!profileOpen) return;
     const close = (event: Event) => {
@@ -163,6 +193,7 @@ export function AppShell() {
     };
   }, [profileOpen]);
 
+  // Global Ctrl + K search shortcut
   useEffect(() => {
     const shortcut = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
@@ -174,173 +205,213 @@ export function AppShell() {
     return () => window.removeEventListener("keydown", shortcut);
   }, []);
 
-  useEffect(() => {
-    const desktop = window.matchMedia("(min-width: 961px)");
-    const closeMobileNav = () => {
-      if (desktop.matches) setMobileNavOpen(false);
-    };
-    desktop.addEventListener("change", closeMobileNav);
-    closeMobileNav();
-    return () => desktop.removeEventListener("change", closeMobileNav);
-  }, [setMobileNavOpen]);
-
   const isWorkspaceScope = isWorkspaceTabView(activeView);
   const shellViewKey = isWorkspaceScope ? "workspace-shell" : activeView;
 
   const renderPage = () => {
     if (route.invalid)
       return (
-        <section className="page-load-error" role="alert">
+        <section className="page-load-error" role="alert" style={{ padding: 40, textAlign: "center" }}>
           <h2>Đường dẫn không hợp lệ</h2>
           <p>Trang hoặc mã tài nguyên trong liên kết không tồn tại.</p>
-          <Button icon="home" onClick={() => setActiveView("overview")}>
+          <button className="button button--primary" onClick={() => setActiveView("overview")}>
             Về trang chủ
-          </Button>
+          </button>
         </section>
       );
     let Component;
     if (activeView === "overview") Component = <WorkspaceHomePage />;
+    else if (activeView === "call-center") Component = <CallCenterWorkspace />;
+    else if (activeView === "call-directory") Component = <CallDirectoryPage />;
     else if (isWorkspaceScope) Component = <WorkspaceShell />;
     else if (activeView === "profile") Component = <ProfilePage />;
     else if (activeView === "admin") Component = <WorkspaceAdminPage />;
     else if (activeView === "invitation") Component = <InvitationPage />;
     else if (activeView === "notifications") Component = <NotificationsPage />;
+    else if (activeView === "elearning") Component = <ELearningPage />;
     else if (activeView === "thesis") Component = <ThesisPage />;
     else Component = <WorkspaceHomePage />;
 
     return (
       <PageErrorBoundary key={shellViewKey}>
         <Suspense fallback={<ViewFallback />}>
-          <ViewReveal>{Component}</ViewReveal>
+          {Component}
         </Suspense>
       </PageErrorBoundary>
     );
   };
 
   return (
-    <div
-      className={`app-shell editorial-workspace-shell ${sidebarCollapsed ? "is-collapsed" : ""}`}
-    >
-      {mobileNavOpen && (
-        <button
-          aria-label="Đóng thanh điều hướng"
-          className="mobile-overlay"
-          onClick={() => setMobileNavOpen(false)}
-        />
-      )}
+    <div className="app-shell">
+      {/* 56px Top Header */}
+      <header className="editorial-master-topbar tdtu-header">
+        <div className="tdtu-header__left">
+          <button
+            type="button"
+            className="tdtu-header__brand-btn"
+            onClick={() => {
+              setActiveMenuId("home");
+              setActiveView("overview");
+            }}
+            title="Cổng nội bộ TDTU"
+          >
+            <TdtuLogo />
+          </button>
 
-      {/* Top Master Floating Bar matching reference */}
-      <header className="editorial-master-topbar">
-        <div className="editorial-master-topbar__left">
-          <Brand onClick={() => setActiveView("overview")} />
+          <button
+            type="button"
+            className="tdtu-header__home-btn"
+            title="Trang chủ"
+            onClick={() => {
+              setActiveMenuId("home");
+              setActiveView("overview");
+            }}
+          >
+            <Icon name="home" size={17} />
+          </button>
+
+          <div
+            className="tdtu-header__search"
+            onClick={() => setSearchOpen(true)}
+            role="search"
+          >
+            <Icon name="search" size={14} className="tdtu-header__search-icon" />
+            <input
+              type="text"
+              readOnly
+              placeholder="Tìm kiếm"
+              className="tdtu-header__search-input"
+              onClick={() => setSearchOpen(true)}
+            />
+          </div>
         </div>
 
-        <div className="editorial-master-topbar__right">
+        <div className="tdtu-header__right">
           {showMeetingChip && (
             <button
               type="button"
-              className="topbar-meeting-chip"
+              className="button button--sm button--primary"
+              style={{ gap: 6, borderRadius: 9999 }}
               title="Quay lại cuộc họp"
-              aria-label={`Quay lại cuộc họp đang diễn ra${meeting.mic ? "" : " (micro đang tắt)"}`}
               onClick={() =>
                 meetingWorkspaceId
                   ? openChannel(meetingWorkspaceId, meeting.roomId, true)
                   : setActiveView("meetings")
               }
             >
-              <span className="topbar-meeting-chip__dot" aria-hidden="true" />
-              <Icon name="video" size={15} className="topbar-meeting-chip__icon" />
-              <span className="topbar-meeting-chip__label">Đang họp</span>
-              {!meeting.mic && <Icon name="mic-off" size={14} className="topbar-meeting-chip__mic" />}
+              <Icon name="video" size={14} />
+              <span>Đang họp</span>
             </button>
           )}
-          <Button
+
+          {/* Language Switcher VI | EN */}
+          <div className="tdtu-lang-switcher" aria-label="Chuyển đổi ngôn ngữ">
+            <Icon name="languages" size={13} className="tdtu-lang-switcher__icon" />
+            <button
+              type="button"
+              className={`tdtu-lang-switcher__btn ${lang === "VI" ? "is-active" : ""}`}
+              onClick={() => setLang("VI")}
+            >
+              VI
+            </button>
+            <button
+              type="button"
+              className={`tdtu-lang-switcher__btn ${lang === "EN" ? "is-active" : ""}`}
+              onClick={() => setLang("EN")}
+            >
+              EN
+            </button>
+          </div>
+
+          {/* Dark Mode Toggle */}
+          <button
             type="button"
-            variant="icon"
-            icon="search"
-            className="topbar-action-icon-btn"
-            title="Tìm kiếm (Ctrl + K)"
-            aria-label="Tìm kiếm"
-            onClick={() => setSearchOpen(true)}
-          />
-          <Button
-            type="button"
-            variant="icon"
-            icon="bell"
-            className="topbar-action-icon-btn topbar-bell-btn"
-            title="Thông báo"
-            aria-label={
-              unreadNotifications ? `Thông báo (${unreadNotifications} chưa đọc)` : "Thông báo"
-            }
-            onClick={() => setActiveView("notifications")}
+            className="tdtu-icon-btn"
+            title={theme === "dark" ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối"}
+            aria-label="Chế độ giao diện"
+            onClick={toggleTheme}
           >
-            <AnimatePresence>
-              {unreadNotifications > 0 && (
-                <motion.span
-                  className="topbar-bell-dot"
-                  aria-hidden="true"
-                  initial={safe.reduced ? false : { scale: 0 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: safe.reduced ? 1 : 0 }}
-                  transition={safe.reduced ? {duration:0} : SPRING.bouncy}
-                />
-              )}
-            </AnimatePresence>
-          </Button>
-          <div className="topbar-account" ref={accountRef}>
+            <Icon name={theme === "dark" ? "sun" : "moon"} size={16} />
+          </button>
+
+          {/* Notifications Bell with Red Badge */}
+          <button
+            type="button"
+            className="tdtu-icon-btn"
+            title="Quản lý thông báo"
+            aria-label={`Thông báo (${unreadNotifications || 1} chưa đọc)`}
+            onClick={() => {
+              setActiveMenuId("notifications");
+              setActiveView("notifications");
+            }}
+          >
+            <Icon name="bell" size={16} />
+            <span className="tdtu-badge-num">
+              {unreadNotifications > 0 ? (unreadNotifications > 99 ? "99+" : unreadNotifications) : 1}
+            </span>
+          </button>
+
+          {/* User Profile Avatar */}
+          <div className="tdtu-avatar-wrap" ref={accountRef}>
             <button
               ref={avatarButtonRef}
               type="button"
-              className="topbar-avatar-btn"
-              title={`Tài khoản: ${displayName} · ${presenceLabel}`}
-              aria-label={`Tài khoản: ${displayName}`}
+              className="tdtu-avatar-btn"
+              title={`Tài khoản: ${displayName}`}
               aria-haspopup="menu"
               aria-expanded={profileOpen}
               onClick={() => setProfileOpen(!profileOpen)}
             >
-              <img
-                src={user?.avatarUrl || "/avatar-fallback.svg"}
-                alt=""
-                className="topbar-avatar-img"
-              />
-              <span className={`topbar-online-dot is-${presence}`} aria-label={presenceLabel} />
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={displayName}
+                  className="tdtu-avatar-img"
+                />
+              ) : (
+                <div className="tdtu-avatar-img">
+                  {displayName.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <span className="tdtu-online-dot" />
             </button>
 
             <AnimatePresence>
               {profileOpen && (
-                <motion.div
-                  className="sidebar-account-menu topbar-account-popover"
-                  initial={safe.reduced ? false : { opacity: 0, scale: 0.95, y: 8 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: safe.reduced ? 1 : 0, scale: safe.reduced ? 1 : 0.95, y: safe.reduced ? 0 : 6, transition: {duration:safe.duration(DURATION.panelExit)} }}
-                  transition={safe.reduced ? {duration:0} : SPRING.gentle}
-                >
-                  <div className="sidebar-account-header">
-                    <img
-                      src={user?.avatarUrl || "/avatar-fallback.svg"}
-                      alt=""
-                      className="topbar-account-avatar"
-                    />
+                <div className="tdtu-account-popover">
+                  <div className="tdtu-account-header">
+                    <div className="tdtu-avatar-img" style={{ width: 36, height: 36 }}>
+                      {displayName.charAt(0).toUpperCase()}
+                    </div>
                     <div>
                       <strong>{displayName}</strong>
-                      <small>{userEmail}</small>
-                      <span className={`topbar-presence-label is-${presence}`}>
-                        <i /> {presenceLabel}
-                      </span>
+                      <small>{userEmail || "Quản trị hệ thống · Tài khoản khoa"}</small>
                     </div>
                   </div>
                   <hr />
                   <button
                     type="button"
                     onClick={() => {
+                      setActiveMenuId("profile");
                       setActiveView("profile");
                       setProfileOpen(false);
                     }}
                   >
-                    <Icon name="profile" size={15} /> Hồ sơ & Cài đặt cá nhân
+                    <Icon name="profile" size={15} /> Trang cá nhân
                   </button>
                   <button
                     type="button"
+                    onClick={() => {
+                      setActiveMenuId("settings");
+                      setActiveView("profile");
+                      setProfileOpen(false);
+                    }}
+                  >
+                    <Icon name="settings" size={15} /> Cài đặt hệ thống
+                  </button>
+                  <button
+                    type="button"
+                    className="is-logout"
                     onClick={() => {
                       setProfileOpen(false);
                       setLogoutConfirmOpen(true);
@@ -348,67 +419,52 @@ export function AppShell() {
                   >
                     <Icon name="logout" size={15} /> Đăng xuất
                   </button>
-                </motion.div>
+                </div>
               )}
             </AnimatePresence>
           </div>
         </div>
       </header>
-      <AnimatePresence>
-        {logoutConfirmOpen && (
-          <LogoutConfirmDialog
-            onClose={() => {
-              setLogoutConfirmOpen(false);
-              // The menu item that opened the dialog is gone; return to the avatar button.
-              requestAnimationFrame(() => avatarButtonRef.current?.focus());
-            }}
-          />
-        )}
-      </AnimatePresence>
 
-      {/* Main Workspace Body: Left Dock + Stage */}
-      <div className="editorial-workspace-body">
-        {/* Left Vertical Dock */}
-        <aside
-          ref={mobileNavRef}
-          className={`editorial-dock ${mobileNavOpen ? "is-mobile-open" : ""}`}
-          aria-label="Điều hướng chính"
-        >
-          {dockItems.map((item) => {
-            const selected = activeView === item.id || Boolean(item.also?.includes(activeView));
+      {/* Main Workspace Body: Left 240px Sidebar + Stage Viewport */}
+      <div className="editorial-workspace-body tdtu-body">
+        {/* Left Sidebar (240px) with exactly 14 items */}
+        <aside className="editorial-dock tdtu-sidebar" aria-label="Menu chức năng chính">
+          {SIDEBAR_MENU_ITEMS.map((item) => {
+            const isSelected = activeMenuId === item.id;
+            const badgeCount =
+              item.badgeKey === "notifications"
+                ? (unreadNotifications > 0 ? unreadNotifications : 1)
+                : item.badgeKey === "messages" && unreadCount > 0
+                  ? unreadCount
+                  : undefined;
+
             return (
-              <motion.button
+              <button
                 key={item.id}
                 type="button"
-                className={`dock-btn ${selected ? "is-active" : ""}`}
-                aria-current={selected ? "page" : undefined}
-                whileTap={safe.reduced ? undefined : { scale: 0.97 }}
+                className={`tdtu-sidebar__item ${isSelected ? "is-active" : ""}`}
+                aria-current={isSelected ? "page" : undefined}
                 onClick={() => {
-                  setActiveView(item.id);
-                  setMobileNavOpen(false);
+                  setActiveMenuId(item.id);
+                  setActiveView(item.targetView);
                 }}
-                title={item.title ?? item.label}
+                title={item.label}
               >
-                {selected && (
-                  <motion.span
-                    layoutId="dock-active-pill"
-                    className="dock-active-pill"
-                    transition={safe.reduced ? {duration:0} : SPRING.snappy}
-                  />
+                <Icon name={item.icon} size={18} strokeWidth={isSelected ? 2 : 1.7} />
+                <span>{item.label}</span>
+                {badgeCount !== undefined && badgeCount > 0 && (
+                  <span className="tdtu-sidebar__item-badge">
+                    {badgeCount > 99 ? "99+" : badgeCount}
+                  </span>
                 )}
-                <Icon name={item.icon} size={20} />
-                <span className="dock-label">{item.label}</span>
-                {item.id === "workspace" && unreadCount > 0 && <span className="dock-badge-dot" />}
-                {item.id === "notifications" && unreadNotifications > 0 && (
-                  <span className="dock-badge-dot" />
-                )}
-              </motion.button>
+              </button>
             );
           })}
         </aside>
 
         {/* Content Viewport */}
-        <div className="editorial-stage-viewport">
+        <div className="editorial-stage-viewport tdtu-stage">
           {connectionStatus !== "connected" && (
             <div
               className={`network-reconnect-bar status-${connectionStatus}`}
@@ -418,10 +474,8 @@ export function AppShell() {
               <span className="network-reconnect-dot" />
               <span className="network-reconnect-text">
                 {connectionStatus === "connecting" && "Đang kết nối tới máy chủ thời gian thực..."}
-                {connectionStatus === "reconnecting" &&
-                  "Mất kết nối mạng. Đang tự động kết nối lại..."}
-                {connectionStatus === "disconnected" &&
-                  "Mất kết nối với máy chủ. Vui lòng kiểm tra mạng."}
+                {connectionStatus === "reconnecting" && "Mất kết nối mạng. Đang tự động kết nối lại..."}
+                {connectionStatus === "disconnected" && "Mất kết nối với máy chủ. Vui lòng kiểm tra mạng."}
               </span>
               <button
                 type="button"
@@ -438,17 +492,9 @@ export function AppShell() {
             id="main-content"
             className={`editorial-main-content view-${activeView} ${isWorkspaceScope ? "is-workspace-scope" : ""}`}
           >
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={shellViewKey}
-                className="view-transition-wrapper"
-                initial={safe.view.initial}
-                animate={safe.view.animate}
-                exit={safe.view.exit}
-              >
-                {renderPage()}
-              </motion.div>
-            </AnimatePresence>
+            <div className="view-transition-wrapper">
+              {renderPage()}
+            </div>
           </main>
         </div>
       </div>
@@ -471,6 +517,17 @@ export function AppShell() {
           setSearchOpen(false);
         }}
       />
+
+      <AnimatePresence>
+        {logoutConfirmOpen && (
+          <LogoutConfirmDialog
+            onClose={() => {
+              setLogoutConfirmOpen(false);
+              requestAnimationFrame(() => avatarButtonRef.current?.focus());
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

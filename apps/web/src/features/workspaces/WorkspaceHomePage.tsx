@@ -1,163 +1,260 @@
-import { useMemo, useState, type FormEvent } from "react";
-import { AnimatePresence } from "motion/react";
-import { createWorkspaceApi } from "../chat/api";
+import { useMemo, useState, useEffect } from "react";
 import { useApp } from "../../app/providers/AppContext";
-import { Button, Chip, Field } from "../../shared/ui/Primitives";
+import { useSocket } from "../../app/providers/SocketContext";
 import { Icon } from "../../shared/ui/Icon";
+import { FilterPills, KpiStatCard } from "../../shared/ui/Primitives";
+import { governanceApi } from "./api";
 import "./workspace-home.css";
-import { HomePriorities } from "./HomePriorities";
-import { CreateWorkspaceModal, workspaceNameError } from "./CreateWorkspaceModal";
-import { focusFirstInvalid } from "../../shared/lib/interaction";
-import { ambientBridge } from "../../shared/motion/AmbientBackdrop";
+
+interface NewsItem {
+  id: string;
+  category: string;
+  badge?: string;
+  title: string;
+  summary: string;
+  author: string;
+  time: string;
+  scope: string;
+  filterKey: "general" | "training" | "event" | "urgent";
+}
 
 export function WorkspaceHomePage() {
-  const { accessToken, setActiveView, openWorkspace, user, notify } = useApp();
+  const { setActiveView, user, accessToken } = useApp();
+  const { unreadCount: unreadMessages } = useSocket();
 
-  // Modal tạo nhóm mới
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [newWorkspaceName, setNewWorkspaceName] = useState("");
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState("");
+  const [unreadNotifications, setUnreadNotifications] = useState(1);
+  const [selectedFilter, setSelectedFilter] = useState<string>("all");
+
+  useEffect(() => {
+    if (!accessToken) return;
+    void governanceApi<{ unreadCount: number }>(accessToken, "notifications?unread=true")
+      .then((res) => {
+        if (typeof res?.unreadCount === "number") {
+          setUnreadNotifications(res.unreadCount);
+        }
+      })
+      .catch(() => {});
+  }, [accessToken]);
 
   const formattedDate = useMemo(() => {
     try {
-      const raw = new Intl.DateTimeFormat("vi-VN", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }).format(new Date());
-      return raw.charAt(0).toUpperCase() + raw.slice(1);
+      const now = new Date();
+      const day = now.getDate();
+      const month = now.getMonth() + 1;
+      const year = now.getFullYear();
+      const weekdayStr = new Intl.DateTimeFormat("vi-VN", { weekday: "long" }).format(now);
+      const capWeekday = weekdayStr.charAt(0).toUpperCase() + weekdayStr.slice(1);
+      return `${capWeekday}, ${day} tháng ${month}, ${year}`;
     } catch {
-      return "Hôm nay";
+      return "Thứ Hai, 12 tháng 10, 2026";
     }
   }, []);
 
-  const handleCreateWorkspace = async (event: FormEvent) => {
-    event.preventDefault();
-    const trimmed = newWorkspaceName.trim();
-    const validation = workspaceNameError(trimmed);
-    if (validation) {
-      setCreateError(validation);
-      focusFirstInvalid(event.currentTarget.closest(".modal") ?? event.currentTarget);
-      return;
-    }
-    if (!accessToken) return;
+  const calendarDate = useMemo(() => {
+    const now = new Date();
+    const day = now.getDate();
+    const dayOfWeek = now.getDay();
+    const weekdayShort = dayOfWeek === 0 ? "CN" : `T${dayOfWeek + 1}`;
+    return {
+      weekday: weekdayShort,
+      day: day.toString().padStart(2, "0"),
+    };
+  }, []);
 
-    setCreating(true);
-    setCreateError("");
-    try {
-      const created = await createWorkspaceApi(accessToken, trimmed);
-      ambientBridge.pulse();
-      notify("Thành công", `Đã tạo nhóm "${created.name}".`, "success");
-      setCreateModalOpen(false);
-      setNewWorkspaceName("");
-      openWorkspace(created.id, "workspace");
-    } catch (err: unknown) {
-      setCreateError(err instanceof Error ? err.message : "Không thể tạo nhóm làm việc.");
-    } finally {
-      setCreating(false);
-    }
+  const displayName = user?.displayName?.trim() || "Nguyễn Đăng Khoa";
+
+  const filterTabs = [
+    { key: "all", label: "Tất cả" },
+    { key: "general", label: "Thông báo chung" },
+    { key: "training", label: "Đào tạo" },
+    { key: "event", label: "Sự kiện" },
+    { key: "urgent", label: "Khẩn" },
+  ];
+
+  const featuredPost: NewsItem = {
+    id: "1",
+    category: "Thông báo chung",
+    badge: "Mới",
+    title: "đâ",
+    summary: "sdasdas",
+    author: displayName,
+    time: "Vừa xong",
+    scope: "Toàn trường",
+    filterKey: "general",
   };
 
   return (
-    <div className="workspace-home">
-      <div className="workspace-home__unified-card">
-        {/* Hero Greeting Section */}
-        <section className="workspace-home__hero">
-          <div className="workspace-home__greeting">
-            <Chip icon="calendar" className="workspace-home__date-pill">
-              {formattedDate}
-            </Chip>
-            <h1>Xin chào, {user?.displayName ?? "bạn"}</h1>
-            <p>
-              Đây là trạm điều khiển của bạn. Tiếp tục cuộc trò chuyện, vào phòng họp hoặc mở nhóm
-              đang làm việc.
-            </p>
-          </div>
-          <div className="workspace-home__quick-actions">
-            <Button variant="primary" icon="plus" onClick={() => setCreateModalOpen(true)}>
-              Tạo nhóm mới
-            </Button>
-            <Button variant="secondary" icon="users" onClick={() => setActiveView("workspace")}>
-              Mở không gian nhóm
-            </Button>
-            <Button variant="secondary" icon="video" onClick={() => setActiveView("meetings")}>
-              Mở phòng họp
-            </Button>
-          </div>
-        </section>
+    <div className="tdtu-home-container">
+      {/* 1. Lời chào */}
+      <section className="tdtu-home-greeting">
+        <div className="tdtu-home-greeting__date">{formattedDate}</div>
+        <h1 className="tdtu-home-greeting__title">
+          Xin chào, {displayName} 👋
+        </h1>
+        <p className="tdtu-home-greeting__subtitle">
+          Quản trị hệ thống · Tài khoản khoa
+        </p>
+      </section>
 
-        <HomePriorities />
-      </div>
+      {/* 2. Hàng 3 thẻ KPI ngang */}
+      <section className="tdtu-home-kpi-grid">
+        <KpiStatCard
+          icon="bell"
+          tone="purple"
+          value={unreadNotifications > 0 ? unreadNotifications : 1}
+          label="Thông báo chưa đọc"
+          onClick={() => setActiveView("notifications")}
+        />
+        <KpiStatCard
+          icon="message"
+          tone="green"
+          value={unreadMessages || 0}
+          label="Tin nhắn chưa đọc"
+          onClick={() => setActiveView("chat")}
+        />
+        <KpiStatCard
+          icon="video"
+          tone="purple"
+          value={1}
+          label="Cuộc họp sắp tới"
+          onClick={() => setActiveView("meetings")}
+        />
+      </section>
 
-      {/* Modal Tạo Nhóm Mới */}
-      <AnimatePresence>
-        {createModalOpen && (
-          <CreateWorkspaceModal
-            title="Tạo nhóm làm việc mới"
-            eyebrow="TẠO WORKSPACE"
-            onClose={() => {
-              if (!creating) {
-                setCreateModalOpen(false);
-                setCreateError("");
-              }
-            }}
-            footer={
-              <div className="modal-footer-actions">
-                <Button
-                  variant="ghost"
-                  disabled={creating}
-                  onClick={() => {
-                    setCreateModalOpen(false);
-                    setCreateError("");
-                  }}
-                >
-                  Hủy
-                </Button>
-                <Button
-                  type="submit"
-                  form="create-workspace-form"
-                  loading={creating}
-                  disabled={creating || !newWorkspaceName.trim()}
-                >
-                  Tạo nhóm ngay
-                </Button>
+      {/* 3. Khu vực nội dung chính chia 2 cột (Tỷ lệ 2.2fr : 1fr) */}
+      <section className="tdtu-home-main-grid">
+        {/* Cột trái: Bảng tin */}
+        <div className="tdtu-home-feed">
+          <div className="tdtu-home-feed__head">
+            <h2 className="tdtu-home-feed__title">Bảng tin</h2>
+            <FilterPills
+              options={filterTabs}
+              activeKey={selectedFilter}
+              onChange={(key) => {
+                setSelectedFilter(key);
+                if (key === "training") {
+                  setActiveView("elearning");
+                }
+              }}
+            />
+          </div>
+
+          {/* Thẻ bài viết nổi bật chia 2 nửa */}
+          <div className="tdtu-home-featured-card">
+            {/* Nửa trái: Khối màu xanh gradient có icon cái loa */}
+            <div className="tdtu-home-featured-banner">
+              <div className="tdtu-home-featured-banner__deco-circle-1" />
+              <div className="tdtu-home-featured-banner__deco-circle-2" />
+              <div className="tdtu-home-featured-banner__icon">
+                <Icon name="megaphone" size={54} strokeWidth={1.7} />
               </div>
-            }
-          >
-            <form id="create-workspace-form" onSubmit={handleCreateWorkspace}>
-              <p className="modal-lead">
-                Nhóm làm việc là nơi bạn và các thành viên cùng trao đổi tin nhắn thời gian thực và
-                tham gia hội nghị truyền hình SFU bảo mật. Bạn sẽ tự động là{" "}
-                <strong>Quản trị viên (Admin)</strong> của nhóm này.
-              </p>
-              <Field
-                label="Tên nhóm làm việc"
-                hint="Ví dụ: Đội ngũ Frontend, Dự án 2026, Bộ môn Công nghệ mạng"
-                error={createError}
-              >
-                <div className="editorial-input-wrap">
-                  <Icon name="users" size={16} className="editorial-input-icon" />
-                  <input
-                    type="text"
-                    required
-                    maxLength={80}
-                    placeholder="Nhập tên nhóm làm việc…"
-                    value={newWorkspaceName}
-                    onChange={(e) => {
-                      setNewWorkspaceName(e.target.value);
-                      if (createError) setCreateError("");
-                    }}
-                    disabled={creating}
-                    className="editorial-input"
-                  />
+            </div>
+
+            {/* Nửa phải: Nhãn, badge, tiêu đề, tóm tắt, tác giả */}
+            <div className="tdtu-home-featured-content">
+              <div>
+                <div className="tdtu-home-featured-content__tags">
+                  <span className="tdtu-home-featured-chip">
+                    📢 {featuredPost.category}
+                  </span>
+                  {featuredPost.badge && (
+                    <span className="tdtu-home-featured-badge">{featuredPost.badge}</span>
+                  )}
                 </div>
-              </Field>
-            </form>
-          </CreateWorkspaceModal>
-        )}
-      </AnimatePresence>
+                <h3 className="tdtu-home-featured-title">{featuredPost.title}</h3>
+                <p className="tdtu-home-featured-desc">{featuredPost.summary}</p>
+              </div>
+
+              <div className="tdtu-home-featured-footer">
+                <div className="tdtu-home-featured-author-dot" />
+                <span className="tdtu-home-featured-author-text">
+                  {featuredPost.author} · {featuredPost.time} · {featuredPost.scope}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Cột phải: 2 thẻ xếp dọc */}
+        <div className="tdtu-home-side-cards">
+          {/* Thẻ 1: Cuộc họp sắp tới */}
+          <div className="tdtu-home-side-card">
+            <div className="tdtu-home-side-card__head">
+              <h3 className="tdtu-home-side-card__title">Cuộc họp sắp tới</h3>
+              <button
+                type="button"
+                className="tdtu-home-side-card__link"
+                onClick={() => setActiveView("meetings")}
+              >
+                Xem tất cả
+              </button>
+            </div>
+
+            <div className="tdtu-home-meeting-row">
+              <div className="tdtu-home-calendar-tile">
+                <span className="tdtu-home-calendar-tile__weekday">{calendarDate.weekday}</span>
+                <span className="tdtu-home-calendar-tile__day">{calendarDate.day}</span>
+              </div>
+              <div className="tdtu-home-meeting-info">
+                <div className="tdtu-home-meeting-name">Báo cáo dự án</div>
+                <div className="tdtu-home-meeting-time">22:30 · 60 phút</div>
+              </div>
+              <button
+                type="button"
+                className="tdtu-home-detail-btn"
+                onClick={() => setActiveView("meetings")}
+              >
+                Chi tiết
+              </button>
+            </div>
+          </div>
+
+          {/* Thẻ 2: Lối tắt */}
+          <div className="tdtu-home-side-card">
+            <div className="tdtu-home-side-card__head">
+              <h3 className="tdtu-home-side-card__title">Lối tắt</h3>
+            </div>
+
+            <div className="tdtu-home-shortcuts-grid">
+              <button
+                type="button"
+                className="tdtu-home-shortcut-btn"
+                onClick={() => setActiveView("chat")}
+              >
+                <Icon name="message" size={17} />
+                <span>Nhắn tin</span>
+              </button>
+
+              <button
+                type="button"
+                className="tdtu-home-shortcut-btn"
+                onClick={() => setActiveView("meetings")}
+              >
+                <Icon name="video" size={17} />
+                <span>Hội nghị</span>
+              </button>
+
+              <button
+                type="button"
+                className="tdtu-home-shortcut-btn"
+                onClick={() => setActiveView("call-center")}
+              >
+                <Icon name="phone-call" size={17} />
+                <span>Cuộc gọi</span>
+              </button>
+
+              <button
+                type="button"
+                className="tdtu-home-shortcut-btn"
+                onClick={() => setActiveView("workspace")}
+              >
+                <Icon name="users" size={17} />
+                <span>Nhân sự</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

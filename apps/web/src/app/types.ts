@@ -11,7 +11,10 @@ export type ViewId =
   | "invitation"
   | "notifications"
   | "tasks"
-  | "thesis";
+  | "thesis"
+  | "call-center"
+  | "call-directory"
+  | "elearning";
 
 export type PublicScreen = "landing" | "login" | "app";
 export type AuthMode = "login" | "register";

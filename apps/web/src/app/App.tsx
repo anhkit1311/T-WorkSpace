@@ -2,11 +2,8 @@ import { lazy, Suspense, useEffect } from "react";
 import { useApp } from "./providers/AppContext";
 import { useMeeting } from "./providers/MeetingContext";
 import { AnimatePresence, motion } from "motion/react";
-import { AmbientBackdrop } from "../shared/motion/AmbientBackdrop";
-import type { AmbientMood } from "../shared/motion/ambient-scene";
 import { DURATION, EASE_OUT } from "../shared/motion/tokens";
 import { useMotionSafe, motionDebugEnabled } from "../shared/motion/MotionProvider";
-import "./styles/screen-motion.css";
 import { ToastViewport } from "../shared/ui/Primitives";
 
 const LandingPage = lazy(() =>
@@ -37,18 +34,11 @@ export function App() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [screen]);
-  const mood: AmbientMood = screen === "app" ? activeView : screen;
   return (
     <>
       <a className="skip-link" href="#main-content">
         Đi đến nội dung chính
       </a>
-      {/* One persistent backdrop (video + three.js atmosphere); Motion owns only the foreground. */}
-      <AmbientBackdrop
-        mood={mood}
-        tone={screen === "app" ? "workspace" : "public"}
-        active={!(screen === "app" && inCall)}
-      />
       <div className={`screen-stage ${screen !== "app" ? "screen-stage--public" : ""}`}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div

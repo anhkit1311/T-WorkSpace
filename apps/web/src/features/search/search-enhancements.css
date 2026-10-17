@@ -8,9 +8,7 @@
   position: fixed !important;
   inset: 0 !important;
   z-index: 99999 !important;
-  background: rgba(28, 27, 25, 0.36) !important;
-  backdrop-filter: blur(12px) saturate(140%) !important;
-  -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
+  background: rgba(15, 23, 42, 0.45) !important;
   display: flex !important;
   align-items: flex-start !important;
   justify-content: center !important;
@@ -24,20 +22,17 @@
   width: 100% !important;
   max-width: 660px !important;
   max-height: min(720px, calc(100vh - 90px)) !important;
-  background: var(--editorial-surface-popup, rgba(250, 249, 246, 0.96)) !important;
-  backdrop-filter: blur(24px) saturate(150%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(150%) !important;
-  border: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
-  border-radius: 28px !important;
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 14px !important;
   box-shadow:
-    0 24px 64px rgba(28, 27, 25, 0.16),
-    0 4px 16px rgba(28, 27, 25, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.85) !important;
+    0 20px 25px -5px rgba(15, 23, 42, 0.1),
+    0 8px 10px -6px rgba(15, 23, 42, 0.05) !important;
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
-  font-family: var(--font-body, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif) !important;
-  color: var(--nexo-text-primary, #1C1B19) !important;
+  font-family: var(--font-sans, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif) !important;
+  color: #0F172A !important;
 }
 
 /* 3. Search Header */
@@ -45,9 +40,9 @@
   display: flex !important;
   align-items: center !important;
   gap: 10px !important;
-  padding: 16px 20px !important;
-  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
-  background: transparent !important;
+  padding: 14px 18px !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  background: #FFFFFF !important;
 }
 
 .notion-search-input-wrap {
@@ -59,35 +54,35 @@
 
 .notion-search-head-icon {
   position: absolute !important;
-  left: 16px !important;
-  color: var(--nexo-text-muted, #8A8780) !important;
+  left: 14px !important;
+  color: #64748B !important;
   pointer-events: none !important;
   z-index: 2 !important;
 }
 
 .notion-search-input {
   width: 100% !important;
-  height: 46px !important;
-  padding: 0 46px 0 46px !important;
+  height: 42px !important;
+  padding: 0 42px 0 40px !important;
   border-radius: 9999px !important;
-  background: var(--nexo-bg-subtle, #EEECE7) !important;
-  border: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
-  color: var(--nexo-text-primary, #1C1B19) !important;
-  font-size: 14.5px !important;
-  font-family: var(--font-body) !important;
+  background: #F1F5F9 !important;
+  border: 1px solid transparent !important;
+  color: #0F172A !important;
+  font-size: 14px !important;
+  font-family: inherit !important;
   outline: none !important;
-  transition: transform 180ms ease !important, opacity 180ms ease !important, background-color 180ms ease !important, border-color 180ms ease !important, color 180ms ease !important;
+  transition: all 0.15s ease !important;
 }
 
 .notion-search-input::placeholder {
-  color: var(--nexo-text-muted, #8A8780) !important;
+  color: #94A3B8 !important;
 }
 
 .notion-search-input:focus,
 .notion-search-input:focus-visible {
-  background: var(--nexo-bg-ivory, #FAF9F6) !important;
-  border-color: var(--nexo-text-primary, #1C1B19) !important;
-  box-shadow: none !important;
+  background: #FFFFFF !important;
+  border-color: #2563EB !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
 }
 
 .notion-search-clear-btn {

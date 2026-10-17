@@ -667,6 +667,10 @@ export function LoginPage() {
             ) : (
               /* Step: Main Form (Login / Register) */
               <div>
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
+                  <NexoLogo />
+                </div>
+
                 {/* Mode Switcher Tabs */}
                 <div className="editorial-tab-switcher">
                   <button
@@ -692,13 +696,13 @@ export function LoginPage() {
                 </div>
 
                 <h1 className="editorial-auth-title">
-                  {isLogin ? "Bước vào không gian" : "Khởi tạo tài khoản"}
+                  {isLogin ? "Cổng nội bộ TDTU" : "Tạo tài khoản"}
                 </h1>
 
                 <p className="editorial-auth-desc">
                   {isLogin
-                    ? "Đăng nhập để vào không gian cộng tác thời gian thực của nhóm."
-                    : "Đăng ký tài khoản để tạo và tham gia các không gian làm việc số."}
+                    ? "Đăng nhập bằng tài khoản trường hoặc tài khoản Google."
+                    : "Đăng ký tài khoản để truy cập cổng nội bộ và dịch vụ trực tuyến."}
                 </p>
 
                 {errors.general && (

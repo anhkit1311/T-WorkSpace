@@ -1,28 +1,22 @@
-.nexo-lockup {
+.nexo-lockup,
+.tdtu-brand-lockup {
   display: inline-flex;
   align-items: center;
-  gap: 0.2em;
+  gap: 0.35rem;
   color: inherit;
   vertical-align: middle;
   white-space: nowrap;
   line-height: 1;
 }
 
-.nexo-mark {
+.nexo-mark,
+.tdtu-brand-mark {
   display: block;
-  width: 1.12em;
-  height: 1.12em;
+  height: 26px;
+  width: auto;
   flex: 0 0 auto;
 }
 
 .nexo-wordmark {
-  font-family: var(--font-brand, "Playfair Display", Georgia, serif);
-  font-weight: 500;
-  font-style: normal;
-  letter-spacing: -0.045em;
-}
-
-.brand-name .nexo-lockup,
-.brand-name .nexo-wordmark {
-  color: inherit;
+  display: none;
 }

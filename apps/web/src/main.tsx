@@ -7,8 +7,6 @@ import { AppProvider } from "./app/providers/AppContext";
 import { SocketProvider } from "./app/providers/SocketContext";
 import { MeetingProvider } from "./app/providers/MeetingContext";
 import "./app/styles/styles.css";
-import "./app/styles/editorial-workspace.css";
-import "./app/styles/unified-surfaces.css";
 import "./shared/motion/motion.css";
 
 // Consume only the DEV diagnostic flag before the product router reads the URL.

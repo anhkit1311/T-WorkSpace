@@ -538,3 +538,191 @@ export function ConfirmDialog({title,description,confirmLabel,onConfirm,onClose,
     <p>{description}</p>
   </Modal>;
 }
+
+export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: ReactNode;
+  className?: string;
+}
+
+export function Card({ children, className = "", style, ...props }: CardProps) {
+  return (
+    <div
+      className={`card ${className}`.trim()}
+      style={{
+        background: "var(--bg-surface, #FFFFFF)",
+        border: "1px solid var(--border-color, #E2E8F0)",
+        borderRadius: "var(--radius-card, 14px)",
+        padding: "20px",
+        boxShadow: "var(--shadow-card, 0 1px 2px rgba(15, 23, 42, 0.04))",
+        ...style,
+      }}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function Surface({ children, className = "", style, ...props }: CardProps) {
+  return <Card className={`surface ${className}`.trim()} style={style} {...props}>{children}</Card>;
+}
+
+export interface FilterPillOption {
+  key: string;
+  label: string;
+  count?: number;
+}
+
+export interface FilterPillsProps {
+  options: FilterPillOption[];
+  activeKey: string;
+  onChange: (key: string) => void;
+  className?: string;
+}
+
+export function FilterPills({ options, activeKey, onChange, className = "" }: FilterPillsProps) {
+  return (
+    <div className={`filter-pills ${className}`.trim()} style={{ display: "flex", gap: "8px", overflowX: "auto" }}>
+      {options.map((opt) => {
+        const isActive = activeKey === opt.key;
+        return (
+          <button
+            key={opt.key}
+            type="button"
+            className={`filter-pill-btn ${isActive ? "is-active" : ""}`}
+            onClick={() => onChange(opt.key)}
+            style={{
+              padding: "6px 14px",
+              borderRadius: "var(--radius-pill, 9999px)",
+              fontSize: "13px",
+              fontWeight: 500,
+              cursor: "pointer",
+              border: isActive ? "1px solid var(--brand-primary, #2563EB)" : "1px solid var(--border-color, #E2E8F0)",
+              background: isActive ? "var(--brand-primary, #2563EB)" : "var(--bg-surface, #FFFFFF)",
+              color: isActive ? "#FFFFFF" : "var(--text-secondary, #475569)",
+              transition: "all 0.15s ease",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {opt.label}
+            {typeof opt.count === "number" && (
+              <span
+                style={{
+                  marginLeft: "6px",
+                  fontSize: "11px",
+                  padding: "1px 6px",
+                  borderRadius: "9999px",
+                  background: isActive ? "rgba(255, 255, 255, 0.25)" : "var(--bg-subtle, #F1F5F9)",
+                  color: isActive ? "#FFFFFF" : "var(--text-muted, #64748B)",
+                }}
+              >
+                {opt.count}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export interface KpiStatCardProps {
+  icon: IconName;
+  value: string | number;
+  label: string;
+  tone?: "purple" | "green" | "blue" | "amber" | "red";
+  onClick?: () => void;
+  className?: string;
+}
+
+export function KpiStatCard({
+  icon,
+  value,
+  label,
+  tone = "purple",
+  onClick,
+  className = "",
+}: KpiStatCardProps) {
+  const toneBg =
+    tone === "purple"
+      ? "var(--badge-purple-bg, #F3E8FF)"
+      : tone === "green"
+        ? "var(--badge-green-bg, #DCFCE7)"
+        : tone === "blue"
+          ? "#EFF6FF"
+          : tone === "amber"
+            ? "#FEF3C7"
+            : "#FEE2E2";
+
+  const toneText =
+    tone === "purple"
+      ? "var(--badge-purple-text, #7C3AED)"
+      : tone === "green"
+        ? "var(--badge-green-text, #16A34A)"
+        : tone === "blue"
+          ? "#2563EB"
+          : tone === "amber"
+            ? "#D97706"
+            : "#DC2626";
+
+  return (
+    <div
+      className={`kpi-stat-card ${onClick ? "is-clickable" : ""} ${className}`.trim()}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      style={{
+        background: "var(--bg-surface, #FFFFFF)",
+        border: "1px solid var(--border-color, #E2E8F0)",
+        borderRadius: "var(--radius-card, 14px)",
+        padding: "16px 20px",
+        boxShadow: "var(--shadow-card, 0 1px 2px rgba(15, 23, 42, 0.04))",
+        display: "flex",
+        alignItems: "center",
+        gap: "16px",
+        cursor: onClick ? "pointer" : "default",
+        transition: "all 0.15s ease",
+      }}
+    >
+      <div
+        className="kpi-stat-card__icon"
+        style={{
+          width: "42px",
+          height: "42px",
+          borderRadius: "10px",
+          background: toneBg,
+          color: toneText,
+          display: "grid",
+          placeItems: "center",
+          flexShrink: 0,
+        }}
+      >
+        <Icon name={icon} size={22} strokeWidth={1.8} />
+      </div>
+      <div className="kpi-stat-card__body" style={{ display: "flex", flexDirection: "column" }}>
+        <span
+          className="kpi-stat-card__number"
+          style={{
+            fontSize: "20px",
+            fontWeight: 700,
+            color: "var(--text, #0F172A)",
+            lineHeight: 1.15,
+          }}
+        >
+          {value}
+        </span>
+        <span
+          className="kpi-stat-card__label"
+          style={{
+            fontSize: "13px",
+            color: "var(--text-muted, #64748B)",
+            marginTop: "3px",
+          }}
+        >
+          {label}
+        </span>
+      </div>
+    </div>
+  );
+}
+

@@ -27,6 +27,9 @@ const views = new Set([
   "notifications",
   "tasks",
   "thesis",
+  "call-center",
+  "call-directory",
+  "elearning",
 ]);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

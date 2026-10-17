@@ -1,0 +1,852 @@
+/* ==========================================================================
+   TDTU Call Center & Call Directory Stylesheet
+   Minimalist, Flat, Light Theme Matching TDTU Portal Aesthetic
+   ========================================================================== */
+
+.callcenter-page {
+  padding: 24px 32px 48px;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* Page Header */
+.callcenter-header {
+  margin-bottom: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.callcenter-header__title {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.callcenter-header__subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #64748B;
+}
+
+/* Top 3 KPI Cards */
+.callcenter-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.callcenter-kpi-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+[data-theme="dark"] .callcenter-kpi-card {
+  background: #1E293B;
+  border-color: #334155;
+}
+
+.callcenter-kpi-card__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.callcenter-kpi-card__icon--queue {
+  background: #EDE9FE;
+  color: #7C3AED;
+}
+
+.callcenter-kpi-card__icon--agents {
+  background: #ECFDF5;
+  color: #059669;
+}
+
+.callcenter-kpi-card__icon--sla {
+  background: #EFF6FF;
+  color: #2563EB;
+}
+
+.callcenter-kpi-card__number {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0F172A;
+  line-height: 1.1;
+}
+
+[data-theme="dark"] .callcenter-kpi-card__number {
+  color: #F8FAFC;
+}
+
+.callcenter-kpi-card__label {
+  font-size: 13px;
+  color: #64748B;
+  margin-top: 3px;
+}
+
+/* Main 2-Column Layout (70% - 30%) */
+.callcenter-main-grid {
+  display: grid;
+  grid-template-columns: 7fr 3fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* Left Column: Queue & Monitoring */
+.callcenter-left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.callcenter-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.callcenter-pill {
+  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
+  color: #64748B;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 5px 14px;
+  border-radius: 9999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+[data-theme="dark"] .callcenter-pill {
+  background: #1E293B;
+  border-color: #334155;
+  color: #94A3B8;
+}
+
+.callcenter-pill:hover:not(.is-active) {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+.callcenter-pill.is-active {
+  background: #2563EB;
+  color: #FFFFFF;
+  border-color: #2563EB;
+  font-weight: 600;
+}
+
+/* Panel Card */
+.callcenter-panel {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+[data-theme="dark"] .callcenter-panel {
+  background: #1E293B;
+  border-color: #334155;
+}
+
+.callcenter-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.callcenter-panel__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+[data-theme="dark"] .callcenter-panel__title {
+  color: #F8FAFC;
+}
+
+.callcenter-badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #EFF6FF;
+  color: #2563EB;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 9999px;
+}
+
+/* List Items in Queue & Active */
+.call-item-card {
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  background: #F8FAFC;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all 0.15s ease;
+}
+
+[data-theme="dark"] .call-item-card {
+  background: #0F172A;
+  border-color: #334155;
+}
+
+.call-item-card:hover {
+  background: #FFFFFF;
+  border-color: #CBD5E1;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.05);
+}
+
+.call-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.call-item-caller {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+[data-theme="dark"] .call-item-caller {
+  color: #F8FAFC;
+}
+
+.call-item-mssv {
+  font-size: 11.5px;
+  font-weight: 600;
+  background: #EEF2FF;
+  color: #1D4ED8;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.call-item-topic {
+  font-size: 12.5px;
+  color: #64748B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.call-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: #94A3B8;
+}
+
+/* Supervisor Actions Group */
+.call-supervisor-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn-spy, .btn-whisper, .btn-barge {
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+
+.btn-spy {
+  background: #FFFFFF;
+  color: #2563EB;
+}
+.btn-spy:hover, .btn-spy.is-active {
+  background: #EFF6FF;
+  border-color: #93C5FD;
+}
+
+.btn-whisper {
+  background: #FFFFFF;
+  color: #D97706;
+}
+.btn-whisper:hover, .btn-whisper.is-active {
+  background: #FFFBEB;
+  border-color: #FCD34D;
+}
+
+.btn-barge {
+  background: #FFFFFF;
+  color: #7C3AED;
+}
+.btn-barge:hover, .btn-barge.is-active {
+  background: #F5F3FF;
+  border-color: #C4B5FD;
+}
+
+/* Right Column: Web Softphone */
+.softphone-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+[data-theme="dark"] .softphone-card {
+  background: #1E293B;
+  border-color: #334155;
+}
+
+/* Status Selector */
+.softphone-status-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.softphone-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 9999px;
+}
+
+.softphone-status-badge.status-ready {
+  background: #ECFDF5;
+  color: #059669;
+  border: 1px solid #A7F3D0;
+}
+
+.softphone-status-badge.status-break {
+  background: #FFFBEB;
+  color: #D97706;
+  border: 1px solid #FDE68A;
+}
+
+.softphone-status-badge.status-qa_locked {
+  background: #FEF2F2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
+}
+
+/* Call Timer */
+.softphone-timer-box {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+}
+
+[data-theme="dark"] .softphone-timer-box {
+  background: #0F172A;
+  border-color: #334155;
+}
+
+.softphone-timer-digits {
+  font-size: 26px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: #0F172A;
+  letter-spacing: 0.05em;
+}
+
+[data-theme="dark"] .softphone-timer-digits {
+  color: #F8FAFC;
+}
+
+.softphone-timer-status {
+  font-size: 12px;
+  color: #64748B;
+  margin-top: 2px;
+}
+
+/* Keypad Grid 3x4 */
+.softphone-input-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.softphone-dial-input {
+  width: 100%;
+  height: 40px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  background: #FFFFFF;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #0F172A;
+  padding: 0 32px 0 12px;
+  outline: none;
+}
+
+[data-theme="dark"] .softphone-dial-input {
+  background: #0F172A;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+.softphone-backspace-btn {
+  position: absolute;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.softphone-backspace-btn:hover {
+  color: #0F172A;
+}
+
+.softphone-keypad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.softphone-key-btn {
+  height: 42px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+[data-theme="dark"] .softphone-key-btn {
+  background: #0F172A;
+  border-color: #334155;
+}
+
+.softphone-key-btn:hover {
+  background: #EEF2FF;
+  border-color: #BFDBFE;
+}
+
+.softphone-key-btn:active {
+  transform: scale(0.96);
+}
+
+.softphone-key-num {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+  line-height: 1;
+}
+
+[data-theme="dark"] .softphone-key-num {
+  color: #F8FAFC;
+}
+
+.softphone-key-sub {
+  font-size: 9px;
+  font-weight: 600;
+  color: #94A3B8;
+  letter-spacing: 0.05em;
+}
+
+/* Call Control Buttons */
+.softphone-actions-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.softphone-call-btn {
+  height: 42px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+}
+
+.softphone-call-btn.btn-start {
+  background: #10B981;
+  color: #FFFFFF;
+}
+.softphone-call-btn.btn-start:hover {
+  background: #059669;
+}
+
+.softphone-call-btn.btn-hangup {
+  background: #EF4444;
+  color: #FFFFFF;
+}
+.softphone-call-btn.btn-hangup:hover {
+  background: #DC2626;
+}
+
+.softphone-feature-btn {
+  height: 38px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+[data-theme="dark"] .softphone-feature-btn {
+  background: #0F172A;
+  border-color: #334155;
+  color: #CBD5E1;
+}
+
+.softphone-feature-btn:hover {
+  background: #F8FAFC;
+  border-color: #2563EB;
+  color: #2563EB;
+}
+
+/* Video Stage Area */
+.callcenter-video-stage {
+  background: #0F172A;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 14px;
+  position: relative;
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+}
+
+.callcenter-video-stage video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.callcenter-video-controls {
+  position: absolute;
+  bottom: 12px;
+  display: flex;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.75);
+  padding: 6px 12px;
+  border-radius: 9999px;
+}
+
+/* ==========================================================================
+   Call Directory (CDR) Table Styles
+   ========================================================================== */
+.cdr-table-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+[data-theme="dark"] .cdr-table-card {
+  background: #1E293B;
+  border-color: #334155;
+}
+
+.cdr-table-wrapper {
+  overflow-x: auto;
+}
+
+.cdr-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.cdr-table th {
+  background: #F8FAFC;
+  padding: 12px 16px;
+  color: #64748B;
+  font-weight: 600;
+  border-bottom: 1px solid #E2E8F0;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .cdr-table th {
+  background: #0F172A;
+  border-color: #334155;
+}
+
+.cdr-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #F1F5F9;
+  color: #0F172A;
+  vertical-align: middle;
+}
+
+[data-theme="dark"] .cdr-table td {
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+.cdr-table tr:hover td {
+  background: #F8FAFC;
+}
+
+[data-theme="dark"] .cdr-table tr:hover td {
+  background: #162032;
+}
+
+/* Audio Player Pill */
+.audio-player-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #F1F5F9;
+  border-radius: 9999px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+}
+
+.audio-player-pill:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+/* Score Badges */
+.qa-score-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 9999px;
+}
+
+.qa-score-badge.score-high {
+  background: #ECFDF5;
+  color: #059669;
+}
+
+.qa-score-badge.score-mid {
+  background: #FFFBEB;
+  color: #D97706;
+}
+
+.qa-score-badge.score-low {
+  background: #FEF2F2;
+  color: #DC2626;
+}
+
+.qa-score-badge.score-none {
+  background: #F1F5F9;
+  color: #64748B;
+}
+
+/* QA Scoring Drawer */
+.qa-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.qa-drawer {
+  width: min(600px, 100vw);
+  height: 100vh;
+  background: #FFFFFF;
+  box-shadow: -4px 0 24px rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+[data-theme="dark"] .qa-drawer {
+  background: #1E293B;
+}
+
+.qa-drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.qa-drawer__body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+}
+
+.qa-drawer__footer {
+  padding: 16px 24px;
+  border-top: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+[data-theme="dark"] .qa-drawer__footer {
+  background: #0F172A;
+  border-color: #334155;
+}
+
+/* Audio Player in Drawer */
+.qa-audio-box {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+[data-theme="dark"] .qa-audio-box {
+  background: #0F172A;
+  border-color: #334155;
+}
+
+.qa-audio-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.qa-play-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #2563EB;
+  color: #FFFFFF;
+  border: none;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+/* Rubric Scoring Table */
+.qa-rubric-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.qa-rubric-table th {
+  padding: 10px 12px;
+  border-bottom: 1.5px solid #E2E8F0;
+  color: #64748B;
+  font-weight: 600;
+  text-align: left;
+}
+
+.qa-rubric-table td {
+  padding: 12px;
+  border-bottom: 1px solid #F1F5F9;
+  vertical-align: middle;
+}
+
+.qa-score-input {
+  width: 70px;
+  height: 34px;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: #0F172A;
+}
+
+.qa-total-row {
+  background: #F8FAFC;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+[data-theme="dark"] .qa-total-row {
+  background: #0F172A;
+}
+
+/* Lock Warning Box */
+.qa-lock-alert {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  gap: 10px;
+  color: #991B1B;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* Modal Ticket Creator */
+.ticket-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}

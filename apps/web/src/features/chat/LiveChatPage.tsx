@@ -13,7 +13,6 @@ import { AnimatePresence, motion } from "motion/react";
 import { useMotionSafe } from "../../shared/motion/MotionProvider";
 import { DURATION, EASE } from "../../shared/motion/tokens";
 import { ReactionCount } from "../../shared/motion/AnimatedCount";
-import { ambientBridge } from "../../shared/motion/AmbientBackdrop";
 import { useSendFeedback } from "../../shared/motion/useControlMotion";
 import { usePanelDialog } from "../../shared/hooks/usePanelDialog";
 import { channelScroll, rememberChannelScroll } from "../../shared/lib/channel-scroll";
@@ -965,7 +964,6 @@ export function ChatPage() {
         );
       }
       setChannelPreviews((previous) => ({ ...previous, [draft.channelId]: message }));
-      ambientBridge.pulse();
     } catch (reason) {
       const error = reason instanceof Error ? reason.message : "Không thể gửi tin.";
       setOutbox((previous) =>

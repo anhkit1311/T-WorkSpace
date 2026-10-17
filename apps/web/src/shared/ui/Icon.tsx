@@ -78,6 +78,14 @@ import {
   SquarePen,
   EllipsisVertical,
   MessageSquareMore,
+  Megaphone,
+  GraduationCap,
+  Building2,
+  Table as TableIcon,
+  Languages,
+  PhoneCall,
+  Shield,
+  ClipboardList,
   type LucideIcon,
 } from "lucide-react";
 
@@ -161,7 +169,15 @@ export type IconName =
   | "edit"
   | "pencil"
   | "smile"
-  | "thumbs-up";
+  | "thumbs-up"
+  | "megaphone"
+  | "graduation-cap"
+  | "building"
+  | "table"
+  | "languages"
+  | "phone-call"
+  | "shield"
+  | "clipboard";
 
 const icons = {
   activity: Activity,
@@ -244,6 +260,14 @@ const icons = {
   trash: Trash2,
   "at-sign": AtSign,
   refresh: RefreshCw,
+  megaphone: Megaphone,
+  "graduation-cap": GraduationCap,
+  building: Building2,
+  table: TableIcon,
+  languages: Languages,
+  "phone-call": PhoneCall,
+  shield: Shield,
+  clipboard: ClipboardList,
 } satisfies Record<IconName, LucideIcon>;
 
 interface IconProps extends SVGProps<SVGSVGElement> {
@@ -251,28 +275,7 @@ interface IconProps extends SVGProps<SVGSVGElement> {
   size?: number;
 }
 
-export function Icon({ name, size = 18, ...props }: IconProps) {
-  if (name === "home") {
-    return (
-      <svg
-        aria-hidden="true"
-        width={size}
-        height={size}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.85}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        {...props}
-      >
-        <path d="M3 10.6L12 3.2l9 7.4" />
-        <path d="M16.8 4.4v3.4" strokeWidth={2.2} />
-        <path d="M5.6 8.8V18.8a1.7 1.7 0 0 0 1.7 1.7h9.4a1.7 1.7 0 0 0 1.7-1.7V8.8" />
-        <rect x="9.8" y="13.2" width="4.4" height="7.3" rx="0.5" fill="currentColor" stroke="none" />
-      </svg>
-    );
-  }
+export function Icon({ name, size = 18, strokeWidth = 1.7, ...props }: IconProps & { strokeWidth?: number }) {
   const Glyph = icons[name];
-  return <Glyph aria-hidden="true" size={size} strokeWidth={1.8} absoluteStrokeWidth {...props} />;
+  return <Glyph aria-hidden="true" size={size} strokeWidth={strokeWidth} absoluteStrokeWidth {...props} />;
 }

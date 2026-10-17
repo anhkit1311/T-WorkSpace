@@ -8,7 +8,6 @@ import { Button, IconButton, ConfirmDialog } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
 import { AnimatePresence, motion, useIsPresent } from "motion/react";
 import { useMotionSafe } from "../../shared/motion/MotionProvider";
-import { ambientBridge } from "../../shared/motion/AmbientBackdrop";
 import { beforeTaskAt } from "../../shared/lib/interaction";
 import { AttachmentView } from "../chat/ChatAttachment";
 import type { ChannelMember } from "../chat/ThreadPanel";
@@ -18,6 +17,17 @@ import { useDraft } from "../../shared/hooks/useDraft";
 
 const statuses = { todo: "Cần làm", doing: "Đang làm", done: "Hoàn thành" } as const;
 const priorities = { low: "Thấp", normal: "Bình thường", high: "Cao", urgent: "Khẩn cấp" } as const;
+interface CallCenterTicket {
+  id: string;
+  title: string;
+  studentId: string;
+  description: string;
+  status: "todo" | "doing" | "done";
+  priority: "low" | "normal" | "high" | "urgent";
+  branch: string;
+  createdAt: string;
+}
+
 type Board = { tasks: TaskItem[]; truncated: boolean };
 export function TaskBoardPage() {
   const { accessToken, user, route, navigate, notify } = useApp();
@@ -26,6 +36,14 @@ export function TaskBoardPage() {
     [channels, setChannels] = useState<ChannelItem[]>([]),
     [members, setMembers] = useState<ChannelMember[]>([]),
     [board, setBoard] = useState<Board>({ tasks: [], truncated: false });
+  const [ccTickets, setCcTickets] = useState<CallCenterTicket[]>([]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("tdtu_callcenter_tickets");
+      if (raw) setCcTickets(JSON.parse(raw));
+    } catch {}
+  }, []);
   const [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
@@ -201,7 +219,6 @@ export function TaskBoardPage() {
       focusCreateRef.current = true;
       setBoardRevision((n) => n + 1);
       setCreateSuccess(n => n + 1);
-      ambientBridge.pulse();
       notify("Đã tạo nhiệm vụ", undefined, "success", {label:"Mở",onClick:() => navigate({...route,taskId:data.task.id})});
     } catch (reason) {
       fail(reason);
@@ -365,6 +382,34 @@ export function TaskBoardPage() {
           </div>
           {loading && <p role="status">Đang tải công việc…</p>}
           {board.truncated && <p>Hiển thị tối đa 500 nhiệm vụ. Dùng bộ lọc để thu hẹp kết quả.</p>}
+
+          {/* Call Center Integration Alert Banner */}
+          {ccTickets.length > 0 && (
+            <div className="task-callcenter-banner">
+              <div>
+                <strong>Liên thông Tổng đài:</strong> Đang có {ccTickets.length} phiếu yêu cầu học vụ
+                được chuyên viên tạo trực tiếp từ bàn trực Softphone.
+              </div>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  try {
+                    localStorage.removeItem("tdtu_callcenter_tickets");
+                    setCcTickets([]);
+                    notify(
+                      "Đã xử lý tất cả phiếu",
+                      "Toàn bộ phiếu tổng đài đã được hoàn tất và lưu trữ.",
+                      "info",
+                    );
+                  } catch {}
+                }}
+              >
+                Đánh dấu đã hoàn thành
+              </Button>
+            </div>
+          )}
+
           <div className="task-columns">
             {Object.entries(statuses).map(([key, label]) => {
               const items = board.tasks
@@ -386,9 +431,31 @@ export function TaskBoardPage() {
                   }}
                 >
                   <h3>
-                    {label} <span>{items.length}</span>
+                    {label} <span>{items.length + (key === "todo" ? ccTickets.length : 0)}</span>
                   </h3>
-                  {!items.length && <p className="task-empty">Chưa có công việc</p>}
+                  {key === "todo" &&
+                    ccTickets.map((ticket) => (
+                      <article key={ticket.id} className="task-card priority-high">
+                        <span className="task-card-cc-badge">
+                          <Icon name="phone-call" size={12} />
+                          {ticket.branch} · MSSV: {ticket.studentId}
+                        </span>
+                        <div className="task-title" style={{ cursor: "default" }}>
+                          {ticket.title}
+                        </div>
+                        <small style={{ color: "#475569" }}>{ticket.description}</small>
+                        <time>
+                          Tiếp nhận:{" "}
+                          {new Date(ticket.createdAt).toLocaleTimeString("vi-VN", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </time>
+                      </article>
+                    ))}
+                  {!items.length && (key !== "todo" || !ccTickets.length) && (
+                    <p className="task-empty">Chưa có công việc</p>
+                  )}
                   {items.map((task, index) => (
                     <article
                       key={task.id}

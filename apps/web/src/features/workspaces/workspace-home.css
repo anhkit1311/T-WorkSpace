@@ -1,164 +1,489 @@
 /* ==========================================================================
-   Workspace Home Page — Warm Ivory & Floating Dock Layout
-   Matching Reference Mobile Aesthetic (Warm Ivory #FAF9F6, Near-Black #1C1B19)
+   TDTU Workspace Home Page Stylesheet
+   Clean, light, minimal matching 100% TDTU internal portal screenshot
    ========================================================================== */
 
-.workspace-home {
-  padding: 0;
-  margin: 0;
-  max-width: none;
+.tdtu-home-container {
+  padding: 24px 32px 48px;
+  max-width: 1360px;
   width: 100%;
-  flex: 1 1 0;
-  height: 100%;
-  max-height: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
+  margin: 0 auto;
   box-sizing: border-box;
-  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif);
-  color: var(--nexo-text-primary, #1C1B19);
 }
 
-/* --------------------------------------------------------------------------
-   Eyebrow / Small Label (No uppercase, no letter-spacing, ~14px, 500, warm gray)
-   -------------------------------------------------------------------------- */
-.editorial-tag {
-  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif);
-  font-size: var(--nexo-fs-eyebrow, 14px);
+/* Greeting Section */
+.tdtu-home-greeting {
+  margin-bottom: 22px;
+}
+
+.tdtu-home-greeting__date {
+  font-size: 13px;
   font-weight: 500;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--nexo-text-muted, #8A8780);
+  color: #64748B;
+  margin-bottom: 4px;
 }
 
-/* --------------------------------------------------------------------------
-   Single Unified Card Content Pane (Inside .editorial-workspace-body)
-   -------------------------------------------------------------------------- */
-.workspace-home__unified-card {
-  width: 100%;
-  flex: 1 1 0;
-  height: 100%;
-  min-height: 0;
-  box-sizing: border-box;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
-  position: relative;
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
+.tdtu-home-greeting__title {
+  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #0F172A;
   display: flex;
-  flex-direction: column;
-}
-
-/* --------------------------------------------------------------------------
-   Zone 1: Hero Greeting Section (Inside Unified Card)
-   -------------------------------------------------------------------------- */
-.workspace-home__hero {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 28px;
-  padding: clamp(28px, 3.2vw, 40px) clamp(28px, 3.2vw, 44px) clamp(28px, 3.2vw, 36px);
+  gap: 8px;
+  letter-spacing: -0.01em;
+}
+
+.tdtu-home-greeting__subtitle {
   margin: 0;
-  border: 0;
-  border-bottom: 1.5px solid var(--nexo-border-beige, #E6E2DA);
-  border-radius: 0;
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
-  position: relative;
-  flex-wrap: wrap;
-}
-
-.workspace-home__greeting {
-  flex: 1;
-  min-width: 280px;
-  max-width: 780px;
-}
-
-.workspace-home__date-pill {
-  margin-bottom: 14px;
-}
-
-.workspace-home__greeting h1 {
-  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif);
-  font-style: normal;
-  font-size: var(--nexo-fs-hero, clamp(44px, 4.2vw, 48px));
-  font-weight: 750;
-  letter-spacing: -0.02em;
-  color: var(--nexo-text-primary, #1C1B19);
-  margin: 0 0 12px;
-  line-height: 1.1;
-}
-
-.workspace-home__greeting p {
-  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif);
-  font-size: var(--nexo-fs-desc, 15px);
+  font-size: 13px;
+  color: #64748B;
   font-weight: 400;
-  color: var(--nexo-text-muted, #8A8780);
-  margin: 0;
-  line-height: 1.4;
 }
 
-/* --------------------------------------------------------------------------
-   Quick Action Buttons (Inheriting shared Button primary & secondary styles)
-   -------------------------------------------------------------------------- */
-.workspace-home__quick-actions {
+/* 3 Horizontal KPI Cards */
+.tdtu-home-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.tdtu-home-kpi-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 16px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+[data-theme="dark"] .tdtu-home-kpi-card {
+  background: #1E293B;
+  border-color: #334155;
+}
+
+.tdtu-home-kpi-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.06);
+}
+
+.tdtu-home-kpi-card__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
   flex-shrink: 0;
 }
 
-/* --------------------------------------------------------------------------
-   Zone 3: Workspace Groups Section (Inside Unified Card)
-   -------------------------------------------------------------------------- */
-.workspace-home .inline-alert {
-  margin: 20px clamp(28px, 3.2vw, 44px) 0;
+.tdtu-home-kpi-card__icon--bell {
+  background: #EDE9FE;
+  color: #7C3AED;
 }
 
-/* --------------------------------------------------------------------------
-   Workspace Groups (Divided Sections Inside Unified Card — No Separate Boxes)
-   -------------------------------------------------------------------------- */
+.tdtu-home-kpi-card__icon--chat {
+  background: #ECFDF5;
+  color: #059669;
+}
 
-/* --------------------------------------------------------------------------
-   Channels Section inside Workspace Group Row
-   -------------------------------------------------------------------------- */
+.tdtu-home-kpi-card__icon--video {
+  background: #F3E8FF;
+  color: #9333EA;
+}
 
-/* Video channel variant */
+.tdtu-home-kpi-card__body {
+  display: flex;
+  flex-direction: column;
+}
 
-@media (max-width: 900px) {
-  .workspace-home__greeting {
-    min-width: 0;
-  }
-  .workspace-home__quick-actions {
-    width: 100%;
-    min-width: 0;
-    flex-shrink: 1;
+.tdtu-home-kpi-card__number {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0F172A;
+  line-height: 1.1;
+}
+
+[data-theme="dark"] .tdtu-home-kpi-card__number {
+  color: #F8FAFC;
+}
+
+.tdtu-home-kpi-card__label {
+  font-size: 13px;
+  color: #64748B;
+  margin-top: 3px;
+}
+
+/* Two-column Main Section (2.2fr : 1fr) */
+.tdtu-home-main-grid {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* Left Column: Bảng tin */
+.tdtu-home-feed__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.tdtu-home-feed__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+[data-theme="dark"] .tdtu-home-feed__title {
+  color: #F8FAFC;
+}
+
+.tdtu-home-feed__filters {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.tdtu-home-filter-pill {
+  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
+  color: #64748B;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 5px 14px;
+  border-radius: 9999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+[data-theme="dark"] .tdtu-home-filter-pill {
+  background: #1E293B;
+  border-color: #334155;
+  color: #94A3B8;
+}
+
+.tdtu-home-filter-pill:hover:not(.is-active) {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+.tdtu-home-filter-pill.is-active {
+  background: #2563EB;
+  color: #FFFFFF;
+  border-color: #2563EB;
+  font-weight: 600;
+}
+
+/* Featured Article Card (Split 2 Halves) */
+.tdtu-home-featured-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 250px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+[data-theme="dark"] .tdtu-home-featured-card {
+  background: #1E293B;
+  border-color: #334155;
+}
+
+.tdtu-home-featured-banner {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 55%, #1D4ED8 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  min-height: 200px;
+}
+
+.tdtu-home-featured-banner__deco-circle-1 {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+}
+
+.tdtu-home-featured-banner__deco-circle-2 {
+  position: absolute;
+  bottom: -50px;
+  left: -30px;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+.tdtu-home-featured-banner__icon {
+  position: relative;
+  z-index: 2;
+  color: #FFFFFF;
+}
+
+.tdtu-home-featured-content {
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.tdtu-home-featured-content__tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tdtu-home-featured-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #EFF6FF;
+  color: #2563EB;
+  border: 1px solid #DBEAFE;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tdtu-home-featured-badge {
+  background: #EF4444;
+  color: #FFFFFF;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tdtu-home-featured-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+[data-theme="dark"] .tdtu-home-featured-title {
+  color: #F8FAFC;
+}
+
+.tdtu-home-featured-desc {
+  margin: 0;
+  font-size: 14px;
+  color: #64748B;
+  line-height: 1.5;
+}
+
+.tdtu-home-featured-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.tdtu-home-featured-author-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #0F172A;
+  flex-shrink: 0;
+}
+
+.tdtu-home-featured-author-text {
+  font-size: 13px;
+  color: #64748B;
+  font-weight: 500;
+}
+
+/* Right Column: Cuộc họp sắp tới & Lối tắt */
+.tdtu-home-side-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tdtu-home-side-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+[data-theme="dark"] .tdtu-home-side-card {
+  background: #1E293B;
+  border-color: #334155;
+}
+
+.tdtu-home-side-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.tdtu-home-side-card__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+[data-theme="dark"] .tdtu-home-side-card__title {
+  color: #F8FAFC;
+}
+
+.tdtu-home-side-card__link {
+  background: transparent;
+  border: none;
+  color: #2563EB;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.tdtu-home-meeting-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tdtu-home-calendar-tile {
+  width: 44px;
+  height: 48px;
+  background: #EEF2FF;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tdtu-home-calendar-tile__weekday {
+  font-size: 11px;
+  font-weight: 600;
+  color: #2563EB;
+}
+
+.tdtu-home-calendar-tile__day {
+  font-size: 16px;
+  font-weight: 800;
+  color: #1D4ED8;
+  line-height: 1;
+}
+
+.tdtu-home-meeting-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.tdtu-home-meeting-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme="dark"] .tdtu-home-meeting-name {
+  color: #F8FAFC;
+}
+
+.tdtu-home-meeting-time {
+  font-size: 12px;
+  color: #64748B;
+  margin-top: 2px;
+}
+
+.tdtu-home-detail-btn {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.tdtu-home-detail-btn:hover {
+  background: #F8FAFC;
+  border-color: #CBD5E1;
+}
+
+/* Lối tắt 2x2 Grid */
+.tdtu-home-shortcuts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.tdtu-home-shortcut-btn {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1E293B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+[data-theme="dark"] .tdtu-home-shortcut-btn {
+  background: #334155;
+  border-color: #475569;
+  color: #F8FAFC;
+}
+
+.tdtu-home-shortcut-btn svg {
+  color: #2563EB;
+}
+
+.tdtu-home-shortcut-btn:hover {
+  background: #EEF2FF;
+  border-color: #BFDBFE;
+  color: #1D4ED8;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1080px) {
+  .tdtu-home-main-grid {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 768px) {
-  .workspace-home {
-    padding: 0;
+  .tdtu-home-container {
+    padding: 16px 16px 40px;
   }
-  .workspace-home__unified-card {
-    padding: 0 !important;
+  .tdtu-home-kpi-grid {
+    grid-template-columns: 1fr;
   }
-  .workspace-home__hero {
-    padding: 24px 20px !important;
-  }
-  .workspace-home .inline-alert {
-    margin: 16px 20px 0;
-  }
-  .workspace-home__quick-actions .button {
-    flex: 1 1 100%;
+  .tdtu-home-featured-card {
+    grid-template-columns: 1fr;
   }
 }
