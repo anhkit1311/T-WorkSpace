@@ -103,7 +103,7 @@ async function handleRequest(
     ).catch(() => {
       throw new HttpError(503, "NOT_READY", "Máy chủ chưa sẵn sàng.");
     });
-    if (version.rows[0]?.name !== "024_thesis_evaluation.sql")
+    if (version.rows[0]?.name !== "026_direct_messages.sql")
       throw new HttpError(503, "NOT_READY", "Cần chạy migration trước khi phục vụ.");
     sendJson(response, 200, { status: "ready" });
     return;

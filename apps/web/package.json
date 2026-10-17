@@ -15,6 +15,7 @@
   "dependencies": {
     "@doan/shared": "0.1.0",
     "gsap": "^3.15.0",
+    "jssip": "^3.10.1",
     "lucide-react": "^1.47.0",
     "mediasoup-client": "^3.23.2",
     "motion": "^13.2.0",

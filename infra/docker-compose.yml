@@ -15,3 +15,25 @@ services:
       timeout: 3s
       retries: 10
     restart: unless-stopped
+
+  # Call center PBX (plan CC-1). Start with: npm run callcenter:up
+  # The entrypoint refuses to start without ASTERISK_ARI_PASSWORD and ASTERISK_SPIKE_SIP_PASSWORD.
+  asterisk:
+    profiles: ["callcenter"]
+    build: ./asterisk
+    # Asterisk puts its hostname in From/Contact; Docker's default (hex id, may start with a digit)
+    # is not a valid SIP host, and JsSIP drops such requests (OPTIONS, INVITE).
+    hostname: pbx.tdtu.local
+    environment:
+      ARI_PASSWORD: ${ASTERISK_ARI_PASSWORD:-}
+      SPIKE_SIP_PASSWORD: ${ASTERISK_SPIKE_SIP_PASSWORD:-}
+      EXTERNAL_IP: ${ASTERISK_EXTERNAL_IP:-127.0.0.1}
+      ARI_ALLOWED_ORIGINS: ${WEB_ORIGIN:-http://localhost:5173}
+    volumes:
+      # Edit config without rebuilding; restart the container to apply.
+      - ./asterisk/config:/opt/nexo-asterisk:ro
+    ports:
+      - "5060:5060/udp"
+      - "8088:8088/tcp"
+      - "10000-10099:10000-10099/udp"
+    restart: unless-stopped

@@ -77,13 +77,11 @@ interface SidebarMenuItem {
 
 const SIDEBAR_MENU_ITEMS: SidebarMenuItem[] = [
   { id: "home", label: "Trang chủ", icon: "home", targetView: "overview" },
-  { id: "schedule", label: "Thời khóa biểu", icon: "calendar", targetView: "thesis" },
-  { id: "tasks", label: "Bảng phân công", icon: "table", targetView: "tasks" },
   { id: "switchboard", label: "Tổng đài", icon: "grid", targetView: "call-center" },
   { id: "call-list", label: "Danh sách cuộc gọi", icon: "phone-call", targetView: "call-directory" },
-  { id: "messages", label: "Nhắn tin", icon: "message", targetView: "chat", badgeKey: "messages" },
-  { id: "meetings", label: "Hội nghị", icon: "video", targetView: "meetings" },
-  { id: "elearning", label: "Đào tạo (E-Learning)", icon: "graduation-cap", targetView: "elearning" },
+  { id: "meetings", label: "Họp trực tuyến", icon: "video", targetView: "meetings" },
+  { id: "elearning", label: "Khóa học", icon: "graduation-cap", targetView: "elearning" },
+  { id: "messages", label: "Tin nhắn", icon: "message", targetView: "chat", badgeKey: "messages" },
   { id: "staff", label: "Danh sách nhân sự", icon: "users", targetView: "workspace" },
   { id: "departments", label: "Khoa / Phòng ban", icon: "building", targetView: "admin" },
   { id: "notifications", label: "Quản lý thông báo", icon: "bell", targetView: "notifications", badgeKey: "notifications" },
@@ -139,11 +137,9 @@ export function AppShell() {
     else if (activeView === "call-center") setActiveMenuId("switchboard");
     else if (activeView === "call-directory") setActiveMenuId("call-list");
     else if (activeView === "chat") setActiveMenuId("messages");
-    else if (activeView === "tasks") setActiveMenuId("tasks");
     else if (activeView === "meetings") setActiveMenuId("meetings");
     else if (activeView === "notifications") setActiveMenuId("notifications");
     else if (activeView === "elearning") setActiveMenuId("elearning");
-    else if (activeView === "thesis") setActiveMenuId("schedule");
     else if (activeView === "admin") setActiveMenuId("roles");
     else if (activeView === "profile") setActiveMenuId("profile");
     else if (activeView === "workspace") setActiveMenuId("staff");

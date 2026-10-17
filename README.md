@@ -1,39 +1,24 @@
-# nexo — nền tảng cộng tác thời gian thực
+# Dịch vụ call center, video conferencing, e-learning cho TDTU
 
 [Cấu trúc mã nguồn](docs/guides/24-cau-truc-du-an.md) · [Mục lục tài liệu](docs/README.md)
 
-Đồ án: **Phát triển nền tảng không gian làm việc cộng tác thời gian thực tích hợp hội nghị truyền hình đa điểm**.
+Đồ án: **Xây dựng các dịch vụ call center, video conferencing, e-learning cho doanh nghiệp**. Doanh nghiệp áp dụng là Đại học Tôn Đức Thắng (TDTU), dùng nội bộ.
 
-React/TypeScript + Node/Socket.IO + PostgreSQL + mediasoup. Cập nhật **01/10/2026**.
+Kiến trúc modular monolith: React/TypeScript + Node.js/Socket.IO + PostgreSQL; mediasoup (SFU) cho họp và lớp live; Asterisk 22 điều khiển qua ARI cho tổng đài. Cập nhật **17/10/2026**.
 
-## Chức năng
+## Ba dịch vụ
 
-- Cá nhân hóa profile, sở thích/âm nhạc/trạng thái, quyền riêng tư và presence.
-- Chat ảnh/GIF/sticker/voice/file, reaction, thread/mention, pin/bookmark, thông báo và tìm kiếm có bộ lọc.
-- Workspace, owner/admin/member, invitation, private channel, lưu trữ/khôi phục, quota và audit.
-- Kanban: assignment/deadline/checklist/comment/file/source message, stable order, realtime và version conflict.
-- Lịch họp/lobby, host/co-host, waiting/lock/kick/end/raise hand, screen share, worker pool và room affinity.
-- Kết quả cuộc họp: agenda từ lịch, ghi chú chung realtime (khóa theo phiên bản), tạo việc Kanban ngay trong họp và một tin tổng kết tự đăng vào kênh khi phiên kết thúc.
-- URL định danh; home ưu tiên công việc/lịch/thông báo; bản nháp/outbox qua reload; retry chat không tạo trùng.
-- Storage DB/S3, PostgreSQL adapter/presence TTL, readiness/metrics/logs, migration lock và retention.
+| Dịch vụ | Trạng thái |
+| --- | --- |
+| Call center (VoIP) | Đang spike: Asterisk 22 trong Docker, PJSIP UDP/WS, ARI (`infra/asterisk`, `scripts/callcenter`); schema `025_call_center` |
+| Họp trực tuyến | Chạy được: lịch họp, phòng chờ, host/co-host, khóa phòng, giơ tay, chia sẻ màn hình, agenda, biên bản. Còn thiếu ghi hình, danh sách tham dự, phòng hội đồng |
+| E-learning | Mới có giao diện mẫu; chưa có backend |
 
-**Phân hệ quản lý & hướng dẫn đồ án tốt nghiệp** (`/app/thesis`, migration 022–024). Đặc tả: [docs/academic/01-dac-ta-nghiep-vu.md](docs/academic/01-dac-ta-nghiep-vu.md).
+Chat nhóm giữ làm kênh trao đổi nội bộ: ảnh/file/voice, reaction, thread/mention, ghim, tìm kiếm, gửi lại không trùng. Schema chat 1-1 (`026_direct_messages`) đã có; giao diện và API chat 1-1 chưa làm.
 
-- **Vai trò:** quản trị hệ thống, giáo vụ khoa, lãnh đạo khoa, giảng viên, sinh viên. Có phân tách trách nhiệm giữa các vai trò.
-- **Vòng đời đợt đồ án** (7 giai đoạn) có điều kiện chuyển giai đoạn:
-  - nhập danh sách SV và tự xét điều kiện;
-  - đề tài có quy trình duyệt và kiểm tra trùng lặp;
-  - nhóm đăng ký nguyện vọng có thứ tự;
-  - GV nhận nhóm có kiểm tra sức chứa và định mức, và tự tạo không gian làm việc cho đồ án.
-- **Thực hiện đồ án:**
-  - máy trạng thái kiểm soát bằng trigger PostgreSQL;
-  - bản nộp có phiên bản và SHA-256, không sửa được;
-  - nhật ký hướng dẫn phải được hai phía xác nhận.
-- **Phản biện và bảo vệ:** hội đồng 3–5 thành viên (chủ tịch phải là TS); lịch bảo vệ chống trùng giờ bằng `EXCLUDE USING gist`, có thuật toán xếp lịch tự động.
-- **Chấm điểm:** rubric có trọng số; điểm hội đồng lệch nhiều thì chủ tịch phải giải trình; khóa điểm sau khi chốt; sổ cái điểm hash-chain chống sửa; có quy trình phúc khảo.
-- **Báo cáo:** dashboard, cảnh báo đồ án có nguy cơ, xuất CSV, thông báo realtime.
+Nền tảng chung: đăng nhập email OTP và Google, hồ sơ, presence, lưu file DB/S3, metrics, migration có khóa.
 
-Chat/gọi diễn ra trong kênh nhóm; chưa có direct message một-một. Âm nhạc trên profile là thông tin cá nhân, chưa tích hợp dịch vụ streaming.
+Ngoài phạm vi đề tài, vẫn giữ code nhưng đã ẩn khỏi menu chính: Kanban (`/app/tasks`) và phân hệ quản lý đồ án tốt nghiệp (`/app/thesis`, migration 022–024, đặc tả [docs/academic/01-dac-ta-nghiep-vu.md](docs/academic/01-dac-ta-nghiep-vu.md)).
 
 ## Chạy local
 
@@ -60,6 +45,21 @@ Web localhost:5173; API localhost:3001. Vite dùng polling watcher trong develop
 
 Google Sign-In cần đăng ký đúng origin của web trong Google Cloud; xem [xử lý lỗi origin_mismatch](docs/guides/google-oauth-local.md). Dev server dùng cổng của `WEB_ORIGIN` trong `.env` (mẫu mặc định 5173), báo lỗi nếu cổng bận.
 
+### Tổng đài (spike Asterisk 22)
+
+Điền `ASTERISK_ARI_PASSWORD` và `ASTERISK_SPIKE_SIP_PASSWORD` (≥ 12 ký tự) trong `.env`, rồi:
+
+```powershell
+npm run callcenter:up        # build Asterisk 22 từ mã nguồn (lần đầu vài phút), mở 5060/udp, 8088, 10000-10099/udp
+npm run callcenter:ari-spike # in StasisStart khi có cuộc gọi vào ứng dụng ARI "nexo"
+```
+
+- Máy lẻ thử: 1001, 1002 (Zoiper/Linphone, UDP 127.0.0.1:5060) và 1101 (trình duyệt), cùng mật khẩu `ASTERISK_SPIKE_SIP_PASSWORD`.
+- Trang thử JsSIP: `http://localhost:<cổng web>/softphone-test.html` (chỉ có ở dev server).
+- Số thử: 1001/1002/1101 gọi nhau; 8000 echo kiểm tra tiếng; 9000 chuyển vào ARI.
+- SIP trunk: chép `infra/asterisk/config/pjsip_trunk.conf.example` thành `pjsip_trunk.conf` (không đưa vào git), điền thông số nhà cung cấp, chạy lại `npm run callcenter:up`.
+- Máy khác trong LAN: đặt `ASTERISK_EXTERNAL_IP` là IP LAN của máy chạy Docker.
+
 ## Kiểm tra
 
 ```powershell
@@ -85,7 +85,7 @@ Benchmark local50/100/200 socket,2 API process,4tin/giây,30s ×2/mức:732tin,0
 ## API và vận hành
 
 - GET /health: liveness.
-- GET /ready: PostgreSQL và schema đã migrate 021.
+- GET /ready: PostgreSQL và schema đã migrate tới 026.
 - GET /api/openapi.json: danh mục REST; socket types trong packages/shared/src/socket.ts.
 - GET /api/operations/metrics: cần OPERATIONS_TOKEN riêng.
 - SOCKET_ADAPTER=postgres: đồng bộ chat/task/notification giữa node, lease45s/heartbeat15s. WebSocket hoặc sticky-session nếu polling.

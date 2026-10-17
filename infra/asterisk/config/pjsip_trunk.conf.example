@@ -1,0 +1,37 @@
+; Copy to pjsip_trunk.conf (git-ignored) and fill in the provider's parameters (CC-4).
+; Ask for: auth type (register or IP), SIP server and port, codecs, channel count, allowed outbound.
+
+[trunk]
+type = registration
+transport = transport-udp
+outbound_auth = trunk-auth
+server_uri = sip:SIP_SERVER:5060
+client_uri = sip:TRUNK_USERNAME@SIP_SERVER:5060
+retry_interval = 60
+
+[trunk-auth]
+type = auth
+auth_type = userpass
+username = TRUNK_USERNAME
+password = TRUNK_PASSWORD
+
+[trunk]
+type = aor
+contact = sip:SIP_SERVER:5060
+
+[trunk]
+type = endpoint
+transport = transport-udp
+context = from-trunk
+disallow = all
+allow = alaw,ulaw
+outbound_auth = trunk-auth
+aors = trunk
+direct_media = no
+from_user = TRUNK_USERNAME
+
+; Only the provider may send calls to this endpoint.
+[trunk]
+type = identify
+endpoint = trunk
+match = SIP_SERVER

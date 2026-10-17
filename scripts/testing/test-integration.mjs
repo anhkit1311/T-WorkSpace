@@ -13,6 +13,7 @@ const result = spawnSync(
     "services/api/test/storage.test.js",
     "services/api/test/worker-recovery.test.js",
     "services/api/test/academic.test.js",
+    "services/api/test/call-center-schema.test.js",
   ],
   {
     stdio: "inherit",

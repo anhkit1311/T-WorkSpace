@@ -8,7 +8,7 @@ import "./editorial.css";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const HERO_TITLE = "Không gian cộng tác thời gian thực";
+const HERO_TITLE = "Tổng đài, họp trực tuyến và e-learning nội bộ";
 
 const spacesList = [
   {
@@ -20,20 +20,20 @@ const spacesList = [
     desc: "Phòng họp thời gian thực định tuyến qua SFU: mỗi người chỉ gửi một luồng lên máy chủ, có chia sẻ màn hình, chat trong cuộc họp và xuất báo cáo chất lượng kết nối.",
   },
   {
-    id: "chat",
-    name: "Kênh thảo luận nhóm",
-    location: "Trao đổi tức thời đa kênh",
-    specs: "Socket.IO · Chủ đề & nhắc tên · Đính kèm tệp",
-    badge: "Tin nhắn realtime",
-    desc: "Trò chuyện phân kênh theo nhóm, trả lời theo chủ đề, ghim và đánh dấu tin nhắn; lịch sử được lưu trong PostgreSQL và đồng bộ tức thời tới mọi thành viên.",
+    id: "call-center",
+    name: "Tổng đài chăm sóc người học",
+    location: "Một số hotline cho toàn trường",
+    specs: "Asterisk · IVR · Softphone trên web",
+    badge: "Call center",
+    desc: "Cuộc gọi vào hotline được IVR định tuyến tới đúng phòng ban; tổng đài viên nghe máy ngay trên trình duyệt, ghi âm và tạo phiếu yêu cầu cho từng cuộc gọi.",
   },
   {
-    id: "tasks",
-    name: "Bảng quản lý công việc",
-    location: "Điều phối tiến độ dự án",
-    specs: "Kanban · Checklist · Bình luận",
-    badge: "Cộng tác nhóm",
-    desc: "Theo dõi tiến độ trên bảng Kanban theo kênh, phân công người phụ trách, hạn chót và mức ưu tiên; quyền thao tác theo vai trò trong nhóm.",
+    id: "elearning",
+    name: "Đào tạo trực tuyến",
+    location: "Khóa học, bài giảng và kiểm tra",
+    specs: "Video HLS · Quiz · Lớp học trực tiếp",
+    badge: "E-learning",
+    desc: "Giảng viên đăng khóa học, video bài giảng và bài kiểm tra; buổi học trực tiếp mở bằng chính phòng họp trực tuyến của hệ thống.",
   },
 ];
 
@@ -66,22 +66,22 @@ const principles = [
   {
     tag: "01 / TỐI GIẢN GIAO DIỆN",
     heading: "Thanh lọc không gian",
-    desc: "Loại bỏ những hiệu ứng rối mắt, đặt người dùng vào trung tâm của cuộc thảo luận và công việc.",
+    desc: "Loại bỏ những hiệu ứng rối mắt, để cán bộ, giảng viên và sinh viên tập trung vào cuộc gọi, cuộc họp và bài học.",
   },
   {
     tag: "02 / TƯƠNG TÁC LIỀN MẠCH",
     heading: "Chuyển động tự nhiên",
-    desc: "Chuyển trang, mở bảng và gửi tin nhắn phản hồi ngay, chỉ dùng transform và opacity để giữ nhịp 60 khung hình.",
+    desc: "Chuyển trang và mở bảng phản hồi ngay, chỉ dùng transform và opacity để giữ nhịp 60 khung hình.",
   },
   {
     tag: "03 / BỀN BỈ & BẢO MẬT",
     heading: "Nền tảng vững chắc",
-    desc: "Xác thực phiên an toàn, dữ liệu lưu bền vững trong PostgreSQL và phân quyền theo vai trò trong nhóm.",
+    desc: "Xác thực phiên an toàn, dữ liệu lưu bền vững trong PostgreSQL và phân quyền theo vai trò, đơn vị trong trường.",
   },
 ];
 
 const navSections = [
-  { id: "residences", label: "Không gian" },
+  { id: "residences", label: "Dịch vụ" },
   { id: "architecture", label: "Kiến trúc" },
   { id: "philosophy", label: "Triết lý" },
 ];
@@ -341,7 +341,7 @@ export function LandingPage() {
               onClick={handleNavCta}
               className="editorial-pill-btn editorial-pill-btn--sm"
             >
-              {user ? "Vào không gian" : "Bắt đầu ngay"}
+              {user ? "Vào hệ thống" : "Bắt đầu ngay"}
             </button>
           </div>
         </nav>
@@ -368,7 +368,7 @@ export function LandingPage() {
               onClick={handleHeroCta}
               className="editorial-pill-btn editorial-pill-btn--lg"
             >
-              {user ? "Vào không gian làm việc" : "Khám phá không gian"}
+              {user ? "Vào hệ thống" : "Đăng ký tài khoản"}
             </button>
           </div>
         </main>
@@ -377,7 +377,7 @@ export function LandingPage() {
       <section id="residences" className="editorial-section">
         <div className="editorial-section-head">
           <span className="editorial-tag">Hệ sinh thái cộng tác</span>
-          <h2 className="editorial-title">Không gian chuyên biệt</h2>
+          <h2 className="editorial-title">Ba dịch vụ chính</h2>
           <p className="editorial-subtitle">
             Tập trung cao độ với các phân khu chức năng được thiết kế tinh giản, tối ưu hóa trải
             nghiệm tương tác nhóm mà không gây nhiễu loạn thị giác.
@@ -463,7 +463,7 @@ export function LandingPage() {
             onClick={handleHeroCta}
             className="editorial-pill-btn editorial-pill-btn--lg"
           >
-            {user ? "Vào không gian làm việc" : "Trải nghiệm hệ thống ngay"}
+            {user ? "Vào hệ thống" : "Trải nghiệm hệ thống ngay"}
           </button>
         </div>
       </section>
@@ -476,7 +476,7 @@ export function LandingPage() {
                 <NexoLogo />
               </span>
               <p className="editorial-footer-lead">
-                Không gian làm việc cộng tác thời gian thực và hội nghị truyền hình WebRTC SFU.
+                Tổng đài, họp trực tuyến WebRTC SFU và e-learning cho Đại học Tôn Đức Thắng.
               </p>
             </div>
 
@@ -502,15 +502,15 @@ export function LandingPage() {
                 <strong className="editorial-footer-heading">Thông tin đề tài</strong>
                 <ul className="editorial-footer-list editorial-footer-list--muted">
                   <li>Đồ án tốt nghiệp Công nghệ Thông tin</li>
-                  <li>WebRTC SFU · mediasoup · Socket.IO · React</li>
+                  <li>Asterisk · WebRTC SFU · mediasoup · React</li>
                 </ul>
               </div>
             </div>
           </div>
 
           <div className="editorial-footer-bottom">
-            <span>© 2026 nexo Workspace.</span>
-            <span>Realtime Collaborative Architecture · Báo cáo tốt nghiệp CNTT</span>
+            <span>© 2026 TDTU.</span>
+            <span>Hệ thống tổng đài, hội nghị và e-learning · Báo cáo tốt nghiệp CNTT</span>
           </div>
         </div>
       </footer>
