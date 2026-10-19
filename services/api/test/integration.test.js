@@ -21,6 +21,7 @@ import {
   removeWorkspaceMember,
   saveMessage,
 } from "../../../dist/api/modules/workspaces/service.js";
+import { openDirectConversation } from "../../../dist/api/modules/chat/direct.js";
 
 test(
   "PostgreSQL: workspace rights, latest history and socket isolation",
@@ -29,7 +30,7 @@ test(
     const owner = randomUUID(),
       member = randomUUID(),
       outsider = randomUUID();
-    let workspace, privateWorkspace, server;
+    let workspace, privateWorkspace, server, directChannel;
     const sockets = [];
     try {
       for (const id of [owner, member, outsider])
@@ -347,6 +348,16 @@ test(
       assert.deepEqual(sharedProfile.interests, ["Âm nhạc", "Thiết kế"]);
       assert.equal(sharedProfile.contactText, "");
       assert.equal(sharedProfile.showActivity, false);
+      // Sharing a direct conversation is enough to see the other person's profile (DM avatars).
+      const outsiderProfile = async () =>
+        (
+          await fetch(`${base}/api/users/${owner}/profile`, {
+            headers: { Authorization: `Bearer ${await createAccessToken(outsider)}` },
+          })
+        ).status;
+      assert.equal(await outsiderProfile(), 404);
+      directChannel = await openDirectConversation(outsider, owner);
+      assert.equal(await outsiderProfile(), 200);
       const invalidInterests = await fetch(`${base}/auth/profile`, {
         method: "POST",
         headers: { Authorization: `Bearer ${ownerToken}`, "Content-Type": "application/json" },
@@ -681,6 +692,7 @@ test(
       if (workspace) await pool.query(`DELETE FROM workspaces WHERE id=$1`, [workspace.id]);
       if (privateWorkspace)
         await pool.query(`DELETE FROM workspaces WHERE id=$1`, [privateWorkspace.id]);
+      if (directChannel) await pool.query(`DELETE FROM channels WHERE id=$1`, [directChannel.id]);
       await pool.query(`DELETE FROM users WHERE id=ANY($1::uuid[])`, [[owner, member, outsider]]);
       await pool.end();
     }

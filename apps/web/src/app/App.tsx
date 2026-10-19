@@ -5,6 +5,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { DURATION, EASE_OUT } from "../shared/motion/tokens";
 import { useMotionSafe, motionDebugEnabled } from "../shared/motion/MotionProvider";
 import { ToastViewport } from "../shared/ui/Primitives";
+import { MeetingInviteListener } from "../features/meetings/MeetingInviteListener";
+import { GlobalCallBar } from "../features/call-center/GlobalCallBar";
 
 const LandingPage = lazy(() =>
   import("../features/landing/LandingPage").then((m) => ({ default: m.LandingPage })),
@@ -29,7 +31,9 @@ function ScreenFallback() {
 
 export function App() {
   const safe = useMotionSafe();
-  const { screen, activeView } = useApp();
+  const { screen, activeView, isAuthChecking } = useApp();
+  // An /app/ link reloads into the landing screen until the session is restored; show a skeleton instead.
+  const restoring = isAuthChecking && screen === "landing" && window.location.pathname.startsWith("/app/");
   const { inCall } = useMeeting();
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -56,7 +60,7 @@ export function App() {
             }}
           >
             <Suspense fallback={<ScreenFallback />}>
-              {screen === "landing" && <LandingPage />}
+              {screen === "landing" && (restoring ? <ScreenFallback /> : <LandingPage />)}
               {screen === "login" && <LoginPage />}
               {screen === "app" && <AppShell />}
             </Suspense>
@@ -64,6 +68,8 @@ export function App() {
         </AnimatePresence>
       </div>
       <ToastViewport />
+      {screen === "app" && <MeetingInviteListener />}
+      {screen === "app" && <GlobalCallBar />}
       {MotionDebug && <Suspense fallback={null}><MotionDebug /></Suspense>}
     </>
   );

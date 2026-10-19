@@ -209,7 +209,7 @@
   gap: 10px;
   padding: 8px 10px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 6px;
   background: transparent;
   color: var(--nexo-text-primary, #1C1B19);
   font: inherit;

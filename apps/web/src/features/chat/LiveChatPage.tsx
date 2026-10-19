@@ -1,5 +1,6 @@
 import {
   Fragment,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -17,7 +18,16 @@ import { useSendFeedback } from "../../shared/motion/useControlMotion";
 import { usePanelDialog } from "../../shared/hooks/usePanelDialog";
 import { channelScroll, rememberChannelScroll } from "../../shared/lib/channel-scroll";
 import { formatFileSize } from "../../shared/lib/file-size";
-import type { ChannelItem, ChatMessageItem, GroupMemberItem, WorkspaceItem } from "@doan/shared";
+import type {
+  CcTransferDirectory,
+  ChannelItem,
+  ChatMessageItem,
+  DirectConversationItem,
+  DirectFileItem,
+  DirectUserItem,
+  GroupMemberItem,
+  WorkspaceItem,
+} from "@doan/shared";
 import {
   getChannelsApi,
   getMessagesApi,
@@ -31,12 +41,12 @@ import { Avatar, Button, Modal } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
 import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
-import "./chat-live.css";
-import "./chat-media.css";
+import "./chat.css";
 import { AttachmentView } from "./ChatAttachment";
 import type { ChannelMember } from "./ThreadPanel";
 import { useUserAvatars } from "./useUserAvatars";
 import { governanceApi } from "../workspaces/api";
+import { callCenterApi } from "../call-center/api";
 import { isAtLatest, jumpToLatestLabel } from "./jump-latest";
 import { MeetingSummaryCard } from "../meetings/MeetingSummaryCard";
 
@@ -114,6 +124,18 @@ type OutgoingMessage = {
 
 const reactionEmojis = ["👍", "❤️", "😂", "😮", "😢", "🔥", "🎉", "✅"] as const;
 
+/** Whether `next` continues `previous`'s run: same author, same day, within 5 minutes, not a reply. */
+function continuesRun(previous?: ChatMessageItem, next?: ChatMessageItem) {
+  if (!previous || !next || previous.authorId !== next.authorId || next.replyToId) return false;
+  if ((previous.kind ?? "user") !== (next.kind ?? "user")) return false;
+  const gap = new Date(next.createdAt).getTime() - new Date(previous.createdAt).getTime();
+  return (
+    gap >= 0 &&
+    gap < 5 * 60_000 &&
+    new Date(previous.createdAt).toDateString() === new Date(next.createdAt).toDateString()
+  );
+}
+
 export function ChatPage() {
   const safe = useMotionSafe();
   const {
@@ -140,7 +162,9 @@ export function ChatPage() {
   } = useSocket();
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
   const [workspaceId, setWorkspaceId] = useState("");
-  const [channels, setChannels] = useState<ChannelItem[]>([]);
+  // Workspace text channels followed by the user's direct conversations (kind 'direct').
+  const [channels, setChannels] = useState<(ChannelItem | DirectConversationItem)[]>([]);
+  const [peopleResults, setPeopleResults] = useState<DirectUserItem[]>([]);
   const [meetingRoomId, setMeetingRoomId] = useState("");
   const [channelId, setChannelId] = useState("");
   const [channelSearch, setChannelSearch] = useState("");
@@ -155,8 +179,10 @@ export function ChatPage() {
   const [attachmentPreview, setAttachmentPreview] = useState("");
   const [members, setMembers] = useState<GroupMemberItem[]>([]);
   const [showStickers, setShowStickers] = useState(false);
-  // The details panel defaults to closed so the reading and composing area remains spacious.
-  const [showInfoPanel, setShowInfoPanel] = useState(false);
+  // Group channels open without the details panel; the "Tin nhắn" inbox shows the contact beside the chat when it fits.
+  const [showInfoPanel, setShowInfoPanel] = useState(
+    () => route.view === "chat" && window.matchMedia("(min-width: 1101px)").matches,
+  );
   const [mobileChannelDrawerOpen, setMobileChannelDrawerOpen] = useState(false);
   const [wideInfoLayout, setWideInfoLayout] = useState(() => window.matchMedia("(min-width: 961px)").matches);
   const infoPanelRef = usePanelDialog(() => setShowInfoPanel(false), showInfoPanel && !wideInfoLayout, ".live-chat-info-backdrop");
@@ -270,6 +296,75 @@ export function ChatPage() {
 
   const workspace = workspaces.find((w) => w.id === workspaceId);
   const channel = channels.find((c) => c.id === channelId);
+  const isDirect = channel?.kind === "direct";
+  // Embedded in a workspace's "Trao đổi" tab the page keeps the workspace view; otherwise it is "Tin nhắn",
+  // which only lists direct conversations.
+  const chatView = route.view === "workspace" ? "workspace" : "chat";
+  const directOnly = chatView === "chat";
+  const openConversation = (id: string) => navigate({ view: chatView, workspaceId, channelId: id });
+  const directPeer = isDirect ? (channel as DirectConversationItem).peer : undefined;
+  const knownChannelIdsRef = useRef(new Set<string>());
+  knownChannelIdsRef.current = new Set(channels.map((c) => c.id));
+  const directIdsRef = useRef(new Set<string>());
+  directIdsRef.current = new Set(channels.filter((c) => c.kind === "direct").map((c) => c.id));
+  const loadDirects = useCallback(async () => {
+    if (!accessToken) return;
+    const { conversations } = await governanceApi<{ conversations: DirectConversationItem[] }>(
+      accessToken,
+      "direct-conversations",
+    );
+    setChannels((previous) => [...previous.filter((c) => c.kind !== "direct"), ...conversations]);
+    setChannelPreviews((previous) => ({
+      ...previous,
+      ...(Object.fromEntries(
+        conversations.filter((c) => c.lastMessage).map((c) => [c.id, c.lastMessage]),
+      ) as Record<string, ChatMessageItem>),
+    }));
+    return conversations;
+  }, [accessToken]);
+  // Runs even with no channel open: the first message of a conversation someone opened with us.
+  // Messages from the user's other workspaces also land here and only cost one list refresh.
+  useEffect(() => {
+    if (!socket) return;
+    const onNew = (message: ChatMessageItem) => {
+      if (!knownChannelIdsRef.current.has(message.channelId)) void loadDirects().catch(() => {});
+    };
+    socket.on("new_message", onNew);
+    return () => {
+      socket.off("new_message", onNew);
+    };
+  }, [socket, loadDirects]);
+  const [directFiles, setDirectFiles] = useState<DirectFileItem[]>([]);
+  const loadedFileCount = messages.filter((m) => m.attachment).length;
+  useEffect(() => {
+    setDirectFiles([]);
+    if (!accessToken || !isDirect || !showInfoPanel) return;
+    let active = true;
+    governanceApi<{ files: DirectFileItem[] }>(accessToken, `direct-conversations/${channelId}/files?limit=8`)
+      .then((data) => {
+        if (active) setDirectFiles(data.files);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [accessToken, channelId, isDirect, showInfoPanel, loadedFileCount]);
+  // The peer's switchboard extension; only call-center members can read the directory (others get 403, no button).
+  const [peerExtension, setPeerExtension] = useState("");
+  useEffect(() => {
+    setPeerExtension("");
+    if (!accessToken || !directPeer || !showInfoPanel) return;
+    let active = true;
+    callCenterApi<CcTransferDirectory>(accessToken, "transfer-directory")
+      .then((data) => {
+        const extension = data.extensions.find((item) => item.userId === directPeer.userId);
+        if (active && extension) setPeerExtension(extension.number);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [accessToken, directPeer?.userId, showInfoPanel]);
   const readOnly = Boolean(workspace?.archivedAt || channel?.archivedAt);
   const isAdmin = workspace?.role === "owner" || workspace?.role === "admin";
 
@@ -361,6 +456,7 @@ export function ChatPage() {
         if (!active) return;
         setWorkspaces(items);
         setWorkspaceId((old) => {
+          if (routeRef.current.view === "chat") return "";
           const target = routeRef.current.workspaceId;
           if (target) return items.some((item) => item.id === target) ? target : "";
           return items.some((item) => item.id === old) ? old : (items[0]?.id ?? "");
@@ -387,7 +483,9 @@ export function ChatPage() {
         : "",
     );
     setWorkspaceId(
-      target
+      route.view === "chat"
+        ? ""
+        : target
         ? workspaces.some((item) => item.id === target)
           ? target
           : ""
@@ -402,20 +500,25 @@ export function ChatPage() {
     setMembers([]);
     setMessages([]);
     setChannelPreviews({});
-    if (!accessToken || !workspaceId) return;
+    if (!accessToken || loading) return;
     let active = true;
     Promise.all([
-      getChannelsApi(accessToken, workspaceId),
-      getWorkspaceMembersApi(accessToken, workspaceId),
+      workspaceId ? getChannelsApi(accessToken, workspaceId) : [],
+      workspaceId ? getWorkspaceMembersApi(accessToken, workspaceId) : [],
+      governanceApi<{ conversations: DirectConversationItem[] }>(
+        accessToken,
+        "direct-conversations",
+      ),
     ])
-      .then(([items, people]) => {
+      .then(([items, people, direct]) => {
         if (!active || (routeRef.current.view !== "chat" && routeRef.current.view !== "workspace"))
           return;
-        const text = items.filter((c) => c.type === "text");
+        const text = [...items.filter((c) => c.type === "text"), ...direct.conversations];
         setChannels(text);
         setMeetingRoomId(items.find((c) => c.type !== "text")?.id ?? "");
         const target = routeRef.current;
-        if (target.workspaceId === workspaceId && target.channelId) {
+        // A link without a workspace (notification, toast) can only open a direct conversation.
+        if ((target.workspaceId === workspaceId || !target.workspaceId) && target.channelId) {
           const allowed = text.some((item) => item.id === target.channelId);
           setNavigationError(
             allowed
@@ -425,7 +528,7 @@ export function ChatPage() {
           setChannelId(allowed ? target.channelId : "");
         } else {
           setChannelId(text[0]?.id ?? "");
-          navigate({ view: "chat", workspaceId, channelId: text[0]?.id }, true);
+          navigate({ view: routeRef.current.view, workspaceId, channelId: text[0]?.id }, true);
         }
         setMembers(people);
         setChannelPreviews(
@@ -440,10 +543,14 @@ export function ChatPage() {
     return () => {
       active = false;
     };
-  }, [accessToken, workspaceId, revision, navigate]);
+  }, [accessToken, workspaceId, revision, navigate, loading]);
 
   useEffect(() => {
-    if (route.workspaceId === workspaceId && route.channelId && channels.length) {
+    if (
+      (route.workspaceId === workspaceId || !route.workspaceId) &&
+      route.channelId &&
+      channels.length
+    ) {
       const allowed = channels.some((item) => item.id === route.channelId);
       setNavigationError(allowed ? "" : "Kênh không tồn tại hoặc bạn không có quyền truy cập.");
       setChannelId(allowed ? route.channelId : "");
@@ -594,13 +701,17 @@ export function ChatPage() {
           .then((fresh) => {
             if (!active) return;
             const text = fresh.filter((item) => item.type === "text");
-            setChannelPreviews(
-              Object.fromEntries(
+            setChannelPreviews((previous) => ({
+              ...Object.fromEntries(
+                Object.entries(previous).filter(([id]) => directIdsRef.current.has(id)),
+              ),
+              ...(Object.fromEntries(
                 text.filter((item) => item.lastMessage).map((item) => [item.id, item.lastMessage]),
-              ) as Record<string, ChatMessageItem>,
-            );
+              ) as Record<string, ChatMessageItem>),
+            }));
           })
           .catch(fail);
+      if (directIdsRef.current.has(data.channelId)) void loadDirects();
       if (data.channelId !== channelId) return;
       if (data.deleted) {
         setMessages((previous) => previous.filter((m) => m.id !== data.messageId));
@@ -1239,23 +1350,78 @@ export function ChatPage() {
 
 
   const filteredChannels = useMemo(() => {
+    const term = channelSearch.trim().toLowerCase();
     return channels
-      .filter((c) => {
-        const matches = c.name.toLowerCase().includes(channelSearch.toLowerCase());
-        if (!matches) return false;
-        if (filterTab === "favorites") return Boolean(c.pinned);
-        return true;
-      })
+      .filter(
+        (c) =>
+          c.name.toLowerCase().includes(term) && (filterTab !== "favorites" || Boolean(c.pinned)),
+      )
       .sort(
         (a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || a.position - b.position,
       );
   }, [channels, channelSearch, filterTab]);
+  const groupChannels = filteredChannels.filter((c) => c.kind !== "direct");
+  const directConversations = filteredChannels.filter(
+    (c): c is DirectConversationItem => c.kind === "direct",
+  );
+  // People who already have a conversation are not offered again, even when it is filtered out.
+  const newPeople = peopleResults.filter(
+    (person) =>
+      !channels.some(
+        (c) => c.kind === "direct" && (c as DirectConversationItem).peer.userId === person.userId,
+      ),
+  );
+
+  useEffect(() => {
+    const term = channelSearch.trim();
+    setPeopleResults([]);
+    if (!accessToken || term.length < 2 || !directOnly || filterTab === "favorites")
+      return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      void governanceApi<{ users: DirectUserItem[] }>(
+        accessToken,
+        `direct-conversations/users?q=${encodeURIComponent(term)}`,
+        "GET",
+        undefined,
+        controller.signal,
+      )
+        .then((data) => setPeopleResults(data.users))
+        .catch(() => {
+          /* Aborted or failed lookups leave the list empty; typing again retries. */
+        });
+    }, 250);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [accessToken, channelSearch, filterTab, directOnly]);
+
+  async function startDirect(peer: DirectUserItem) {
+    if (!accessToken) return;
+    await mutate(async () => {
+      const { conversation } = await governanceApi<{ conversation: DirectConversationItem }>(
+        accessToken,
+        "direct-conversations",
+        "POST",
+        { userId: peer.userId },
+      );
+      await loadDirects();
+      setChannelSearch("");
+      openConversation(conversation.id);
+      setMobileChannelDrawerOpen(false);
+    });
+  }
 
   const visibleMessages = searchResults ?? messages;
   const avatarOf = useUserAvatars(
     useMemo(
-      () => [...visibleMessages.map((m) => m.authorId), ...members.map((m) => m.userId)],
-      [visibleMessages, members],
+      () => [
+        ...visibleMessages.map((m) => m.authorId),
+        ...members.map((m) => m.userId),
+        ...(directPeer ? [directPeer.userId] : []),
+      ],
+      [visibleMessages, members, directPeer],
     ),
   );
   const draftLink = firstLink(content);
@@ -1266,7 +1432,7 @@ export function ChatPage() {
       : setActiveView("meetings");
 
   return (
-    <section className="live-chat" aria-label="Tin nhắn nhóm">
+    <section className={`live-chat ${directOnly ? "is-inbox" : ""}`} aria-label="Tin nhắn">
       {/* 1. Panel: Conversation List matching mockup */}
       {mobileChannelDrawerOpen && (
         <button
@@ -1279,117 +1445,195 @@ export function ChatPage() {
       <aside
         className={`live-chat-nav ${mobileChannelDrawerOpen ? "is-mobile-open" : ""}`}
         ref={channelsPanelRef}
-        aria-label="Danh sách kênh trong nhóm"
+        aria-label="Danh sách hội thoại"
         role={mobileChannelDrawerOpen ? "dialog" : undefined}
         aria-modal={mobileChannelDrawerOpen || undefined}
       >
-        <div className="live-chat-nav__header">
-          <div className="chat-nav-title-stack">
-            <span className="chat-nav-eyebrow">KÊNH TRONG NHÓM</span>
-            <h2 className="chat-nav-title">Kênh trao đổi</h2>
+        {!directOnly && (
+          <div className="live-chat-nav__header">
+            <span className="chat-nav-section">Hội thoại</span>
+            {isAdmin && workspaceId && (
+              <button
+                type="button"
+                className="chat-nav-compose-btn"
+                title="Quản lý & Tạo kênh"
+                aria-label="Quản lý và tạo kênh"
+                onClick={() => navigate({ view: "admin", workspaceId })}
+              >
+                <Icon name="plus" size={16} />
+              </button>
+            )}
           </div>
-          {isAdmin && workspaceId && (
-            <button
-              type="button"
-              className="chat-nav-compose-btn"
-              title="Quản lý & Tạo kênh"
-              aria-label="Quản lý và tạo kênh"
-              onClick={() => navigate({ view: "admin", workspaceId })}
-            >
-              <Icon name="plus" size={16} />
-            </button>
-          )}
-        </div>
+        )}
 
-        {/* Search Input Pill */}
         <div className="chat-search-pill-box">
           <Icon name="search" size={15} />
           <input
-            type="text"
+            type="search"
             className="chat-search-pill-input"
-            aria-label="Tìm kiếm kênh trong nhóm"
-            placeholder="Tìm kênh # trong nhóm…"
+            aria-label={directOnly ? "Tìm người để nhắn tin" : "Tìm kênh"}
+            placeholder={directOnly ? "Tìm tên hoặc email…" : "Tìm kênh…"}
             value={channelSearch}
             onChange={(e) => setChannelSearch(e.target.value)}
           />
         </div>
 
-        {/* Filter Tabs Pill Row */}
-        <div className="chat-nav-filter-tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={filterTab === "all"}
-            className={`chat-filter-pill ${filterTab === "all" ? "is-active" : ""}`}
-            onClick={() => setFilterTab("all")}
-          >
-            Tất cả
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={filterTab === "favorites"}
-            className={`chat-filter-pill ${filterTab === "favorites" ? "is-active" : ""}`}
-            onClick={() => setFilterTab("favorites")}
-          >
-            Đã ghim
-          </button>
+        <div className="chat-nav-filter-tabs" role="tablist" aria-label="Lọc hội thoại">
+          {(
+            [
+              ["all", "Tất cả"],
+              ["favorites", "Đã ghim"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={filterTab === key}
+              className={`chat-filter-pill ${filterTab === key ? "is-active" : ""}`}
+              onClick={() => setFilterTab(key)}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
-        <nav className="chat-channels-scroll" aria-label="Danh sách kênh">
-          {filteredChannels.length === 0 ? (
-            <p className="live-chat-nav__empty">
-              {channels.length === 0 ? "Nhóm chưa có kênh nào" : "Không tìm thấy kênh phù hợp"}
-            </p>
-          ) : (
-            filteredChannels.map((c: ChannelItem) => {
-              const latest = channelPreviews[c.id];
-              const formattedTime = latest
-                ? new Date(latest.createdAt).toLocaleTimeString("vi-VN", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                : "";
+        <nav className="chat-channels-scroll" aria-label="Hội thoại">
+          {/* "Tin nhắn" lists people, a workspace's "Trao đổi" tab lists its channels. */}
+          {!directOnly && (
+            <>
+              <h3 className="chat-nav-section">Kênh nhóm</h3>
+              {groupChannels.length === 0 ? (
+                <p className="live-chat-nav__empty">
+                  {!workspaceId
+                    ? "Bạn chưa tham gia nhóm nào"
+                    : channelSearch.trim() || filterTab === "favorites"
+                      ? "Không có kênh phù hợp"
+                      : "Nhóm chưa có kênh nào"}
+                </p>
+              ) : (
+                groupChannels.map((c) => {
+                  const latest = channelPreviews[c.id];
+                  const formattedTime = latest
+                    ? new Date(latest.createdAt).toLocaleTimeString("vi-VN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "";
 
-              return (
-                <div key={c.id} className="chat-conversation-item-wrap">
-                  <button
-                    type="button"
-                    className={`chat-conversation-card ${c.id === channelId ? "is-active" : ""}`}
-                    aria-current={c.id === channelId ? "page" : undefined}
-                    onClick={() => {
-                      openChannel(workspaceId, c.id);
-                      setMobileChannelDrawerOpen(false);
-                    }}
-                  >
-                    <div className="chat-convo-hash" aria-hidden="true">
-                      #
+                  return (
+                    <div key={c.id} className="chat-conversation-item-wrap">
+                      <button
+                        type="button"
+                        className={`chat-conversation-card ${c.id === channelId ? "is-active" : ""}`}
+                        aria-current={c.id === channelId ? "page" : undefined}
+                        onClick={() => {
+                          openConversation(c.id);
+                          setMobileChannelDrawerOpen(false);
+                        }}
+                      >
+                        <div className="chat-convo-hash" aria-hidden="true">
+                          #
+                        </div>
+                        <div className="chat-convo-info">
+                          <div className="chat-convo-top">
+                            <strong className="chat-convo-name">#{c.name}</strong>
+                            {formattedTime && (
+                              <time dateTime={latest?.createdAt}>{formattedTime}</time>
+                            )}
+                          </div>
+                          <div className="chat-convo-bottom">
+                            <span className="chat-convo-preview">
+                              {latest ? (
+                                <>
+                                  {latest.authorId === user?.id ? "Bạn: " : ""}
+                                  {latest.content ||
+                                    (latest.attachment ? "Đã gửi tệp đính kèm" : "")}
+                                </>
+                              ) : (
+                                c.description?.trim() || "Chưa có tin nhắn mới"
+                              )}
+                            </span>
+                            <span className="chat-convo-indicators">
+                              {c.muted && (
+                                <Icon
+                                  name="bell-off"
+                                  size={12}
+                                  className="chat-muted-icon"
+                                  aria-label="Đã tắt thông báo"
+                                />
+                              )}
+                              {c.unreadCount ? (
+                                <span
+                                  className="chat-unread-badge-circle"
+                                  aria-label={`${c.unreadCount} tin chưa đọc`}
+                                >
+                                  {c.unreadCount}
+                                </span>
+                              ) : c.pinned ? (
+                                <Icon name="star" size={13} className="chat-pinned-star-icon" />
+                              ) : null}
+                            </span>
+                          </div>
+                        </div>
+                      </button>
                     </div>
-                    <div className="chat-convo-info">
-                      <div className="chat-convo-top">
-                        <strong className="chat-convo-name">#{c.name}</strong>
-                        {formattedTime && <time dateTime={latest?.createdAt}>{formattedTime}</time>}
-                      </div>
-                      <div className="chat-convo-bottom">
-                        <span className="chat-convo-preview">
-                          {latest ? (
-                            <>
-                              {latest.authorId === user?.id ? "Bạn: " : ""}
-                              {latest.content || (latest.attachment ? "Đã gửi tệp đính kèm" : "")}
-                            </>
-                          ) : (
-                            c.description?.trim() || "Chưa có tin nhắn mới"
+                  );
+                })
+              )}
+            </>
+          )}
+
+          {directOnly && (
+            <>
+              {(directConversations.length > 0 || newPeople.length === 0) && (
+                <h3 className="chat-nav-section">Tin nhắn trực tiếp</h3>
+              )}
+              {directConversations.length === 0 && newPeople.length === 0 && (
+                <p className="live-chat-nav__empty">
+                  {channelSearch.trim()
+                    ? "Không tìm thấy người phù hợp"
+                    : filterTab === "favorites"
+                      ? "Chưa ghim cuộc trò chuyện nào"
+                      : "Tìm tên hoặc email ở ô trên để bắt đầu trò chuyện"}
+                </p>
+              )}
+              {directConversations.map((c) => {
+                const latest = channelPreviews[c.id];
+                return (
+                  <div key={c.id} className="chat-conversation-item-wrap">
+                    <button
+                      type="button"
+                      className={`chat-conversation-card ${c.id === channelId ? "is-active" : ""}`}
+                      aria-current={c.id === channelId ? "page" : undefined}
+                      onClick={() => {
+                        openConversation(c.id);
+                        setMobileChannelDrawerOpen(false);
+                      }}
+                    >
+                      <Avatar
+                        name={c.name}
+                        size="sm"
+                        status={onlineUserIds.includes(c.peer.userId) ? "online" : undefined}
+                      />
+                      <div className="chat-convo-info">
+                        <div className="chat-convo-top">
+                          <strong className="chat-convo-name">{c.name}</strong>
+                          {latest && (
+                            <time dateTime={latest.createdAt}>
+                              {new Date(latest.createdAt).toLocaleTimeString("vi-VN", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </time>
                           )}
-                        </span>
-                        <span className="chat-convo-indicators">
-                          {c.muted && (
-                            <Icon
-                              name="bell-off"
-                              size={12}
-                              className="chat-muted-icon"
-                              aria-label="Đã tắt thông báo"
-                            />
-                          )}
+                        </div>
+                        <div className="chat-convo-bottom">
+                          <span className="chat-convo-preview">
+                            {latest
+                              ? `${latest.authorId === user?.id ? "Bạn: " : ""}${latest.content || (latest.attachment ? "Đã gửi tệp đính kèm" : "")}`
+                              : "Chưa có tin nhắn"}
+                          </span>
                           {c.unreadCount ? (
                             <span
                               className="chat-unread-badge-circle"
@@ -1397,16 +1641,37 @@ export function ChatPage() {
                             >
                               {c.unreadCount}
                             </span>
-                          ) : c.pinned ? (
-                            <Icon name="star" size={13} className="chat-pinned-star-icon" />
                           ) : null}
-                        </span>
+                        </div>
                       </div>
+                    </button>
+                  </div>
+                );
+              })}
+              {newPeople.length > 0 && (
+                <>
+                  <h3 className="chat-nav-section">Bắt đầu trò chuyện mới</h3>
+                  {newPeople.map((person) => (
+                    <div key={person.userId} className="chat-conversation-item-wrap">
+                      <button
+                        type="button"
+                        className="chat-conversation-card"
+                        disabled={busy}
+                        onClick={() => void startDirect(person)}
+                      >
+                        <Avatar name={person.displayName} size="sm" />
+                        <div className="chat-convo-info">
+                          <strong className="chat-convo-name">{person.displayName}</strong>
+                          <div className="chat-convo-bottom">
+                            <span className="chat-convo-preview">{person.email}</span>
+                          </div>
+                        </div>
+                      </button>
                     </div>
-                  </button>
-                </div>
-              );
-            })
+                  ))}
+                </>
+              )}
+            </>
           )}
         </nav>
       </aside>
@@ -1430,38 +1695,107 @@ export function ChatPage() {
 
         {/* Active Channel Sub-Header */}
         <header className="chat-main-header">
+          <button
+            type="button"
+            className="chat-icon-btn chat-mobile-list-btn"
+            aria-label="Mở danh sách hội thoại"
+            onClick={() => setMobileChannelDrawerOpen(true)}
+          >
+            <Icon name="chevron-left" size={18} />
+          </button>
           <div className="chat-header-identity">
-            <div className="chat-header-hash" aria-hidden="true">
-              #
-            </div>
+            {directPeer ? (
+              <Avatar
+                name={directPeer.displayName}
+                size="sm"
+                status={onlineUserIds.includes(directPeer.userId) ? "online" : undefined}
+              />
+            ) : (
+              <div className="chat-header-hash" aria-hidden="true">
+                #
+              </div>
+            )}
             <div className="chat-header-title-box">
               <h2 className="chat-header-room-name">
-                {channel ? channel.name : "Chọn kênh trao đổi"}
+                {channel ? channel.name : "Chọn cuộc trò chuyện"}
               </h2>
               <span className="chat-header-room-subtitle">
-                {channel?.description?.trim() ? `${channel.description} • ` : ""}
-                {mentionMembers.length || members.length} thành viên •{" "}
-                {isConnected
-                  ? `${members.filter((m) => onlineUserIds.includes(m.userId)).length} đang trực tuyến`
-                  : connectionStatus === "disconnected"
-                    ? "Mất kết nối"
-                    : "Đang kết nối lại…"}
+                {directPeer ? (
+                  <>
+                    {directPeer.email} •{" "}
+                    {onlineUserIds.includes(directPeer.userId) ? "Đang trực tuyến" : "Ngoại tuyến"}
+                  </>
+                ) : channel ? (
+                  <>
+                    {channel.description?.trim() ? `${channel.description} • ` : ""}
+                    {mentionMembers.length || members.length} thành viên •{" "}
+                    {isConnected
+                      ? `${members.filter((m) => onlineUserIds.includes(m.userId)).length} đang trực tuyến`
+                      : connectionStatus === "disconnected"
+                        ? "Mất kết nối"
+                        : "Đang kết nối lại…"}
+                  </>
+                ) : null}
               </span>
             </div>
           </div>
 
-          <div className="chat-header-action-group">
-            <button
-              type="button"
-              className={`chat-header-icon-btn ${showInfoPanel ? "is-active" : ""}`}
-              title="Thông tin kênh & nhóm"
-              aria-label="Thông tin kênh"
-              aria-expanded={showInfoPanel}
-              onClick={() => setShowInfoPanel(!showInfoPanel)}
-            >
-              <Icon name="more" size={17} />
-            </button>
-          </div>
+          {channel && (
+            <div className="chat-header-action-group">
+              <button
+                type="button"
+                className={`chat-icon-btn ${showInChannelSearch || messageSearch ? "is-active" : ""}`}
+                title="Tìm trong cuộc trò chuyện"
+                aria-label="Tìm trong cuộc trò chuyện"
+                aria-pressed={showInChannelSearch || Boolean(messageSearch)}
+                onClick={() => {
+                  if (showInChannelSearch || messageSearch) {
+                    setShowInChannelSearch(false);
+                    setMessageSearch("");
+                  } else {
+                    setShowInChannelSearch(true);
+                    requestAnimationFrame(() => document.getElementById("message-search")?.focus());
+                  }
+                }}
+              >
+                <Icon name="search" size={17} />
+              </button>
+              <button
+                type="button"
+                className={`chat-icon-btn ${savedMode === "pins" ? "is-active" : ""}`}
+                title="Tin nhắn đã ghim"
+                aria-label="Tin nhắn đã ghim"
+                aria-pressed={savedMode === "pins"}
+                onClick={() => {
+                  setMessageSearch("");
+                  setSavedMode(savedMode === "pins" ? null : "pins");
+                }}
+              >
+                <Icon name="pin" size={17} />
+              </button>
+              {workspace && !isDirect && (
+                <button
+                  type="button"
+                  className="chat-icon-btn"
+                  title="Mở phòng họp của nhóm"
+                  aria-label="Mở phòng họp của nhóm"
+                  onClick={openMeetingRoom}
+                >
+                  <Icon name="video" size={17} />
+                </button>
+              )}
+              <button
+                type="button"
+                className={`chat-icon-btn ${showInfoPanel ? "is-active" : ""}`}
+                title="Thông tin cuộc trò chuyện"
+                aria-label="Thông tin cuộc trò chuyện"
+                aria-expanded={showInfoPanel}
+                onClick={() => setShowInfoPanel(!showInfoPanel)}
+              >
+                <Icon name="info" size={17} />
+              </button>
+            </div>
+          )}
         </header>
 
         {pinnedMessage && (
@@ -1560,7 +1894,7 @@ export function ChatPage() {
             <p role="status" className="loading-note">
               Đang tải cuộc trò chuyện…
             </p>
-          ) : !workspace ? (
+          ) : !workspace && !isDirect && !directOnly ? (
             <div className="chat-empty-state">
               <div className="chat-empty-icon">
                 <Icon name="users" size={24} />
@@ -1574,7 +1908,11 @@ export function ChatPage() {
                 <Icon name="message" size={24} />
               </div>
               <h3>Chưa chọn cuộc trò chuyện</h3>
-              <p>Chọn một kênh ở bên trái để xem tin nhắn hoặc tạo nhóm làm việc mới.</p>
+              <p>
+                {directOnly
+                  ? "Chọn một người ở bên trái, hoặc tìm tên/email để bắt đầu trò chuyện."
+                  : "Chọn một kênh ở bên trái để xem tin nhắn hoặc tạo nhóm làm việc mới."}
+              </p>
             </div>
           ) : !visibleMessages.length ? (
             <div className="chat-empty-state">
@@ -1584,9 +1922,11 @@ export function ChatPage() {
               <h3>
                 {messageSearch
                   ? "Không tìm thấy tin nhắn"
-                  : channel
-                    ? `Chào mừng đến với #${channel.name}`
-                    : "Chưa có kênh văn bản"}
+                  : isDirect
+                    ? `Bắt đầu trò chuyện với ${channel.name}`
+                    : channel
+                      ? `Chào mừng đến với #${channel.name}`
+                      : "Chưa có kênh văn bản"}
               </h3>
               <p>
                 {messageSearch
@@ -1604,6 +1944,9 @@ export function ChatPage() {
                 hour: "2-digit",
                 minute: "2-digit",
               });
+              // Consecutive messages share one name/avatar; the receipt sits on the last one.
+              const grouped = continuesRun(previous, m);
+              const endsRun = !continuesRun(m, visibleMessages[index + 1]);
 
               return (
                 <Fragment key={m.id}>
@@ -1622,171 +1965,75 @@ export function ChatPage() {
                   )}
                   <article
                     data-message-id={m.id}
-                    className={`message-item ${isMine ? "is-mine" : "is-incoming"} ${searchHighlight?.messageId === m.id ? "is-search-target" : ""}`}
+                    className={`message-row ${isMine ? "is-mine" : ""} ${grouped ? "is-grouped" : ""} ${searchHighlight?.messageId === m.id ? "is-search-target" : ""}`}
                     tabIndex={0}
                   >
-                    <div className="message-author-avatar">
-                      <Avatar name={m.authorName} image={avatarOf(m.authorId)} size="sm" />
+                    <div className="message-row__gutter">
+                      {grouped ? (
+                        <time className="message-row__hover-time" dateTime={m.createdAt}>
+                          {formattedTime}
+                        </time>
+                      ) : (
+                        <Avatar name={m.authorName} image={avatarOf(m.authorId)} size="sm" />
+                      )}
                     </div>
-                    <div className="message-item__body">
-                      <span className="chat-author-name-tag">{m.authorName}</span>
-                      {m.replyToId && (
-                        <div className="chat-reply-quote">
-                          <Icon name="arrow-right" size={12} />{" "}
-                          {m.replyToContent === "" ? "Tệp đính kèm" : m.replyToContent ?? "Tin nhắn đã xóa"}
+                    <div className="message-row__main">
+                      {!grouped && (
+                        <div className="message-row__head">
+                          <strong>{m.authorName}</strong>
+                          <time dateTime={m.createdAt} title={new Date(m.createdAt).toLocaleString("vi-VN")}>
+                            {formattedTime}
+                          </time>
                         </div>
                       )}
-                      <div className="message-bubble-row">
-                        {editingId === m.id ? (
-                          <div className="chat-edit-box">
-                            <textarea
-                              value={editingContent}
-                              maxLength={4000}
-                              onChange={(event) => setEditingContent(event.target.value)}
-                            />
-                            <div className="chat-edit-box__actions">
-                              <Button size="sm" variant="ghost" onClick={() => setEditingId("")}>
-                                Hủy
-                              </Button>
-                              <Button
-                                size="sm"
-                                disabled={!editingContent.trim()}
-                                onClick={() => void saveEdit(m.id)}
-                              >
-                                Lưu
-                              </Button>
-                            </div>
-                          </div>
-                        ) : m.kind === "meeting_summary" ? (
-                          <MeetingSummaryCard message={m} />
-                        ) : (
-                          <div className="message-bubble">
-                            {m.content && <MessageText content={m.content.trim()} />}
-                            {m.attachment && accessToken && (
-                              <AttachmentView attachment={m.attachment} accessToken={accessToken} />
-                            )}
-                          </div>
-                        )}
-
-                        {!readOnly && (
-                          <div
-                            className={`chat-message-actions ${reactionPickerId === m.id ? "is-open" : ""}`}
+                      {m.replyToId && (
+                        <div className="message-row__quote">
+                          <Icon name="arrow-right" size={12} />
+                          <span>
+                            {m.replyToContent === ""
+                              ? "Tệp đính kèm"
+                              : (m.replyToContent ?? "Tin nhắn đã xóa")}
+                          </span>
+                        </div>
+                      )}
+                      {editingId === m.id ? (
+                      <div className="chat-edit-box">
+                        <textarea
+                          value={editingContent}
+                          maxLength={4000}
+                          onChange={(event) => setEditingContent(event.target.value)}
+                        />
+                        <div className="chat-edit-box__actions">
+                          <Button size="sm" variant="ghost" onClick={() => setEditingId("")}>
+                            Hủy
+                          </Button>
+                          <Button
+                            size="sm"
+                            disabled={!editingContent.trim()}
+                            onClick={() => void saveEdit(m.id)}
                           >
-                            <div className="chat-reaction-picker-anchor">
-                              <button
-                                type="button"
-                                className={reactionPickerId === m.id ? "is-active" : ""}
-                                title="Thả cảm xúc"
-                                aria-label="Chọn biểu cảm"
-                                aria-expanded={reactionPickerId === m.id}
-                                onClick={() =>
-                                  setReactionPickerId((current) => (current === m.id ? "" : m.id))
-                                }
-                              >
-                                <Icon name="smile" size={14} />
-                              </button>
-                              <AnimatePresence>
-                                {reactionPickerId === m.id && (
-                                  <motion.div
-                                    className="chat-reaction-picker"
-                                    initial={safe.reduced ? false : { opacity: 0, scale: 0.95, y: 4 }}
-                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0 }}
-                                    transition={{
-                                      duration: safe.duration(DURATION.micro),
-                                      ease: EASE.out,
-                                    }}
-                                    style={{ transformOrigin: "bottom left" }}
-                                    role="group"
-                                    aria-label="Chọn biểu cảm"
-                                  >
-                                    {reactionEmojis.map((emoji, idx) => (
-                                      <motion.button
-                                        initial={safe.reduced ? false : { opacity: 0, y: 3 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{
-                                          duration: safe.duration(DURATION.micro),
-                                          delay: safe.duration(idx * 0.02),
-                                        }}
-                                        type="button"
-                                        key={emoji}
-                                        aria-label={`Thả cảm xúc ${emoji}`}
-                                        onClick={() => {
-                                          setReactionPickerId("");
-                                          void messageAction("react_message", {
-                                            messageId: m.id,
-                                            emoji,
-                                          }).catch(fail);
-                                        }}
-                                      >
-                                        {emoji}
-                                      </motion.button>
-                                    ))}
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
-                            </div>
-                            <button
-                              type="button"
-                              title="Trả lời"
-                              aria-label="Trả lời tin nhắn"
-                              onClick={() => {
-                                setReplyTo(m);
-                                composerRef.current?.focus();
-                              }}
-                            >
-                              <Icon name="arrow-right" size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              className={m.pinned ? "is-active" : ""}
-                              title={m.pinned ? "Bỏ ghim" : "Ghim tin nhắn"}
-                              aria-label={m.pinned ? "Bỏ ghim" : "Ghim tin nhắn"}
-                              aria-pressed={Boolean(m.pinned)}
-                              onClick={() => void toggleMessageFlag(m, "pinned")}
-                            >
-                              <Icon name="pin" size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              className={m.bookmarked ? "is-active" : ""}
-                              title={m.bookmarked ? "Bỏ đánh dấu" : "Đánh dấu tin nhắn"}
-                              aria-label={m.bookmarked ? "Bỏ đánh dấu" : "Đánh dấu tin nhắn"}
-                              aria-pressed={Boolean(m.bookmarked)}
-                              onClick={() => void toggleMessageFlag(m, "bookmarked")}
-                            >
-                              <Icon name="bookmark" size={14} />
-                            </button>
-                            {isMine && m.content && m.kind !== "meeting_summary" && (
-                              <button
-                                type="button"
-                                title="Sửa tin nhắn"
-                                aria-label="Sửa tin nhắn"
-                                onClick={() => {
-                                  setEditingId(m.id);
-                                  setEditingContent(m.content);
-                                }}
-                              >
-                                <Icon name="edit" size={14} />
-                              </button>
-                            )}
-                            {isMine && (
-                              <button
-                                type="button"
-                                className="is-danger"
-                                title="Thu hồi tin nhắn"
-                                aria-label="Thu hồi tin nhắn"
-                                onClick={() => setDeleteTarget(m)}
-                              >
-                                <Icon name="trash" size={14} />
-                              </button>
-                            )}
-                          </div>
-                        )}
+                            Lưu
+                          </Button>
+                        </div>
                       </div>
+                      ) : m.kind === "meeting_summary" ? (
+                        <MeetingSummaryCard message={m} />
+                      ) : (
+                        <>
+                          {m.content && (
+                            <div className="message-row__text">
+                              <MessageText content={m.content.trim()} />
+                              {m.editedAt && <span className="message-row__edited"> (đã sửa)</span>}
+                            </div>
+                          )}
+                          {m.attachment && accessToken && (
+                            <AttachmentView attachment={m.attachment} accessToken={accessToken} />
+                          )}
+                        </>
+                      )}
 
                       {(m.pinned || m.bookmarked) && (
-                        <div className="chat-message-flags">
+                        <div className="message-row__flags">
                           {m.pinned && (
                             <span>
                               <Icon name="pin" size={11} /> Đã ghim
@@ -1801,12 +2048,12 @@ export function ChatPage() {
                       )}
 
                       {m.reactions && m.reactions.length > 0 && (
-                        <div className="chat-reactions-dock">
+                        <div className="message-reactions">
                           {m.reactions.map((reaction) => (
                             <button
                               type="button"
                               key={reaction.emoji}
-                              className={`chat-reaction-chip ${reaction.reacted ? "is-active" : ""}`}
+                              className={`message-reaction ${reaction.reacted ? "is-active" : ""}`}
                               aria-label={`${reaction.emoji} ${reaction.count} cảm xúc`}
                               onClick={() =>
                                 void messageAction("react_message", {
@@ -1820,30 +2067,136 @@ export function ChatPage() {
                           ))}
                         </div>
                       )}
-
-                      <div className="message-item__meta">
-                        <time dateTime={m.createdAt}>{formattedTime}</time>
-                        {m.editedAt && <span>· đã sửa</span>}
-                        {isMine &&
-                          ((m.seenCount ?? 0) > 0 ? (
-                            <span
-                              className="message-check-icon is-seen"
-                              title={`${m.seenCount} người đã xem`}
-                              aria-label={`${m.seenCount} người đã xem`}
-                            >
-                              ✓✓
-                            </span>
-                          ) : (
-                            <span
-                              className="message-check-icon"
-                              title="Đã gửi, chưa ai xem"
-                              aria-label="Đã gửi, chưa ai xem"
-                            >
-                              ✓
-                            </span>
-                          ))}
-                      </div>
                     </div>
+
+                    {isMine && endsRun && (
+                      <span
+                        className={`message-row__receipt ${(m.seenCount ?? 0) > 0 ? "is-seen" : ""}`}
+                        title={
+                          (m.seenCount ?? 0) > 0
+                            ? `${m.seenCount} người đã xem`
+                            : "Đã gửi, chưa ai xem"
+                        }
+                      >
+                        {(m.seenCount ?? 0) > 0 ? "✓✓ Đã xem" : "✓ Đã gửi"}
+                      </span>
+                    )}
+
+                    {!readOnly && (
+                      <div
+                        className={`message-actions ${reactionPickerId === m.id ? "is-open" : ""}`}
+                      >
+                        <div className="chat-reaction-picker-anchor">
+                          <button
+                            type="button"
+                            className={reactionPickerId === m.id ? "is-active" : ""}
+                            title="Thả cảm xúc"
+                            aria-label="Chọn biểu cảm"
+                            aria-expanded={reactionPickerId === m.id}
+                            onClick={() =>
+                              setReactionPickerId((current) => (current === m.id ? "" : m.id))
+                            }
+                          >
+                            <Icon name="smile" size={14} />
+                          </button>
+                          <AnimatePresence>
+                            {reactionPickerId === m.id && (
+                              <motion.div
+                                className="chat-reaction-picker"
+                                initial={safe.reduced ? false : { opacity: 0, scale: 0.95, y: 4 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0 }}
+                                transition={{
+                                  duration: safe.duration(DURATION.micro),
+                                  ease: EASE.out,
+                                }}
+                                style={{ transformOrigin: "bottom left" }}
+                                role="group"
+                                aria-label="Chọn biểu cảm"
+                              >
+                                {reactionEmojis.map((emoji, idx) => (
+                                  <motion.button
+                                    initial={safe.reduced ? false : { opacity: 0, y: 3 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{
+                                      duration: safe.duration(DURATION.micro),
+                                      delay: safe.duration(idx * 0.02),
+                                    }}
+                                    type="button"
+                                    key={emoji}
+                                    aria-label={`Thả cảm xúc ${emoji}`}
+                                    onClick={() => {
+                                      setReactionPickerId("");
+                                      void messageAction("react_message", {
+                                        messageId: m.id,
+                                        emoji,
+                                      }).catch(fail);
+                                    }}
+                                  >
+                                    {emoji}
+                                  </motion.button>
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                        <button
+                          type="button"
+                          title="Trả lời"
+                          aria-label="Trả lời tin nhắn"
+                          onClick={() => {
+                            setReplyTo(m);
+                            composerRef.current?.focus();
+                          }}
+                        >
+                          <Icon name="arrow-right" size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className={m.pinned ? "is-active" : ""}
+                          title={m.pinned ? "Bỏ ghim" : "Ghim tin nhắn"}
+                          aria-label={m.pinned ? "Bỏ ghim" : "Ghim tin nhắn"}
+                          aria-pressed={Boolean(m.pinned)}
+                          onClick={() => void toggleMessageFlag(m, "pinned")}
+                        >
+                          <Icon name="pin" size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className={m.bookmarked ? "is-active" : ""}
+                          title={m.bookmarked ? "Bỏ đánh dấu" : "Đánh dấu tin nhắn"}
+                          aria-label={m.bookmarked ? "Bỏ đánh dấu" : "Đánh dấu tin nhắn"}
+                          aria-pressed={Boolean(m.bookmarked)}
+                          onClick={() => void toggleMessageFlag(m, "bookmarked")}
+                        >
+                          <Icon name="bookmark" size={14} />
+                        </button>
+                        {isMine && m.content && m.kind !== "meeting_summary" && (
+                          <button
+                            type="button"
+                            title="Sửa tin nhắn"
+                            aria-label="Sửa tin nhắn"
+                            onClick={() => {
+                              setEditingId(m.id);
+                              setEditingContent(m.content);
+                            }}
+                          >
+                            <Icon name="edit" size={14} />
+                          </button>
+                        )}
+                        {isMine && (
+                          <button
+                            type="button"
+                            className="is-danger"
+                            title="Thu hồi tin nhắn"
+                            aria-label="Thu hồi tin nhắn"
+                            onClick={() => setDeleteTarget(m)}
+                          >
+                            <Icon name="trash" size={14} />
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </article>
                 </Fragment>
               );
@@ -1999,7 +2352,13 @@ export function ChatPage() {
               maxLength={4000}
               rows={1}
               disabled={!channel || busy || readOnly || !draftReady}
-              placeholder={!isConnected ? "Mất kết nối. Đang thử lại…" : "Nhập tin nhắn…"}
+              placeholder={
+                !isConnected
+                  ? "Mất kết nối. Đang thử lại…"
+                  : channel
+                    ? `Nhắn tin tới ${isDirect ? channel.name : `#${channel.name}`}`
+                    : "Chọn một cuộc trò chuyện để nhắn tin"
+              }
               value={content}
               onKeyDown={handleKeyDown}
               onInput={(event) => {
@@ -2058,6 +2417,8 @@ export function ChatPage() {
                 type="button"
                 className="chat-dock-icon-btn"
                 title="Đính kèm tệp"
+                aria-label="Đính kèm tệp"
+                disabled={!channel || sending}
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Icon name="paperclip" size={18} />
@@ -2066,10 +2427,15 @@ export function ChatPage() {
                 type="button"
                 className={`chat-dock-icon-btn ${recording ? "is-recording" : ""}`}
                 title="Tin nhắn thoại"
+                aria-label={recording ? "Dừng ghi âm" : "Tin nhắn thoại"}
+                disabled={!channel || (sending && !recording)}
                 onClick={() => (recording ? stopRecording() : void startRecording())}
               >
                 <Icon name="mic" size={18} />
               </button>
+              <span className="chat-dock-hint" aria-hidden="true">
+                Enter để gửi · Shift + Enter xuống dòng
+              </span>
               <button
                 type="submit"
                 className="chat-dock-send-btn"
@@ -2083,7 +2449,8 @@ export function ChatPage() {
                   sending
                 }
               >
-                <Icon name="send" size={16} />
+                <Icon name="send" size={15} />
+                <span>Gửi</span>
               </button>
             </div>
           </form>
@@ -2091,7 +2458,7 @@ export function ChatPage() {
       </div>
 
       {/* 3. Panel: Right Info Card — Distinguishes Channel Info vs Group Info */}
-      {showInfoPanel && workspace && (
+      {showInfoPanel && (workspace || isDirect) && (
         <button
           type="button"
           className="live-chat-info-backdrop"
@@ -2099,10 +2466,10 @@ export function ChatPage() {
           onClick={() => setShowInfoPanel(false)}
         />
       )}
-      {showInfoPanel && workspace && (
+      {showInfoPanel && (workspace || isDirect) && (
         <motion.aside {...safe.panel} ref={infoPanelRef} role={wideInfoLayout ? undefined : "dialog"} aria-modal={wideInfoLayout ? undefined : true} tabIndex={-1} className="live-chat-info-panel" aria-label="Thông tin kênh và nhóm">
           <div className="chat-info-head">
-            <h3>{channel ? "Thông tin kênh" : "Thông tin nhóm"}</h3>
+            <h3>{isDirect ? "Thông tin liên hệ" : channel ? "Thông tin kênh" : "Thông tin nhóm"}</h3>
             <button
               type="button"
               className="chat-info-close-btn"
@@ -2116,16 +2483,29 @@ export function ChatPage() {
 
           <div className="chat-info-scrollable">
             <div className="chat-info-identity-card">
-              <div className="chat-info-hash-large" aria-hidden="true">
-                #
-              </div>
-              <h2 className="chat-info-title">
-                {channel ? `#${channel.name}` : workspace.name}
-              </h2>
-              <span className="chat-info-member-subtitle">
-                Thuộc nhóm <strong>{workspace.name}</strong> •{" "}
-                {mentionMembers.length || members.length} thành viên
-              </span>
+              {directPeer ? (
+                <>
+                  <Avatar name={directPeer.displayName} image={avatarOf(directPeer.userId)} size="lg" />
+                  <h2 className="chat-info-title">{directPeer.displayName}</h2>
+                  <span className="chat-info-member-subtitle">
+                    {directPeer.email} •{" "}
+                    {onlineUserIds.includes(directPeer.userId) ? "Đang trực tuyến" : "Ngoại tuyến"}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <div className="chat-info-hash-large" aria-hidden="true">
+                    #
+                  </div>
+                  <h2 className="chat-info-title">
+                    {channel ? `#${channel.name}` : workspace?.name}
+                  </h2>
+                  <span className="chat-info-member-subtitle">
+                    Thuộc nhóm <strong>{workspace?.name}</strong> •{" "}
+                    {mentionMembers.length || members.length} thành viên
+                  </span>
+                </>
+              )}
             </div>
 
             <div className="chat-info-action-row">
@@ -2144,6 +2524,34 @@ export function ChatPage() {
                 <span>Tìm kiếm</span>
               </button>
 
+              {directPeer && (
+                <a
+                  className="chat-info-circle-action"
+                  href={`mailto:${directPeer.email}`}
+                  title={`Gửi email tới ${directPeer.email}`}
+                >
+                  <div className="circle-action-icon">
+                    <Icon name="mail" size={18} />
+                  </div>
+                  <span>Email</span>
+                </a>
+              )}
+
+              {peerExtension && (
+                <button
+                  type="button"
+                  className="chat-info-circle-action"
+                  title={`Gọi máy lẻ ${peerExtension} qua tổng đài`}
+                  onClick={() => navigate({ view: "call-center", query: peerExtension })}
+                >
+                  <div className="circle-action-icon">
+                    <Icon name="phone" size={18} />
+                  </div>
+                  <span>Gọi</span>
+                </button>
+              )}
+
+              {workspace && !isDirect && (
               <button
                 type="button"
                 className="chat-info-circle-action"
@@ -2161,7 +2569,9 @@ export function ChatPage() {
                 </div>
                 <span>Công việc</span>
               </button>
+              )}
 
+              {workspace && !isDirect && (
               <button
                 type="button"
                 className="chat-info-circle-action"
@@ -2173,6 +2583,7 @@ export function ChatPage() {
                 </div>
                 <span>Họp nhóm</span>
               </button>
+              )}
             </div>
 
             {channel?.description?.trim() && (
@@ -2184,10 +2595,37 @@ export function ChatPage() {
               </div>
             )}
 
+            {isDirect && (
+              <div className="chat-info-menu-list">
+                <div className="chat-info-section-label">Tệp đã chia sẻ</div>
+                {directFiles.length === 0 ? (
+                  <p className="chat-info-empty">Chưa có tệp nào trong cuộc trò chuyện.</p>
+                ) : (
+                  directFiles.map((file) => (
+                    <button
+                      key={file.id}
+                      type="button"
+                      className="chat-info-menu-item"
+                      title={`${file.uploaderName} · ${new Date(file.createdAt).toLocaleString("vi-VN")}`}
+                      onClick={() => navigate({ ...route, messageId: file.messageId })}
+                    >
+                      <div className="menu-item-left chat-info-file">
+                        <Icon name="file" size={16} />
+                        <span>{file.fileName}</span>
+                      </div>
+                      <small className="chat-info-file-size">{formatFileSize(file.fileSize)}</small>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+
             <div className="chat-info-menu-list">
               {channel && (
                 <>
-                  <div className="chat-info-section-label">Tùy chọn kênh #{channel.name}</div>
+                  <div className="chat-info-section-label">
+                    {isDirect ? "Tùy chọn cuộc trò chuyện" : `Tùy chọn kênh #${channel.name}`}
+                  </div>
                   <button
                     type="button"
                     className="chat-info-menu-item"
@@ -2196,7 +2634,7 @@ export function ChatPage() {
                   >
                     <div className="menu-item-left">
                       <Icon name="star" size={18} fill={channel.pinned ? "currentColor" : "none"} />
-                      <span>Ghim kênh này</span>
+                      <span>{isDirect ? "Ghim cuộc trò chuyện" : "Ghim kênh này"}</span>
                     </div>
                     <div className="menu-item-right">
                       <span className={`chat-info-switch ${channel.pinned ? "is-on" : ""}`}>
@@ -2212,7 +2650,7 @@ export function ChatPage() {
                   >
                     <div className="menu-item-left">
                       <Icon name={channel.muted ? "bell-off" : "bell"} size={18} />
-                      <span>Tắt thông báo kênh</span>
+                      <span>Tắt thông báo</span>
                     </div>
                     <div className="menu-item-right">
                       <span className={`chat-info-switch ${channel.muted ? "is-on" : ""}`}>
@@ -2233,7 +2671,7 @@ export function ChatPage() {
               >
                 <div className="menu-item-left">
                   <Icon name="pin" size={18} />
-                  <span>Tin nhắn ghim trong kênh</span>
+                  <span>Tin nhắn đã ghim</span>
                 </div>
                 <div className="menu-item-right">
                   <Icon name="chevron-right" size={14} />
@@ -2257,6 +2695,8 @@ export function ChatPage() {
                 </div>
               </button>
 
+              {workspace && !isDirect && (
+                <>
               <div className="chat-info-section-label">Thông tin chung của nhóm {workspace.name}</div>
               <button
                 type="button"
@@ -2324,6 +2764,8 @@ export function ChatPage() {
                   <Icon name="chevron-right" size={14} />
                 </div>
               </button>
+                </>
+              )}
             </div>
           </div>
         </motion.aside>

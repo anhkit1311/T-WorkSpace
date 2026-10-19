@@ -3,7 +3,7 @@
    ========================================================================== */
 
 .profile-page {
-  padding: 32px clamp(20px, 3vw, 48px) 80px;
+  padding: 20px 24px 40px;
   max-width: 1040px;
   margin: 0 auto;
   width: 100%;
@@ -29,7 +29,6 @@
 }
 
 .profile-header h1 {
-  font-family: var(--font-display);
   font-style: normal;
   font-size: var(--nexo-fs-section, clamp(28px, 2.8vw, 32px));
   font-weight: 700;
@@ -50,7 +49,7 @@
 .profile-card {
   background: var(--nexo-card-surface, rgba(250, 249, 246, 0.88));
   border: 1px solid var(--nexo-border-beige, #E6E2DA);
-  border-radius: 28px;
+  border-radius: 8px;
   padding: 28px;
   margin-bottom: 28px;
   overflow: hidden;
@@ -156,9 +155,9 @@
   border: 4px solid var(--nexo-bg-ivory, #FAF9F6);
   width: 88px;
   height: 88px;
-  border-radius: 28px;
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 12px 28px rgba(28, 27, 25, 0.14);
+  box-shadow: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -188,9 +187,8 @@
 }
 
 .profile-name-row h2 {
-  font-family: var(--font-display);
   font-style: normal;
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--nexo-text-primary, #1C1B19);
   margin: 0;
@@ -229,7 +227,7 @@
   height: 7px;
   border-radius: 9999px;
   background: #10b981;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+  box-shadow: none;
 }
 
 .profile-activity.is-hidden i {
@@ -241,9 +239,8 @@
    Settings Form & Sections
    -------------------------------------------------------------------------- */
 .profile-section-title {
-  font-family: var(--font-display);
   font-style: normal;
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--nexo-text-primary, #1C1B19);
   margin: 0 0 20px;
@@ -279,7 +276,7 @@
 }
 
 .profile-field-input:is(textarea) {
-  border-radius: 18px;
+  border-radius: 8px;
   min-height: 90px;
   resize: vertical;
   padding: 14px 18px;
@@ -359,7 +356,7 @@
   min-height: var(--nexo-touch-min, 44px);
   padding: 6px 12px;
   margin-top: 8px;
-  border-radius: 12px;
+  border-radius: 8px;
   color: var(--nexo-text-primary, #1C1B19);
   font-size: 14px;
   font-weight: 500;

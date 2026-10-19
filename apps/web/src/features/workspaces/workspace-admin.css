@@ -4,32 +4,30 @@
    ========================================================================== */
 
 .workspace-admin {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 32px clamp(20px, 3vw, 48px) 80px;
+  padding: 20px 24px 40px;
   display: grid;
-  gap: 28px;
+  gap: 16px;
   font-family: var(--font-body, 'Inter', sans-serif);
   color: var(--nexo-text-primary, #1C1B19);
 }
 
 .workspace-admin h1 {
-  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
   font-style: normal;
-  font-size: clamp(2.2rem, 3.5vw, 3rem);
+  font-size: 20px;
   font-weight: 600;
   color: var(--nexo-text-primary, #1C1B19);
-  letter-spacing: -0.015em;
-  margin: 0 0 10px;
+  letter-spacing: normal;
+  margin: 0 0 4px;
 }
 
 .workspace-admin h2 {
-  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
   font-style: normal;
-  font-size: 21px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--nexo-text-primary, #1C1B19);
-  margin: 0 0 14px;
+  margin: 0 0 10px;
 }
 
 .workspace-admin h3 {
@@ -42,17 +40,15 @@
 .workspace-admin p {
   color: var(--nexo-text-muted, #8A8780);
   line-height: 1.6;
-  font-size: 14.5px;
+  font-size: 13px;
 }
 
 .workspace-admin section {
-  padding: 28px;
-  border: 1px solid var(--nexo-border-beige, #E6E2DA);
-  border-radius: 26px;
-  background: var(--nexo-card-surface, rgba(250, 249, 246, 0.88));
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08);
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: none;
 }
 
 .workspace-admin form {
@@ -63,44 +59,44 @@
 
 .workspace-admin label {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   font-size: 12.5px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--nexo-text-muted, #8A8780);
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text-secondary);
 }
 
 .workspace-admin input:not([type="checkbox"]),
 .workspace-admin textarea,
 .workspace-admin select {
   width: 100%;
-  min-height: 44px;
-  background: var(--nexo-bg-ivory, #FAF9F6);
-  border: 1px solid var(--nexo-border-beige, #E6E2DA);
-  color: var(--nexo-text-primary, #1C1B19);
-  border-radius: 9999px;
-  padding: 10px 18px;
+  min-height: 34px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
   font: inherit;
-  font-size: 13.5px;
+  font-size: 13px;
   outline: none !important;
   transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
   box-sizing: border-box;
 }
 
 .workspace-admin textarea {
-  min-height: 90px;
-  border-radius: 18px;
+  min-height: 72px;
+  border-radius: var(--radius-md);
   resize: vertical;
-  padding: 14px 18px;
+  padding: 8px 10px;
 }
 
 .workspace-admin input:focus,
 .workspace-admin textarea:focus,
 .workspace-admin select:focus {
-  border-color: var(--nexo-text-primary, #1C1B19);
-  background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(28, 27, 25, 0.08);
+  border-color: var(--primary);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
   outline: none !important;
 }
 
@@ -113,9 +109,9 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 44px;
+  min-height: 32px;
   text-transform: none;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--nexo-text-primary, #1C1B19);
   cursor: pointer;
@@ -187,4 +183,19 @@
   list-style: none;
   padding: 0;
   margin: 0;
+}
+
+/* margin:auto turns off flex stretch; without a width the page grows to its widest row on phones. */
+.workspace-admin {
+  box-sizing: border-box;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+}
+.workspace-admin > * {
+  min-width: 0;
+}
+@media (max-width: 480px) {
+  .workspace-admin {
+    padding: 14px 12px 32px;
+  }
 }

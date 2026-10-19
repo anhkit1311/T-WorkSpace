@@ -3,11 +3,18 @@ import { useApp } from "../../app/providers/AppContext";
 import { Icon } from "../../shared/ui/Icon";
 import { callCenterStore, QA_RUBRIC_CRITERIA } from "./call-center-store";
 import type { CallRecord } from "./types";
+import { CallCenterWorkspace } from "./CallCenterWorkspace";
 import "./call-center.css";
 
 type FilterTab = "all" | "inbound" | "missed" | "need_qa" | "low_score";
 
+/** "Danh sách cuộc gọi": the real call history (cc_calls, recordings, QA) of the switchboard. */
 export function CallDirectoryPage() {
+  return <CallCenterWorkspace initialTab="history" />;
+}
+
+/** Early UI prototype on local mock records (simulated audio); kept for reference, no longer routed. */
+export function CallDirectoryPrototype() {
   const { notify, setActiveView } = useApp();
 
   const [records, setRecords] = useState<CallRecord[]>(() => callCenterStore.getRecords());

@@ -149,7 +149,9 @@ export async function profileRoutes({
        u.show_contact AS "showContact", u.show_activity AS "showActivity"
        FROM users u WHERE u.id=$1 AND ($1=$2 OR EXISTS (
          SELECT 1 FROM memberships own JOIN memberships viewer ON viewer.workspace_id=own.workspace_id
-         WHERE own.user_id=$1 AND viewer.user_id=$2))`,
+         WHERE own.user_id=$1 AND viewer.user_id=$2) OR EXISTS (
+         SELECT 1 FROM direct_conversations d
+         WHERE d.user_low=LEAST($1::uuid, $2::uuid) AND d.user_high=GREATEST($1::uuid, $2::uuid)))`,
       [targetId, viewerId],
     );
     const profile = result.rows[0];

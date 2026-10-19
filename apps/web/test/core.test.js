@@ -14,7 +14,7 @@ const secondWorkspaceId = "a4b5c6d7-1d86-49a3-b8d6-2d08c213565c";
 const channelId = "c0d0e0b1-20d6-401b-8823-f8de9d22dcad";
 
 test("channel and meeting URLs retain identifiers and search through reload", () => {
-  for (const view of ["chat", "meetings"]) {
+  for (const view of ["workspace", "meetings"]) {
     const target = {
       view,
       workspaceId,
@@ -27,8 +27,18 @@ test("channel and meeting URLs retain identifiers and search through reload", ()
   assert.equal(readAppRoute(new URL("https://collab.test/app/unknown")).invalid, true);
   assert.equal(readAppRoute(new URL("https://collab.test/app/chat?workspace=bad")).invalid, true);
   assert.equal(
-    readAppRoute(new URL(`https://collab.test/app/chat?channel=${channelId}`)).invalid,
+    readAppRoute(new URL(`https://collab.test/app/meetings?channel=${channelId}`)).invalid,
     true,
+  );
+  // A direct conversation has no workspace.
+  assert.deepEqual(readAppRoute(new URL(`https://collab.test/app/chat?channel=${channelId}`)), {
+    view: "chat",
+    channelId,
+  });
+  // Group channels are not listed in "Tin nhắn"; old chat links open the workspace's "Trao đổi" tab.
+  assert.deepEqual(
+    readAppRoute(new URL(`https://collab.test/app/chat?workspace=${workspaceId}&channel=${channelId}`)),
+    { view: "workspace", workspaceId, channelId },
   );
 });
 

@@ -45,6 +45,30 @@ const pages: { id: ViewId; title: string; desc: string; icon: IconName }[] = [
     icon: "home",
   },
   {
+    id: "call-center",
+    title: "Tổng đài",
+    desc: "Bàn làm việc tổng đài viên, softphone, hàng đợi, giám sát, phiếu yêu cầu, VoIP",
+    icon: "headset",
+  },
+  {
+    id: "call-directory",
+    title: "Danh sách cuộc gọi",
+    desc: "Lịch sử cuộc gọi, ghi âm, kết quả & chấm điểm chất lượng",
+    icon: "phone-call",
+  },
+  {
+    id: "elearning",
+    title: "Khóa học",
+    desc: "E-learning: bài video, tài liệu, bài kiểm tra, chứng nhận",
+    icon: "graduation-cap",
+  },
+  {
+    id: "thesis",
+    title: "Đồ án tốt nghiệp",
+    desc: "Đề tài, hướng dẫn, hội đồng bảo vệ & điểm",
+    icon: "book",
+  },
+  {
     id: "workspace",
     title: "Nhóm làm việc",
     desc: "Không gian nhóm, tổng quan hoạt động, thành viên & chức năng nhóm",
@@ -550,7 +574,7 @@ export function NotionSearchModal({
                                 {message.workspaceName}
                               </span>
                               <span className="notion-search-channel-pill">
-                                #{message.channelName}
+                                {message.workspaceId ? `#${message.channelName}` : message.channelName}
                               </span>
                             </div>
                             <div className="notion-search-message-meta">

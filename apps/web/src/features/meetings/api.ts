@@ -1,5 +1,5 @@
 import { ApiError } from "../auth/api";
-import type { MeetingNotes, MeetingOutcomes, MeetingScheduleItem, TaskItem } from "@doan/shared";
+import type { MeetingAttendance, MeetingRecordings, MeetingNotes, MeetingOutcomes, MeetingScheduleItem, TaskItem } from "@doan/shared";
 
 export type MeetingHistoryItem = {
   id: string;
@@ -32,6 +32,7 @@ export type MeetingScheduleInput = {
   startsAt: string;
   endsAt: string;
   agenda?: string[];
+  committeeId?: string | null;
 };
 
 async function scheduleRequest<T>(
@@ -165,4 +166,91 @@ export async function createMeetingTaskApi(
 ) {
   return (await outcomeRequest<{ task: TaskItem }>(accessToken, sessionId, "tasks", "POST", input))
     .task;
+}
+
+export async function getMeetingAttendanceApi(accessToken: string, sessionId: string) {
+  return (await outcomeRequest<{ attendance: MeetingAttendance }>(accessToken, sessionId, "attendance"))
+    .attendance;
+}
+
+/** MT-2: the register as CSV; Excel opens it directly thanks to the BOM the API adds. */
+export async function downloadMeetingAttendanceApi(accessToken: string, sessionId: string, fileName: string) {
+  const response = await fetch(
+    `${import.meta.env.VITE_API_URL ?? ""}/api/meetings/sessions/${sessionId}/attendance.csv`,
+    { credentials: "include", headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new ApiError(response.status, data.error?.code ?? "EXPORT_FAILED", data.error?.message ?? "Không xuất được tệp.");
+  }
+  const url = URL.createObjectURL(await response.blob());
+  // Content-Disposition is not exposed cross-origin, so the page names the file itself.
+  Object.assign(document.createElement("a"), { href: url, download: fileName }).click();
+  URL.revokeObjectURL(url);
+}
+
+const recordingsBase = () => `${import.meta.env.VITE_API_URL ?? ""}/api/meetings`;
+
+async function meetingsRequest<T>(accessToken: string, path: string, method = "GET", body?: unknown): Promise<T> {
+  const response = await fetch(`${recordingsBase()}/${path}`, {
+    method,
+    credentials: "include",
+    headers: { Authorization: `Bearer ${accessToken}`, ...(body ? { "Content-Type": "application/json" } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok)
+    throw new ApiError(response.status, data.error?.code ?? "UNKNOWN_ERROR", data.error?.message ?? "Không thực hiện được thao tác.");
+  return data as T;
+}
+
+export const getMeetingRecordingsApi = (accessToken: string, sessionId: string) =>
+  meetingsRequest<MeetingRecordings>(accessToken, `sessions/${sessionId}/recordings`);
+export const startMeetingRecordingApi = (accessToken: string, sessionId: string) =>
+  meetingsRequest<{ id: string }>(accessToken, `sessions/${sessionId}/recordings`, "POST");
+export const stopMeetingRecordingApi = (accessToken: string, recordingId: string) =>
+  meetingsRequest<{ ok: true }>(accessToken, `recordings/${recordingId}/stop`, "POST");
+export const shareMeetingRecordingApi = (accessToken: string, recordingId: string, shared: boolean) =>
+  meetingsRequest<{ ok: true }>(accessToken, `recordings/${recordingId}`, "PATCH", { shared });
+export const requestRecordingTranscriptApi = (accessToken: string, recordingId: string) =>
+  meetingsRequest<{ transcriptStatus: "processing" }>(accessToken, `recordings/${recordingId}/transcript`, "POST");
+export const meetingRecordingPlaylist = (recordingId: string) =>
+  `${recordingsBase()}/recordings/${recordingId}/files/index.m3u8`;
+
+// MT-3: defense committees. Types mirror academic's committeeRoom(); the thesis feature keeps its own.
+export type CommitteeSlot = {
+  id: string;
+  projectId: string;
+  projectCode: string;
+  topicTitle: string;
+  status: string;
+  startsAt: string;
+  endsAt: string;
+  version: number;
+  result: { finalScore: number; letter: string; passed: boolean; conclusion: string | null } | null;
+};
+export type MeetingCommittee = {
+  id: string;
+  code: string;
+  name: string;
+  room: string;
+  myRole: "chair" | "secretary" | "member" | null;
+  members: { lecturerId: string; displayName: string; role: string }[];
+  slots: CommitteeSlot[];
+};
+
+export const getSessionCommitteeApi = async (accessToken: string, sessionId: string) =>
+  (await meetingsRequest<{ committee: MeetingCommittee | null }>(accessToken, `sessions/${sessionId}/committee`)).committee;
+export const getMyCommitteesApi = async (accessToken: string) =>
+  (await meetingsRequest<{ committees: { id: string; code: string; name: string }[] }>(accessToken, "committees")).committees;
+
+/** M1: number and 6-digit code to join this room from a phone (internal extension). */
+export async function getDialInApi(accessToken: string, roomId: string): Promise<{ number: string; code: string }> {
+  const response = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/meetings/rooms/${roomId}/dial-in`, {
+    credentials: "include",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  const data = await response.json();
+  if (!response.ok) throw new ApiError(response.status, data.error?.code ?? "UNKNOWN_ERROR", data.error?.message ?? "Không lấy được mã gọi vào.");
+  return data;
 }

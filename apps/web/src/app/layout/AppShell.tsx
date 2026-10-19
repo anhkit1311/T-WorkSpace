@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { useApp } from "../providers/AppContext";
 import { useSocket } from "../providers/SocketContext";
+import { useMenuAccess, type MenuAccess } from "./useMenuAccess";
 import { useMeeting } from "../providers/MeetingContext";
 import { Icon, type IconName } from "../../shared/ui/Icon";
 import { TdtuLogo } from "../../shared/ui/TdtuLogo";
@@ -21,6 +22,9 @@ const WorkspaceShell = lazy(() =>
   import("../../features/workspaces/WorkspaceShell").then((m) => ({
     default: m.WorkspaceShell,
   })),
+);
+const MessagesPage = lazy(() =>
+  import("../../features/chat/MessagesPage").then((m) => ({ default: m.MessagesPage })),
 );
 const ProfilePage = lazy(() =>
   import("../../features/profile/ProfilePage").then((m) => ({ default: m.ProfilePage })),
@@ -72,7 +76,7 @@ interface SidebarMenuItem {
   label: string;
   icon: IconName;
   targetView: ViewId;
-  badgeKey?: "notifications" | "messages";
+  badgeKey?: "notifications" | "messages" | "groups";
 }
 
 const SIDEBAR_MENU_ITEMS: SidebarMenuItem[] = [
@@ -81,14 +85,28 @@ const SIDEBAR_MENU_ITEMS: SidebarMenuItem[] = [
   { id: "call-list", label: "Danh sách cuộc gọi", icon: "phone-call", targetView: "call-directory" },
   { id: "meetings", label: "Họp trực tuyến", icon: "video", targetView: "meetings" },
   { id: "elearning", label: "Khóa học", icon: "graduation-cap", targetView: "elearning" },
+  { id: "thesis", label: "Đồ án tốt nghiệp", icon: "book", targetView: "thesis" },
   { id: "messages", label: "Tin nhắn", icon: "message", targetView: "chat", badgeKey: "messages" },
-  { id: "staff", label: "Danh sách nhân sự", icon: "users", targetView: "workspace" },
+  { id: "staff", label: "Nhóm làm việc", icon: "users", targetView: "workspace", badgeKey: "groups" },
   { id: "departments", label: "Khoa / Phòng ban", icon: "building", targetView: "admin" },
   { id: "notifications", label: "Quản lý thông báo", icon: "bell", targetView: "notifications", badgeKey: "notifications" },
-  { id: "roles", label: "Tài khoản & phân quyền", icon: "shield", targetView: "admin" },
+  { id: "roles", label: "Quản trị nhóm", icon: "shield", targetView: "admin" },
   { id: "profile", label: "Trang cá nhân", icon: "profile", targetView: "profile" },
   { id: "settings", label: "Cài đặt", icon: "settings", targetView: "profile" },
 ];
+
+/** Entries that only duplicated another page ("departments" = admin, "settings" = profile). */
+const HIDDEN_MENU_ITEMS = new Set(["departments", "settings"]);
+/**
+ * Entries shown only to users with that role (see useMenuAccess). The switchboard and call list
+ * are the core of the system and always stay visible; the page itself explains missing access.
+ */
+const RESTRICTED_MENU_ITEMS: Record<string, keyof MenuAccess> = {
+  roles: "workspaceAdmin",
+  thesis: "thesis",
+};
+/** No English translation exists yet: the VI | EN switch stays hidden until it does. */
+const SHOW_LANGUAGE_SWITCH = false;
 
 export function AppShell() {
   const {
@@ -100,8 +118,9 @@ export function AppShell() {
     openChatSearchResult,
     openChannel,
   } = useApp();
-  const { connectionStatus, reconnect, unreadCount, socket } = useSocket();
+  const { connectionStatus, reconnect, unreadCount, groupUnreadCount, socket } = useSocket();
   const meeting = useMeeting();
+  const menuAccess = useMenuAccess(accessToken);
 
   const [activeMenuId, setActiveMenuId] = useState<string>("home");
   const [meetingWorkspaceId, setMeetingWorkspaceId] = useState("");
@@ -111,7 +130,7 @@ export function AppShell() {
   }, [meeting.inCall, activeView, route.workspaceId]);
   const showMeetingChip = meeting.inCall && activeView !== "meetings";
 
-  const [unreadNotifications, setUnreadNotifications] = useState(1);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   useEffect(() => {
     if (!accessToken) return;
     let active = true;
@@ -142,7 +161,8 @@ export function AppShell() {
     else if (activeView === "elearning") setActiveMenuId("elearning");
     else if (activeView === "admin") setActiveMenuId("roles");
     else if (activeView === "profile") setActiveMenuId("profile");
-    else if (activeView === "workspace") setActiveMenuId("staff");
+    else if (activeView === "workspace" || activeView === "tasks" || activeView === "files") setActiveMenuId("staff");
+    else if (activeView === "thesis") setActiveMenuId("thesis");
   }, [activeView]);
 
   const [lang, setLang] = useState<"VI" | "EN">("VI");
@@ -162,7 +182,7 @@ export function AppShell() {
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const avatarButtonRef = useRef<HTMLButtonElement>(null);
 
-  const displayName = user?.displayName?.trim() || "Nguyễn Đăng Khoa";
+  const displayName = user?.displayName?.trim() || user?.email || "Tài khoản";
   const userEmail = user?.email || "";
   const presence =
     user?.showActivity === false || connectionStatus === "disconnected"
@@ -202,7 +222,7 @@ export function AppShell() {
   }, []);
 
   const isWorkspaceScope = isWorkspaceTabView(activeView);
-  const shellViewKey = isWorkspaceScope ? "workspace-shell" : activeView;
+  const shellViewKey = activeView === "chat" ? "messages" : isWorkspaceScope ? "workspace-shell" : activeView;
 
   const renderPage = () => {
     if (route.invalid)
@@ -219,6 +239,7 @@ export function AppShell() {
     if (activeView === "overview") Component = <WorkspaceHomePage />;
     else if (activeView === "call-center") Component = <CallCenterWorkspace />;
     else if (activeView === "call-directory") Component = <CallDirectoryPage />;
+    else if (activeView === "chat") Component = <MessagesPage />;
     else if (isWorkspaceScope) Component = <WorkspaceShell />;
     else if (activeView === "profile") Component = <ProfilePage />;
     else if (activeView === "admin") Component = <WorkspaceAdminPage />;
@@ -287,7 +308,7 @@ export function AppShell() {
             <button
               type="button"
               className="button button--sm button--primary"
-              style={{ gap: 6, borderRadius: 9999 }}
+              style={{ gap: 6 }}
               title="Quay lại cuộc họp"
               onClick={() =>
                 meetingWorkspaceId
@@ -301,7 +322,7 @@ export function AppShell() {
           )}
 
           {/* Language Switcher VI | EN */}
-          <div className="tdtu-lang-switcher" aria-label="Chuyển đổi ngôn ngữ">
+          {SHOW_LANGUAGE_SWITCH && <div className="tdtu-lang-switcher" aria-label="Chuyển đổi ngôn ngữ">
             <Icon name="languages" size={13} className="tdtu-lang-switcher__icon" />
             <button
               type="button"
@@ -317,7 +338,7 @@ export function AppShell() {
             >
               EN
             </button>
-          </div>
+          </div>}
 
           {/* Dark Mode Toggle */}
           <button
@@ -335,16 +356,16 @@ export function AppShell() {
             type="button"
             className="tdtu-icon-btn"
             title="Quản lý thông báo"
-            aria-label={`Thông báo (${unreadNotifications || 1} chưa đọc)`}
+            aria-label={unreadNotifications ? `Thông báo (${unreadNotifications} chưa đọc)` : "Thông báo"}
             onClick={() => {
               setActiveMenuId("notifications");
               setActiveView("notifications");
             }}
           >
             <Icon name="bell" size={16} />
-            <span className="tdtu-badge-num">
-              {unreadNotifications > 0 ? (unreadNotifications > 99 ? "99+" : unreadNotifications) : 1}
-            </span>
+            {unreadNotifications > 0 && (
+              <span className="tdtu-badge-num">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>
+            )}
           </button>
 
           {/* User Profile Avatar */}
@@ -381,7 +402,7 @@ export function AppShell() {
                     </div>
                     <div>
                       <strong>{displayName}</strong>
-                      <small>{userEmail || "Quản trị hệ thống · Tài khoản khoa"}</small>
+                      <small>{userEmail}</small>
                     </div>
                   </div>
                   <hr />
@@ -395,16 +416,19 @@ export function AppShell() {
                   >
                     <Icon name="profile" size={15} /> Trang cá nhân
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveMenuId("settings");
-                      setActiveView("profile");
-                      setProfileOpen(false);
-                    }}
-                  >
-                    <Icon name="settings" size={15} /> Cài đặt hệ thống
-                  </button>
+                  {/* Same profile page as above while the settings screen is hidden. */}
+                  {!HIDDEN_MENU_ITEMS.has("settings") && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveMenuId("settings");
+                        setActiveView("profile");
+                        setProfileOpen(false);
+                      }}
+                    >
+                      <Icon name="settings" size={15} /> Cài đặt hệ thống
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="is-logout"
@@ -426,14 +450,18 @@ export function AppShell() {
       <div className="editorial-workspace-body tdtu-body">
         {/* Left Sidebar (240px) with exactly 14 items */}
         <aside className="editorial-dock tdtu-sidebar" aria-label="Menu chức năng chính">
-          {SIDEBAR_MENU_ITEMS.map((item) => {
+          {SIDEBAR_MENU_ITEMS.filter(
+            (item) => !HIDDEN_MENU_ITEMS.has(item.id) && (!RESTRICTED_MENU_ITEMS[item.id] || menuAccess?.[RESTRICTED_MENU_ITEMS[item.id]]),
+          ).map((item) => {
             const isSelected = activeMenuId === item.id;
             const badgeCount =
               item.badgeKey === "notifications"
-                ? (unreadNotifications > 0 ? unreadNotifications : 1)
-                : item.badgeKey === "messages" && unreadCount > 0
+                ? unreadNotifications
+                : item.badgeKey === "messages"
                   ? unreadCount
-                  : undefined;
+                  : item.badgeKey === "groups"
+                    ? groupUnreadCount
+                    : undefined;
 
             return (
               <button
@@ -501,7 +529,7 @@ export function AppShell() {
         onClose={() => setSearchOpen(false)}
         onSelectMessage={(message, query) => {
           openChatSearchResult({
-            workspaceId: message.workspaceId,
+            workspaceId: message.workspaceId ?? undefined,
             channelId: message.channelId,
             messageId: message.id,
             query,

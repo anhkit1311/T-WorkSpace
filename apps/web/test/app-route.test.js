@@ -24,8 +24,8 @@ test("entering the app resyncs the route from the current URL", () => {
   assert.deepEqual(plain(appEntryRoute(at("/register"))), { view: "overview" });
   assert.deepEqual(plain(appEntryRoute(at("/"))), { view: "overview" });
   assert.deepEqual(plain(appEntryRoute(at("/unknown"))), { view: "overview" });
-  assert.deepEqual(plain(appEntryRoute(at(`/app/chat?workspace=${workspaceId}`))), {
-    view: "chat",
+  assert.deepEqual(plain(appEntryRoute(at(`/app/tasks?workspace=${workspaceId}`))), {
+    view: "tasks",
     workspaceId,
   });
   assert.equal(appEntryRoute(at("/app/xyz")).invalid, true);

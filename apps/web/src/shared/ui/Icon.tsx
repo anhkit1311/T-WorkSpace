@@ -51,6 +51,7 @@ import {
   PanelLeft,
   Paperclip,
   Phone,
+  Pause,
   Play,
   Plus,
   Search,
@@ -141,6 +142,7 @@ export type IconName =
   | "more"
   | "paperclip"
   | "phone"
+  | "pause"
   | "play"
   | "plus"
   | "record"
@@ -227,6 +229,7 @@ const icons = {
   more: EllipsisVertical,
   paperclip: Paperclip,
   phone: Phone,
+  pause: Pause,
   play: Play,
   plus: Plus,
   record: Circle,

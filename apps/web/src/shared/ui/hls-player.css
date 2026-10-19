@@ -1,0 +1,55 @@
+/* M3: transcript under a recording or video lesson; click a line to seek. */
+.hls-transcript {
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.hls-transcript summary {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.hls-transcript input {
+  width: calc(100% - 24px);
+  margin: 0 12px 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--text);
+}
+.hls-transcript ol {
+  max-height: 260px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0 4px 8px;
+  list-style: none;
+}
+.hls-transcript button {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.hls-transcript button:hover,
+.hls-transcript button[aria-current="true"] {
+  background: var(--primary-soft);
+}
+.hls-transcript time {
+  flex: none;
+  min-width: 42px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.hls-transcript__empty {
+  padding: 4px 8px;
+  color: var(--text-muted);
+}

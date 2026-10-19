@@ -1,0 +1,717 @@
+/* Real call center screens (CC-6 agent desk, live board, admin). Builds on call-center.css. */
+
+.desk-tabs {
+  margin-bottom: 16px;
+}
+
+.desk-muted {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.desk-warning {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.desk-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.desk-caller {
+  display: grid;
+  gap: 8px;
+}
+
+.desk-caller__name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.desk-caller__meta,
+.desk-caller__facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.desk-caller__facts {
+  color: var(--text-muted);
+}
+
+.desk-form {
+  display: grid;
+  gap: 12px;
+}
+
+.desk-form select,
+.desk-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.desk-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.desk-states {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.desk-state {
+  min-height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.desk-state.is-active {
+  border-color: var(--primary-text);
+  background: var(--primary-soft);
+  color: var(--primary-text);
+}
+
+.desk-state:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.desk-state:focus-visible {
+  outline: 2px solid var(--primary-text);
+  outline-offset: 2px;
+}
+
+.desk-wait {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.desk-agent-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.desk-notes {
+  max-width: 260px;
+  white-space: pre-wrap;
+}
+
+.desk-empty-row {
+  padding: 16px;
+  text-align: center;
+}
+
+.desk-admin {
+  display: grid;
+  gap: 16px;
+}
+
+.desk-admin__card {
+  display: grid;
+  gap: 10px;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+
+.desk-admin__row,
+.desk-admin__inline,
+.desk-admin__members {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.desk-admin__inline {
+  align-items: flex-end;
+  padding-top: 10px;
+}
+
+.desk-admin__inline input,
+.desk-admin__inline select,
+.desk-admin__row select {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.desk-admin__actions {
+  white-space: nowrap;
+}
+
+.desk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.desk-chip button {
+  display: inline-flex;
+  padding: 2px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.desk-chip select {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.desk-secret {
+  display: block;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--bg-subtle);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  word-break: break-all;
+  user-select: all;
+}
+
+.desk-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+}
+
+.desk-live-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.desk-notes {
+  min-width: 160px;
+}
+
+.softphone-card form.softphone-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+@media (max-width: 900px) {
+  .callcenter-main-grid,
+  .desk-grid,
+  .desk-live-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* CC-8 tickets, CC-9 KPI and wallboard */
+.desk-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.desk-ticket-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.desk-ticket .call-item-caller {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.desk-ticket {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border-radius: 8px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.desk-ticket.is-active {
+  background: var(--primary-soft);
+}
+
+.desk-ticket:focus-visible {
+  outline: 2px solid var(--primary-text);
+  outline-offset: 2px;
+}
+
+.desk-ticket__description {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.desk-actions--start {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.desk-timeline {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0 0 0 14px;
+  border-left: 2px solid var(--border);
+  list-style: none;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.desk-timeline li {
+  display: grid;
+  gap: 2px;
+}
+
+.desk-kpi {
+  margin-top: 20px;
+}
+
+.desk-kpi__grid {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.desk-hourly {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 120px;
+  margin: 8px 0 16px;
+}
+
+.desk-hourly__bar {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  height: 100%;
+  max-width: 40px;
+}
+
+.desk-hourly__bar span {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+}
+
+.desk-hourly__bar i {
+  display: block;
+  width: 100%;
+  background: var(--primary-text);
+  border-radius: 3px 3px 0 0;
+}
+
+.desk-hourly__bar small {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.desk-wallboard:fullscreen {
+  overflow: auto;
+  padding: 24px 32px;
+  background: var(--surface);
+  /* UI-3 TV mode: readable from across the room. */
+  zoom: 1.35;
+}
+.desk-wallboard .callcenter-kpi-grid {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+.desk-wallboard__clock {
+  display: none;
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+}
+.desk-wallboard:fullscreen .desk-wallboard__clock {
+  display: block;
+}
+.desk-wallboard:fullscreen .call-supervisor-actions {
+  display: none;
+}
+.desk-wallboard .kpi-stat-card.is-late {
+  border-color: #dc2626 !important;
+  animation: desk-late 1.5s ease-in-out infinite;
+}
+@keyframes desk-late {
+  50% { box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.25); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .desk-wallboard .kpi-stat-card.is-late { animation: none; }
+}
+
+@media (max-width: 900px) {
+  .desk-ticket-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* CC-10 transfer, CC-11 monitoring */
+.desk-transfer {
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-subtle);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.desk-transfer select {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.desk-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.desk-monitor {
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.desk-monitor:hover,
+.desk-monitor:focus-visible {
+  border-color: var(--primary-text);
+  color: var(--primary-text);
+}
+.desk-shortcuts {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.desk-shortcuts kbd {
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+/* "Hôm nay của tôi": the agent's own totals and last calls, with call-back. */
+.desk-today {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.desk-today > div {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-subtle);
+}
+.desk-today strong {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  color: var(--text);
+}
+.desk-today span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.desk-recent {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.desk-recent li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+.desk-recent__who {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.desk-recent__who strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.desk-recent__who span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.softphone-input-row {
+  gap: 8px;
+}
+.softphone-dial-input::placeholder {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.softphone-key-btn--wide {
+  grid-column: 3;
+}
+@media (max-width: 640px) {
+  .desk-today > div {
+    padding: 8px;
+  }
+  .desk-today strong {
+    font-size: 15px;
+  }
+  .desk-recent li {
+    flex-wrap: wrap;
+  }
+  /* The phone controls come first on a phone screen: state and answering matter most. */
+  .desk-grid .softphone-card {
+    order: -1;
+  }
+}
+
+.cdr-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.cdr-toolbar input,
+.cdr-toolbar select {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+.cdr-toolbar input {
+  flex: 1 1 260px;
+}
+.cdr-toolbar .desk-muted {
+  margin-left: auto;
+}
+
+.cdr-table td:first-child {
+  white-space: nowrap;
+}
+.cdr-table td.cdr-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+/* Ticket rows: one meta line that wraps between items instead of squeezing each word into a column. */
+.desk-ticket {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.desk-ticket .call-item-info {
+  flex: 1;
+  min-width: 0;
+}
+.desk-ticket .call-item-meta {
+  flex-wrap: wrap;
+  gap: 2px 6px;
+}
+.desk-ticket .call-item-meta span {
+  white-space: nowrap;
+}
+.desk-ticket .desk-agent-state {
+  flex-shrink: 0;
+}
+
+/* Admin: each department is its own card, two per row on wide screens. */
+.desk-admin > .callcenter-panel:first-child {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.desk-admin > .callcenter-panel:first-child > .callcenter-panel__head {
+  grid-column: 1 / -1;
+}
+.desk-admin__card {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-subtle);
+}
+.desk-admin > .callcenter-panel:first-child > :not(.callcenter-panel__head):not(.desk-admin__card) {
+  grid-column: 1 / -1;
+}
+.desk-admin__row:first-child {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.desk-admin__row:first-child strong {
+  font-size: 15px;
+}
+.desk-admin__row input {
+  width: 64px;
+  min-height: 32px;
+  margin: 0 4px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+}
+.desk-admin__row label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.desk-admin__inline {
+  border-top: 1px dashed var(--border);
+}
+.desk-admin {
+  grid-template-columns: minmax(0, 1fr);
+}
+.desk-admin > *,
+.desk-admin__card {
+  min-width: 0;
+}
+.desk-admin__card select,
+.desk-admin__card input,
+.desk-admin__row > *,
+.desk-chip {
+  min-width: 0;
+  max-width: 100%;
+}
+.desk-chip {
+  overflow-wrap: anywhere;
+}
+.desk-admin__card {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (max-width: 480px) {
+  .callcenter-page {
+    padding: 14px 12px 32px;
+  }
+  .callcenter-panel {
+    padding: 14px;
+  }
+}
+@media (hover: none) and (pointer: coarse) {
+  .desk-shortcuts {
+    display: none;
+  }
+}
+
+.desk-pause {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.desk-context {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--primary-soft);
+  color: var(--primary-text);
+  font-size: 13px;
+}
+.desk-recent li.is-unheard .desk-recent__who strong::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--danger, #dc2626);
+  vertical-align: middle;
+}
+.desk-recent audio {
+  width: 100%;
+  height: 32px;
+  margin-top: 6px;
+}
+.desk-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* NV-CC1 caller profile */
+.desk-profile { display: grid; gap: 10px; margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--border, rgba(0, 0, 0, 0.08)); }
+.desk-profile__student { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 0; font-size: 0.875rem; }
+.desk-profile__student span { color: var(--text-muted, #667085); }
+.desk-profile h3 { margin: 0 0 4px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--text-muted, #667085); }
+.desk-profile ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.desk-profile li { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.8125rem; }
+.desk-profile li > span { min-width: 0; overflow-wrap: anywhere; }
+.desk-profile em { color: var(--text-muted, #667085); }
+
+.desk-actions:has(> .desk-muted) { flex-wrap: wrap; }
+.desk-actions > .desk-muted { flex: 1 0 100%; margin: 0; text-align: right; }

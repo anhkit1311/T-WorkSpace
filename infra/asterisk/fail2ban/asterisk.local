@@ -1,0 +1,14 @@
+# CC-12: bans hosts that brute-force SIP registrations. Copy to /etc/fail2ban/jail.d/ on the Linux
+# host that runs Docker (fail2ban must change the host firewall, so it does not run in a container).
+# The asterisk filter ships with fail2ban; it reads the security and messages logs written by
+# infra/asterisk/config/logger.conf and mounted on the host by docker-compose (ASTERISK_LOG_DIR).
+[asterisk]
+enabled  = true
+filter   = asterisk
+logpath  = /srv/nexo/asterisk-logs/security
+           /srv/nexo/asterisk-logs/messages
+maxretry = 5
+findtime = 600
+bantime  = 3600
+# DOCKER-USER is evaluated before Docker's published-port rules, so the ban covers 5060/udp too.
+action   = iptables-allports[name=asterisk, protocol=all, chain=DOCKER-USER]

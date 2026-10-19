@@ -49,7 +49,7 @@
   gap: 2px;
   text-align: center;
   padding: 7px 5px;
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--nexo-bg-subtle, #EEECE7);
   font-variant-numeric: tabular-nums;
 }
@@ -132,7 +132,7 @@
   min-height: 44px;
   box-sizing: border-box;
   border: 1px solid var(--nexo-border-beige, #E6E2DA);
-  border-radius: 14px;
+  border-radius: 8px;
   padding: 10px 14px;
   background: var(--nexo-bg-ivory, #FAF9F6);
   color: var(--nexo-text-primary, #1C1B19);

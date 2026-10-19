@@ -37,17 +37,18 @@ export async function uploadFile(
         throw new HttpError(403, "FORBIDDEN", "Bạn không còn quyền tải tệp lên.");
       const usage = (
         await client.query(
-          `SELECT COALESCE(sum(a.file_size),0)::bigint AS workspace_bytes,COALESCE(sum(a.file_size) FILTER(WHERE a.uploader_id=$2),0)::bigint AS user_bytes FROM message_attachments a JOIN channels c ON c.id=a.channel_id WHERE c.workspace_id=$1`,
+          `SELECT COALESCE(sum(a.file_size),0)::bigint AS workspace_bytes,COALESCE(sum(a.file_size) FILTER(WHERE a.uploader_id=$2),0)::bigint AS user_bytes FROM message_attachments a JOIN channels c ON c.id=a.channel_id WHERE ${scope.workspace_id ? "c.workspace_id=$1" : "c.kind='direct' AND $1::uuid IS NULL"}`,
           [scope.workspace_id, userId],
         )
       ).rows[0];
-      if (Number(usage.workspace_bytes) + data.length > config.fileQuotaBytes)
+      // Direct conversations share no workspace pool; only the per-user budget applies to them.
+      if (scope.workspace_id && Number(usage.workspace_bytes) + data.length > config.fileQuotaBytes)
         throw new HttpError(413, "QUOTA_EXCEEDED", "Nhóm đã đạt giới hạn dung lượng tệp.");
       // Per-user budget is per workspace so one workspace cannot consume another's allowance.
       if (Number(usage.user_bytes) + data.length > config.userFileQuotaBytes)
         throw new HttpError(413, "USER_QUOTA_EXCEEDED", "Bạn đã đạt giới hạn tải tệp trong nhóm.");
       if (provider === "s3") {
-        key = `workspaces/${scope.workspace_id}/${id}`;
+        key = scope.workspace_id ? `workspaces/${scope.workspace_id}/${id}` : `direct/${channelId}/${id}`;
         await putObject(key, data, mimeType);
       }
       await client.query(

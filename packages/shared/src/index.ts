@@ -56,6 +56,8 @@ export type MeetingScheduleItem = {
   endsAt: string;
   canManage: boolean;
   agenda?: string[];
+  /** MT-3: the defense committee that meets here, if any. */
+  committeeId?: string | null;
 };
 
 export type AuthResponse = {
@@ -135,6 +137,27 @@ export type ChannelItem = {
   pinned?: boolean;
   muted?: boolean;
   unreadCount?: number;
+  kind?: "workspace" | "direct";
+};
+
+export type DirectUserItem = { userId: string; displayName: string; email: string };
+
+/** A file sent in a direct conversation, newest first, for the contact panel. */
+export type DirectFileItem = {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  createdAt: string;
+  messageId: string;
+  uploaderName: string;
+};
+
+/** One-to-one conversation: a text channel outside any workspace, named after the other participant. */
+export type DirectConversationItem = Omit<ChannelItem, "workspaceId" | "kind"> & {
+  workspaceId: null;
+  kind: "direct";
+  peer: DirectUserItem;
 };
 
 export type ChatMessageItem = {
@@ -165,7 +188,8 @@ export type GlobalMessageSearchItem = {
   threadRootId?: string | null;
   authorId?: string;
   id: string;
-  workspaceId: string;
+  /** null for a direct conversation; then channelName is the other person's name. */
+  workspaceId: string | null;
   workspaceName: string;
   channelId: string;
   channelName: string;
@@ -384,3 +408,7 @@ export interface WorkspaceOverviewSummary {
   files: WorkspaceFileItem[];
 }
 
+export * from "./callcenter.js";
+export * from "./meeting-attendance.js";
+export * from "./meeting-recordings.js";
+export * from "./elearning.js";

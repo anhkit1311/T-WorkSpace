@@ -149,7 +149,7 @@
 
 .thesis-page .thesis-columns {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
   gap: 20px;
   align-items: start;
 }
@@ -210,7 +210,7 @@
 
 .thesis-page .thesis-ok {
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--green-50);
   color: var(--green-600) !important;
   font-weight: 600;
@@ -224,7 +224,7 @@
   padding: 10px 14px;
   border-left: 3px solid var(--nexo-border-beige);
   background: var(--nexo-bg-subtle);
-  border-radius: 0 10px 10px 0;
+  border-radius: 0 6px 6px 0;
   font-size: 14px;
 }
 
@@ -298,7 +298,7 @@
   gap: 4px;
   padding: 16px;
   border: 1px solid var(--nexo-border-beige);
-  border-radius: 18px;
+  border-radius: 8px;
   background: var(--nexo-bg-ivory);
 }
 
@@ -308,7 +308,7 @@
 }
 
 .thesis-page .thesis-stat strong {
-  font-size: 30px;
+  font-size: 20px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -367,7 +367,7 @@
 .thesis-page .thesis-blockers {
   margin: 12px 0;
   padding: 12px 16px 12px 32px;
-  border-radius: 14px;
+  border-radius: 8px;
   background: var(--amber-50);
   color: var(--amber-600);
   font-size: 14px;
@@ -387,7 +387,7 @@
   gap: 8px;
   padding: 16px;
   border: 1px solid var(--nexo-border-beige);
-  border-radius: 18px;
+  border-radius: 8px;
   background: var(--nexo-bg-ivory);
 }
 
@@ -409,7 +409,7 @@
 
 .thesis-page .thesis-action-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   gap: 12px;
   margin: 16px 0;
 }
@@ -436,7 +436,7 @@
   justify-content: space-between;
   gap: 8px;
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--nexo-bg-ivory);
   font-size: 14px;
 }
@@ -561,7 +561,7 @@
 
 .thesis-page .thesis-facts div {
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: 8px;
   background: var(--nexo-bg-ivory);
 }
 
@@ -656,7 +656,7 @@
   gap: 2px;
   padding: 10px 12px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 6px;
   background: transparent;
   color: var(--text, inherit);
   font: inherit;
@@ -683,4 +683,17 @@
 .thesis-inbox small {
   color: var(--nexo-text-muted);
   font-weight: 400;
+}
+
+/* Grid stacks: one shrinkable column, so wide tables or long policies scroll inside, not the page. */
+.thesis-page .thesis-stack {
+  grid-template-columns: minmax(0, 1fr);
+}
+.thesis-page .thesis-stack > *,
+.thesis-page .thesis-columns > *,
+.thesis-page .field {
+  min-width: 0;
+}
+.thesis-page .field > * {
+  max-width: 100%;
 }

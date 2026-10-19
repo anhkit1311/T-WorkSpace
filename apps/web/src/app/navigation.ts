@@ -92,7 +92,9 @@ export function readAppRoute(url: URL): AppRoute {
       route[key] = value;
     }
   }
-  if (route.channelId && !route.workspaceId) route.invalid = true;
+  // Direct conversations live outside any workspace, so a chat link may carry only the channel.
+  if (route.channelId && !route.workspaceId && route.view !== "chat") route.invalid = true;
+  if (route.view === "chat" && route.workspaceId) route.view = "workspace";
   const query = url.searchParams.get("q");
   if (query) route.query = query;
   if (route.view === "invitation")

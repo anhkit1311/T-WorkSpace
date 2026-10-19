@@ -32,8 +32,76 @@ services:
     volumes:
       # Edit config without rebuilding; restart the container to apply.
       - ./asterisk/config:/opt/nexo-asterisk:ro
+      # CC-12: security/messages logs on the host for fail2ban (see infra/asterisk/fail2ban).
+      - ${ASTERISK_LOG_DIR:-./asterisk/logs}:/var/log/asterisk
     ports:
       - "5060:5060/udp"
       - "8088:8088/tcp"
       - "10000-10099:10000-10099/udp"
     restart: unless-stopped
+
+  # Dev only: FFmpeg next to an API that runs on the host. Start with:
+  #   docker compose -f infra/docker-compose.yml --profile recording up -d ffmpeg
+  # and set FFMPEG_COMMAND="docker exec -i -w /work nexo-ffmpeg ffmpeg" for the API.
+  # The SFU sends recording RTP to 127.0.0.1:<RECORDING_RTP_*_PORT>, published below.
+  ffmpeg:
+    profiles: ["recording"]
+    build: ./ffmpeg
+    container_name: nexo-ffmpeg
+    volumes:
+      - ../services/api/data/media:/work
+    ports:
+      - "127.0.0.1:30000-30199:30000-30199/udp"
+    restart: unless-stopped
+
+  # Q5 monitoring (opt-in): docker compose -f infra/docker-compose.yml --profile monitoring up -d
+  # Put OPERATIONS_TOKEN (same as the API's) in infra/monitoring/operations_token first.
+  # Prometheus: http://localhost:9090 · Grafana: http://localhost:3000 (dashboard "nexo").
+  prometheus:
+    profiles: ["monitoring"]
+    image: prom/prometheus:v2.53.2
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ./monitoring/operations_token:/etc/prometheus/operations_token:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    profiles: ["monitoring"]
+    image: grafana/grafana:11.2.0
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on: [prometheus]
+    restart: unless-stopped
+
+  # Q2 object storage (opt-in): docker compose -f infra/docker-compose.yml --profile storage up -d minio
+  # Then in .env: FILE_STORAGE_PROVIDER=s3, MEDIA_STORAGE=s3, S3_ENDPOINT=http://localhost:9000,
+  # S3_FORCE_PATH_STYLE=true, S3_BUCKET=nexo, AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY = the MinIO user.
+  # Create the bucket once in the console (http://localhost:9001).
+  minio:
+    profiles: ["storage"]
+    image: minio/minio:RELEASE.2024-08-17T01-24-54Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-nexo}
+      # MinIO refuses to start with a password under 8 characters; set a real one in .env.
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-}
+    volumes:
+      - minio-data:/data
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    restart: unless-stopped
+
+volumes:
+  minio-data:

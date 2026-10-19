@@ -229,7 +229,9 @@ class CallCenterStore {
       if (savedRecords) {
         try {
           this.records = JSON.parse(savedRecords);
-        } catch {}
+        } catch {
+          // Corrupt saved data: keep the defaults.
+        }
       }
     }
   }

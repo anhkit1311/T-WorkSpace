@@ -1,0 +1,33 @@
+# Q5: alerts shown in Prometheus (and Grafana); wire an Alertmanager to send them on.
+groups:
+  - name: nexo
+    rules:
+      - alert: ApiDown
+        expr: up{job="nexo-api"} == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations: { summary: "API không phản hồi /metrics" }
+      - alert: NoAcdLeader
+        expr: max(nexo_acd_leader) < 1
+        for: 2m
+        labels: { severity: critical }
+        annotations: { summary: "Không instance nào chạy ACD: cuộc gọi tổng đài không được phân phối" }
+      - alert: CallersWaitingLong
+        expr: max(nexo_callcenter_longest_wait_seconds) > 120
+        for: 1m
+        labels: { severity: warning }
+        annotations: { summary: "Có người gọi chờ quá 2 phút" }
+      - alert: NoAgentReady
+        expr: sum(nexo_callcenter_waiting_calls) > 0 and sum(nexo_callcenter_agents{state="ready"}) == 0
+        for: 1m
+        labels: { severity: warning }
+        annotations: { summary: "Có cuộc gọi chờ nhưng không tổng đài viên nào sẵn sàng" }
+      - alert: MediaJobsFailing
+        expr: max(nexo_media_jobs{status="failed"}) > 0
+        labels: { severity: warning }
+        annotations: { summary: "Có việc xử lý media (HLS/phụ đề) thất bại" }
+      - alert: HttpErrors
+        expr: rate(nexo_http_errors_total[5m]) > 0.1
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "API trả lỗi 5xx liên tục" }

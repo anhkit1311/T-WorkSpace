@@ -27,6 +27,13 @@ import {
   updateAgendaItem,
 } from "../../../dist/api/modules/meetings/outcomes.js";
 import { withTransaction } from "../../../dist/api/infrastructure/database/db.js";
+import { getMeetingAttendance, presentMs } from "../../../dist/api/modules/meetings/attendance.js";
+
+test("Meeting attendance: overlapping connections count once", () => {
+  assert.equal(presentMs([]), 0);
+  assert.equal(presentMs([{ from: 0, to: 10 }, { from: 5, to: 15 }, { from: 20, to: 30 }]), 25);
+  assert.equal(presentMs([{ from: 20, to: 30 }, { from: 0, to: 40 }, { from: 1, to: 2 }]), 40);
+});
 
 test(
   "Meeting outcomes: agenda, notes conflicts, meeting tasks and one summary per session",
@@ -69,6 +76,23 @@ test(
       assert.equal(outcomes.canEdit, true);
       assert.equal(outcomes.canManage, false);
       assert.equal((await getMeetingOutcomes(outsider, sessionId)).canEdit, false);
+
+      // Two tabs for the member overlap; the owner's connection is still open.
+      await pool.query(
+        `INSERT INTO meeting_participations(id,channel_id,user_id,socket_id,session_id,joined_at,left_at) VALUES
+         ($1,$4,$5,'qa-a1',$7,now()-interval '20 minutes',now()-interval '10 minutes'),
+         ($2,$4,$5,'qa-a2',$7,now()-interval '15 minutes',now()-interval '5 minutes'),
+         ($3,$4,$6,'qa-a3',$7,now()-interval '20 minutes',NULL)`,
+        [randomUUID(), randomUUID(), randomUUID(), room.id, member, owner, sessionId],
+      );
+      await pool.query(`UPDATE meeting_sessions SET started_at=now()-interval '20 minutes' WHERE id=$1`, [sessionId]);
+      const attendance = await getMeetingAttendance(owner, sessionId);
+      const byUser = new Map(attendance.rows.map((row) => [row.userId, row]));
+      assert.equal(Math.round(byUser.get(member).presentSeconds / 60), 15);
+      assert.ok(byUser.get(member).lastLeftAt);
+      assert.equal(byUser.get(owner).lastLeftAt, null, "Still in the room");
+      assert.ok(byUser.get(owner).ratio > 0.99);
+      await assert.rejects(getMeetingAttendance(member, sessionId), { statusCode: 403 });
 
       const first = await saveMeetingNotes(member, sessionId, {
         content: "Chốt demo thứ Sáu",

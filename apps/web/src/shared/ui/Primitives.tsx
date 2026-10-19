@@ -582,7 +582,7 @@ export interface FilterPillsProps {
 
 export function FilterPills({ options, activeKey, onChange, className = "" }: FilterPillsProps) {
   return (
-    <div className={`filter-pills ${className}`.trim()} style={{ display: "flex", gap: "8px", overflowX: "auto" }}>
+    <div className={`filter-pills ${className}`.trim()}>
       {options.map((opt) => {
         const isActive = activeKey === opt.key;
         return (
@@ -591,34 +591,9 @@ export function FilterPills({ options, activeKey, onChange, className = "" }: Fi
             type="button"
             className={`filter-pill-btn ${isActive ? "is-active" : ""}`}
             onClick={() => onChange(opt.key)}
-            style={{
-              padding: "6px 14px",
-              borderRadius: "var(--radius-pill, 9999px)",
-              fontSize: "13px",
-              fontWeight: 500,
-              cursor: "pointer",
-              border: isActive ? "1px solid var(--brand-primary, #2563EB)" : "1px solid var(--border-color, #E2E8F0)",
-              background: isActive ? "var(--brand-primary, #2563EB)" : "var(--bg-surface, #FFFFFF)",
-              color: isActive ? "#FFFFFF" : "var(--text-secondary, #475569)",
-              transition: "all 0.15s ease",
-              whiteSpace: "nowrap",
-            }}
           >
             {opt.label}
-            {typeof opt.count === "number" && (
-              <span
-                style={{
-                  marginLeft: "6px",
-                  fontSize: "11px",
-                  padding: "1px 6px",
-                  borderRadius: "9999px",
-                  background: isActive ? "rgba(255, 255, 255, 0.25)" : "var(--bg-subtle, #F1F5F9)",
-                  color: isActive ? "#FFFFFF" : "var(--text-muted, #64748B)",
-                }}
-              >
-                {opt.count}
-              </span>
-            )}
+            {typeof opt.count === "number" && <span className="filter-pill-btn__count">{opt.count}</span>}
           </button>
         );
       })}
@@ -689,7 +664,7 @@ export function KpiStatCard({
         style={{
           width: "42px",
           height: "42px",
-          borderRadius: "10px",
+          borderRadius: "8px",
           background: toneBg,
           color: toneText,
           display: "grid",

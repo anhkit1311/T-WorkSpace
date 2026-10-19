@@ -310,13 +310,14 @@ export function WorkspaceShell() {
   const handleSelectWorkspace = (workspaceId: string) => {
     setMobileDrawerOpen(false);
     setShowActionsMenu(false);
-    // Selecting a workspace from the sidebar opens its "Trao đổi" tab by default and clears old channel/task IDs
-    navigate(selectWorkspaceRoute(workspaceId, "chat"));
+    // Selecting a workspace from the sidebar opens its "Trao đổi" tab by default and clears old channel/task IDs.
+    // That tab is the "workspace" view; the "chat" view is the standalone "Tin nhắn" page.
+    navigate(selectWorkspaceRoute(workspaceId, "workspace"));
   };
 
   const handleSelectTab = (tabId: WorkspaceTabId) => {
     if (!activeWorkspaceId) return;
-    navigate(switchWorkspaceTabRoute(route, tabId, activeWorkspaceId));
+    navigate(switchWorkspaceTabRoute(route, tabId === "chat" ? "workspace" : tabId, activeWorkspaceId));
   };
 
   const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -361,7 +362,7 @@ export function WorkspaceShell() {
       setNewWorkspaceName("");
       setShowCreateModal(false);
       notify("Đã tạo nhóm làm việc", `Nhóm "${created.name}" đã sẵn sàng.`);
-      navigate(selectWorkspaceRoute(created.id, "chat"));
+      navigate(selectWorkspaceRoute(created.id, "workspace"));
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : "Vui lòng thử lại.");
       notify(
@@ -448,7 +449,7 @@ export function WorkspaceShell() {
       setShowActionsMenu(false);
       notify("Đã rời nhóm", `Bạn đã rời khỏi nhóm "${activeWorkspace?.name ?? ""}".`, "info");
       if (remaining[0]) {
-        navigate(selectWorkspaceRoute(remaining[0].id, "chat"));
+        navigate(selectWorkspaceRoute(remaining[0].id, "workspace"));
       } else {
         setActiveView("overview");
       }

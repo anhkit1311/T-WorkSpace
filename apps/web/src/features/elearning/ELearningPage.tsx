@@ -6,6 +6,7 @@ import { callCenterStore } from "../call-center/call-center-store";
 import { elearningStore } from "./elearning-store";
 import type { CourseItem, ElearningFilter } from "./types";
 import "./elearning.css";
+import { CoursesWorkspace } from "./CoursesWorkspace";
 
 const FILTER_PILLS: ElearningFilter[] = [
   "Tất cả",
@@ -15,7 +16,13 @@ const FILTER_PILLS: ElearningFilter[] = [
   "Công nghệ Thông tin",
 ];
 
+/** EL-1..EL-6: the real course module, backed by the API. */
 export function ELearningPage() {
+  return <CoursesWorkspace />;
+}
+
+/** Early UI prototype on local mock data; kept for reference, no longer routed. */
+export function ELearningPrototype() {
   const { user, setActiveView, notify } = useApp();
   const [courses, setCourses] = useState<CourseItem[]>(() => elearningStore.getCourses());
   const [selectedFilter, setSelectedFilter] = useState<ElearningFilter>("Tất cả");
@@ -219,8 +226,11 @@ export function ELearningPage() {
                   setQuizSubmitted(false);
                 }}
               >
-                {/* Nửa trên: Gradient Banner */}
-                <div className="elearning-card__banner" style={{ background: course.gradient }}>
+                {/* Nửa trên: banner màu phẳng (khóa học đã lưu vẫn giữ chuỗi gradient, chỉ lấy màu đầu) */}
+                <div
+                  className="elearning-card__banner"
+                  style={{ background: course.gradient.match(/#[0-9a-f]{6}/i)?.[0] ?? course.gradient }}
+                >
                   <div className="elearning-card__badges">
                     <span className="elearning-card__cat-badge">{course.category}</span>
                     {course.isMandatoryQA && (
@@ -492,7 +502,7 @@ export function ELearningPage() {
                     style={{
                       width: "44px",
                       height: "44px",
-                      borderRadius: "10px",
+                      borderRadius: "6px",
                       background: "#EFF6FF",
                       color: "#2563EB",
                       display: "flex",
@@ -520,7 +530,7 @@ export function ELearningPage() {
                   padding: "16px",
                   background: "#EFF6FF",
                   border: "1px solid #BFDBFE",
-                  borderRadius: "14px",
+                  borderRadius: "8px",
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
-import { withTransaction } from "../../infrastructure/database/db.js";
+import { query, withTransaction } from "../../infrastructure/database/db.js";
 import {
   audit,
   choice,
@@ -215,6 +215,45 @@ export async function listCommittees(userId: string, termId: string) {
     );
     return { committees: await Promise.all(ids.rows.map((row) => getCommitteeIn(client, row.id))) };
   });
+}
+
+/** MT-3: the committee room — members, the defenses in order, and each one's stage and result. */
+export async function committeeRoom(userId: string, committeeId: string) {
+  return withTransaction(async (client) => {
+    const unit = await client.query<{ unit_id: string }>(
+      `SELECT t.unit_id FROM thesis_committees c JOIN thesis_terms t ON t.id=c.term_id WHERE c.id=$1`,
+      [committeeId],
+    );
+    if (!unit.rowCount) throw notFound("Không tìm thấy hội đồng.");
+    const committee = await getCommitteeIn(client, committeeId);
+    const myRole: string | null = committee.members.find((m: { lecturerId: string }) => m.lecturerId === userId)?.role ?? null;
+    if (!myRole && !hasUnitRole(await loadActor(client, userId), unit.rows[0].unit_id, "unit_admin", "unit_head"))
+      throw forbidden("Chỉ thành viên hội đồng mở được phiếu chấm.");
+    const extra = await client.query<{ projectId: string; version: number; finalScore: number | null; letter: string | null; passed: boolean | null; conclusion: string | null }>(
+      `SELECT p.id AS "projectId",p.version,r.final_score::float8 AS "finalScore",r.letter,r.passed,r.conclusion
+       FROM thesis_defense_slots s JOIN thesis_projects p ON p.id=s.project_id LEFT JOIN thesis_results r ON r.project_id=p.id WHERE s.committee_id=$1`,
+      [committeeId],
+    );
+    const byProject = new Map(extra.rows.map((row) => [row.projectId, row]));
+    return {
+      ...committee,
+      myRole,
+      slots: committee.slots.map((slot: { projectId: string }) => {
+        const { version, ...result } = byProject.get(slot.projectId)!;
+        return { ...slot, version, result: result.letter ? result : null };
+      }),
+    };
+  });
+}
+
+/** Confirmed committees the user sits on, for linking a meeting schedule to one. */
+export async function myCommittees(userId: string) {
+  const rows = await query<{ id: string; code: string; name: string }>(
+    `SELECT c.id,c.code,c.name FROM thesis_committees c JOIN thesis_committee_members m ON m.committee_id=c.id AND m.lecturer_id=$1
+     WHERE c.status='confirmed' ORDER BY c.code`,
+    [userId],
+  );
+  return rows.rows;
 }
 
 // ---- defense schedule ---------------------------------------------------------------
@@ -460,8 +499,8 @@ export async function finalizeGrades(userId: string, projectId: string, body: Re
     const letter = letterGrade(final);
     const passed = final >= Number(term.pass_score);
     await client.query(
-      `INSERT INTO thesis_results(project_id,supervisor_score,reviewer_score,committee_score,committee_spread,deviation_note,final_score,letter,passed,finalized_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [project.id, components.supervisor, components.reviewer, components.committee, aggregate.spread, deviationNote, final, letter, passed, userId],
+      `INSERT INTO thesis_results(project_id,supervisor_score,reviewer_score,committee_score,committee_spread,deviation_note,final_score,letter,passed,finalized_by,conclusion) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      [project.id, components.supervisor, components.reviewer, components.committee, aggregate.spread, deviationNote, final, letter, passed, userId, optionalText(body.conclusion, "Kết luận", 4000) || null],
     );
     const hash = await appendLedger(client, term.id, project.id, "finalized", {
       components,

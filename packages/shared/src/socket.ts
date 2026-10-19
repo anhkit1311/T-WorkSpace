@@ -1,3 +1,4 @@
+import type { AgentState, TicketStatus, CcCallOffer } from "./callcenter.js";
 import type {
   ChatMessageItem,
   ConsumerOptions,
@@ -10,13 +11,23 @@ import type {
   TypingEvent,
 } from "./index.js";
 export interface ServerToClientEvents {
+  /** Call center: this agent's state or current offer changed; refetch /api/callcenter/me. */
+  callcenter_agent: (data: { state: AgentState; offer: CcCallOffer | null }) => void;
+  /** NV-CC5: a message was left on the user's own extension. */
+  callcenter_voicemail: (data: { voicemailId: string; from: string; durationSeconds: number }) => void;
+  /** NV-CC3: a ticket the user opened changed status. */
+  callcenter_ticket: (data: { ticketId: string; code: string; status: TicketStatus; message: string }) => void;
+  /** Call center: the queue or agent board of a department changed; refetch its live snapshot. */
+  callcenter_live: (data: { departmentId: string }) => void;
+  /** M2: an agent moved this user's call to a video room; offer to join it. */
+  meeting_invite: (data: { workspaceId: string; roomId: string; from: string }) => void;
   meeting_state_changed: (data: { roomId: string }) => void;
   meeting_closed: (data: { roomId: string; reason: string }) => void;
   meeting_mute: (data: { roomId: string }) => void;
   meeting_outcomes_changed: (data: {
     roomId: string;
     sessionId: string;
-    part: "notes" | "agenda" | "tasks" | "channel" | "summary";
+    part: "notes" | "agenda" | "tasks" | "channel" | "summary" | "recording";
     notes?: MeetingNotes;
   }) => void;
   task_changed: (data: { channelId: string; taskId: string; version: number }) => void;

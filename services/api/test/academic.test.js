@@ -336,7 +336,23 @@ test("Thesis lifecycle: registration → supervision → review → defense → 
     await evaluation.saveScoreSheet(id("L3"), p1Id, { graderRole: "committee", scores: await scores("committee", 6.5, 6.5), submit: true, version: 1 });
     await rejects(evaluation.finalizeGrades(id("L5"), p1Id, { version: await ver() }), "DEVIATION_REVIEW"); // spread 2.5 > 2
     await rejects(evaluation.finalizeGrades(id(chair), p1Id, { version: await ver(), deviationNote: "ngắn" }), "INVALID_INPUT");
-    const result = await evaluation.finalizeGrades(id(chair), p1Id, { version: await ver(), deviationNote: "Thành viên L3 đánh giá thấp phần trình bày; hội đồng thống nhất giữ trung bình." });
+    // MT-3 committee room: members see the defenses with their stage; others are kept out.
+    const room = await evaluation.committeeRoom(id(chair), c1.id);
+    assert.equal(room.myRole, "chair");
+    const p1Slot = room.slots.find((slot) => slot.projectId === p1Id);
+    assert.equal(p1Slot.status, "defended");
+    assert.equal(p1Slot.result, null);
+    assert.equal(p1Slot.version, await ver());
+    await rejects(evaluation.committeeRoom(id("S1"), c1.id), "FORBIDDEN");
+    assert.deepEqual((await evaluation.myCommittees(id("L3"))).map((c) => c.code), ["HD1", "HD2"]);
+    const result = await evaluation.finalizeGrades(id(chair), p1Id, {
+      version: await ver(),
+      deviationNote: "Thành viên L3 đánh giá thấp phần trình bày; hội đồng thống nhất giữ trung bình.",
+      conclusion: "Đồ án đạt yêu cầu, đề nghị bổ sung phần đánh giá hiệu năng.",
+    });
+    const concluded = (await evaluation.committeeRoom(id("L2"), c1.id)).slots.find((slot) => slot.projectId === p1Id);
+    assert.equal(concluded.result.conclusion, "Đồ án đạt yêu cầu, đề nghị bổ sung phần đánh giá hiệu năng.");
+    assert.equal(concluded.result.letter, "B");
     // supervisor 8.3, reviewer 7.3, committee mean 8.0 → 0.2·8.3 + 0.2·7.3 + 0.6·8 = 7.92 → 7.9
     assert.equal(result.finalScore, 7.9);
     assert.equal(result.letter, "B");

@@ -3,11 +3,9 @@
   margin: 12px 0;
   padding: 16px 18px;
   border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 20px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(var(--editorial-blur, 10px));
-  -webkit-backdrop-filter: blur(var(--editorial-blur, 10px));
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+  box-shadow: none;
   color: #0f172a;
 }
 
@@ -62,7 +60,7 @@
   margin-bottom: 8px;
   padding: 12px 14px;
   border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 16px;
+  border-radius: 8px;
   background: rgba(241, 245, 249, 0.8);
 }
 
@@ -76,7 +74,7 @@
   margin: 8px 0;
   padding: 10px 14px;
   border: 1px solid rgba(185, 28, 28, 0.2);
-  border-radius: 14px;
+  border-radius: 8px;
   background: #fef2f2;
   color: #b91c1c;
   font-size: 13px;

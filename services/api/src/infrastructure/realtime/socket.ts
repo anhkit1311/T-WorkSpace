@@ -467,6 +467,7 @@ export function initSocketServer(
       try {
         await setChannelPreference(user.id, data.channelId, { markRead: true });
         io.to(await recipients(data.channelId)).emit("channel_read", { channelId: data.channelId });
+        io.to(`user:${user.id}`).emit("notifications_changed");
         callback?.({ success: true });
       } catch (error) {
         callback?.({

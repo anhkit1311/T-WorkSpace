@@ -23,6 +23,18 @@ server {
     }
     location / { try_files $uri $uri/ /index.html; }
 
+    # EL-3 lesson uploads (video up to 2 GB): streamed to the API, not buffered by Nginx.
+    location ~ ^/api/elearning/lessons/[0-9a-fA-F-]+/file$ {
+        client_max_body_size 2g;
+        proxy_request_buffering off;
+        proxy_read_timeout 900s;
+        proxy_send_timeout 900s;
+        proxy_pass http://api:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+    }
     location ~ ^/(auth|api|health|ready)(/|$) {
         proxy_pass http://api:3001;
         proxy_set_header Host $host;
@@ -32,6 +44,16 @@ server {
     }
     location /socket.io/ {
         proxy_pass http://api:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_read_timeout 3600s;
+    }
+    # Softphone (SIP over WebSocket) to Asterisk.
+    location = /ws {
+        proxy_pass http://asterisk:8088;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";

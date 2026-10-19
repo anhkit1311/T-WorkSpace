@@ -63,6 +63,16 @@ services:
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-false}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      # Recordings and lesson videos (HLS) on a volume; FFmpeg is in the image.
+      FFMPEG_COMMAND: ffmpeg
+      MEDIA_DIR: /app/data/media
+      # Call center: ARI over the Docker network, browsers reach SIP over WSS through Nginx.
+      ASTERISK_ARI_URL: http://asterisk:8088
+      ASTERISK_ARI_USER: nexo
+      ASTERISK_ARI_PASSWORD: ${ASTERISK_ARI_PASSWORD:?}
+      VITE_SIP_WS_URL: wss://${APP_DOMAIN:?}/ws
+    volumes:
+      - media_prod:/app/data/media
     healthcheck:
       test:
         [
@@ -90,6 +100,8 @@ services:
     depends_on:
       api:
         condition: service_healthy
+      asterisk:
+        condition: service_started
     environment:
       APP_DOMAIN: ${APP_DOMAIN:?}
       NGINX_ENVSUBST_FILTER: ^APP_DOMAIN$
@@ -99,6 +111,25 @@ services:
     volumes:
       - ${TLS_CERTS_DIR:?}:/etc/letsencrypt:ro
       - ${ACME_WEBROOT_DIR:?}:/var/www/certbot:ro
+
+  # PBX of the call center. 8088 (ARI, SIP over WebSocket) stays inside the Docker network;
+  # Nginx proxies wss://APP_DOMAIN/ws to it. 5060/udp is only needed for a SIP trunk (CC-4).
+  asterisk:
+    build: ./asterisk
+    restart: unless-stopped
+    hostname: pbx.tdtu.local
+    environment:
+      ARI_PASSWORD: ${ASTERISK_ARI_PASSWORD:?}
+      SPIKE_SIP_PASSWORD: ${ASTERISK_SPIKE_SIP_PASSWORD:?}
+      EXTERNAL_IP: ${ASTERISK_EXTERNAL_IP:?}
+      ARI_ALLOWED_ORIGINS: https://${APP_DOMAIN:?}
+    volumes:
+      # pjsip_trunk.conf (not in git) is picked up from here when present.
+      - ./asterisk/config:/opt/nexo-asterisk:ro
+      - ${ASTERISK_LOG_DIR:-./asterisk/logs}:/var/log/asterisk
+    ports:
+      - "5060:5060/udp"
+      - "10000-10099:10000-10099/udp"
 
   # STUN/TURN for clients behind symmetric NAT or networks that block UDP (e.g. some 4G
   # carriers). Host networking so the relay ports are exposed on the public IP directly.
@@ -133,3 +164,4 @@ services:
 
 volumes:
   postgres_prod:
+  media_prod:

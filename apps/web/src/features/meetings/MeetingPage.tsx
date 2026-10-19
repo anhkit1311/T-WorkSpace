@@ -6,6 +6,8 @@ import {
   getMeetingSchedulesApi,
   saveMeetingScheduleApi,
   cancelMeetingScheduleApi,
+  getMyCommitteesApi,
+  getDialInApi,
   type MeetingHistoryItem,
 } from "./api";
 import { useApp } from "../../app/providers/AppContext";
@@ -39,13 +41,8 @@ type Room = {
   role: WorkspaceItem["role"];
 };
 
-export const MEETING_BRANCH_PILLS = [
-  "Tất cả",
-  "Họp Khoa / Bộ môn",
-  "Sinh hoạt CVHT",
-  "Hội đồng Bảo vệ Đồ án",
-  "Lớp học Trực tuyến",
-] as const;
+/** Room filters from real data: schedules, committees (MT-3) and the user's role in the group. */
+export const MEETING_BRANCH_PILLS = ["Tất cả", "Có lịch sắp tới", "Hội đồng bảo vệ", "Nhóm tôi quản lý"] as const;
 
 export const THESIS_RUBRICS = [
   { id: "r1", name: "Tổng quan đề tài & Mục tiêu nghiên cứu", weight: 20 },
@@ -53,6 +50,12 @@ export const THESIS_RUBRICS = [
   { id: "r3", name: "Báo cáo tiến độ & Kỹ năng thuyết trình", weight: 20 },
   { id: "r4", name: "Trả lời câu hỏi phản biện của hội đồng", weight: 20 },
 ];
+
+/**
+ * The council scoring and live-quiz side panels were UI prototypes (scores were never saved). Real
+ * committee scoring is MeetingCommitteePanel (MT-3) and quizzes live in e-learning; kept hidden.
+ */
+const SHOW_PROTOTYPE_PANELS = false;
 
 export const QUIZ_QUESTION = "Kiến trúc WebRTC SFU phân phối luồng media như thế nào?";
 export const QUIZ_OPTIONS = [
@@ -212,6 +215,27 @@ interface GridTile {
   peer: RemotePeer | null;
 }
 
+/** M1: lets someone without a computer join by phone: dial the meeting number, type the code. */
+function DialInBadge({ accessToken, roomId }: { accessToken: string; roomId: string }) {
+  const [dialIn, setDialIn] = useState<{ number: string; code: string } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    getDialInApi(accessToken, roomId).then((info) => alive && setDialIn(info), () => alive && setDialIn(null));
+    return () => {
+      alive = false;
+    };
+  }, [accessToken, roomId]);
+  if (!dialIn) return null;
+  const code = `${dialIn.code.slice(0, 3)} ${dialIn.code.slice(3)}`;
+  return (
+    <Badge tone="neutral">
+      <span title={`Từ máy lẻ: gọi ${dialIn.number}, nhập mã ${dialIn.code} rồi nhấn #`}>
+        <Icon name="phone" size={12} /> Gọi {dialIn.number} · mã {code}
+      </span>
+    </Badge>
+  );
+}
+
 function ParticipantTile({
   isLocal,
   displayName,
@@ -307,6 +331,9 @@ export function MeetingPage() {
   const [scheduleTitle, setScheduleTitle] = useState("");
   const [scheduleDescription, setScheduleDescription] = useState("");
   const [scheduleAgenda, setScheduleAgenda] = useState("");
+  // MT-3: committees the user sits on; a schedule can make its meeting that committee's room.
+  const [committees, setCommittees] = useState<{ id: string; code: string; name: string }[]>([]);
+  const [scheduleCommitteeId, setScheduleCommitteeId] = useState("");
   const [scheduleRoomId, setScheduleRoomId] = useState("");
   const [scheduleStart, setScheduleStart] = useState("");
   const [scheduleEnd, setScheduleEnd] = useState("");
@@ -572,6 +599,10 @@ export function MeetingPage() {
   }, [accessToken, meeting.inCall]);
 
   useEffect(() => {
+    if (accessToken) void getMyCommitteesApi(accessToken).then(setCommittees, () => setCommittees([]));
+  }, [accessToken]);
+
+  useEffect(() => {
     if (!accessToken || meeting.inCall) return;
     let active = true;
     setSchedulesLoading(true);
@@ -677,21 +708,19 @@ export function MeetingPage() {
     ? schedules.filter((item) => item.workspaceId === route.workspaceId)
     : schedules;
 
+  const scheduledRooms = new Set(visibleSchedules.filter((item) => new Date(item.endsAt) > new Date()).map((item) => item.roomId));
+  const committeeRooms = new Set(visibleSchedules.filter((item) => item.committeeId).map((item) => item.roomId));
+  const pillMatches = (pill: string, room: Room) =>
+    pill === "Có lịch sắp tới"
+      ? scheduledRooms.has(room.id)
+      : pill === "Hội đồng bảo vệ"
+        ? committeeRooms.has(room.id)
+        : pill === "Nhóm tôi quản lý"
+          ? room.role === "owner" || room.role === "admin"
+          : true;
+  const pillCount = (pill: string) => visibleRooms.filter((room) => pillMatches(pill, room)).length;
   const filteredRooms = visibleRooms.filter((room) => {
-    if (meetingPill === "Tất cả") return true;
-    if (meetingPill === "Họp Khoa / Bộ môn") {
-      return /khoa|bộ môn|giảng|họp|phòng/i.test(room.name) || /khoa/i.test(room.workspace);
-    }
-    if (meetingPill === "Sinh hoạt CVHT") {
-      return /cvht|sinh hoạt|lớp|cố vấn/i.test(room.name) || /cvht/i.test(room.workspace);
-    }
-    if (meetingPill === "Hội đồng Bảo vệ Đồ án") {
-      return /hội đồng|đồ án|khóa luận|defense|chấm/i.test(room.name) || /đồ án/i.test(room.workspace);
-    }
-    if (meetingPill === "Lớp học Trực tuyến") {
-      return /lớp|học|trực tuyến|online|lecture/i.test(room.name) || /mạng|phần mềm/i.test(room.name);
-    }
-    return true;
+    return pillMatches(meetingPill, room);
   });
   const displayRooms = filteredRooms.length ? filteredRooms : visibleRooms;
   const selected = displayRooms.find((room) => room.id === selectedId) ?? displayRooms[0] ?? visibleRooms.find((room) => room.id === selectedId) ?? rooms.find((room) => room.id === selectedId);
@@ -789,6 +818,7 @@ export function MeetingPage() {
     setScheduleTitle(item?.title ?? "");
     setScheduleDescription(item?.description ?? "");
     setScheduleAgenda((item?.agenda ?? []).join("\n"));
+    setScheduleCommitteeId(item?.committeeId ?? "");
     setScheduleRoomId(item?.roomId ?? selectedId ?? visibleRooms[0]?.id ?? rooms[0]?.id ?? "");
     setScheduleStart(localDateTime(item ? new Date(item.startsAt) : start));
     setScheduleEnd(
@@ -822,6 +852,7 @@ export function MeetingPage() {
             .filter(Boolean),
           startsAt: startsAt.toISOString(),
           endsAt: endsAt.toISOString(),
+          ...(committees.length ? { committeeId: scheduleCommitteeId || null } : {}),
         },
         editingScheduleId || undefined,
       );
@@ -1108,7 +1139,9 @@ export function MeetingPage() {
                 <Icon name="calendar" size={22} strokeWidth={1.8} />
               </div>
               <div>
-                <div className="meeting-kpi-card__number">{visibleSchedules.length}</div>
+                <div className="meeting-kpi-card__number">
+                  {visibleSchedules.filter((item) => new Date(item.startsAt).toDateString() === new Date().toDateString()).length}
+                </div>
                 <div className="meeting-kpi-card__label">Cuộc họp hôm nay</div>
               </div>
             </div>
@@ -1118,22 +1151,22 @@ export function MeetingPage() {
                 <Icon name="graduation-cap" size={22} strokeWidth={1.8} />
               </div>
               <div>
-                <div className="meeting-kpi-card__number">3</div>
-                <div className="meeting-kpi-card__label">Hội đồng đồ án</div>
+                <div className="meeting-kpi-card__number">{committees.length}</div>
+                <div className="meeting-kpi-card__label">Hội đồng bạn tham gia</div>
               </div>
             </div>
           </div>
 
           {/* Dãy pill lọc phân loại hội nghị */}
           <div className="meeting-filter-row" role="tablist" aria-label="Bộ lọc phân loại hội nghị">
-            {MEETING_BRANCH_PILLS.map((pill) => (
+            {MEETING_BRANCH_PILLS.filter((pill) => pill === "Tất cả" || pill === meetingPill || pillCount(pill) > 0).map((pill) => (
               <button
                 key={pill}
                 type="button"
                 className={`meeting-filter-pill ${meetingPill === pill ? "is-active" : ""}`}
                 onClick={() => setMeetingPill(pill)}
               >
-                {pill}
+                {pill} ({pillCount(pill)})
               </button>
             ))}
           </div>
@@ -1458,6 +1491,19 @@ export function MeetingPage() {
                       placeholder="Nội dung, tài liệu cần chuẩn bị…"
                     />
                   </label>
+                  {committees.length > 0 && (
+                    <label className="meeting-schedule-wide">
+                      Hội đồng bảo vệ
+                      <select value={scheduleCommitteeId} onChange={(event) => setScheduleCommitteeId(event.target.value)}>
+                        <option value="">Không phải buổi bảo vệ</option>
+                        {committees.map((committee) => (
+                          <option key={committee.id} value={committee.id}>
+                            {committee.code} · {committee.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
                   <label className="meeting-schedule-wide">
                     Agenda (mỗi dòng một mục)
                     <textarea
@@ -1626,6 +1672,7 @@ export function MeetingPage() {
               <Badge tone={isConnected ? "green" : "amber"}>
                 <Icon name="users" size={12} /> {participantCount} người tham gia
               </Badge>
+              {accessToken && <DialInBadge accessToken={accessToken} roomId={meeting.roomId} />}
               <Badge tone="blue">WebRTC SFU</Badge>
             </div>
           </header>
@@ -1764,6 +1811,7 @@ export function MeetingPage() {
                     <Icon name="users" size={14} />
                     <span>Điểm danh ({participantCount})</span>
                   </button>
+                  {SHOW_PROTOTYPE_PANELS && <>
                   <button
                     type="button"
                     className={`meeting-panel-tab ${sidePanel === "council" ? "is-active" : ""}`}
@@ -1780,6 +1828,7 @@ export function MeetingPage() {
                     <Icon name="help-circle" size={14} />
                     <span>Live Quiz</span>
                   </button>
+                  </>}
                   <button
                     type="button"
                     className={`meeting-panel-tab ${sidePanel === "notes" ? "is-active" : ""}`}
@@ -2198,6 +2247,7 @@ export function MeetingPage() {
             >
               <Icon name="users" size={18} />
             </button>
+            {SHOW_PROTOTYPE_PANELS && <>
             <button
               type="button"
               className={`meeting-dock-btn ${sidePanel === "council" ? "is-active" : ""}`}
@@ -2218,6 +2268,7 @@ export function MeetingPage() {
             >
               <Icon name="help-circle" size={18} />
             </button>
+            </>}
             <button
               type="button"
               className={`meeting-dock-btn ${sidePanel === "notes" ? "is-active" : ""}`}

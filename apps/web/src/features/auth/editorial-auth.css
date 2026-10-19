@@ -58,7 +58,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border-radius: var(--radius-pill, 9999px);
+  border-radius: var(--radius-button, 6px);
   background: var(--bg-surface, #FFFFFF);
   color: var(--text-secondary, #475569);
   padding: 7px 16px;
@@ -67,7 +67,7 @@
   border: 1px solid var(--border-color, #E2E8F0);
   cursor: pointer;
   transition: all 0.15s ease;
-  box-shadow: var(--shadow-card, 0 1px 2px rgba(15, 23, 42, 0.04));
+  box-shadow: none;
 }
 
 .editorial-auth-back-btn:hover {
@@ -84,10 +84,10 @@
   max-width: 440px;
   background: var(--bg-surface, #FFFFFF);
   border: 1px solid var(--border-color, #E2E8F0);
-  border-radius: var(--radius-card, 14px);
+  border-radius: var(--radius-card, 8px);
   padding: 36px 32px;
   margin: auto 0;
-  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.04), 0 2px 4px -2px rgba(15, 23, 42, 0.02);
+  box-shadow: none;
   box-sizing: border-box;
 }
 
@@ -126,7 +126,7 @@
   display: flex;
   background: var(--bg-subtle, #F1F5F9);
   padding: 3px;
-  border-radius: var(--radius-pill, 9999px);
+  border-radius: var(--radius-button, 6px);
   margin-bottom: 22px;
   gap: 3px;
 }
@@ -136,7 +136,7 @@
   padding: 7px 14px;
   font-size: 13px;
   font-weight: 500;
-  border-radius: var(--radius-pill, 9999px);
+  border-radius: var(--radius-button, 6px);
   border: none;
   cursor: pointer;
   background: transparent;
@@ -149,7 +149,7 @@
 .editorial-tab-btn.is-active {
   background: var(--brand-primary, #2563EB);
   color: #FFFFFF;
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
+  box-shadow: none;
   font-weight: 600;
 }
 
@@ -172,7 +172,7 @@
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
-  border-radius: var(--radius-button, 10px);
+  border-radius: var(--radius-button, 6px);
   border: 1px solid var(--border-color, #E2E8F0);
   background: var(--bg-surface, #FFFFFF);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -247,7 +247,7 @@
   background-color: var(--brand-primary, #2563EB);
   color: #FFFFFF;
   border: none;
-  border-radius: var(--radius-button, 10px);
+  border-radius: var(--radius-button, 6px);
   padding: 11px 24px;
   font-size: 14px;
   font-weight: 600;
@@ -258,7 +258,7 @@
   justify-content: center;
   gap: 8px;
   transition: background-color 0.15s ease, transform 0.1s ease;
-  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+  box-shadow: none;
 }
 
 .editorial-submit-btn:hover:not(:disabled) {
@@ -322,7 +322,7 @@
   background: #FEF2F2;
   border: 1px solid #FECACA;
   color: #DC2626;
-  border-radius: var(--radius-button, 10px);
+  border-radius: var(--radius-button, 6px);
   padding: 10px 14px;
   font-size: 13px;
   margin-bottom: 16px;
@@ -336,7 +336,7 @@
   justify-content: center;
   gap: 8px;
   padding: 9px 16px;
-  border-radius: var(--radius-pill, 9999px);
+  border-radius: var(--radius-button, 6px);
   background: var(--bg-subtle, #F1F5F9);
   color: var(--text, #0F172A);
   font-size: 13.5px;
@@ -353,7 +353,7 @@
   width: 100%;
   box-sizing: border-box;
   border: 1px solid var(--border-color, #E2E8F0);
-  border-radius: var(--radius-button, 10px);
+  border-radius: var(--radius-button, 6px);
   background: var(--bg-surface, #FFFFFF);
   color: var(--text, #0F172A);
   outline: none !important;

@@ -37,6 +37,23 @@ export const config = {
   otpMaxAttempts: readPositiveInteger("OTP_MAX_ATTEMPTS", 5),
   otpResendCooldownSeconds: readPositiveInteger("OTP_RESEND_COOLDOWN_SECONDS", 60),
   otpMaxResends: readPositiveInteger("OTP_MAX_RESENDS", 5),
+  // MT-1 / EL-3: FFmpeg for recordings and video lessons. FFMPEG_COMMAND may be a prefix such as
+  // "docker exec -i -w /work nexo-ffmpeg ffmpeg"; FFmpeg always runs with cwd = mediaDir and
+  // relative paths, so the same arguments work inside a container that mounts mediaDir at /work.
+  ffmpegCommand: process.env.FFMPEG_COMMAND ?? "ffmpeg",
+  mediaDir: process.env.MEDIA_DIR ?? "data/media",
+  recordingRtpMinPort: readPositiveInteger("RECORDING_RTP_MIN_PORT", 30000),
+  recordingRtpMaxPort: readPositiveInteger("RECORDING_RTP_MAX_PORT", 30199),
+  // M1 phone dial-in: how FFmpeg reaches the SFU, and how Asterisk reaches FFmpeg (dev, in
+  // containers: host.docker.internal and the "ffmpeg" service; one host in production).
+  phoneSfuHost: process.env.PHONE_SFU_HOST ?? "127.0.0.1",
+  phoneMediaHost: process.env.PHONE_MEDIA_HOST ?? "127.0.0.1",
+  meetingDialInNumber: process.env.MEETING_DIALIN_NUMBER ?? "7000",
+  // M3: OpenAI-compatible speech-to-text (/v1/audio/transcriptions); empty turns captions off.
+  transcribeUrl: process.env.TRANSCRIBE_URL ?? "",
+  transcribeApiKey: process.env.TRANSCRIBE_API_KEY ?? "",
+  transcribeModel: process.env.TRANSCRIBE_MODEL ?? "whisper-1",
+  transcribeLanguage: process.env.TRANSCRIBE_LANGUAGE ?? "vi",
 };
 
 export function getJwtSecret(): Uint8Array {

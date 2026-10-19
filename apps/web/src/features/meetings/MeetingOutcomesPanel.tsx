@@ -16,6 +16,9 @@ import {
   setOutcomeChannelApi,
   updateAgendaItemApi,
 } from "./api";
+import { MeetingAttendancePanel } from "./MeetingAttendancePanel";
+import { MeetingRecordingPanel } from "./MeetingRecordingPanel";
+import { MeetingCommitteePanel } from "./MeetingCommitteePanel";
 import "./meeting-outcomes.css";
 
 const SAVE_DELAY_MS = 800;
@@ -462,6 +465,10 @@ export function MeetingOutcomesPanel({ sessionId, live }: { sessionId: string; l
           </form>
         )}
       </section>
+
+      <MeetingCommitteePanel sessionId={sessionId} />
+      <MeetingRecordingPanel sessionId={sessionId} live={live} />
+      <MeetingAttendancePanel sessionId={sessionId} />
     </div>
   );
 }

@@ -52,6 +52,7 @@ Google Sign-In cần đăng ký đúng origin của web trong Google Cloud; xem 
 ```powershell
 npm run callcenter:up        # build Asterisk 22 từ mã nguồn (lần đầu vài phút), mở 5060/udp, 8088, 10000-10099/udp
 npm run callcenter:ari-spike # in StasisStart khi có cuộc gọi vào ứng dụng ARI "nexo"
+npm run callcenter:seed -- giaovu@demo.nexo.test gv.ha@demo.nexo.test  # 2 phòng ban, hotline 19001234 (IVR phím 1/2), máy lẻ cho từng email
 ```
 
 - Máy lẻ thử: 1001, 1002 (Zoiper/Linphone, UDP 127.0.0.1:5060) và 1101 (trình duyệt), cùng mật khẩu `ASTERISK_SPIKE_SIP_PASSWORD`.

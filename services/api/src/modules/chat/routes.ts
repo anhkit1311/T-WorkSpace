@@ -20,6 +20,12 @@ import {
   toggleSavedMessage,
   workspaceNotificationPreference,
 } from "./conversations.js";
+import {
+  listDirectConversations,
+  listDirectFiles,
+  openDirectConversation,
+  searchDirectUsers,
+} from "./direct.js";
 export async function conversationRoutes({
   request,
   response,
@@ -48,6 +54,32 @@ export async function conversationRoutes({
     await markNotificationsRead(userId, body.id as string | undefined);
     io.to(`user:${userId}`).emit("notifications_changed");
     sendJson(response, 200, { success: true });
+    return;
+  }
+  if (pathname === "/api/direct-conversations" && request.method === "GET") {
+    const userId = await getAuthUserId(request);
+    response.setHeader("Cache-Control", "no-store");
+    sendJson(response, 200, { conversations: await listDirectConversations(userId) });
+    return;
+  }
+  if (pathname === "/api/direct-conversations" && request.method === "POST") {
+    const userId = await getAuthUserId(request);
+    const body = await readJson(request);
+    sendJson(response, 200, { conversation: await openDirectConversation(userId, body.userId) });
+    return;
+  }
+  if (pathname === "/api/direct-conversations/users" && request.method === "GET") {
+    const userId = await getAuthUserId(request);
+    sendJson(response, 200, { users: await searchDirectUsers(userId, params.get("q") ?? "") });
+    return;
+  }
+  const directFiles = pathname.match(/^\/api\/direct-conversations\/([^/]+)\/files$/);
+  if (directFiles && request.method === "GET") {
+    const userId = await getAuthUserId(request);
+    response.setHeader("Cache-Control", "no-store");
+    sendJson(response, 200, {
+      files: await listDirectFiles(userId, directFiles[1], Number(params.get("limit")) || 20),
+    });
     return;
   }
   const conversation = pathname.match(
@@ -165,6 +197,7 @@ export async function conversationRoutes({
       muted: body.muted as boolean | undefined,
       markRead: body.markRead === true,
     });
+    if (body.markRead === true) io.to(`user:${userId}`).emit("notifications_changed");
     sendJson(response, 200, { preference });
     return;
   }

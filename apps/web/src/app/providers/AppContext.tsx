@@ -45,13 +45,13 @@ interface AppContextValue {
   openWorkspace: (workspaceId: string, tab?: WorkspaceTabId) => void;
   openChannel: (workspaceId: string, channelId?: string, meeting?: boolean) => void;
   chatNavigation: {
-    workspaceId: string;
+    workspaceId?: string;
     channelId: string;
     messageId: string;
     query: string;
   } | null;
   openChatSearchResult: (target: {
-    workspaceId: string;
+    workspaceId?: string;
     channelId: string;
     messageId: string;
     query: string;
@@ -96,6 +96,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [route, setRoute] = useState(() => readAppRoute(new URL(window.location.href)));
   const activeView = route.view;
   const navigate = useCallback((target: AppRoute, replace = false) => {
+    // "Tin nhắn" holds direct conversations only; a group channel opens in its workspace's "Trao đổi" tab.
+    if (target.view === "chat" && target.workspaceId) target = { ...target, view: "workspace" };
     const url = appRouteUrl(target);
     if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== url)
       window.history[replace ? "replaceState" : "pushState"]({}, "", url);
@@ -105,7 +107,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setActiveView = useCallback(
     (view: ViewId) => {
       const keepWorkspace =
-        (isWorkspaceTabView(view) || view === "admin") && route.workspaceId
+        ((isWorkspaceTabView(view) && view !== "chat") || view === "admin") && route.workspaceId
           ? route.workspaceId
           : undefined;
       navigate({ view, workspaceId: keepWorkspace });

@@ -4,6 +4,7 @@ import { useSocket } from "../../app/providers/SocketContext";
 import { Icon } from "../../shared/ui/Icon";
 import { FilterPills, KpiStatCard } from "../../shared/ui/Primitives";
 import { governanceApi } from "./api";
+import { RoleHome, roleSubtitle, useRoleData } from "./RoleHome";
 import "./workspace-home.css";
 
 interface NewsItem {
@@ -22,7 +23,11 @@ export function WorkspaceHomePage() {
   const { setActiveView, user, accessToken } = useApp();
   const { unreadCount: unreadMessages } = useSocket();
 
-  const [unreadNotifications, setUnreadNotifications] = useState(1);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const roleData = useRoleData();
+  const nextMeeting = roleData?.meetings[0] ?? null;
+  // The news feed has no backend yet; its sample post stays hidden until it does.
+  const showSampleNews = false;
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
 
   useEffect(() => {
@@ -50,8 +55,8 @@ export function WorkspaceHomePage() {
     }
   }, []);
 
-  const calendarDate = useMemo(() => {
-    const now = new Date();
+  const calendarDate = (iso: string) => {
+    const now = new Date(iso);
     const day = now.getDate();
     const dayOfWeek = now.getDay();
     const weekdayShort = dayOfWeek === 0 ? "CN" : `T${dayOfWeek + 1}`;
@@ -59,9 +64,9 @@ export function WorkspaceHomePage() {
       weekday: weekdayShort,
       day: day.toString().padStart(2, "0"),
     };
-  }, []);
+  };
 
-  const displayName = user?.displayName?.trim() || "Nguyễn Đăng Khoa";
+  const displayName = user?.displayName?.trim() || "bạn";
 
   const filterTabs = [
     { key: "all", label: "Tất cả" },
@@ -92,7 +97,7 @@ export function WorkspaceHomePage() {
           Xin chào, {displayName} 👋
         </h1>
         <p className="tdtu-home-greeting__subtitle">
-          Quản trị hệ thống · Tài khoản khoa
+          {roleSubtitle(roleData)}
         </p>
       </section>
 
@@ -101,7 +106,7 @@ export function WorkspaceHomePage() {
         <KpiStatCard
           icon="bell"
           tone="purple"
-          value={unreadNotifications > 0 ? unreadNotifications : 1}
+          value={unreadNotifications}
           label="Thông báo chưa đọc"
           onClick={() => setActiveView("notifications")}
         />
@@ -115,7 +120,7 @@ export function WorkspaceHomePage() {
         <KpiStatCard
           icon="video"
           tone="purple"
-          value={1}
+          value={roleData?.meetings.length ?? "…"}
           label="Cuộc họp sắp tới"
           onClick={() => setActiveView("meetings")}
         />
@@ -125,7 +130,8 @@ export function WorkspaceHomePage() {
       <section className="tdtu-home-main-grid">
         {/* Cột trái: Bảng tin */}
         <div className="tdtu-home-feed">
-          <div className="tdtu-home-feed__head">
+          <RoleHome data={roleData} />
+          {showSampleNews && <div className="tdtu-home-feed__head">
             <h2 className="tdtu-home-feed__title">Bảng tin</h2>
             <FilterPills
               options={filterTabs}
@@ -137,10 +143,10 @@ export function WorkspaceHomePage() {
                 }
               }}
             />
-          </div>
+          </div>}
 
           {/* Thẻ bài viết nổi bật chia 2 nửa */}
-          <div className="tdtu-home-featured-card">
+          {showSampleNews && <div className="tdtu-home-featured-card">
             {/* Nửa trái: Khối màu xanh gradient có icon cái loa */}
             <div className="tdtu-home-featured-banner">
               <div className="tdtu-home-featured-banner__deco-circle-1" />
@@ -172,7 +178,7 @@ export function WorkspaceHomePage() {
                 </span>
               </div>
             </div>
-          </div>
+          </div>}
         </div>
 
         {/* Cột phải: 2 thẻ xếp dọc */}
@@ -190,14 +196,18 @@ export function WorkspaceHomePage() {
               </button>
             </div>
 
-            <div className="tdtu-home-meeting-row">
+            {!nextMeeting && <p className="role-home__empty">Không có lịch họp sắp tới.</p>}
+            {nextMeeting && <div className="tdtu-home-meeting-row">
               <div className="tdtu-home-calendar-tile">
-                <span className="tdtu-home-calendar-tile__weekday">{calendarDate.weekday}</span>
-                <span className="tdtu-home-calendar-tile__day">{calendarDate.day}</span>
+                <span className="tdtu-home-calendar-tile__weekday">{calendarDate(nextMeeting.startsAt).weekday}</span>
+                <span className="tdtu-home-calendar-tile__day">{calendarDate(nextMeeting.startsAt).day}</span>
               </div>
               <div className="tdtu-home-meeting-info">
-                <div className="tdtu-home-meeting-name">Báo cáo dự án</div>
-                <div className="tdtu-home-meeting-time">22:30 · 60 phút</div>
+                <div className="tdtu-home-meeting-name">{nextMeeting.title}</div>
+                <div className="tdtu-home-meeting-time">
+                  {new Date(nextMeeting.startsAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })} ·{" "}
+                  {Math.round((new Date(nextMeeting.endsAt).getTime() - new Date(nextMeeting.startsAt).getTime()) / 60000)} phút
+                </div>
               </div>
               <button
                 type="button"
@@ -206,7 +216,7 @@ export function WorkspaceHomePage() {
               >
                 Chi tiết
               </button>
-            </div>
+            </div>}
           </div>
 
           {/* Thẻ 2: Lối tắt */}
@@ -219,10 +229,10 @@ export function WorkspaceHomePage() {
               <button
                 type="button"
                 className="tdtu-home-shortcut-btn"
-                onClick={() => setActiveView("chat")}
+                onClick={() => setActiveView("call-center")}
               >
-                <Icon name="message" size={17} />
-                <span>Nhắn tin</span>
+                <Icon name="headset" size={17} />
+                <span>Tổng đài</span>
               </button>
 
               <button
@@ -231,25 +241,25 @@ export function WorkspaceHomePage() {
                 onClick={() => setActiveView("meetings")}
               >
                 <Icon name="video" size={17} />
-                <span>Hội nghị</span>
+                <span>Họp trực tuyến</span>
               </button>
 
               <button
                 type="button"
                 className="tdtu-home-shortcut-btn"
-                onClick={() => setActiveView("call-center")}
+                onClick={() => setActiveView("elearning")}
               >
-                <Icon name="phone-call" size={17} />
-                <span>Cuộc gọi</span>
+                <Icon name="graduation-cap" size={17} />
+                <span>Khóa học</span>
               </button>
 
               <button
                 type="button"
                 className="tdtu-home-shortcut-btn"
-                onClick={() => setActiveView("workspace")}
+                onClick={() => setActiveView("chat")}
               >
-                <Icon name="users" size={17} />
-                <span>Nhân sự</span>
+                <Icon name="message" size={17} />
+                <span>Tin nhắn</span>
               </button>
             </div>
           </div>

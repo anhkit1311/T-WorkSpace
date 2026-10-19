@@ -1,0 +1,126 @@
+/* LT-4 training gate on the desk, V7 scorecards and reviews. */
+.desk-training {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--primary-soft);
+  font-size: 13px;
+}
+.desk-training strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.desk-training__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px auto auto;
+  align-items: center;
+  gap: 8px;
+}
+.desk-training__bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.desk-training__bar > span {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+}
+
+.qa-panel {
+  display: grid;
+  gap: 16px;
+}
+.qa-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 16px;
+  align-items: start;
+}
+.qa-criteria {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+.qa-criteria li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+}
+.qa-weight {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.qa-weight input {
+  width: 56px;
+}
+.qa-review {
+  display: block;
+}
+.qa-review__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.qa-review__head .call-item-info {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.qa-review__body {
+  margin-top: 8px;
+  font-size: 13px;
+}
+.qa-review__body ul {
+  margin: 0 0 6px;
+  padding-left: 18px;
+}
+.qa-sheet {
+  display: grid;
+  gap: 12px;
+}
+.qa-score {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px 48px;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+}
+.qa-score output {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .qa-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .desk-training__row,
+  .qa-score {
+    grid-template-columns: 1fr;
+  }
+}
+.qa-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+}

@@ -23,10 +23,10 @@
   align-items: center;
   gap: 16px;
   padding: 16px 20px;
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 14px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: none;
 }
 
 .meeting-kpi-card__icon {
@@ -35,7 +35,7 @@
   justify-content: center;
   width: 48px;
   height: 48px;
-  border-radius: 12px;
+  border-radius: 8px;
   flex-shrink: 0;
 }
 
@@ -55,15 +55,15 @@
 }
 
 .meeting-kpi-card__number {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--text);
   line-height: 1.2;
 }
 
 .meeting-kpi-card__label {
   font-size: 13px;
-  color: #64748B;
+  color: var(--text-muted);
   margin-top: 2px;
 }
 
@@ -77,26 +77,26 @@
 }
 
 .meeting-filter-pill {
-  padding: 6px 14px;
-  border-radius: 9999px;
-  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
   font-weight: 500;
-  border: 1px solid #E2E8F0;
-  background: #FFFFFF;
-  color: #64748B;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 150ms ease;
 }
 
 .meeting-filter-pill:hover {
   background: #F1F5F9;
-  color: #0F172A;
+  color: var(--text);
 }
 
 .meeting-filter-pill.is-active {
-  background: #2563EB;
-  color: #FFFFFF;
-  border-color: #2563EB;
+  background: var(--primary-soft);
+  color: var(--primary-text);
+  border-color: transparent;
   font-weight: 600;
 }
 
@@ -109,11 +109,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px 16px;
-  border: 1px solid #E2E8F0;
-  border-radius: 14px;
-  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  color: #0F172A;
+  color: var(--text);
 }
 
 .meeting-return-notice {
@@ -129,7 +129,7 @@
   margin-bottom: 12px;
   padding: 8px 12px 8px 16px;
   font-size: 13px;
-  color: #475569;
+  color: var(--text-secondary);
 }
 
 .meeting-layout-switch {
@@ -150,13 +150,13 @@
   display: block;
   margin-bottom: 4px;
   font-size: 13.5px;
-  color: #0F172A;
+  color: var(--text);
 }
 
 .meeting-qos-info p {
   margin: 0;
   font-size: 12.5px;
-  color: #64748B;
+  color: var(--text-muted);
 }
 
 .meeting-qos-actions {
@@ -168,8 +168,8 @@
 .meeting-panel-tabs {
   display: flex;
   align-items: center;
-  border-bottom: 1px solid #E2E8F0;
-  background: #F8FAFC;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
   padding: 4px 8px 0;
   gap: 4px;
   overflow-x: auto;
@@ -182,7 +182,7 @@
   padding: 8px 12px;
   font-size: 12.5px;
   font-weight: 500;
-  color: #64748B;
+  color: var(--text-muted);
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
@@ -192,14 +192,14 @@
 }
 
 .meeting-panel-tab:hover {
-  color: #0F172A;
+  color: var(--text);
 }
 
 .meeting-panel-tab.is-active {
   color: #2563EB;
   border-bottom-color: #2563EB;
   font-weight: 600;
-  background: #FFFFFF;
+  background: var(--surface);
   border-radius: 8px 8px 0 0;
 }
 
@@ -209,8 +209,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  background: #F8FAFC;
-  border-bottom: 1px solid #E2E8F0;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
   font-size: 12.5px;
 }
 
@@ -248,12 +248,12 @@
   padding: 8px 10px;
   border-radius: 8px;
   font-size: 13px;
-  color: #0F172A;
+  color: var(--text);
   border-bottom: 1px solid #F1F5F9;
 }
 
 .meeting-person-row:hover {
-  background: #F8FAFC;
+  background: var(--bg-subtle);
 }
 
 .meeting-person-info {
@@ -264,7 +264,7 @@
 
 .meeting-person-name {
   font-weight: 600;
-  color: #0F172A;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -278,7 +278,7 @@
 
 .meeting-person-meta {
   font-size: 11px;
-  color: #64748B;
+  color: var(--text-muted);
 }
 
 /* Chat List in Side Panel */
@@ -294,7 +294,7 @@
   gap: 2px;
   margin: 0 0 8px;
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: #F1F5F9;
   font-size: 13px;
   color: #334155;
@@ -303,7 +303,7 @@
 
 .meeting-chat-list p strong {
   font-size: 12px;
-  color: #0F172A;
+  color: var(--text);
 }
 
 /* Thesis Defense Council Panel (Hội đồng Chấm Đồ án) */
@@ -319,7 +319,7 @@
 
 .meeting-council-alert {
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: 6px;
   font-size: 12.5px;
   line-height: 1.45;
   display: flex;
@@ -344,15 +344,15 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  background: #F8FAFC;
-  border: 1px solid #E2E8F0;
-  border-radius: 10px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 6px;
 }
 
 .meeting-council-toggle-label {
   font-size: 13px;
   font-weight: 600;
-  color: #0F172A;
+  color: var(--text);
 }
 
 .meeting-rubric-table {
@@ -362,12 +362,12 @@
 }
 
 .meeting-rubric-table th {
-  background: #F8FAFC;
+  background: var(--bg-subtle);
   padding: 8px 10px;
   text-align: left;
   font-weight: 600;
-  color: #475569;
-  border-bottom: 1px solid #E2E8F0;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
 }
 
 .meeting-rubric-table td {
@@ -399,7 +399,7 @@
   padding: 10px 14px;
   background: #EEF2FF;
   border: 1px solid #C7D2FE;
-  border-radius: 10px;
+  border-radius: 6px;
   font-weight: 700;
   font-size: 14px;
   color: #1E40AF;
@@ -418,15 +418,15 @@
 
 .meeting-quiz-card {
   padding: 14px;
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
 }
 
 .meeting-quiz-question {
   font-size: 13.5px;
   font-weight: 600;
-  color: #0F172A;
+  color: var(--text);
   margin-bottom: 12px;
 }
 
@@ -436,14 +436,14 @@
   gap: 4px;
   margin-bottom: 8px;
   padding: 8px 10px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--border);
   border-radius: 8px;
   cursor: pointer;
   transition: all 140ms ease;
 }
 
 .meeting-quiz-option:hover {
-  background: #F8FAFC;
+  background: var(--bg-subtle);
   border-color: #CBD5E1;
 }
 
@@ -469,7 +469,25 @@
 
 .meeting-quiz-stat {
   font-size: 11.5px;
-  color: #64748B;
+  color: var(--text-muted);
   display: flex;
   justify-content: space-between;
+}
+
+.meeting-policy-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.meeting-policy-select select {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 6px);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
 }

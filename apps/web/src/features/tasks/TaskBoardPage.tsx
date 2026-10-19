@@ -42,7 +42,9 @@ export function TaskBoardPage() {
     try {
       const raw = localStorage.getItem("tdtu_callcenter_tickets");
       if (raw) setCcTickets(JSON.parse(raw));
-    } catch {}
+    } catch {
+      // Storage unavailable or corrupt: start with no tickets.
+    }
   }, []);
   const [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
@@ -402,7 +404,9 @@ export function TaskBoardPage() {
                       "Toàn bộ phiếu tổng đài đã được hoàn tất và lưu trữ.",
                       "info",
                     );
-                  } catch {}
+                  } catch {
+                    // Storage unavailable: nothing to clear.
+                  }
                 }}
               >
                 Đánh dấu đã hoàn thành

@@ -159,3 +159,24 @@ export async function sendOtpEmail({
 
   throw new Error("OTP email delivery failed; configure RESEND_API_KEY or SMTP_HOST");
 }
+
+/** A short plain-text notice (voicemail, ticket update). Resolves false when no mail service is configured. */
+export async function sendNoticeEmail(to: string, subject: string, textBody: string): Promise<boolean> {
+  const html = textBody
+    .split("\n")
+    .map((line) => `<p>${escapeHtml(line)}</p>`)
+    .join("");
+  if (config.resendApiKey) {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      signal: AbortSignal.timeout(10000),
+      headers: { Authorization: `Bearer ${config.resendApiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: config.smtpFrom, to: [to], subject, html, text: textBody }),
+    });
+    if (response.ok) return true;
+  }
+  const transporter = getTransporter();
+  if (!transporter) return false;
+  await transporter.sendMail({ from: config.smtpFrom, to, subject, html, text: textBody });
+  return true;
+}

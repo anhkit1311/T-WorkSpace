@@ -12,11 +12,17 @@ import { profileRoutes } from "./modules/profiles/routes.js";
 import { meetingRoutes } from "./modules/meetings/routes.js";
 import { fileRoutes } from "./modules/files/routes.js";
 import { academicRoutes } from "./modules/academic/routes.js";
+import { callCenterMetrics, callcenterRoutes, startCallCenter } from "./modules/callcenter/index.js";
+import { elearningRoutes, startElearning } from "./modules/elearning/index.js";
+import { startJobWorker } from "./infrastructure/jobs/queue.js";
 import { randomUUID } from "node:crypto";
 import { pool, query } from "./infrastructure/database/db.js";
 import { roomManager } from "./modules/meetings/media/room-manager.js";
+import { recoverRecordings, stopAllRecordings } from "./modules/meetings/recording/recordings.js";
+import { publishOutcomeChange } from "./modules/meetings/outcome-events.js";
 import { startMaintenance } from "./infrastructure/operations/maintenance.js";
 import { openapi } from "./shared/http/openapi.js";
+import { renderMetrics, type Metric } from "./infrastructure/operations/prometheus.js";
 const port = Number(process.env.API_PORT ?? 3001);
 const metrics = { requests: 0, errors: 0, totalDurationMs: 0 };
 const ioForShutdown = new WeakMap<Server, ReturnType<typeof initSocketServer>>();
@@ -103,9 +109,53 @@ async function handleRequest(
     ).catch(() => {
       throw new HttpError(503, "NOT_READY", "Máy chủ chưa sẵn sàng.");
     });
-    if (version.rows[0]?.name !== "026_direct_messages.sql")
+    if (version.rows[0]?.name !== "037_voip_completion.sql")
       throw new HttpError(503, "NOT_READY", "Cần chạy migration trước khi phục vụ.");
     sendJson(response, 200, { status: "ready" });
+    return;
+  }
+  if (request.method === "GET" && pathname === "/metrics") {
+    // Q5: Prometheus scrape (same bearer token as the JSON metrics below).
+    if (!process.env.OPERATIONS_TOKEN || request.headers.authorization !== `Bearer ${process.env.OPERATIONS_TOKEN}`)
+      throw new HttpError(403, "FORBIDDEN", "Bạn không có quyền truy cập.");
+    const media = roomManager.metrics();
+    const jobs = await query<{ status: string; count: number }>(
+      `SELECT status,count(*)::int AS count FROM media_jobs WHERE status IN ('queued','running','failed') GROUP BY status`,
+    );
+    const acd = callCenterMetrics();
+    const gauge = (name: string, help: string, samples: Metric["samples"]): Metric => ({ name, help, type: "gauge", samples });
+    const one = (value: number) => [{ value }];
+    const body = renderMetrics([
+      { name: "nexo_http_requests_total", help: "HTTP requests served.", type: "counter", samples: one(metrics.requests) },
+      { name: "nexo_http_errors_total", help: "HTTP responses with status 5xx.", type: "counter", samples: one(metrics.errors) },
+      { name: "nexo_http_request_duration_ms_total", help: "Sum of request durations in ms.", type: "counter", samples: one(metrics.totalDurationMs) },
+      gauge("nexo_db_pool_connections", "PostgreSQL pool connections.", [
+        { labels: { state: "total" }, value: pool.totalCount },
+        { labels: { state: "idle" }, value: pool.idleCount },
+        { labels: { state: "waiting" }, value: pool.waitingCount },
+      ]),
+      gauge("nexo_socket_clients", "Connected Socket.IO clients.", one(io.engine.clientsCount)),
+      gauge("nexo_media_workers", "mediasoup workers.", one(media.workers)),
+      gauge("nexo_media_rooms", "Meeting rooms with a router.", one(media.rooms)),
+      gauge("nexo_media_peers", "Peers in meeting rooms (phone callers included).", one(media.peers)),
+      gauge("nexo_media_jobs", "Media jobs in the PostgreSQL queue.", ["queued", "running", "failed"].map((status) => ({
+        labels: { status },
+        value: jobs.rows.find((row) => row.status === status)?.count ?? 0,
+      }))),
+      gauge("nexo_acd_leader", "1 on the instance running the ACD.", one(acd ? 1 : 0)),
+      ...(acd
+        ? [
+            gauge("nexo_callcenter_active_calls", "Calls the ACD is handling.", one(acd.activeCalls)),
+            gauge("nexo_callcenter_waiting_calls", "Calls waiting in a department queue.", acd.queues.map((queue) => ({ labels: { department: queue.departmentId }, value: queue.waiting }))),
+            gauge("nexo_callcenter_longest_wait_seconds", "Longest current wait per department.", acd.queues.map((queue) => ({ labels: { department: queue.departmentId }, value: Math.round(queue.longestMs / 1000) }))),
+            gauge("nexo_callcenter_agents", "Agents by state.", Object.entries(acd.agents).map(([state, value]) => ({ labels: { state }, value }))),
+          ]
+        : []),
+      gauge("process_resident_memory_bytes", "Resident memory.", one(process.memoryUsage().rss)),
+      gauge("process_uptime_seconds", "Process uptime.", one(Math.round(process.uptime()))),
+    ]);
+    response.writeHead(200, { "Content-Type": "text/plain; version=0.0.4; charset=utf-8", "Cache-Control": "no-store" });
+    response.end(body);
     return;
   }
   if (request.method === "GET" && pathname === "/api/operations/metrics") {
@@ -143,6 +193,8 @@ async function handleRequest(
     meetingRoutes,
     fileRoutes,
     academicRoutes,
+    callcenterRoutes,
+    elearningRoutes,
   ]) {
     await route(context);
     if (response.writableEnded) return;
@@ -165,15 +217,28 @@ if (process.argv[1]?.endsWith("server.ts") || process.argv[1]?.endsWith("server.
   }
   const server = createApiServer();
   const stopMaintenance = startMaintenance();
+  const stopCallCenter = startCallCenter(ioForShutdown.get(server)!);
+  const stopElearning = startElearning();
+  // Q3: media jobs (handlers registered by the modules above) from the PostgreSQL queue.
+  const stopJobs = startJobWorker((event, details = {}) =>
+    console.log(JSON.stringify({ level: event.endsWith("failed") ? "warn" : "info", event, ...details })),
+  );
+  void recoverRecordings((roomId, sessionId) =>
+    publishOutcomeChange(ioForShutdown.get(server)!, { roomId, sessionId, part: "recording" }),
+  ).catch((error) => console.error(JSON.stringify({ level: "error", event: "recording_recovery_failed", message: String(error) })));
   let stopping = false;
   const shutdown = () => {
     if (stopping) return;
     stopping = true;
     stopMaintenance();
+    stopCallCenter();
+    stopElearning();
+    stopJobs();
     console.log(JSON.stringify({ level: "info", event: "shutdown_started" }));
     const deadline = setTimeout(() => process.exit(1), 10000);
     deadline.unref();
-    server.close(() => {
+    server.close(async () => {
+      await stopAllRecordings().catch(() => {});
       roomManager.close();
       void pool.end().finally(() => {
         clearTimeout(deadline);

@@ -132,8 +132,8 @@ export async function getChannelMessages(
   const channelCheck = await query(
     `SELECT c.id
      FROM channels c
-     JOIN memberships m ON m.workspace_id = c.workspace_id
-     WHERE c.id = $1 AND m.user_id = $2`,
+     WHERE c.id = $1 AND (c.kind = 'direct' OR EXISTS (
+       SELECT 1 FROM memberships m WHERE m.workspace_id = c.workspace_id AND m.user_id = $2))`,
     [channelId, userId],
   );
   if (!channelCheck.rowCount) {
@@ -165,9 +165,10 @@ export async function getChannelMessages(
        m.content,
        m.created_at as "createdAt", m.edited_at as "editedAt",
        (SELECT count(*)::integer FROM channel_preferences reader
-         JOIN memberships member ON member.user_id=reader.user_id AND member.workspace_id=channel.workspace_id
          WHERE reader.channel_id=m.channel_id AND reader.user_id<>m.author_id
-           AND reader.last_read_at>=m.created_at) AS "seenCount",
+           AND reader.last_read_at>=m.created_at
+           AND (channel.kind='direct' OR EXISTS (SELECT 1 FROM memberships member
+             WHERE member.user_id=reader.user_id AND member.workspace_id=channel.workspace_id))) AS "seenCount",
        m.reply_to_id as "replyToId", reply.content as "replyToContent",
        CASE WHEN attachment.id IS NULL THEN NULL ELSE json_build_object(
          'id', attachment.id, 'fileName', attachment.file_name,
@@ -256,12 +257,12 @@ export async function saveMessage(
     );
   }
 
-  const channelCheck = await query<{ authorName: string }>(
-    `SELECT u.display_name as "authorName"
+  const channelCheck = await query<{ authorName: string; kind: string }>(
+    `SELECT u.display_name as "authorName", c.kind
      FROM channels c
-     JOIN memberships m ON m.workspace_id = c.workspace_id
      JOIN users u ON u.id = $2
-     WHERE c.id = $1 AND m.user_id = $2`,
+     WHERE c.id = $1 AND (c.kind = 'direct' OR EXISTS (
+       SELECT 1 FROM memberships m WHERE m.workspace_id = c.workspace_id AND m.user_id = $2))`,
     [channelId, userId],
   );
   if (!channelCheck.rowCount) {
@@ -292,7 +293,11 @@ export async function saveMessage(
     await client.query(`SELECT w.id FROM workspaces w JOIN channels c ON c.workspace_id=w.id WHERE c.id=$1 FOR SHARE OF w`,[channelId]);
     await client.query(`SELECT id FROM channels WHERE id=$1 FOR SHARE`,[channelId]);
     // Hold current membership against concurrent removal until the insert commits.
-    const access = await client.query(
+    // Direct conversations have no membership; the participant pair is immutable.
+    const access = channelCheck.rows[0].kind === "direct" ? await client.query(
+      `SELECT 1 FROM channel_access WHERE channel_id=$1 AND user_id=$2 AND can_write`,
+      [channelId, userId],
+    ) : await client.query(
       `SELECT m.user_id FROM memberships m JOIN channels c ON c.workspace_id=m.workspace_id JOIN workspaces w ON w.id=c.workspace_id WHERE c.id=$1 AND m.user_id=$2 AND EXISTS (SELECT 1 FROM channel_access access WHERE access.channel_id=c.id AND access.user_id=$2 AND access.can_write) FOR SHARE OF m`,
       [channelId, userId],
     );
@@ -433,6 +438,12 @@ export async function setChannelPreference(
       input.muted ?? null,
     ],
   );
+  // Reading a direct conversation also clears its per-message inbox entries.
+  if (input.markRead === true)
+    await query(
+      `UPDATE notifications SET read_at=now() WHERE user_id=$1 AND kind='direct' AND read_at IS NULL AND message_id IN (SELECT id FROM messages WHERE channel_id=$2)`,
+      [userId, channelId],
+    );
   return result.rows[0];
 }
 
@@ -490,8 +501,8 @@ export async function toggleReaction(
   validateId(messageId);
   if (!["👍", "❤️", "😂", "🎉", "👀"].includes(emoji))
     throw new HttpError(400, "INVALID_REACTION", "Cảm xúc không hợp lệ.");
-  const access = await query<{ channelId: string }>(
-    `SELECT m.channel_id AS "channelId" FROM messages m JOIN channels c ON c.id=m.channel_id JOIN memberships member ON member.workspace_id=c.workspace_id AND member.user_id=$2 WHERE m.id=$1 AND m.deleted_at IS NULL`,
+  const access = await query<{ channelId: string; kind: string }>(
+    `SELECT m.channel_id AS "channelId",c.kind FROM messages m JOIN channels c ON c.id=m.channel_id LEFT JOIN memberships member ON member.workspace_id=c.workspace_id AND member.user_id=$2 WHERE m.id=$1 AND m.deleted_at IS NULL AND (member.user_id IS NOT NULL OR c.kind='direct')`,
     [messageId, userId],
   );
   if (!access.rowCount) throw new HttpError(404, "MESSAGE_NOT_FOUND", "Không tìm thấy tin nhắn.");
@@ -499,7 +510,7 @@ export async function toggleReaction(
   await withTransaction(async client=>{
   await client.query(`SELECT w.id FROM workspaces w JOIN channels c ON c.workspace_id=w.id WHERE c.id=$1 FOR SHARE OF w`,[access.rows[0].channelId]);
   await client.query(`SELECT id FROM channels WHERE id=$1 FOR SHARE`,[access.rows[0].channelId]);
-  if(!(await client.query(`SELECT m.user_id FROM memberships m JOIN channel_access a ON a.workspace_id=m.workspace_id AND a.user_id=m.user_id AND a.can_write WHERE m.user_id=$1 AND a.channel_id=$2 FOR SHARE OF m`,[userId,access.rows[0].channelId])).rowCount)throw new HttpError(403,'FORBIDDEN','Bạn không còn quyền phản hồi.');
+  if(!(await client.query(access.rows[0].kind==='direct'?`SELECT 1 FROM channel_access WHERE user_id=$1 AND channel_id=$2 AND can_write`:`SELECT m.user_id FROM memberships m JOIN channel_access a ON a.workspace_id=m.workspace_id AND a.user_id=m.user_id AND a.can_write WHERE m.user_id=$1 AND a.channel_id=$2 FOR SHARE OF m`,[userId,access.rows[0].channelId])).rowCount)throw new HttpError(403,'FORBIDDEN','Bạn không còn quyền phản hồi.');
   await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1,0))`,[`${userId}:${messageId}:${emoji}`]);
   if(!(await client.query(`SELECT id FROM messages WHERE id=$1 AND deleted_at IS NULL FOR SHARE`,[messageId])).rowCount)throw new HttpError(404,'MESSAGE_NOT_FOUND','Tin nhắn đã bị xóa.');
   const removed = await client.query(
@@ -518,7 +529,7 @@ export async function toggleReaction(
 export async function getMessageChannel(userId: string, messageId: string): Promise<string> {
   validateId(messageId);
   const result = await query<{ channelId: string }>(
-    `SELECT m.channel_id AS "channelId" FROM messages m JOIN channels c ON c.id=m.channel_id JOIN memberships member ON member.workspace_id=c.workspace_id AND member.user_id=$2 WHERE m.id=$1`,
+    `SELECT m.channel_id AS "channelId" FROM messages m JOIN channels c ON c.id=m.channel_id LEFT JOIN memberships member ON member.workspace_id=c.workspace_id AND member.user_id=$2 WHERE m.id=$1 AND (member.user_id IS NOT NULL OR c.kind='direct')`,
     [messageId, userId],
   );
   if (!result.rowCount) throw new HttpError(404, "MESSAGE_NOT_FOUND", "Không tìm thấy tin nhắn.");

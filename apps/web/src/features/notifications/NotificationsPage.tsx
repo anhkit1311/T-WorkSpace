@@ -12,7 +12,7 @@ import "./notifications.css";
 
 export interface NotificationItem {
   id: string;
-  kind: "mention" | "thread";
+  kind: "mention" | "thread" | "direct";
   readAt: string | null;
   createdAt: string;
   messageId: string;
@@ -20,7 +20,7 @@ export interface NotificationItem {
   threadRootId: string | null;
   channelId: string;
   channelName: string;
-  workspaceId: string;
+  workspaceId: string | null;
   authorName: string;
 }
 export interface NotificationPage {
@@ -331,14 +331,19 @@ export function NotificationsPage() {
                       <>
                         {item.authorName}{" "}
                         <span className="notification-kind">
-                          {item.kind === "mention" ? "đã nhắc tên bạn" : "đã phản hồi trong chủ đề"}
+                          {item.kind === "mention"
+                            ? "đã nhắc tên bạn"
+                            : item.kind === "direct"
+                              ? "đã nhắn tin cho bạn"
+                              : "đã phản hồi trong chủ đề"}
                         </span>
                         {!item.readAt && <span className="sr-only"> (chưa đọc)</span>}
                       </>
                     }
                     subtitle={
                       <>
-                        <b>#{item.channelName}</b> · {item.content}
+                        {item.kind !== "direct" && <><b>#{item.channelName}</b> · </>}
+                        {item.content}
                       </>
                     }
                     metaPrimary={time}
@@ -347,7 +352,7 @@ export function NotificationsPage() {
                       void mark(item.id);
                       navigate({
                         view: "chat",
-                        workspaceId: item.workspaceId,
+                        workspaceId: item.workspaceId ?? undefined,
                         channelId: item.channelId,
                         messageId: item.threadRootId ?? item.messageId,
                         threadId: item.threadRootId ?? undefined,

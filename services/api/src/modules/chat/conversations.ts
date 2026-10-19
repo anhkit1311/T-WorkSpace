@@ -62,8 +62,13 @@ export async function createConversationNotifications(
         [options.threadRootId],
       )
     : { rows: [] };
+  // A direct channel is the only access row without a workspace; its other participant always hears about it.
+  const peer = await client.query<{ user_id: string }>(
+    `SELECT user_id FROM channel_access WHERE channel_id=$1 AND workspace_id IS NULL AND user_id<>$2`,
+    [channelId, userId],
+  );
   const recipients = [
-    ...new Set([...mentions, ...watchers.rows.map((row) => row.author_id)]),
+    ...new Set([...mentions, ...watchers.rows.map((row) => row.author_id), ...peer.rows.map((row) => row.user_id)]),
   ].filter((id) => id !== userId);
   for (const target of recipients) {
     await client.query(
@@ -76,7 +81,7 @@ export async function createConversationNotifications(
         randomUUID(),
         target,
         messageId,
-        mentions.includes(target) ? "mention" : "thread",
+        peer.rowCount ? "direct" : mentions.includes(target) ? "mention" : "thread",
         channelId,
       ],
     );
@@ -310,7 +315,7 @@ export async function filteredMessageSearch(userId: string, params: URLSearchPar
   if (file && !["image", "audio", "document", "any"].includes(file))
     throw new HttpError(400, "INVALID_FILE_FILTER", "Loại tệp không hợp lệ.");
   const messages = await query<GlobalMessageSearchItem>(
-    `SELECT m.id,c.workspace_id AS "workspaceId",w.name AS "workspaceName",c.id AS "channelId",c.name AS "channelName",m.author_id AS "authorId",u.display_name AS "authorName",m.content,m.created_at AS "createdAt",m.thread_root_id AS "threadRootId" FROM messages m JOIN channels c ON c.id=m.channel_id JOIN workspaces w ON w.id=c.workspace_id JOIN users u ON u.id=m.author_id JOIN channel_access access ON access.channel_id=c.id AND access.user_id=$1 LEFT JOIN message_attachments a ON a.id=m.attachment_id WHERE m.deleted_at IS NULL AND (m.thread_root_id IS NULL OR EXISTS(SELECT 1 FROM messages active_root WHERE active_root.id=m.thread_root_id AND active_root.deleted_at IS NULL)) AND m.content ILIKE '%'||$2||'%' ESCAPE '\\' AND ($3::uuid IS NULL OR c.workspace_id=$3) AND ($4::uuid IS NULL OR c.id=$4) AND ($5::uuid IS NULL OR m.author_id=$5) AND ($6::timestamptz IS NULL OR m.created_at>=$6) AND ($7::timestamptz IS NULL OR m.created_at<=$7) AND ($8::uuid IS NULL OR (m.created_at,m.id)<(SELECT created_at,id FROM messages WHERE id=$8)) AND ($9::text IS NULL OR ($9='any' AND a.id IS NOT NULL) OR ($9='image' AND a.mime_type LIKE 'image/%') OR ($9='audio' AND a.mime_type LIKE 'audio/%') OR ($9='document' AND a.mime_type NOT LIKE 'image/%' AND a.mime_type NOT LIKE 'audio/%')) ORDER BY m.created_at DESC,m.id DESC LIMIT 30`,
+    `SELECT m.id,c.workspace_id AS "workspaceId",COALESCE(w.name,'Tin nhắn trực tiếp') AS "workspaceName",c.id AS "channelId",COALESCE(peer.display_name,c.name) AS "channelName",m.author_id AS "authorId",u.display_name AS "authorName",m.content,m.created_at AS "createdAt",m.thread_root_id AS "threadRootId" FROM messages m JOIN channels c ON c.id=m.channel_id LEFT JOIN workspaces w ON w.id=c.workspace_id LEFT JOIN direct_conversations d ON d.channel_id=c.id LEFT JOIN users peer ON peer.id=CASE WHEN d.user_low=$1 THEN d.user_high ELSE d.user_low END JOIN users u ON u.id=m.author_id JOIN channel_access access ON access.channel_id=c.id AND access.user_id=$1 LEFT JOIN message_attachments a ON a.id=m.attachment_id WHERE m.deleted_at IS NULL AND (m.thread_root_id IS NULL OR EXISTS(SELECT 1 FROM messages active_root WHERE active_root.id=m.thread_root_id AND active_root.deleted_at IS NULL)) AND m.content ILIKE '%'||$2||'%' ESCAPE '\\' AND ($3::uuid IS NULL OR c.workspace_id=$3) AND ($4::uuid IS NULL OR c.id=$4) AND ($5::uuid IS NULL OR m.author_id=$5) AND ($6::timestamptz IS NULL OR m.created_at>=$6) AND ($7::timestamptz IS NULL OR m.created_at<=$7) AND ($8::uuid IS NULL OR (m.created_at,m.id)<(SELECT created_at,id FROM messages WHERE id=$8)) AND ($9::text IS NULL OR ($9='any' AND a.id IS NOT NULL) OR ($9='image' AND a.mime_type LIKE 'image/%') OR ($9='audio' AND a.mime_type LIKE 'audio/%') OR ($9='document' AND a.mime_type NOT LIKE 'image/%' AND a.mime_type NOT LIKE 'audio/%')) ORDER BY m.created_at DESC,m.id DESC LIMIT 30`,
     [
       userId,
       term.replace(/[\\%_]/g, "\\$&"),

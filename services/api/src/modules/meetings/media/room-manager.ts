@@ -12,6 +12,7 @@ import type {
   AudioLevelObserver,
   Consumer,
   DtlsParameters,
+  PlainTransport,
   Producer,
   Router,
   RtpCapabilities,
@@ -33,6 +34,8 @@ interface Peer {
   pendingSources: Set<string>;
   pendingTransports: number;
   pendingConsumers: Set<string>;
+  /** M1: a phone caller's voice arrives over plain RTP (from FFmpeg), not WebRTC. */
+  plain?: PlainTransport;
 }
 
 interface Room {
@@ -218,6 +221,35 @@ class MediasoupRoomManager {
       routerRtpCapabilities: room.router.rtpCapabilities,
       existingProducers,
     };
+  }
+
+  /**
+   * M1: joins a phone caller as a peer with one microphone. FFmpeg sends the caller's voice as
+   * Opus RTP with `ssrc` to the returned port (comedia: the SFU learns FFmpeg's address).
+   */
+  async addPhonePeer(roomId: string, socketId: string, userId: string, displayName: string, ssrc: number) {
+    await this.joinRoom(roomId, socketId, userId, displayName);
+    const room = this.rooms.get(roomId)!;
+    const peer = room.peers.get(socketId)!;
+    try {
+      peer.plain = await room.router.createPlainTransport({ listenIp: "0.0.0.0", rtcpMux: false, comedia: true });
+      const producer = await peer.plain.produce({
+        kind: "audio",
+        rtpParameters: {
+          codecs: [{ mimeType: "audio/opus", clockRate: 48000, channels: 2, payloadType: 111, rtcpFeedback: [] }],
+          encodings: [{ ssrc }],
+        },
+        appData: { source: "mic" },
+      });
+      peer.producers.set(producer.id, producer);
+      for (const observer of [room.speakerObserver, room.levelObserver])
+        await observer?.addProducer({ producerId: producer.id }).catch(() => {});
+      const info: ProducerInfo = { producerId: producer.id, socketId, userId, displayName, kind: "audio", source: "mic" };
+      return { producer: info, port: peer.plain.tuple.localPort, rtcpPort: peer.plain.rtcpTuple?.localPort ?? peer.plain.tuple.localPort };
+    } catch (error) {
+      this.leaveRoom(roomId, socketId);
+      throw error;
+    }
   }
 
   async createWebRtcTransport(roomId: string, socketId: string): Promise<TransportOptions> {
@@ -483,6 +515,7 @@ class MediasoupRoomManager {
       transport.close();
     }
     peer.transports.clear();
+    peer.plain?.close();
 
     room.peers.delete(socketId);
     if (room.dominantSocketId === socketId) {
@@ -498,6 +531,17 @@ class MediasoupRoomManager {
     }
 
     return { closedProducerIds };
+  }
+
+  /** MT-1: what the recorder reads from a live room; null once everyone has left. */
+  recordingSource(roomId: string) {
+    const room = this.rooms.get(roomId);
+    if (!room) return null;
+    const paused = new Set(
+      [...room.peers.values()].flatMap((peer) => [...peer.producers.values()].filter((item) => item.paused).map((item) => item.id)),
+    );
+    const producers = this.getRoomProducers(roomId).map((item) => ({ ...item, paused: paused.has(item.producerId) }));
+    return { router: room.router, dominantSocketId: room.dominantSocketId, producers };
   }
 
   getRoomProducers(roomId: string): ProducerInfo[] {

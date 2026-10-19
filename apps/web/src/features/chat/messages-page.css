@@ -1,0 +1,60 @@
+/* "Tin nhắn" page frame: same header and card language as the call-center / e-learning pages. */
+.messages-page {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px;
+  max-width: 1600px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* One line: the conversation, not the page title, gets the height. */
+.messages-page__header > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.messages-page__header {
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.messages-page__title {
+  margin: 0;
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.messages-page__subtitle {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.messages-page__card {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: none;
+  overflow: hidden;
+}
+
+@media (max-width: 680px) {
+  .messages-page {
+    padding: 8px;
+  }
+}

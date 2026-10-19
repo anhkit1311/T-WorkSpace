@@ -25,3 +25,9 @@ experiments/packet-capture/*.pcapng
 experiments/packet-capture/*.csv
 release.tgz
 infra/asterisk/config/pjsip_trunk.conf
+infra/asterisk/logs/
+infra/monitoring/operations_token
+backups/
+
+# Meeting recordings and video lessons (MEDIA_DIR)
+services/api/data/

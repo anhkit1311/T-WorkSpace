@@ -113,7 +113,8 @@ export function ThesisPage() {
     ];
     return list.filter((item) => item.show);
   }, [term, profile]);
-  const activeTab = tabs.some((item) => item.id === tab) ? tab : (tabs[0]?.id ?? "setup");
+  // No tab at all (no term, no setup rights) leaves the "no term" notice instead of an empty setup panel.
+  const activeTab = tabs.some((item) => item.id === tab) ? tab : tabs[0]?.id;
 
   if (!accessToken) return null;
   if (loadError && !profile)
@@ -176,13 +177,15 @@ export function ThesisPage() {
           <ProjectDetailView projectId={route.projectId} />
         ) : (
           <>
-            <nav className="thesis-tabs" role="tablist" aria-label="Phân hệ đồ án">
-              {tabs.map((item) => (
-                <button key={item.id} role="tab" type="button" aria-selected={activeTab === item.id} className={activeTab === item.id ? "is-active" : ""} onClick={() => setTab(item.id)}>
-                  {item.label}
-                </button>
-              ))}
-            </nav>
+            {tabs.length > 0 && (
+              <nav className="thesis-tabs" role="tablist" aria-label="Phân hệ đồ án">
+                {tabs.map((item) => (
+                  <button key={item.id} role="tab" type="button" aria-selected={activeTab === item.id} className={activeTab === item.id ? "is-active" : ""} onClick={() => setTab(item.id)}>
+                    {item.label}
+                  </button>
+                ))}
+              </nav>
+            )}
             {!term && activeTab !== "setup" && (
               <div className="state-card">
                 <h3>Chưa có đợt đồ án</h3>

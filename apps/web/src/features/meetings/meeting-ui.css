@@ -13,14 +13,13 @@
 }
 
 .meeting-page-title {
-  margin: 0 0 10px;
-  color: #0f172a;
-  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
+  margin: 0 0 4px;
+  color: var(--text);
   font-style: normal;
-  font-size: clamp(2.2rem, 3.5vw, 3rem);
-  font-weight: 500;
+  font-size: 20px;
+  font-weight: 600;
   line-height: 1.15;
-  letter-spacing: -0.02em;
+  letter-spacing: normal;
 }
 
 .meeting-page-description {
@@ -64,7 +63,6 @@
 }
 
 .meeting-section-header h3 {
-  font-family: var(--font-display, "Inter", sans-serif);
   font-style: normal;
   font-size: var(--nexo-fs-col, 17.5px);
   font-weight: 600;
@@ -81,8 +79,6 @@
   border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA);
   border-radius: 0;
   background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   cursor: pointer;
   text-align: left;
   transition:
@@ -104,7 +100,7 @@
 
 .meeting-room-card.is-selected {
   background: var(--nexo-bg-ivory, #FAF9F6);
-  box-shadow: inset 3px 0 0 var(--nexo-text-primary, #1C1B19);
+  box-shadow: inset 2px 0 0 var(--primary);
 }
 
 .meeting-room-card:active {
@@ -177,7 +173,6 @@
 .meeting-history h2 {
   margin: 0 0 16px;
   color: var(--nexo-text-primary, #1C1B19);
-  font-family: var(--font-display, 'Inter', sans-serif);
   font-style: normal;
   font-size: var(--nexo-fs-col, 17.5px);
   font-weight: 600;
@@ -205,8 +200,6 @@
   border-radius: 0;
   padding: clamp(22px, 2.6vw, 30px) 32px 28px;
   box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -225,7 +218,7 @@
   width: 100%;
   aspect-ratio: 16 / 9;
   background: #090d16;
-  border-radius: 20px;
+  border-radius: 8px;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -259,7 +252,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
 }
 
 .meeting-preview-controls {
@@ -361,19 +354,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 24px;
+  padding: 10px 16px;
   background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
-  backdrop-filter: blur(var(--editorial-blur, 16px));
-  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px));
   border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36));
-  border-radius: 9999px;
-  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+  border-radius: var(--radius-lg, 8px);
+  box-shadow: none;
 }
 
 .meeting-active-header h2 {
-  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
   font-style: normal;
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 500;
   color: #0f172a;
   margin: 0;
@@ -427,7 +417,7 @@
 }
 .meeting-filmstrip .video-tile {
   flex: 0 0 200px;
-  border-radius: 16px;
+  border-radius: 8px;
 }
 .meeting-grid-pager {
   display: flex;
@@ -467,9 +457,9 @@
   position: relative;
   aspect-ratio: 16 / 9;
   background: #090d16;
-  border-radius: 26px;
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.15);
+  box-shadow: none;
   border: 2px solid rgba(255, 255, 255, 0.5);
   transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.2s ease;
 }
@@ -584,11 +574,11 @@
   max-height: 520px;
   aspect-ratio: 16 / 9;
   background: #000000;
-  border-radius: 26px;
+  border-radius: 8px;
   overflow: hidden;
   margin-bottom: 20px;
   border: 2px solid rgba(15, 23, 42, 0.8);
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.3);
+  box-shadow: none;
 }
 
 .shared-screen span {
@@ -676,7 +666,7 @@
   background: #ffffff;
   color: #000000;
   border-color: #ffffff;
-  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.3);
+  box-shadow: none;
 }
 
 .meeting-dock-btn.is-muted {
@@ -695,7 +685,7 @@
   gap: 8px;
   font-size: 13.5px;
   font-weight: 600;
-  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
+  box-shadow: none;
 }
 
 .meeting-dock-btn.is-leave:hover {
@@ -779,12 +769,10 @@
   min-height: 340px;
   max-height: 65vh;
   border: 1px solid var(--editorial-border, rgba(255, 255, 255, 0.36));
-  border-radius: 26px;
+  border-radius: 8px;
   background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
-  backdrop-filter: blur(var(--editorial-blur, 16px));
-  -webkit-backdrop-filter: blur(var(--editorial-blur, 16px));
   overflow: hidden;
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+  box-shadow: none;
 }
 
 .meeting-side-panel-head {
@@ -809,4 +797,17 @@
   font: inherit;
   font-size: 13px;
   outline: none !important;
+}
+
+/* Lobby camera/mic toggles: equal halves that never wrap their label, with a visible outline. */
+.meeting-preview-controls {
+  gap: 8px;
+}
+.meeting-preview-controls .lobby-control-btn {
+  flex: 1 1 0;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 12px;
+  border-color: var(--border, #e2e8f0);
+  white-space: nowrap;
 }

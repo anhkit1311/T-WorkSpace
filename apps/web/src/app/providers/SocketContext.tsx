@@ -10,6 +10,7 @@ import {
 import type { ChatMessageItem, PresenceEvent, TypingEvent } from "@doan/shared";
 import { io, type Socket } from "socket.io-client";
 import { getChannelsApi, getWorkspacesApi } from "../../features/chat/api";
+import { governanceApi } from "../../features/workspaces/api";
 import { useApp } from "./AppContext";
 
 export type ConnectionStatus = "connected" | "connecting" | "reconnecting" | "disconnected";
@@ -21,6 +22,8 @@ interface SocketContextValue {
   onlineUserIds: string[];
   typingUsers: TypingEvent[];
   unreadCount: number;
+  /** Unread messages in the user's group channels, shown on the groups menu item. */
+  groupUnreadCount: number;
   refreshUnreadCount: () => Promise<void>;
   joinChannel: (channelId: string) => void;
   leaveChannel: (channelId: string) => void;
@@ -54,27 +57,36 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const [onlineUserIds, setOnlineUserIds] = useState<string[]>([]);
   const [typingUsers, setTypingUsers] = useState<TypingEvent[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [groupUnreadCount, setGroupUnreadCount] = useState(0);
   const hasAccessToken = Boolean(accessToken);
 
   const refreshUnreadCount = useCallback(async () => {
     if (!accessToken) {
       setUnreadCount(0);
+      setGroupUnreadCount(0);
       activeChannelRef.current = null;
       return;
     }
+    const total = (items: { unreadCount?: number }[]) =>
+      items.reduce((sum, item) => sum + (item.unreadCount ?? 0), 0);
     try {
-      const workspaces = await getWorkspacesApi(accessToken);
+      // "Tin nhắn" counts direct conversations; group channels are counted for the groups menu item.
+      const [{ conversations }, workspaces] = await Promise.all([
+        governanceApi<{ conversations: { unreadCount?: number }[] }>(accessToken, "direct-conversations"),
+        getWorkspacesApi(accessToken),
+      ]);
+      setUnreadCount(total(conversations));
       const channelLists = await Promise.all(
         workspaces.map((workspace) => getChannelsApi(accessToken, workspace.id)),
       );
-      setUnreadCount(
-        channelLists.flat().reduce((total, channel) => total + (channel.unreadCount ?? 0), 0),
-      );
+      setGroupUnreadCount(total(channelLists.flat()));
     } catch {
       /* The socket will refresh the count on the next message. */
     }
   }, [accessToken]);
 
+  const refreshUnreadRef = useRef(refreshUnreadCount);
+  refreshUnreadRef.current = refreshUnreadCount;
   useEffect(() => {
     void refreshUnreadCount();
   }, [refreshUnreadCount]);
@@ -90,6 +102,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       setOnlineUserIds([]);
       setTypingUsers([]);
       setUnreadCount(0);
+      setGroupUnreadCount(0);
       return;
     }
 
@@ -116,6 +129,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     socket.on("access_revoked", () => {
       refreshingAccess = true;
       setUnreadCount(0);
+      setGroupUnreadCount(0);
       socket.once("disconnect", () => {
         accessRefreshTimer = window.setTimeout(() => {
           refreshingAccess = false;
@@ -182,13 +196,15 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         message.authorId !== current.user?.id &&
         (message.channelId !== activeChannelRef.current || document.visibilityState !== "visible")
       ) {
-        setUnreadCount((count) => count + 1);
+        // The payload does not say whether the channel is direct, so recount from the server.
+        void refreshUnreadRef.current();
       }
       if (
         !current.accessToken ||
         !current.user?.notificationsEnabled ||
         message.authorId === current.user.id ||
-        current.activeView === "chat"
+        current.activeView === "chat" ||
+        current.activeView === "workspace"
       )
         return;
       void fetch(
@@ -209,9 +225,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
               undefined,
               {
                 icon: "message",
-                onOpen: workspaceId
-                  ? () => notificationRef.current.openChannel(workspaceId, message.channelId)
-                  : undefined,
+                // Direct conversations have no workspace; the chat page resolves them by id.
+                onOpen: () => notificationRef.current.openChannel(workspaceId ?? "", message.channelId),
               },
             );
           }
@@ -309,6 +324,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         onlineUserIds,
         typingUsers,
         unreadCount,
+        groupUnreadCount,
         refreshUnreadCount,
         joinChannel,
         leaveChannel,

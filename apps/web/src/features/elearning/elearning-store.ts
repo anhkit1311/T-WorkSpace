@@ -187,7 +187,9 @@ class ElearningStore {
       if (saved) {
         try {
           this.courses = JSON.parse(saved);
-        } catch {}
+        } catch {
+          // Corrupt saved data: keep the defaults.
+        }
       }
     }
   }

@@ -4,7 +4,7 @@
    ========================================================================== */
 
 .callcenter-page {
-  padding: 24px 32px 48px;
+  padding: 20px 24px 40px;
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
@@ -13,7 +13,7 @@
 
 /* Page Header */
 .callcenter-header {
-  margin-bottom: 22px;
+  margin-bottom: 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -21,15 +21,15 @@
 
 .callcenter-header__title {
   margin: 0 0 4px;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--text);
 }
 
 .callcenter-header__subtitle {
   margin: 0;
   font-size: 13px;
-  color: #64748B;
+  color: var(--text-muted);
 }
 
 /* Top 3 KPI Cards */
@@ -41,11 +41,11 @@
 }
 
 .callcenter-kpi-card {
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   padding: 16px 20px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow: none;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -59,7 +59,7 @@
 .callcenter-kpi-card__icon {
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: 8px;
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -81,9 +81,9 @@
 }
 
 .callcenter-kpi-card__number {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--text);
   line-height: 1.1;
 }
 
@@ -93,7 +93,7 @@
 
 .callcenter-kpi-card__label {
   font-size: 13px;
-  color: #64748B;
+  color: var(--text-muted);
   margin-top: 3px;
 }
 
@@ -121,13 +121,13 @@
 }
 
 .callcenter-pill {
-  border: 1px solid #E2E8F0;
-  background: #FFFFFF;
-  color: #64748B;
-  font-size: 13px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12.5px;
   font-weight: 500;
-  padding: 5px 14px;
-  border-radius: 9999px;
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
@@ -141,23 +141,23 @@
 
 .callcenter-pill:hover:not(.is-active) {
   background: #F1F5F9;
-  color: #0F172A;
+  color: var(--text);
 }
 
 .callcenter-pill.is-active {
-  background: #2563EB;
-  color: #FFFFFF;
-  border-color: #2563EB;
+  background: var(--primary-soft);
+  color: var(--primary-text);
+  border-color: transparent;
   font-weight: 600;
 }
 
 /* Panel Card */
 .callcenter-panel {
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   padding: 18px 20px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow: none;
 }
 
 [data-theme="dark"] .callcenter-panel {
@@ -176,7 +176,7 @@
   margin: 0;
   font-size: 15px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--text);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -200,11 +200,11 @@
 
 /* List Items in Queue & Active */
 .call-item-card {
-  border: 1px solid #E2E8F0;
-  border-radius: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
   padding: 12px 16px;
   margin-bottom: 10px;
-  background: #F8FAFC;
+  background: var(--bg-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -218,9 +218,9 @@
 }
 
 .call-item-card:hover {
-  background: #FFFFFF;
+  background: var(--surface);
   border-color: #CBD5E1;
-  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.05);
+  box-shadow: none;
 }
 
 .call-item-info {
@@ -233,7 +233,7 @@
 .call-item-caller {
   font-size: 13.5px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--text);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -254,7 +254,7 @@
 
 .call-item-topic {
   font-size: 12.5px;
-  color: #64748B;
+  color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -277,7 +277,7 @@
 }
 
 .btn-spy, .btn-whisper, .btn-barge {
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 5px 10px;
   font-size: 12px;
@@ -290,7 +290,7 @@
 }
 
 .btn-spy {
-  background: #FFFFFF;
+  background: var(--surface);
   color: #2563EB;
 }
 .btn-spy:hover, .btn-spy.is-active {
@@ -299,7 +299,7 @@
 }
 
 .btn-whisper {
-  background: #FFFFFF;
+  background: var(--surface);
   color: #D97706;
 }
 .btn-whisper:hover, .btn-whisper.is-active {
@@ -308,7 +308,7 @@
 }
 
 .btn-barge {
-  background: #FFFFFF;
+  background: var(--surface);
   color: #7C3AED;
 }
 .btn-barge:hover, .btn-barge.is-active {
@@ -318,11 +318,11 @@
 
 /* Right Column: Web Softphone */
 .softphone-card {
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -339,7 +339,7 @@
   align-items: center;
   justify-content: space-between;
   padding-bottom: 14px;
-  border-bottom: 1px solid #E2E8F0;
+  border-bottom: 1px solid var(--border);
 }
 
 .softphone-status-badge {
@@ -372,9 +372,9 @@
 
 /* Call Timer */
 .softphone-timer-box {
-  background: #F8FAFC;
-  border: 1px solid #E2E8F0;
-  border-radius: 10px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 6px;
   padding: 14px;
   text-align: center;
 }
@@ -385,10 +385,10 @@
 }
 
 .softphone-timer-digits {
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 800;
   font-family: var(--font-mono);
-  color: #0F172A;
+  color: var(--text);
   letter-spacing: 0.05em;
 }
 
@@ -398,7 +398,7 @@
 
 .softphone-timer-status {
   font-size: 12px;
-  color: #64748B;
+  color: var(--text-muted);
   margin-top: 2px;
 }
 
@@ -412,14 +412,14 @@
 .softphone-dial-input {
   width: 100%;
   height: 40px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #FFFFFF;
+  background: var(--surface);
   text-align: center;
   font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: #0F172A;
+  color: var(--text);
   padding: 0 32px 0 12px;
   outline: none;
 }
@@ -441,7 +441,7 @@
   place-items: center;
 }
 .softphone-backspace-btn:hover {
-  color: #0F172A;
+  color: var(--text);
 }
 
 .softphone-keypad-grid {
@@ -452,8 +452,8 @@
 
 .softphone-key-btn {
   height: 42px;
-  background: #F8FAFC;
-  border: 1px solid #E2E8F0;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -480,7 +480,7 @@
 .softphone-key-num {
   font-size: 15px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--text);
   line-height: 1;
 }
 
@@ -534,8 +534,8 @@
 
 .softphone-feature-btn {
   height: 38px;
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 12.5px;
   font-weight: 600;
@@ -555,7 +555,7 @@
 }
 
 .softphone-feature-btn:hover {
-  background: #F8FAFC;
+  background: var(--bg-subtle);
   border-color: #2563EB;
   color: #2563EB;
 }
@@ -563,7 +563,7 @@
 /* Video Stage Area */
 .callcenter-video-stage {
   background: #0F172A;
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
   margin-top: 14px;
   position: relative;
@@ -594,11 +594,11 @@
    Call Directory (CDR) Table Styles
    ========================================================================== */
 .cdr-table-card {
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow: none;
 }
 
 [data-theme="dark"] .cdr-table-card {
@@ -618,11 +618,11 @@
 }
 
 .cdr-table th {
-  background: #F8FAFC;
+  background: var(--bg-subtle);
   padding: 12px 16px;
-  color: #64748B;
+  color: var(--text-muted);
   font-weight: 600;
-  border-bottom: 1px solid #E2E8F0;
+  border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 
@@ -634,7 +634,7 @@
 .cdr-table td {
   padding: 12px 16px;
   border-bottom: 1px solid #F1F5F9;
-  color: #0F172A;
+  color: var(--text);
   vertical-align: middle;
 }
 
@@ -644,7 +644,7 @@
 }
 
 .cdr-table tr:hover td {
-  background: #F8FAFC;
+  background: var(--bg-subtle);
 }
 
 [data-theme="dark"] .cdr-table tr:hover td {
@@ -661,13 +661,13 @@
   padding: 4px 10px;
   font-size: 11.5px;
   font-weight: 600;
-  color: #475569;
+  color: var(--text-secondary);
   cursor: pointer;
 }
 
 .audio-player-pill:hover {
   background: #E2E8F0;
-  color: #0F172A;
+  color: var(--text);
 }
 
 /* Score Badges */
@@ -698,7 +698,7 @@
 
 .qa-score-badge.score-none {
   background: #F1F5F9;
-  color: #64748B;
+  color: var(--text-muted);
 }
 
 /* QA Scoring Drawer */
@@ -714,7 +714,7 @@
 .qa-drawer {
   width: min(600px, 100vw);
   height: 100vh;
-  background: #FFFFFF;
+  background: var(--surface);
   box-shadow: -4px 0 24px rgba(15, 23, 42, 0.12);
   display: flex;
   flex-direction: column;
@@ -730,7 +730,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 18px 24px;
-  border-bottom: 1px solid #E2E8F0;
+  border-bottom: 1px solid var(--border);
 }
 
 .qa-drawer__body {
@@ -743,8 +743,8 @@
 
 .qa-drawer__footer {
   padding: 16px 24px;
-  border-top: 1px solid #E2E8F0;
-  background: #F8FAFC;
+  border-top: 1px solid var(--border);
+  background: var(--bg-subtle);
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -757,9 +757,9 @@
 
 /* Audio Player in Drawer */
 .qa-audio-box {
-  background: #F8FAFC;
-  border: 1px solid #E2E8F0;
-  border-radius: 12px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -799,7 +799,7 @@
 .qa-rubric-table th {
   padding: 10px 12px;
   border-bottom: 1.5px solid #E2E8F0;
-  color: #64748B;
+  color: var(--text-muted);
   font-weight: 600;
   text-align: left;
 }
@@ -813,16 +813,16 @@
 .qa-score-input {
   width: 70px;
   height: 34px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--border);
   border-radius: 6px;
   text-align: center;
   font-weight: 700;
   font-size: 14px;
-  color: #0F172A;
+  color: var(--text);
 }
 
 .qa-total-row {
-  background: #F8FAFC;
+  background: var(--bg-subtle);
   font-weight: 700;
   font-size: 14px;
 }
@@ -835,7 +835,7 @@
 .qa-lock-alert {
   background: #FEF2F2;
   border: 1px solid #FECACA;
-  border-radius: 10px;
+  border-radius: 6px;
   padding: 14px;
   display: flex;
   gap: 10px;

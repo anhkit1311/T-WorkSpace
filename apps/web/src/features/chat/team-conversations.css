@@ -32,7 +32,6 @@
 }
 
 .thread-panel h2 {
-  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
   font-style: normal;
   font-size: 20px;
   font-weight: 500;
@@ -87,7 +86,7 @@
 .thread-root {
   background: rgba(15, 23, 42, 0.03);
   border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 18px;
+  border-radius: 8px;
   padding: 16px !important;
   margin-bottom: 12px;
 }
@@ -114,7 +113,7 @@
 .thread-panel select {
   background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
   border: 1.5px solid rgba(15, 23, 42, 0.12);
-  border-radius: 16px;
+  border-radius: 8px;
   padding: 10px 14px;
   color: #0f172a;
   min-height: 70px;
