@@ -17,6 +17,7 @@ import {
   publishSelectedTracks,
   type JoinMediaOptions,
 } from "../../features/meetings/webrtc/local-media";
+import { INITIAL_ADAPTIVE, adaptToQos, cappedLayer, type NetworkCap } from "../../features/meetings/webrtc/adaptive";
 import { useApp } from "./AppContext";
 import { callDropMessage } from "../../features/meetings/call-drop";
 import { useSocket } from "./SocketContext";
@@ -52,6 +53,8 @@ interface MeetingContextValue {
   sharing: boolean;
   qos: QosMetrics | null;
   qosHistory: QosHistoryPoint[];
+  /** Highest video layer the measured network allows; null = audio only (2.2 adaptive). */
+  networkCap: NetworkCap;
   joinCall: (roomId: string, devices?: JoinMediaOptions, scheduleId?: string) => Promise<void>;
   leaveCall: () => Promise<void>;
   toggleMic: () => Promise<void>;
@@ -110,6 +113,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
 
   const mediasoupRef = useRef<MediasoupClientService | null>(null);
   const qosTimerRef = useRef<number | null>(null);
+  const qosReportRef = useRef(0);
   const joiningRef = useRef(false);
   const joinAbortRef = useRef<AbortController | null>(null);
   const joinEpochRef = useRef(0);
@@ -217,6 +221,8 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
     };
   }, [socket, inCall]);
 
+  const [adaptive, setAdaptive] = useState(INITIAL_ADAPTIVE);
+  const networkCap = adaptive.cap;
   const [videoDemand, setVideoDemandState] = useState<Record<string, number | null>>({});
   const appliedDemandRef = useRef(new Map<string, number | null>());
   const setVideoDemand = useCallback((socketId: string, layer: number | null | undefined) => {
@@ -242,7 +248,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
       const consumerId = ms.videoConsumerIdForTrack(peer.videoTrack.id);
       if (!consumerId) continue;
       const demand = videoDemand[peer.socketId];
-      const target = demand === undefined ? fallback(cameraCount) : demand;
+      const target = cappedLayer(demand === undefined ? fallback(cameraCount) : demand, networkCap);
       const previous = applied.has(consumerId) ? applied.get(consumerId) : 2;
       if (applied.has(consumerId) && previous === target) continue;
       applied.set(consumerId, target);
@@ -253,7 +259,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
       if (previous === null) socket.emit("resume_consumer", { roomId, consumerId });
       socket.emit("consumer_layer", { roomId, consumerId, spatialLayer: target });
     }
-  }, [inCall, remotePeers, roomId, socket, videoDemand]);
+  }, [inCall, remotePeers, roomId, socket, videoDemand, networkCap]);
 
   // Lắng nghe sự kiện Producer mới từ SFU
   useEffect(() => {
@@ -374,6 +380,9 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
       const stats = await service?.getQosMetrics();
       if (stats && epoch === joinEpochRef.current && service === mediasoupRef.current) {
         setQos(stats);
+        setAdaptive((prev) => adaptToQos(prev, stats));
+        // Every 4th sample (~10 s) feeds the server's Prometheus QoS gauges.
+        if (++qosReportRef.current % 4 === 0) socket?.emit("qos_report", { roomId: roomIdRef.current, ...stats });
         setQosHistory((prev) => {
           const point: QosHistoryPoint = { ...stats, timestamp: new Date().toISOString() };
           return [...prev, point].slice(-300);
@@ -384,7 +393,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
     return () => {
       if (qosTimerRef.current) window.clearInterval(qosTimerRef.current);
     };
-  }, [inCall]);
+  }, [inCall, socket]);
 
   const joinCall = async (
     targetRoomId: string,
@@ -516,6 +525,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
     try {
       setQos(null);
       setQosHistory([]);
+      setAdaptive(INITIAL_ADAPTIVE);
       lastMeasuredRoomIdRef.current = targetRoomId;
 
       // 1. Gửi yêu cầu tham gia phòng họp qua Socket
@@ -1004,6 +1014,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
         sharing,
         qos,
         qosHistory,
+        networkCap,
         joinCall,
         leaveCall,
         toggleMic,

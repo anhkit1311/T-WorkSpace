@@ -119,6 +119,9 @@ async function handleRequest(
     if (!process.env.OPERATIONS_TOKEN || request.headers.authorization !== `Bearer ${process.env.OPERATIONS_TOKEN}`)
       throw new HttpError(403, "FORBIDDEN", "Bạn không có quyền truy cập.");
     const media = roomManager.metrics();
+    const qos = roomManager.qosMetrics();
+    const spread = (stats: { avg: number; max: number } | null) =>
+      stats ? [{ labels: { stat: "avg" }, value: Math.round(stats.avg * 100) / 100 }, { labels: { stat: "max" }, value: stats.max }] : [];
     const jobs = await query<{ status: string; count: number }>(
       `SELECT status,count(*)::int AS count FROM media_jobs WHERE status IN ('queued','running','failed') GROUP BY status`,
     );
@@ -138,6 +141,10 @@ async function handleRequest(
       gauge("nexo_media_workers", "mediasoup workers.", one(media.workers)),
       gauge("nexo_media_rooms", "Meeting rooms with a router.", one(media.rooms)),
       gauge("nexo_media_peers", "Peers in meeting rooms (phone callers included).", one(media.peers)),
+      gauge("nexo_media_qos_reporting_peers", "Meeting peers with a QoS report in the last 30 s.", one(qos.peers)),
+      gauge("nexo_media_qos_rtt_ms", "Client-measured round-trip time.", spread(qos.rtt)),
+      gauge("nexo_media_qos_jitter_ms", "Client-measured inbound jitter.", spread(qos.jitter)),
+      gauge("nexo_media_qos_packet_loss_percent", "Client-measured inbound packet loss.", spread(qos.packetLoss)),
       gauge("nexo_media_jobs", "Media jobs in the PostgreSQL queue.", ["queued", "running", "failed"].map((status) => ({
         labels: { status },
         value: jobs.rows.find((row) => row.status === status)?.count ?? 0,

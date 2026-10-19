@@ -205,6 +205,12 @@ export class CallCenterAgentService {
     return this.recording(userId, call.id);
   }
 
+  /** 2.1: the words of a call, open to the same people as its recording. */
+  async transcript(userId: string, callId: string) {
+    const call = await this.reviewable(userId, callId);
+    return this.repo.callTranscript(call.id);
+  }
+
   /** CC-7: playback is limited to the agent who took the call and the department's supervisors. */
   async recording(userId: string, callId: string): Promise<Response> {
     const call = await this.reviewable(userId, callId);

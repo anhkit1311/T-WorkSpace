@@ -57,6 +57,13 @@ export const THESIS_RUBRICS = [
  */
 const SHOW_PROTOTYPE_PANELS = false;
 
+const NETWORK_CAP_LABEL: Record<string, string> = {
+  2: "Tốt (theo ô hiển thị)",
+  1: "Đã hạ xuống trung bình (mạng yếu)",
+  0: "Đã hạ xuống thấp (mạng yếu)",
+  null: "Chỉ âm thanh (mạng rất yếu)",
+};
+
 export const QUIZ_QUESTION = "Kiến trúc WebRTC SFU phân phối luồng media như thế nào?";
 export const QUIZ_OPTIONS = [
   "Server SFU chọn lọc và chuyển tiếp (Selective Forwarding Unit)",
@@ -2299,7 +2306,8 @@ export function MeetingPage() {
                 Độ trễ RTT: <strong>{meeting.qos?.rtt ?? "—"} ms</strong> · Băng thông:{" "}
                 <strong>{meeting.qos?.bitrate ?? "—"} kbps</strong> · Tỷ lệ mất gói:{" "}
                 <strong>{meeting.qos?.packetLoss ?? "—"}%</strong> · Jitter:{" "}
-                <strong>{meeting.qos?.jitter ?? "—"} ms</strong>
+                <strong>{meeting.qos?.jitter ?? "—"} ms</strong> · Chất lượng nhận:{" "}
+                <strong>{NETWORK_CAP_LABEL[String(meeting.networkCap)]}</strong>
               </p>
             </div>
             <div className="meeting-qos-actions">

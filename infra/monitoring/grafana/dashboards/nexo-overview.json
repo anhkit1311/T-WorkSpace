@@ -446,6 +446,64 @@
           "legendFormat": "{{instance}}"
         }
       ]
+    },
+    {
+      "id": 13,
+      "title": "QoS họp video (client đo, trung bình)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 24,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {},
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max(nexo_media_qos_rtt_ms{stat=\"avg\"})",
+          "legendFormat": "RTT (ms)"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max(nexo_media_qos_jitter_ms{stat=\"avg\"})",
+          "legendFormat": "Jitter (ms)"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max(nexo_media_qos_packet_loss_percent{stat=\"avg\"})",
+          "legendFormat": "Mất gói (%)"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(nexo_media_qos_reporting_peers)",
+          "legendFormat": "Người báo cáo"
+        }
+      ]
     }
   ]
 }

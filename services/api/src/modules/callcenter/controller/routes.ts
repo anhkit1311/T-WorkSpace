@@ -87,6 +87,7 @@ export function callCenterRoutes(
     r("GET", "/calls", (u, _m, _b, p) => agents.calls(u, p)),
     r("PATCH", "/calls/:id", (u, m, b) => agents.wrapUp(u, m[1], b)),
     r("POST", "/calls/:id/video", (u, m) => agents.videoRoom(u, m[1])),
+    r("GET", "/calls/:id/transcript", (u, m) => agents.transcript(u, m[1])),
 
     r("GET", "/training-courses", (u) => admin.trainingCourses(u)),
     r("GET", "/departments/:id/qa-criteria", (u, m) => qa.criteria(u, m[1])),

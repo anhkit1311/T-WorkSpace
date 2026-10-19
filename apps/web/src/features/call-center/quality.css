@@ -91,6 +91,19 @@
   margin: 0 0 6px;
   padding-left: 18px;
 }
+.call-transcript {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.call-transcript span {
+  font-variant-numeric: tabular-nums;
+  margin-right: 6px;
+}
 .qa-sheet {
   display: grid;
   gap: 12px;

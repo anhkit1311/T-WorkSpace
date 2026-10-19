@@ -17,7 +17,7 @@ import { Icon } from "../../shared/ui/Icon";
 import { ApiError } from "../auth/api";
 import { callCenterApi, recordingUrl } from "./api";
 import { KpiPanel } from "./KpiPanel";
-import { CallLessonDialog, QaPanel, QaReviewDialog, qaTone } from "./QaPanel";
+import { CallLessonDialog, CallTranscriptDialog, QaPanel, QaReviewDialog, qaTone } from "./QaPanel";
 import { TicketsPanel } from "./TicketsPanel";
 import { TransferPanel } from "./TransferPanel";
 import { VoicemailInbox } from "./VoicemailInbox";
@@ -747,6 +747,7 @@ function CallHistory({ me, api, fail, token }: { me: CcAgentProfile; api: Api; f
   const [reviews, setReviews] = useState<Map<string, CcQaReview>>(new Map());
   const [scoring, setScoring] = useState<CcCallRecord | null>(null);
   const [teaching, setTeaching] = useState<CcCallRecord | null>(null);
+  const [reading, setReading] = useState<CcCallRecord | null>(null);
   const [query, setQuery] = useState("");
   const [outcome, setOutcome] = useState("");
 
@@ -801,6 +802,8 @@ function CallHistory({ me, api, fail, token }: { me: CcAgentProfile; api: Api; f
                   {playing?.id === call.id ? <audio src={playing.url} controls autoPlay /> : call.hasRecording ? (
                     <Button size="sm" variant="ghost" icon="play" onClick={() => play(call)}>Nghe</Button>
                   ) : "—"}
+                  {call.transcriptStatus === "ready" && <Button size="sm" variant="ghost" icon="file" onClick={() => setReading(call)}>Lời thoại</Button>}
+                  {call.transcriptStatus === "processing" && <div className="desk-muted">Đang chép lời…</div>}
                 </td>
                 <td className="cdr-actions">
                   {reviews.get(call.id) && <Badge tone={qaTone(reviews.get(call.id)!.percent)}>{reviews.get(call.id)!.percent}%</Badge>}
@@ -818,6 +821,13 @@ function CallHistory({ me, api, fail, token }: { me: CcAgentProfile; api: Api; f
         </table>
         {shown && !shown.length && <p className="desk-muted desk-empty-row">{calls!.length ? "Không có cuộc gọi khớp bộ lọc." : "Chưa có cuộc gọi nào."}</p>}
       </div>
+      {reading && (
+        <CallTranscriptDialog
+          call={{ id: reading.id, title: `${reading.agentName ?? ""} · ${reading.callerName ?? reading.callerNumber}` }}
+          api={api}
+          onClose={() => setReading(null)}
+        />
+      )}
       {teaching && (
         <CallLessonDialog
           call={{ id: teaching.id, title: `${teaching.agentName ?? teaching.callerNumber} · ${new Date(teaching.startedAt).toLocaleDateString("vi-VN")}` }}

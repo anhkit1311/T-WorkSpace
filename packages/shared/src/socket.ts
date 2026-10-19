@@ -7,6 +7,7 @@ import type {
   PresenceEvent,
   ProducerInfo,
   ProducerSource,
+  QosMetrics,
   TransportOptions,
   TypingEvent,
 } from "./index.js";
@@ -60,6 +61,8 @@ export interface ClientToServerEvents {
     data: { roomId: string; transportId: string },
     callback: (response: { success: boolean; iceParameters?: unknown; error?: string }) => void,
   ) => void;
+  /** 2.2: the client's getStats sample, every ~10 s, for the Prometheus QoS gauges. */
+  qos_report: (data: { roomId: string } & Partial<Pick<QosMetrics, "rtt" | "jitter" | "packetLoss">>) => void;
   consumer_layer: (
     data: { roomId: string; consumerId: string; spatialLayer: number },
     callback?: (response: { success: boolean; error?: string }) => void,

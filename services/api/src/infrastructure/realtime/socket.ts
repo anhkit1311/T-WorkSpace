@@ -300,6 +300,7 @@ export function initSocketServer(
             "close_producer",
             "restart_ice",
             "consumer_layer",
+            "qos_report",
           ].includes(event)
         ) {
           await requireChannelAccess(user.id, data?.roomId, true);
@@ -505,6 +506,9 @@ export function initSocketServer(
           error: error instanceof Error ? error.message : "Không khởi động lại ICE được.",
         });
       }
+    });
+    socket.on("qos_report", (data) => {
+      roomManager.setPeerQos(data.roomId, socket.id, data);
     });
     socket.on("consumer_layer", async (data, callback) => {
       try {

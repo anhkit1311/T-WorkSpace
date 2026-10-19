@@ -98,6 +98,13 @@ export interface CcCallRecord {
   dispositionId: string | null;
   notes: string;
   hasRecording: boolean;
+  /** 2.1: speech-to-text of the recording; null when none was made (no recording or STT off). */
+  transcriptStatus: "processing" | "ready" | "failed" | null;
+}
+
+export interface CcCallTranscript {
+  status: CcCallRecord["transcriptStatus"];
+  segments: { start: number; end: number; text: string }[];
 }
 
 /** What an agent's screen needs: who they are in the call center and their softphone account. */

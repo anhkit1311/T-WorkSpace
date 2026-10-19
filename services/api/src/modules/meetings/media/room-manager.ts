@@ -23,6 +23,7 @@ import type {
 import { mediasoupConfig } from "./config.js";
 import { config } from "../../../config/config.js";
 import { getIceServers } from "./ice.js";
+import { parseQosReport, summarizeQos, type QosReport } from "./qos.js";
 
 interface Peer {
   socketId: string;
@@ -36,6 +37,8 @@ interface Peer {
   pendingConsumers: Set<string>;
   /** M1: a phone caller's voice arrives over plain RTP (from FFmpeg), not WebRTC. */
   plain?: PlainTransport;
+  /** 2.2: the latest network quality this peer measured. */
+  qos?: QosReport;
 }
 
 interface Room {
@@ -599,6 +602,13 @@ class MediasoupRoomManager {
   }
   private releaseWorker(worker:MediasoupWorker){this.allocations.set(worker.pid,Math.max(0,(this.allocations.get(worker.pid)??1)-1));}
   metrics(){return {workers:this.workers.length,rooms:this.rooms.size,peers:[...this.rooms.values()].reduce((sum,room)=>sum+room.peers.size,0),workerRooms:this.workers.map(worker=>({pid:worker.pid,rooms:this.allocations.get(worker.pid)??0}))};}
+  setPeerQos(roomId: string, socketId: string, data: Record<string, unknown>) {
+    const peer = this.getPeer(roomId, socketId);
+    if (peer) peer.qos = parseQosReport(data);
+  }
+  qosMetrics() {
+    return summarizeQos([...this.rooms.values()].flatMap((room) => [...room.peers.values()].flatMap((peer) => (peer.qos ? [peer.qos] : []))));
+  }
   async resourceUsage(){return Promise.all(this.workers.map(async worker=>({pid:worker.pid,usage:await worker.getResourceUsage()})));}
 }
 

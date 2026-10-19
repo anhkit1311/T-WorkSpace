@@ -32,9 +32,9 @@ export function parseSegments(body: unknown): Segment[] {
 }
 
 /** Sends one audio file to the speech service. */
-export async function requestTranscript(file: Buffer, name: string): Promise<Segment[]> {
+export async function requestTranscript(file: Buffer, name: string, type = "audio/mpeg"): Promise<Segment[]> {
   const form = new FormData();
-  form.append("file", new Blob([new Uint8Array(file)], { type: "audio/mpeg" }), name);
+  form.append("file", new Blob([new Uint8Array(file)], { type }), name);
   form.append("model", config.transcribeModel);
   form.append("language", config.transcribeLanguage);
   form.append("response_format", "verbose_json");

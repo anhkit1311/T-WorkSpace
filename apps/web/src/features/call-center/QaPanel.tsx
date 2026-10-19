@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { CcAgentProfile, CcQaCriterion, CcQaReview, CourseDetail, CourseSummary } from "@doan/shared";
+import type { CcAgentProfile, CcCallTranscript, CcQaCriterion, CcQaReview, CourseDetail, CourseSummary } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import { coursesApi } from "../elearning/courses-api";
 import { Badge, Button, Field, FilterPills, Modal } from "../../shared/ui/Primitives";
@@ -273,6 +273,30 @@ export function CallLessonDialog({ call, onClose }: { call: { id: string; title:
           Tôi xác nhận người gọi đã đồng ý, hoặc ghi âm không chứa thông tin cá nhân (Nghị định 13/2023).
         </label>
         {error && <p className="desk-warning" role="alert">{error}</p>}
+      </div>
+    </Modal>
+  );
+}
+
+const minuteSecond = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+
+/** 2.1: the automatic speech-to-text of a call recording. */
+export function CallTranscriptDialog({ call, api, onClose }: { call: { id: string; title: string }; api: Api; onClose: () => void }) {
+  const [transcript, setTranscript] = useState<CcCallTranscript | null>(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    api<CcCallTranscript>(`calls/${call.id}/transcript`).then(setTranscript, (failure: Error) => setError(failure.message));
+  }, [api, call.id]);
+  return (
+    <Modal title="Lời thoại cuộc gọi" eyebrow={call.title} onClose={onClose}>
+      <div className="qa-sheet">
+        {error ? <p className="desk-warning" role="alert">{error}</p> : !transcript ? <p className="desk-muted">Đang tải…</p> : transcript.segments.length ? (
+          <ol className="call-transcript">
+            {transcript.segments.map((segment, index) => (
+              <li key={index}><span className="desk-muted">{minuteSecond(segment.start)}</span> {segment.text}</li>
+            ))}
+          </ol>
+        ) : <p className="desk-muted">Không nhận dạng được lời nói trong ghi âm.</p>}
       </div>
     </Modal>
   );

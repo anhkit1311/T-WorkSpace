@@ -6,6 +6,7 @@ import type {
   CcCaller,
   CcCallerProfile,
   CcCallRecord,
+  CcCallTranscript,
   CcDepartment,
   CcDisposition,
   CcExtension,
@@ -20,6 +21,7 @@ import type {
 } from "@doan/shared";
 import type { PoolClient } from "pg";
 import { query, withTransaction } from "../../../infrastructure/database/db.js";
+import type { Segment } from "../../../infrastructure/speech/transcribe.js";
 import type { KpiCall } from "../domain/kpi.js";
 import type { AcdStore, AgentRecord, CallPatch, DepartmentSettings, HotlineRoute } from "../domain/ports.js";
 
@@ -730,10 +732,11 @@ export class CallCenterRepository implements AcdStore {
       disposition_id: string | null;
       notes: string;
       recording_key: string | null;
+      transcript_status: CcCallRecord["transcriptStatus"];
     }>(
       `SELECT c.id,c.direction,c.department_id,du.name AS department_name,c.caller_number,cu.display_name AS caller_name,
          c.agent_user_id,au.display_name AS agent_name,c.started_at,c.queued_at,c.answered_at,c.ended_at,c.outcome,
-         c.disposition_id,c.notes,c.recording_key
+         c.disposition_id,c.notes,c.recording_key,c.transcript_status
        FROM cc_calls c
        LEFT JOIN academic_units du ON du.id=c.department_id
        LEFT JOIN users cu ON cu.id=c.caller_user_id
@@ -759,6 +762,7 @@ export class CallCenterRepository implements AcdStore {
       dispositionId: row.disposition_id,
       notes: row.notes,
       hasRecording: Boolean(row.recording_key),
+      transcriptStatus: row.transcript_status,
     }));
   }
 
@@ -778,6 +782,19 @@ export class CallCenterRepository implements AcdStore {
       [id],
     );
     return result.rows[0] ?? null;
+  }
+
+  async setCallTranscript(id: string, status: "processing" | "ready" | "failed", segments: Segment[] | null) {
+    await query(`UPDATE cc_calls SET transcript_status=$2, transcript=$3 WHERE id=$1`, [id, status, segments && JSON.stringify(segments)]);
+  }
+
+  async callTranscript(id: string) {
+    const result = await query<{ transcript_status: CcCallTranscript["status"]; transcript: Segment[] | null }>(
+      `SELECT transcript_status,transcript FROM cc_calls WHERE id=$1`,
+      [id],
+    );
+    const row = result.rows[0];
+    return { status: row?.transcript_status ?? null, segments: row?.transcript ?? [] } satisfies CcCallTranscript;
   }
 
   async setCallVideo(id: string, workspaceId: string) {

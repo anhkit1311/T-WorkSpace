@@ -14,6 +14,7 @@ import { CallCenterReportService } from "./service/report-service.js";
 import { CallCenterTicketService } from "./service/ticket-service.js";
 import { MeetingDialInService } from "./service/meeting-dialin-service.js";
 import { PersonalVoicemailService } from "./service/voicemail-service.js";
+import { CallTranscriptService } from "./service/call-transcript-service.js";
 import { CallCenterVoipService, type UserNotice } from "./service/voip-service.js";
 import { VoipRepository } from "./repository/voip-repository.js";
 import { sendNoticeEmail } from "../../infrastructure/email/service.js";
@@ -186,8 +187,10 @@ Nghe trong mục Tổng đài → Bàn làm việc → Hộp thư thoại.`,
         },
       );
     }, log);
+    const transcripts = new CallTranscriptService(repo, (name) => pbx.recording(name), log);
     let chain: Promise<unknown> = Promise.resolve();
     pbx.listen((event: PbxEvent) => {
+      void transcripts.handle(event);
       // Asterisk keeps extensions in memory only: refill them before the ACD reloads the roster.
       chain = chain
         .then(() => (event.type === "connected" ? admin.sync(null) : undefined))
