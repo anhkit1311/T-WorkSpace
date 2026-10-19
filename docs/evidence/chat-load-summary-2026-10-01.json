@@ -1,0 +1,157 @@
+{
+  "timestamp": "2026-10-19T16:15:42.484Z",
+  "source": "chat-load-2026-10-01.json",
+  "cpuDefinition": "Delta process CPU microseconds / delta wall microseconds * 100; 100% is one core, sampled at 5s intervals. Connect/setup is excluded from CPU intervals.",
+  "tiers": [
+    {
+      "count": 50,
+      "runs": 2,
+      "messages": 244,
+      "receipts": 3052,
+      "ackMs": {
+        "p50": 31.284400000004098,
+        "p95": 62.149700000000166,
+        "p99": 102.06619999999748
+      },
+      "receiptMs": {
+        "p50": 29.649499999999534,
+        "p95": 50.63430000000017,
+        "p99": 103.32779999999912
+      },
+      "lostAckRetries": 12,
+      "errors": 0,
+      "duplicates": 0,
+      "reconnectMs": [
+        67.0730999999978,
+        35.73829999999725
+      ],
+      "maxApiRssMiB": 103.49609375,
+      "maxApiOneCoreCpuPercent": 5.9352517985611515,
+      "maxPoolWaiting": 32,
+      "databaseContainer": [
+        {
+          "BlockIO": "87MB / 4.1kB",
+          "CPUPerc": "7.31%",
+          "Container": "infra-postgres-1",
+          "ID": "789d6c19b8e1",
+          "MemPerc": "1.04%",
+          "MemUsage": "120.9MiB / 11.31GiB",
+          "Name": "infra-postgres-1",
+          "NetIO": "84.9MB / 364MB",
+          "PIDs": "25"
+        },
+        {
+          "BlockIO": "87MB / 4.1kB",
+          "CPUPerc": "11.73%",
+          "Container": "infra-postgres-1",
+          "ID": "789d6c19b8e1",
+          "MemPerc": "1.13%",
+          "MemUsage": "131.5MiB / 11.31GiB",
+          "Name": "infra-postgres-1",
+          "NetIO": "86.1MB / 366MB",
+          "PIDs": "26"
+        }
+      ]
+    },
+    {
+      "count": 100,
+      "runs": 2,
+      "messages": 244,
+      "receipts": 6096,
+      "ackMs": {
+        "p50": 30.140599999998813,
+        "p95": 51.68510000000242,
+        "p99": 74.80859999999666
+      },
+      "receiptMs": {
+        "p50": 29.36830000000191,
+        "p95": 37.374400000000605,
+        "p99": 63.86229999999341
+      },
+      "lostAckRetries": 12,
+      "errors": 0,
+      "duplicates": 0,
+      "reconnectMs": [
+        41.052700000000186,
+        36.197299999999814
+      ],
+      "maxApiRssMiB": 98.53125,
+      "maxApiOneCoreCpuPercent": 3.430394894295971,
+      "maxPoolWaiting": 43,
+      "databaseContainer": [
+        {
+          "BlockIO": "90.6MB / 4.1kB",
+          "CPUPerc": "8.08%",
+          "Container": "infra-postgres-1",
+          "ID": "789d6c19b8e1",
+          "MemPerc": "1.09%",
+          "MemUsage": "126.5MiB / 11.31GiB",
+          "Name": "infra-postgres-1",
+          "NetIO": "87.5MB / 368MB",
+          "PIDs": "25"
+        },
+        {
+          "BlockIO": "90.6MB / 4.1kB",
+          "CPUPerc": "7.16%",
+          "Container": "infra-postgres-1",
+          "ID": "789d6c19b8e1",
+          "MemPerc": "1.12%",
+          "MemUsage": "130.3MiB / 11.31GiB",
+          "Name": "infra-postgres-1",
+          "NetIO": "89MB / 370MB",
+          "PIDs": "25"
+        }
+      ]
+    },
+    {
+      "count": 200,
+      "runs": 2,
+      "messages": 244,
+      "receipts": 12196,
+      "ackMs": {
+        "p50": 32.348500000021886,
+        "p95": 58.034599999999045,
+        "p99": 164.83649999997579
+      },
+      "receiptMs": {
+        "p50": 31.637699999992037,
+        "p95": 47.84110000001965,
+        "p99": 144.0331999999762
+      },
+      "lostAckRetries": 12,
+      "errors": 0,
+      "duplicates": 0,
+      "reconnectMs": [
+        44.12380000000121,
+        39.74069999999483
+      ],
+      "maxApiRssMiB": 117.96875,
+      "maxApiOneCoreCpuPercent": 5.609707579073006,
+      "maxPoolWaiting": 94,
+      "databaseContainer": [
+        {
+          "BlockIO": "91.9MB / 4.1kB",
+          "CPUPerc": "9.09%",
+          "Container": "infra-postgres-1",
+          "ID": "789d6c19b8e1",
+          "MemPerc": "1.13%",
+          "MemUsage": "130.4MiB / 11.31GiB",
+          "Name": "infra-postgres-1",
+          "NetIO": "90.9MB / 374MB",
+          "PIDs": "25"
+        },
+        {
+          "BlockIO": "91.9MB / 4.1kB",
+          "CPUPerc": "7.32%",
+          "Container": "infra-postgres-1",
+          "ID": "789d6c19b8e1",
+          "MemPerc": "1.14%",
+          "MemUsage": "132.5MiB / 11.31GiB",
+          "Name": "infra-postgres-1",
+          "NetIO": "93.1MB / 380MB",
+          "PIDs": "25"
+        }
+      ]
+    }
+  ]
+}

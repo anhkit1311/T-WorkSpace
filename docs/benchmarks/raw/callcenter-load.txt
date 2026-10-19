@@ -1,0 +1,106 @@
+== --calls 40 --concurrency 20 --hold 8
+{
+  "calls": 40,
+  "concurrency": 20,
+  "holdSeconds": 8,
+  "wallSeconds": 19.2,
+  "recorded": 40,
+  "failedToOriginate": 0,
+  "errors": [],
+  "setupMs": {
+    "p50": 206,
+    "p95": 354,
+    "max": 364
+  },
+  "ivrToQueueMs": {
+    "p50": 1645,
+    "p95": 1777,
+    "max": 1790
+  },
+  "outcomes": {
+    "abandoned": 40
+  }
+}
+== --calls 100 --concurrency 50 --hold 8
+{
+  "calls": 100,
+  "concurrency": 50,
+  "holdSeconds": 8,
+  "wallSeconds": 19.3,
+  "recorded": 100,
+  "failedToOriginate": 0,
+  "errors": [],
+  "setupMs": {
+    "p50": 433,
+    "p95": 775,
+    "max": 829
+  },
+  "ivrToQueueMs": {
+    "p50": 1693,
+    "p95": 1746,
+    "max": 1779
+  },
+  "outcomes": {
+    "abandoned": 100
+  }
+}
+== --calls 200 --concurrency 100 --hold 8
+{
+  "calls": 200,
+  "concurrency": 100,
+  "holdSeconds": 8,
+  "wallSeconds": 3.3,
+  "recorded": 199,
+  "failedToOriginate": 200,
+  "errors": [
+    "fetch failed",
+    "POST /channels/1792426701.301/dtmf → 409",
+    "POST /channels/1792426701.303/dtmf → 409",
+    "POST /channels/1792426701.305/dtmf → 409",
+    "POST /channels/1792426701.307/dtmf → 409"
+  ],
+  "setupMs": {
+    "p50": 794,
+    "p95": 1409,
+    "max": 1526
+  },
+  "ivrToQueueMs": {
+    "p50": null,
+    "p95": null,
+    "max": null
+  },
+  "outcomes": {
+    "abandoned": 52,
+    "failed": 147
+  }
+}
+== --calls 400 --concurrency 200 --hold 8
+{
+  "calls": 400,
+  "concurrency": 200,
+  "holdSeconds": 8,
+  "wallSeconds": 3.4,
+  "recorded": 253,
+  "failedToOriginate": 400,
+  "errors": [
+    "fetch failed",
+    "POST /channels/1792426707.699/dtmf → 409",
+    "POST /channels/1792426707.701/dtmf → 409",
+    "POST /channels/1792426707.703/dtmf → 409",
+    "POST /channels/1792426707.705/dtmf → 409"
+  ],
+  "setupMs": {
+    "p50": 1759,
+    "p95": 2744,
+    "max": 2922
+  },
+  "ivrToQueueMs": {
+    "p50": null,
+    "p95": null,
+    "max": null
+  },
+  "outcomes": {
+    "abandoned": 201,
+    "open": 52
+  }
+}

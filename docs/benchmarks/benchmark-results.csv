@@ -1,0 +1,5 @@
+Concurrency,Connect Latency (ms),Chat Min RTT (ms),Chat Avg RTT (ms),Chat p95 RTT (ms),Chat Max RTT (ms),Chat Throughput (msg/s),SFU Join Latency (ms),SFU Transport Create Latency (ms),Allocated Transports,CPU Usage (%),Memory RSS (MB),Memory Heap Used (MB)
+1,27.25,21.36,24.05,33.33,33.33,38,164.33,9.4,2,15.18,101.67,30.17
+3,25.44,21.58,25.11,35.61,35.61,36.5,23.8,4.34,6,30.61,107.25,37.5
+5,38.52,22.19,24.67,34.93,34.93,36.9,19.77,3.17,10,30.9,112.41,39.5
+8,43.81,22.18,24.85,33.12,33.12,36.5,14.53,2.4,16,74.18,88.46,30.03

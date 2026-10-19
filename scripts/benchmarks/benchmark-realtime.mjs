@@ -234,6 +234,8 @@ async function runBenchmark() {
       for (const s of clientSockets) {
         s.disconnect();
       }
+      // Let the server's disconnect handlers (meeting summary writes) finish, or the cascade delete deadlocks with them.
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       await pool.query(`DELETE FROM workspaces WHERE id = $1`, [workspace.id]);
       await pool.query(`DELETE FROM users WHERE id = ANY($1::uuid[])`, [userIds]);
 

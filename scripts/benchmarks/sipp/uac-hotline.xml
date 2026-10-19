@@ -3,7 +3,7 @@
 <!-- Q1: SIP/RTP-layer load on Asterisk (SIPp). Each call authenticates as a test extension, dials the
      hotline test number 9000, sends G.711 audio for [hold] ms and hangs up. Use an extension made for
      load tests (UDP, allowed by the internal-only ACL), e.g.:
-     sipp -sf scripts/benchmarks/sipp/uac-hotline.xml -s 9000 -au 1290 -ap <secret> -r 5 -l 50 -m 500 \
+     sipp -sf scripts/benchmarks/sipp/uac-hotline.xml -s 9000 -au 1290 -ap <secret> -key auth_user 1290 -r 5 -l 50 -m 500 \
           -rtp_echo -d 20000 <asterisk-ip>:5060
      -r calls/s, -l max concurrent, -m total, -d hold time (ms). Watch Grafana while it runs. -->
 <scenario name="nexo hotline UAC">
@@ -11,11 +11,11 @@
     <![CDATA[
       INVITE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
       Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
-      From: sipp <sip:[authentication_username]@[remote_ip]>;tag=[pid]SIPpTag00[call_number]
+      From: sipp <sip:[auth_user]@[remote_ip]>;tag=[pid]SIPpTag00[call_number]
       To: <sip:[service]@[remote_ip]:[remote_port]>
       Call-ID: [call_id]
       CSeq: 1 INVITE
-      Contact: sip:[authentication_username]@[local_ip]:[local_port]
+      Contact: sip:[auth_user]@[local_ip]:[local_port]
       Max-Forwards: 70
       Content-Type: application/sdp
       Content-Length: [len]
@@ -35,7 +35,7 @@
     <![CDATA[
       ACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
       Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
-      From: sipp <sip:[authentication_username]@[remote_ip]>;tag=[pid]SIPpTag00[call_number]
+      From: sipp <sip:[auth_user]@[remote_ip]>;tag=[pid]SIPpTag00[call_number]
       To: <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
       Call-ID: [call_id]
       CSeq: 1 ACK
@@ -46,11 +46,11 @@
     <![CDATA[
       INVITE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
       Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
-      From: sipp <sip:[authentication_username]@[remote_ip]>;tag=[pid]SIPpTag00[call_number]
+      From: sipp <sip:[auth_user]@[remote_ip]>;tag=[pid]SIPpTag00[call_number]
       To: <sip:[service]@[remote_ip]:[remote_port]>
       Call-ID: [call_id]
       CSeq: 2 INVITE
-      Contact: sip:[authentication_username]@[local_ip]:[local_port]
+      Contact: sip:[auth_user]@[local_ip]:[local_port]
       [authentication]
       Max-Forwards: 70
       Content-Type: application/sdp
@@ -73,7 +73,7 @@
     <![CDATA[
       ACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
       Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
-      From: sipp <sip:[authentication_username]@[remote_ip]>;tag=[pid]SIPpTag00[call_number]
+      From: sipp <sip:[auth_user]@[remote_ip]>;tag=[pid]SIPpTag00[call_number]
       To: <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
       Call-ID: [call_id]
       CSeq: 2 ACK
@@ -85,7 +85,7 @@
     <![CDATA[
       BYE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
       Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
-      From: sipp <sip:[authentication_username]@[remote_ip]>;tag=[pid]SIPpTag00[call_number]
+      From: sipp <sip:[auth_user]@[remote_ip]>;tag=[pid]SIPpTag00[call_number]
       To: <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
       Call-ID: [call_id]
       CSeq: 3 BYE

@@ -1,0 +1,77 @@
+[
+  {
+    "level": 10,
+    "rate": 10,
+    "holdSeconds": 20,
+    "totalCalls": 20,
+    "sippExitCode": 0,
+    "ccCallsRecorded": 20,
+    "outcomes": {
+      "abandoned": 20
+    },
+    "peakCpuPercent": {
+      "asterisk": 9.51,
+      "postgres": 4.4
+    }
+  },
+  {
+    "level": 25,
+    "rate": 10,
+    "holdSeconds": 20,
+    "totalCalls": 50,
+    "sippExitCode": 0,
+    "ccCallsRecorded": 50,
+    "outcomes": {
+      "abandoned": 50
+    },
+    "peakCpuPercent": {
+      "asterisk": 19.93,
+      "postgres": 4.34
+    }
+  },
+  {
+    "level": 50,
+    "rate": 10,
+    "holdSeconds": 20,
+    "totalCalls": 100,
+    "sippExitCode": 0,
+    "ccCallsRecorded": 100,
+    "outcomes": {
+      "abandoned": 100
+    },
+    "peakCpuPercent": {
+      "asterisk": 31.3,
+      "postgres": 5.26
+    }
+  },
+  {
+    "level": 75,
+    "rate": 10,
+    "holdSeconds": 20,
+    "totalCalls": 150,
+    "sippExitCode": 1,
+    "ccCallsRecorded": 50,
+    "outcomes": {
+      "abandoned": 50
+    },
+    "peakCpuPercent": {
+      "asterisk": 34.74,
+      "postgres": 5.01
+    }
+  },
+  {
+    "level": 100,
+    "rate": 10,
+    "holdSeconds": 20,
+    "totalCalls": 200,
+    "sippExitCode": 1,
+    "ccCallsRecorded": 50,
+    "outcomes": {
+      "abandoned": 50
+    },
+    "peakCpuPercent": {
+      "asterisk": 32.76,
+      "postgres": 4.25
+    }
+  }
+]
