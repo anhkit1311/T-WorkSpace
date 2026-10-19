@@ -226,7 +226,8 @@ function TicketDetail({
         </Field>
       </div>
       <div className="desk-actions desk-actions--start">
-        {ticket.callerNumber && (
+        {/* Internal only (no trunk): an extension can be called back; a student who called from the web is answered in the ticket. */}
+        {ticket.callerNumber && /^1\d{3}$/.test(ticket.callerNumber) && (
           <Button size="sm" icon="phone" onClick={onCallBack} disabled={!canCall} title={canCall ? undefined : "Cần đăng ký softphone trước"}>
             Gọi lại {ticket.callerNumber}
           </Button>

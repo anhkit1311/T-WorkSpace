@@ -58,7 +58,7 @@ npm run callcenter:seed -- giaovu@demo.nexo.test gv.ha@demo.nexo.test  # 2 phòn
 - Máy lẻ thử: 1001, 1002 (Zoiper/Linphone, UDP 127.0.0.1:5060) và 1101 (trình duyệt), cùng mật khẩu `ASTERISK_SPIKE_SIP_PASSWORD`.
 - Trang thử JsSIP: `http://localhost:<cổng web>/softphone-test.html` (chỉ có ở dev server).
 - Số thử: 1001/1002/1101 gọi nhau; 8000 echo kiểm tra tiếng; 9000 chuyển vào ARI.
-- SIP trunk: chép `infra/asterisk/config/pjsip_trunk.conf.example` thành `pjsip_trunk.conf` (không đưa vào git), điền thông số nhà cung cấp, chạy lại `npm run callcenter:up`.
+- Không có SIP trunk: tổng đài chỉ dùng nội bộ TDTU. Máy lẻ của các phòng ban gọi nhau, sinh viên gọi hotline từ trình duyệt (đã đăng nhập). Số ngoài (0…, 00…, +…) bị từ chối.
 - Máy khác trong LAN: đặt `ASTERISK_EXTERNAL_IP` là IP LAN của máy chạy Docker.
 
 ## Kiểm tra

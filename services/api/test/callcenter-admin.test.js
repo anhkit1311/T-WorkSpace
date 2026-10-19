@@ -69,8 +69,7 @@ test(
       const { extension, secret } = await admin.createExtension(adminId, { departmentId, userId: agentId });
       assert.equal(extension.number, String(from), "first free number of the range");
       assert.ok(extension.syncedAt, "pushed to the PBX");
-      // BR-20: the owner is an agent, so the extension may dial out (endpoint context from-internal-out).
-      assert.deepEqual(pushed.at(-1), { number: String(from), secret, transport: "webrtc", callerName: "Agent One", canCallOut: true });
+      assert.deepEqual(pushed.at(-1), { number: String(from), secret, transport: "webrtc", callerName: "Agent One" });
       assert.ok(!("secret" in (await admin.listExtensions(adminId))[0]), "secret never listed");
       assert.ok(rosterChanges >= 2);
 

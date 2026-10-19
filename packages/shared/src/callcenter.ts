@@ -43,8 +43,6 @@ export interface CcExtension {
   transport: ExtensionTransport;
   active: boolean;
   syncedAt: string | null;
-  /** BR-20: may dial numbers outside the school through the SIP trunk. */
-  canCallOut: boolean;
 }
 
 export interface CcHotline {

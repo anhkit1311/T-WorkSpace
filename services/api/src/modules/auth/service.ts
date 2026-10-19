@@ -5,8 +5,8 @@ import { config } from "../../config/config.js";
 import { query, withTransaction } from "../../infrastructure/database/db.js";
 import { HttpError } from "../../shared/http/http-error.js";
 import { findOrCreateGoogleUser, verifyGoogleAuth } from "./google.js";
-import { createAndSendOtp, resendOtp, verifyOtp } from "./otp.js";
-import { hashPassword, verifyPassword } from "./password.js";
+import { resendOtp, verifyOtp } from "./otp.js";
+import { verifyPassword } from "./password.js";
 import {
   createAccessToken,
   createRefreshToken,
@@ -40,7 +40,7 @@ type UserRow = {
   notifications_enabled?: boolean;
 };
 
-function normalizeEmail(value: unknown): string {
+export function normalizeEmail(value: unknown): string {
   if (typeof value !== "string") throw new HttpError(400, "INVALID_EMAIL", "Email không hợp lệ.");
   const email = value.trim().toLowerCase();
   if (email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -56,7 +56,7 @@ function validatePassword(value: unknown): string {
   return value;
 }
 
-function validateDisplayName(value: unknown): string {
+export function validateDisplayName(value: unknown): string {
   if (typeof value !== "string") {
     throw new HttpError(400, "INVALID_DISPLAY_NAME", "Tên hiển thị không hợp lệ.");
   }
@@ -115,55 +115,6 @@ async function createSession(
 
 async function createAuthResult(user: AuthUser, refreshToken: string): Promise<AuthResult> {
   return { user, accessToken: await createAccessToken(user.id), refreshToken };
-}
-
-export async function register(input: {
-  displayName?: unknown;
-  email?: unknown;
-  password?: unknown;
-}): Promise<{ requireOtp: boolean; email: string; message: string }> {
-  const email = normalizeEmail(input.email);
-  const password = validatePassword(input.password);
-  const displayName = validateDisplayName(input.displayName);
-  const passwordHash = await hashPassword(password);
-  const userId = randomUUID();
-
-  const existingUser = await query<UserRow>(
-    `SELECT id, email, display_name, email_verified FROM users WHERE email = $1`,
-    [email],
-  );
-
-  if (existingUser.rows[0]) {
-    const u = existingUser.rows[0];
-    if (u.email_verified) {
-      throw new HttpError(409, "EMAIL_EXISTS", "Email này đã được sử dụng. Vui lòng đăng nhập.");
-    }
-    // Tài khoản đã đăng ký nhưng chưa kích hoạt OTP -> Cập nhật mật khẩu và gửi lại OTP
-    await query(
-      `UPDATE users SET display_name = $1, password_hash = $2, updated_at = now() WHERE id = $3`,
-      [displayName, passwordHash, u.id],
-    );
-    await createAndSendOtp(email, displayName);
-    return {
-      requireOtp: true,
-      email,
-      message: "Mã xác thực OTP đã được gửi đến email của bạn.",
-    };
-  }
-
-  await query(
-    `INSERT INTO users (id, email, password_hash, display_name, email_verified, auth_provider)
-     VALUES ($1, $2, $3, $4, false, 'local')`,
-    [userId, email, passwordHash, displayName],
-  );
-
-  await createAndSendOtp(email, displayName);
-
-  return {
-    requireOtp: true,
-    email,
-    message: "Mã xác thực OTP đã được gửi đến email của bạn.",
-  };
 }
 
 export async function login(

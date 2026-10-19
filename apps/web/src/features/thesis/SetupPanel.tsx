@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, Field } from "../../shared/ui/Primitives";
 import { academicApi } from "./api";
 import { useThesis } from "./context";
-import { rankLabel, toLocalInput } from "./labels";
+import { parseAccountLines, rankLabel, toLocalInput } from "./labels";
 
 interface StaffRow {
   userId: string;
@@ -75,7 +75,51 @@ function SystemAdminCard() {
           <Button type="submit">Cấp quyền</Button>
         </form>
       </div>
+      <AccountsCard />
     </section>
+  );
+}
+
+type CreatedAccount = { email: string; displayName: string; status: "created" | "exists"; password: string | null };
+
+/** No self sign-up: the system administrator creates accounts here, one or a list pasted from Excel. */
+function AccountsCard() {
+  const { token, run } = useThesis();
+  const [lines, setLines] = useState("");
+  const [created, setCreated] = useState<CreatedAccount[]>([]);
+  const copy = () =>
+    void navigator.clipboard.writeText(created.map((row) => [row.email, row.displayName, row.password ?? "(đã có tài khoản)"].join("\t")).join("\n"));
+  return (
+    <div className="thesis-gap">
+      <form className="thesis-form" onSubmit={async (event) => {
+        event.preventDefault();
+        const result = await run("Đã xử lý danh sách tài khoản", () =>
+          academicApi<{ accounts: CreatedAccount[] }>(token, "accounts", "POST", { accounts: parseAccountLines(lines) }), { reload: false });
+        if (result) {
+          setCreated(result.accounts);
+          setLines("");
+        }
+      }}>
+        <h3>Tạo tài khoản</h3>
+        <p className="thesis-note">Hệ thống không cho tự đăng ký. Mỗi dòng: <code>email, Họ tên</code> (dán thẳng 2 cột từ Excel cũng được), tối đa 200 dòng.</p>
+        <textarea rows={5} value={lines} onChange={(e) => setLines(e.target.value)} required aria-label="Danh sách tài khoản" placeholder={"52100001@student.tdtu.edu.vn, Nguyễn Văn A\ngv.lan@tdtu.edu.vn, Trần Thị Lan"} />
+        <Button type="submit">Tạo tài khoản</Button>
+      </form>
+      {created.length > 0 && (
+        <>
+          <p className="thesis-note" role="status">Mật khẩu chỉ hiện một lần. Hãy sao chép và gửi cho từng người; họ có thể đổi qua "Quên mật khẩu".</p>
+          <table className="thesis-table">
+            <thead><tr><th>Email</th><th>Họ tên</th><th>Mật khẩu</th></tr></thead>
+            <tbody>
+              {created.map((row) => (
+                <tr key={row.email}><td>{row.email}</td><td>{row.displayName}</td><td>{row.password ? <code>{row.password}</code> : "Đã có tài khoản, giữ nguyên"}</td></tr>
+              ))}
+            </tbody>
+          </table>
+          <Button type="button" variant="secondary" onClick={copy}>Sao chép danh sách</Button>
+        </>
+      )}
+    </div>
   );
 }
 

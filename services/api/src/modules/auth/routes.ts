@@ -17,7 +17,6 @@ import {
   login,
   logout,
   refreshSession,
-  register,
   resendVerificationOtp,
   verifyOtpAndLogin,
 } from "./service.js";
@@ -25,14 +24,6 @@ import { changePassword, requestPasswordReset, resetPassword } from "./password-
 import { HttpError } from "../../shared/http/http-error.js";
 import { limitRequest } from "../../shared/http/rate-limit.js";
 export async function authRoutes({ request, response, pathname }: RouteContext): Promise<void> {
-  if (request.method === "POST" && pathname === "/auth/register") {
-    await limitRequest(request, "register", 5, 3600);
-    const body = await readJson(request);
-    const result = await register(body);
-    sendJson(response, 200, result);
-    return;
-  }
-
   if (request.method === "POST" && pathname === "/auth/verify-otp") {
     await limitRequest(request, "verify-otp", 15, 600);
     const body = await readJson(request);

@@ -86,20 +86,6 @@ export async function changePasswordApi(
   return handleResponse<{ message: string }>(response);
 }
 
-export async function registerApi(input: {
-  displayName: string;
-  email: string;
-  password: string;
-}): Promise<RegisterResponse> {
-  const response = await fetch(`${API_BASE}/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(input),
-  });
-  return handleResponse<RegisterResponse>(response);
-}
-
 export async function verifyOtpApi(input: VerifyOtpInput): Promise<AuthResponse> {
   const response = await fetch(`${API_BASE}/auth/verify-otp`, {
     method: "POST",

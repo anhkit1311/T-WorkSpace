@@ -209,7 +209,7 @@ export class AriPbx implements Pbx {
   }
 
   /** CC-2: extensions live in Asterisk's memory wizard; auth and aor first, then the endpoint. */
-  async pushExtension(input: { number: string; secret: string; transport: ExtensionTransport; callerName: string; canCallOut?: boolean; context?: string }) {
+  async pushExtension(input: { number: string; secret: string; transport: ExtensionTransport; callerName: string; context?: string }) {
     const fields = (values: Record<string, string>) => ({
       fields: Object.entries(values).map(([attribute, value]) => ({ attribute, value })),
     });
@@ -230,8 +230,8 @@ export class AriPbx implements Pbx {
         : { transport: "transport-udp", rtp_symmetric: "yes", force_rport: "yes", rewrite_contact: "yes", acl: "internal-only" };
     await this.request("PUT", `${dynamic}/endpoint/${input.number}`, fields({
       ...media,
-      // BR-20: the trunk is only in from-internal-out's dialplan.
-      context: input.context ?? (input.canCallOut ? "from-internal-out" : "from-internal"),
+      // Internal only (no SIP trunk): extensions call each other, browser sessions the hotline.
+      context: input.context ?? "from-internal",
       disallow: "all",
       allow: "ulaw,alaw",
       direct_media: "no",

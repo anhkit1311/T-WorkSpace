@@ -557,9 +557,8 @@ export class CallCenterRepository implements AcdStore {
       transport: ExtensionTransport;
       active: boolean;
       synced_at: Date | null;
-      can_call_out: boolean;
     }>(
-      `SELECT e.id,e.number,e.department_id,e.user_id,u.display_name,e.label,e.transport,e.active,e.synced_at,e.can_call_out
+      `SELECT e.id,e.number,e.department_id,e.user_id,u.display_name,e.label,e.transport,e.active,e.synced_at
        FROM cc_extensions e LEFT JOIN users u ON u.id=e.user_id
        WHERE $1::uuid[] IS NULL OR e.department_id=ANY($1::uuid[]) ORDER BY e.number`,
       [departmentIds],
@@ -574,7 +573,6 @@ export class CallCenterRepository implements AcdStore {
       transport: row.transport,
       active: row.active,
       syncedAt: row.synced_at?.toISOString() ?? null,
-      canCallOut: row.can_call_out,
     }));
   }
 
@@ -591,9 +589,8 @@ export class CallCenterRepository implements AcdStore {
       transport: ExtensionTransport;
       label: string;
       display_name: string | null;
-      can_call_out: boolean;
     }>(
-      `SELECT e.id,e.number,e.sip_secret,e.transport,e.label,u.display_name,e.can_call_out FROM cc_extensions e
+      `SELECT e.id,e.number,e.sip_secret,e.transport,e.label,u.display_name FROM cc_extensions e
        LEFT JOIN users u ON u.id=e.user_id WHERE e.active AND ($1::uuid[] IS NULL OR e.id=ANY($1::uuid[]))`,
       [ids],
     );
@@ -610,9 +607,7 @@ export class CallCenterRepository implements AcdStore {
   }): Promise<string> {
     const id = randomUUID();
     await query(
-      // BR-20: an agent's extension may call requesters back through the trunk.
-      `INSERT INTO cc_extensions(id,number,department_id,user_id,label,transport,sip_secret,can_call_out)
-       VALUES($1,$2,$3,$4,$5,$6,$7,EXISTS (SELECT 1 FROM cc_members WHERE user_id=$4 AND role='agent'))`,
+      `INSERT INTO cc_extensions(id,number,department_id,user_id,label,transport,sip_secret) VALUES($1,$2,$3,$4,$5,$6,$7)`,
       [id, input.number, input.departmentId, input.userId, input.label, input.transport, input.secret],
     );
     return id;
@@ -626,20 +621,11 @@ export class CallCenterRepository implements AcdStore {
     return result.rows[0] ?? null;
   }
 
-  async updateExtension(id: string, input: { userId: string | null; label: string | undefined; active: boolean; canCallOut?: boolean }) {
+  async updateExtension(id: string, input: { userId: string | null; label: string | undefined; active: boolean }) {
     await query(
-      `UPDATE cc_extensions SET user_id=$2, label=COALESCE($3,label), active=$4, can_call_out=COALESCE($5,can_call_out), synced_at=NULL WHERE id=$1`,
-      [id, input.userId, input.label ?? null, input.active, input.canCallOut ?? null],
+      `UPDATE cc_extensions SET user_id=$2, label=COALESCE($3,label), active=$4, synced_at=NULL WHERE id=$1`,
+      [id, input.userId, input.label ?? null, input.active],
     );
-  }
-
-  /** Lets the user's extensions dial out; returns the ids that changed. */
-  async grantCallOut(userId: string): Promise<string[]> {
-    const result = await query<{ id: string }>(
-      `UPDATE cc_extensions SET can_call_out=true, synced_at=NULL WHERE user_id=$1 AND NOT can_call_out RETURNING id`,
-      [userId],
-    );
-    return result.rows.map((row) => row.id);
   }
 
   async setExtensionSecret(id: string, secret: string) {

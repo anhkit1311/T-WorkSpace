@@ -160,7 +160,7 @@ export function CallCenterAdmin({ api, fail, notify, onChanged }: { api: Api; fa
         </div>
         <div className="cdr-table-wrapper">
           <table className="cdr-table">
-            <thead><tr><th>Số</th><th>Phòng ban</th><th>Người dùng</th><th>Loại</th><th title="BR-20: được gọi số ngoài trường qua SIP trunk">Gọi ra ngoài</th><th>Asterisk</th><th /></tr></thead>
+            <thead><tr><th>Số</th><th>Phòng ban</th><th>Người dùng</th><th>Loại</th><th>Asterisk</th><th /></tr></thead>
             <tbody>
               {extensions.map((extension) => (
                 <tr key={extension.id}>
@@ -168,21 +168,6 @@ export function CallCenterAdmin({ api, fail, notify, onChanged }: { api: Api; fa
                   <td>{nameOf(extension.departmentId)}</td>
                   <td>{extension.userName || extension.label || "—"}</td>
                   <td>{extension.transport === "webrtc" ? "Trình duyệt" : "Softphone SIP"}</td>
-                  <td>
-                    <label className="desk-toggle">
-                      <input
-                        type="checkbox"
-                        checked={extension.canCallOut}
-                        onChange={(event) =>
-                          run(
-                            api(`extensions/${extension.id}`, "PATCH", { active: extension.active, canCallOut: event.target.checked }),
-                            event.target.checked ? `Máy lẻ ${extension.number} được gọi ra ngoài.` : `Đã chặn gọi ra ngoài từ ${extension.number}.`,
-                          )
-                        }
-                      />
-                      <span>{extension.canCallOut ? "Được phép" : "Chặn"}</span>
-                    </label>
-                  </td>
                   <td>{!extension.active ? <Badge>Tắt</Badge> : extension.syncedAt ? <Badge tone="green">Đã đồng bộ</Badge> : <Badge tone="amber">Chưa đồng bộ</Badge>}</td>
                   <td className="desk-admin__actions">
                     <Button size="sm" variant="ghost" onClick={() => api<{ secret: string }>(`extensions/${extension.id}/reset-secret`, "POST").then((result) => setSecret({ number: extension.number, secret: result.secret }), fail)}>

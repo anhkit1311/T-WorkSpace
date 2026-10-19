@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import type { GoogleAuthInput } from "@doan/shared";
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
 import { config } from "../../config/config.js";
@@ -146,11 +145,7 @@ interface GoogleAuthUserRecord {
 export async function findOrCreateGoogleUser(
   googleData: GoogleUserPayload,
 ): Promise<GoogleAuthUserRecord> {
-  const { googleId, email, displayName, avatarUrl, emailVerified } = googleData;
-  const resolvedDisplayName = (displayName?.trim() || email.split("@")[0] || "Người dùng").slice(
-    0,
-    80,
-  );
+  const { googleId, email, avatarUrl, emailVerified } = googleData;
 
   return withTransaction(async (client) => {
     // 1. Tìm user đã liên kết google_id trước đó
@@ -256,42 +251,11 @@ export async function findOrCreateGoogleUser(
       };
     }
 
-    // 3. Người dùng hoàn toàn mới -> Tự động tạo tài khoản
-    const newUserId = randomUUID();
-    await client.query(
-      `INSERT INTO users (id, email, password_hash, display_name, google_id, auth_provider, email_verified, avatar_url)
-       VALUES ($1, $2, NULL, $3, $4, 'google', $5, $6)`,
-      [
-        newUserId,
-        email,
-        resolvedDisplayName,
-        googleId,
-        emailVerified && !config.requireGoogleOtp,
-        avatarUrl,
-      ],
+    // 3. No self sign-up (TDTU only): Google signs in accounts the system administrator created.
+    throw new HttpError(
+      403,
+      "ACCOUNT_NOT_PROVISIONED",
+      "Email này chưa được cấp tài khoản. Vui lòng liên hệ quản trị hệ thống TDTU.",
     );
-
-    if (config.requireGoogleOtp && !emailVerified) {
-      await createAndSendOtp(email, resolvedDisplayName);
-      return {
-        id: newUserId,
-        email,
-        displayName: resolvedDisplayName,
-        avatarUrl: avatarUrl || null,
-        authProvider: "google",
-        emailVerified: false,
-        requireOtp: true,
-      };
-    }
-
-    return {
-      id: newUserId,
-      email,
-      displayName: resolvedDisplayName,
-      avatarUrl: avatarUrl || null,
-      authProvider: "google",
-      emailVerified: true,
-      requireOtp: false,
-    };
   });
 }

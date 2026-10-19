@@ -305,8 +305,8 @@ export function LandingPage() {
     smoothScrollTo(targetPos);
   };
 
-  const handleHeroCta = () => (user ? enterWorkspace() : openAuth("register"));
-  const handleNavCta = () => (user ? enterWorkspace() : openAuth("login"));
+  const handleHeroCta = () => (user ? enterWorkspace() : openAuth());
+  const handleNavCta = () => (user ? enterWorkspace() : openAuth());
 
   return (
     <div className="editorial-shell" ref={shellRef}>

@@ -57,8 +57,8 @@ export interface Pbx {
   linkedId(channelId: string): Promise<string>;
   /** Hangs up channels and destroys bridges a previous run of the app left behind; returns how many. */
   releaseOrphans(): Promise<number>;
-  /** `context` overrides the dialplan entry (browser call sessions); otherwise it follows canCallOut. */
-  pushExtension(input: { number: string; secret: string; transport: ExtensionTransport; callerName: string; canCallOut?: boolean; context?: string }): Promise<void>;
+  /** `context` overrides the dialplan entry (browser call sessions); otherwise extensions reach each other only. */
+  pushExtension(input: { number: string; secret: string; transport: ExtensionTransport; callerName: string; context?: string }): Promise<void>;
   removeExtension(number: string): Promise<void>;
   /** BR-17: removes a stored recording (call or voicemail); a missing one is not an error. */
   deleteRecording(name: string): Promise<void>;

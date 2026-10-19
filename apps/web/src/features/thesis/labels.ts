@@ -73,3 +73,16 @@ export const formatDate = (value: string | null | undefined) => (value ? new Dat
 
 /** Value for <input type="datetime-local"> in the viewer's own time zone. */
 export const toLocalInput = (date: Date) => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+/** "email, Họ tên" per line (comma, semicolon or a tab pasted from Excel); a header row is skipped. */
+export function parseAccountLines(text: string) {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [email, ...name] = line.split(/[\t,;]/);
+      return { email: email.trim(), displayName: name.join(" ").trim() };
+    })
+    .filter((row) => row.email.toLowerCase() !== "email");
+}

@@ -8,17 +8,16 @@ import {
   useRef,
   useState,
 } from "react";
-import type { AuthResponse, AuthUser, GoogleAuthInput, RegisterResponse } from "@doan/shared";
+import type { AuthResponse, AuthUser, GoogleAuthInput } from "@doan/shared";
 import {
   googleAuthApi,
   loginApi,
   logoutApi,
   refreshSessionApi,
-  registerApi,
   resendOtpApi,
   verifyOtpApi,
 } from "../../features/auth/api";
-import type { AuthMode, PublicScreen, ToastMessage, ViewId } from "../types";
+import type { PublicScreen, ToastMessage, ViewId } from "../types";
 import {
   appEntryRoute,
   appRouteUrl,
@@ -67,16 +66,9 @@ interface AppContextValue {
   user: AuthUser | null;
   accessToken: string | null;
   isAuthChecking: boolean;
-  authMode: AuthMode;
-  setAuthMode: (mode: AuthMode) => void;
-  openAuth: (mode?: AuthMode) => void;
+  openAuth: () => void;
   enterWorkspace: () => void;
   login: (input: { email: string; password: string }) => Promise<void>;
-  register: (input: {
-    displayName: string;
-    email: string;
-    password: string;
-  }) => Promise<RegisterResponse>;
   verifyOtp: (input: { email: string; otp: string }) => Promise<void>;
   resendOtp: (
     email: string,
@@ -124,7 +116,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const onPop = () => {
       setRoute(readAppRoute(new URL(window.location.href)));
       const path = window.location.pathname;
-      if (/^\/(login|register)\/?$/.test(path)) { setAuthMode(path.startsWith("/register") ? "register" : "login"); setScreen("login"); }
+      // "/register" is an old link: there is no self sign-up any more, it opens the sign-in page.
+      if (/^\/(login|register)\/?$/.test(path)) setScreen("login");
       else if (path === "/") setScreen("landing");
       else if(path.startsWith("/app/")) setScreen(user ? "app" : "login");
     };
@@ -140,16 +133,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
-  const [authMode, setAuthMode] = useState<AuthMode>(() => window.location.pathname.startsWith("/register") ? "register" : "login");
   useEffect(() => {
     if (isAuthChecking) return;
     const path = window.location.pathname;
     // Retain an incoming protected deep link while authentication is required.
     if(screen === "login" && path.startsWith("/app/")) return;
-    const destination = screen === "landing" ? "/" : screen === "login" ? `/${authMode}` : appRouteUrl(route);
+    const destination = screen === "landing" ? "/" : screen === "login" ? "/login" : appRouteUrl(route);
     if (`${path}${window.location.search}${window.location.hash}` !== destination)
       window.history[screen === "app" ? "replaceState" : "pushState"]({},"",destination);
-  },[screen,authMode,isAuthChecking,route]);
+  },[screen,isAuthChecking,route]);
 
   useEffect(() => {
     // The editorial glass UI is light-only; a dark color-scheme turned native selects,
@@ -230,17 +222,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [accessToken]);
 
-  const openAuth = (mode: AuthMode = "login") => {
-    setAuthMode(mode);
-    setScreen("login");
-  };
+  const openAuth = () => setScreen("login");
 
   const enterWorkspace = () => {
     if (user) {
       setScreen("app");
       setActiveView("overview");
     } else {
-      openAuth("login");
+      openAuth();
     }
   };
 
@@ -251,14 +240,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     enterApp();
     // Preserve an incoming channel/meeting link through authentication.
     notify("Chào mừng trở lại", `Đăng nhập thành công với ${result.user.displayName}.`);
-  };
-
-  const handleRegister = async (input: {
-    displayName: string;
-    email: string;
-    password: string;
-  }) => {
-    return await registerApi(input);
   };
 
   const handleVerifyOtp = async (input: { email: string; otp: string }) => {
@@ -350,12 +331,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       user,
       accessToken,
       isAuthChecking,
-      authMode,
-      setAuthMode,
       openAuth,
       enterWorkspace,
       login: handleLogin,
-      register: handleRegister,
       verifyOtp: handleVerifyOtp,
       resendOtp: handleResendOtp,
       loginWithGoogle: handleLoginWithGoogle,
@@ -367,7 +345,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       route,
       navigate,
       chatNavigation,
-      authMode,
       isAuthChecking,
       mobileNavOpen,
       screen,

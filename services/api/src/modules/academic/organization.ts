@@ -1,5 +1,7 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { query, withTransaction } from "../../infrastructure/database/db.js";
+import { hashPassword } from "../auth/password.js";
+import { normalizeEmail, validateDisplayName } from "../auth/service.js";
 import {
   audit,
   choice,
@@ -113,6 +115,52 @@ export async function listStaff(userId: string, unitId: string) {
     );
     const departments = await client.query(`SELECT id,code,name FROM academic_departments WHERE unit_id=$1 ORDER BY code`, [unitId]);
     return { staff: rows.rows, departments: departments.rows };
+  });
+}
+
+export const MAX_ACCOUNTS = 200;
+
+/**
+ * No self sign-up (TDTU only): the system administrator creates verified accounts, one or a pasted
+ * list. Each new account gets a random password that is returned once and only stored hashed.
+ */
+export async function createAccounts(userId: string, body: Record<string, unknown>) {
+  const rows = body.accounts;
+  if (!Array.isArray(rows) || !rows.length || rows.length > MAX_ACCOUNTS)
+    throw invalid(`Cần từ 1 đến ${MAX_ACCOUNTS} tài khoản mỗi lần.`);
+  const accounts = rows.map((row: { email?: unknown; displayName?: unknown } | null, index) => {
+    try {
+      return { email: normalizeEmail(row?.email), displayName: validateDisplayName(row?.displayName) };
+    } catch (error) {
+      throw invalid(`Dòng ${index + 1}: ${error instanceof Error ? error.message : "không hợp lệ."}`);
+    }
+  });
+  // Checked before hashing: scrypt for a whole list is too costly to spend on a refused request.
+  await withTransaction(async (client) => {
+    if (!(await loadActor(client, userId)).systemAdmin) throw forbidden("Chỉ quản trị hệ thống được tạo tài khoản.");
+  });
+  const prepared = await Promise.all(
+    accounts.map(async (account) => {
+      const password = randomBytes(9).toString("base64url");
+      return { ...account, password, hash: await hashPassword(password) };
+    }),
+  );
+  return withTransaction(async (client) => {
+    const results = [];
+    for (const account of prepared) {
+      const created = await client.query<{ id: string }>(
+        `INSERT INTO users(id,email,password_hash,display_name,email_verified,auth_provider) VALUES($1,$2,$3,$4,true,'local')
+         ON CONFLICT ((lower(email))) DO NOTHING RETURNING id`,
+        [randomUUID(), account.email, account.hash, account.displayName],
+      );
+      if (!created.rowCount) {
+        results.push({ email: account.email, displayName: account.displayName, status: "exists" as const, password: null });
+        continue;
+      }
+      await audit(client, { actorId: userId, entity: "account", entityId: created.rows[0].id, action: "account.created", details: { email: account.email } });
+      results.push({ email: account.email, displayName: account.displayName, status: "created" as const, password: account.password });
+    }
+    return { accounts: results };
   });
 }
 

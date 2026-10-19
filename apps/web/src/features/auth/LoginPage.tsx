@@ -10,7 +10,6 @@ import {
   Mail,
   RotateCw,
   ShieldCheck,
-  User,
 } from "lucide-react";
 import { ApiError, requestPasswordResetApi, resetPasswordApi } from "./api";
 import { authErrorField } from "./auth-error-field";
@@ -158,18 +157,14 @@ export function LoginPage() {
     setScreen,
     notify,
     login,
-    register,
     verifyOtp,
     resendOtp,
     loginWithGoogle,
-    authMode,
-    setAuthMode,
   } = useApp();
 
   const [authStep, setAuthStep] = useState<"form" | "otp" | "reset-request" | "reset-confirm">(
     "form",
   );
-  const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -187,15 +182,12 @@ export function LoginPage() {
   const [resetNotice, setResetNotice] = useState("");
 
   const [errors, setErrors] = useState<{
-    displayName?: string;
     email?: string;
     password?: string;
     otp?: string;
     general?: string;
   }>({});
   const [loading, setLoading] = useState(false);
-
-  const isLogin = authMode === "login";
 
   // Cooldown countdown
   useEffect(() => {
@@ -237,9 +229,6 @@ export function LoginPage() {
     event.preventDefault();
     const next: typeof errors = {};
 
-    if (!isLogin && (displayName.trim().length < 2 || displayName.trim().length > 80)) {
-      next.displayName = "Tên hiển thị cần từ 2 đến 80 ký tự.";
-    }
     if (!/^\S+@\S+\.\S+$/.test(email)) {
       next.email = "Vui lòng nhập email hợp lệ.";
     }
@@ -252,22 +241,7 @@ export function LoginPage() {
 
     setLoading(true);
     try {
-      if (isLogin) {
-        await login({ email, password });
-      } else {
-        const res = await register({
-          displayName: displayName.trim(),
-          email: email.trim(),
-          password,
-        });
-        if (res.requireOtp) {
-          setOtpEmail(res.email);
-          setAuthStep("otp");
-          setCooldown(60);
-          setOtpCode("");
-          notify("Mã xác thực đã gửi", "Vui lòng kiểm tra email để lấy mã OTP 6 chữ số.", "info");
-        }
-      }
+      await login({ email, password });
     } catch (err: unknown) {
       if (err instanceof ApiError && err.code === "EMAIL_NOT_VERIFIED") {
         setOtpEmail(email.trim());
@@ -368,7 +342,6 @@ export function LoginPage() {
       setResetPasswordValue("");
       setResetCode("");
       setEmail(resetEmail.trim());
-      setAuthMode("login");
       setAuthStep("form");
       setErrors({});
       notify("Đã đổi mật khẩu", result.message, "info");
@@ -416,7 +389,7 @@ export function LoginPage() {
       <div className="editorial-auth-card">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
-            key={authStep === "form" ? authMode : authStep}
+            key={authStep}
             initial={safe.reduced ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: safe.reduced ? 1 : 0, y: safe.reduced ? 0 : -8, transition: { duration: safe.duration(0.15) } }}
@@ -466,7 +439,7 @@ export function LoginPage() {
                           value={resetEmail}
                           id="reset-email" name="email" aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "reset-email-error" : undefined}
                           onChange={(e) => setResetEmail(e.target.value)}
-                          placeholder="tenban@congty.com"
+                          placeholder="mssv@student.tdtu.edu.vn"
                           className="editorial-input"
                           autoFocus
                         />
@@ -665,44 +638,16 @@ export function LoginPage() {
                 </div>
               </div>
             ) : (
-              /* Step: Main Form (Login / Register) */
+              /* Step: Main Form (Login) */
               <div>
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
                   <NexoLogo />
                 </div>
 
-                {/* Mode Switcher Tabs */}
-                <div className="editorial-tab-switcher">
-                  <button
-                    type="button"
-                    className={`editorial-tab-btn ${isLogin ? "is-active" : ""}`}
-                    onClick={() => {
-                      setAuthMode("login");
-                      setErrors({});
-                    }}
-                  >
-                    Đăng nhập
-                  </button>
-                  <button
-                    type="button"
-                    className={`editorial-tab-btn ${!isLogin ? "is-active" : ""}`}
-                    onClick={() => {
-                      setAuthMode("register");
-                      setErrors({});
-                    }}
-                  >
-                    Tạo tài khoản
-                  </button>
-                </div>
-
-                <h1 className="editorial-auth-title">
-                  {isLogin ? "Cổng nội bộ TDTU" : "Tạo tài khoản"}
-                </h1>
+                <h1 className="editorial-auth-title">Cổng nội bộ TDTU</h1>
 
                 <p className="editorial-auth-desc">
-                  {isLogin
-                    ? "Đăng nhập bằng tài khoản trường hoặc tài khoản Google."
-                    : "Đăng ký tài khoản để truy cập cổng nội bộ và dịch vụ trực tuyến."}
+                  Đăng nhập bằng tài khoản trường cấp hoặc Google cùng email. Chưa có tài khoản? Liên hệ quản trị hệ thống.
                 </p>
 
                 {errors.general && (
@@ -712,27 +657,6 @@ export function LoginPage() {
                 )}
 
                 <form onSubmit={submit} noValidate>
-                  {!isLogin && (
-                    <div className="editorial-field">
-                      <label className="editorial-field-label" htmlFor="auth-name">Họ và tên hiển thị</label>
-                      <div className="editorial-input-wrap">
-                        <User className="editorial-input-icon editorial-auth-style-6"  />
-                        <input
-                          type="text"
-                          value={displayName}
-                          id="auth-name" name="displayName" autoComplete="name" aria-invalid={Boolean(errors.displayName)} aria-describedby={errors.displayName ? "auth-name-error" : undefined}
-                          onChange={(e) => setDisplayName(e.target.value)}
-                          placeholder="Ví dụ: Nguyễn Văn A"
-                          className="editorial-input"
-                          autoFocus
-                        />
-                      </div>
-                      {errors.displayName && (
-                        <div className="editorial-field-error" id="auth-name-error" role="alert">{errors.displayName}</div>
-                      )}
-                    </div>
-                  )}
-
                   <div className="editorial-field">
                     <label className="editorial-field-label" htmlFor="auth-email">Email tài khoản</label>
                     <div className="editorial-input-wrap">
@@ -743,7 +667,7 @@ export function LoginPage() {
                         value={email}
                         id="auth-email" name="email" aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "auth-email-error" : undefined}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="tenban@congty.com"
+                        placeholder="mssv@student.tdtu.edu.vn"
                         className="editorial-input"
                       />
                     </div>
@@ -756,7 +680,7 @@ export function LoginPage() {
                       <Lock className="editorial-input-icon editorial-auth-style-6"  />
                       <input
                         type={showPassword ? "text" : "password"}
-                        autoComplete={isLogin ? "current-password" : "new-password"}
+                        autoComplete="current-password"
                         value={password}
                         id="auth-password" name="password" aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? "auth-password-error" : undefined}
                         onChange={(e) => setPassword(e.target.value)}
@@ -781,24 +705,22 @@ export function LoginPage() {
                     )}
                   </div>
 
-                  {isLogin && (
-                    <div className="editorial-auth-forgot">
-                      <button
-                        type="button"
-                        className="editorial-sublink"
-                        onClick={() => {
-                          setResetEmail(email.trim());
-                          setAuthStep("reset-request");
-                          setErrors({});
-                        }}
-                      >
-                        Quên mật khẩu?
-                      </button>
-                    </div>
-                  )}
+                  <div className="editorial-auth-forgot">
+                    <button
+                      type="button"
+                      className="editorial-sublink"
+                      onClick={() => {
+                        setResetEmail(email.trim());
+                        setAuthStep("reset-request");
+                        setErrors({});
+                      }}
+                    >
+                      Quên mật khẩu?
+                    </button>
+                  </div>
 
                   <button type="submit" disabled={loading} aria-busy={loading || undefined} className="editorial-submit-btn">
-                    {loading ? "Đang xử lý..." : isLogin ? "Đăng nhập" : "Tiếp tục tạo tài khoản"}
+                    {loading ? "Đang xử lý..." : "Đăng nhập"}
                   </button>
                 </form>
 

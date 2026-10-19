@@ -113,7 +113,8 @@ services:
       - ${ACME_WEBROOT_DIR:?}:/var/www/certbot:ro
 
   # PBX of the call center. 8088 (ARI, SIP over WebSocket) stays inside the Docker network;
-  # Nginx proxies wss://APP_DOMAIN/ws to it. 5060/udp is only needed for a SIP trunk (CC-4).
+  # Nginx proxies wss://APP_DOMAIN/ws to it. 5060/udp serves desk SIP phones on the campus LAN
+  # (acl.conf); there is no SIP trunk, calls stay inside TDTU.
   asterisk:
     build: ./asterisk
     restart: unless-stopped
@@ -124,7 +125,6 @@ services:
       EXTERNAL_IP: ${ASTERISK_EXTERNAL_IP:?}
       ARI_ALLOWED_ORIGINS: https://${APP_DOMAIN:?}
     volumes:
-      # pjsip_trunk.conf (not in git) is picked up from here when present.
       - ./asterisk/config:/opt/nexo-asterisk:ro
       - ${ASTERISK_LOG_DIR:-./asterisk/logs}:/var/log/asterisk
     ports:

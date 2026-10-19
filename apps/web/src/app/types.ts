@@ -17,7 +17,6 @@ export type ViewId =
   | "elearning";
 
 export type PublicScreen = "landing" | "login" | "app";
-export type AuthMode = "login" | "register";
 
 export interface ToastMessage {
   id: number;
