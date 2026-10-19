@@ -697,3 +697,11 @@
 .thesis-page .field > * {
   max-width: 100%;
 }
+
+.thesis-page .thesis-scroll {
+  overflow-x: auto;
+}
+
+.thesis-page .thesis-scroll td:has(> input[type="checkbox"]) {
+  text-align: center;
+}

@@ -14,11 +14,12 @@ import { ProjectDetailView } from "./ProjectDetail";
 import { CommitteesPanel } from "./CommitteesPanel";
 import { TermAdminPanel } from "./TermAdminPanel";
 import { SetupPanel } from "./SetupPanel";
+import { AccessPanel } from "./AccessPanel";
 import { AcademicInbox } from "./AcademicInbox";
 import "../workspaces/workspace-admin.css";
 import "./thesis.css";
 
-type TabId = "overview" | "topics" | "group" | "registrations" | "projects" | "committees" | "manage" | "setup";
+type TabId = "overview" | "topics" | "group" | "registrations" | "projects" | "committees" | "manage" | "setup" | "access";
 
 export function ThesisPage() {
   const { accessToken, route, navigate, notify } = useApp();
@@ -110,6 +111,7 @@ export function ThesisPage() {
       { id: "committees", label: "Hội đồng & lịch", show: Boolean(viewer && (viewer.admin || viewer.head || viewer.lecturer)) },
       { id: "manage", label: "Quản trị đợt", show: Boolean(viewer?.admin) },
       { id: "setup", label: "Thiết lập khoa", show: Boolean(profile && (profile.systemAdmin || Object.values(profile.unitRoles).some((r) => r.includes("unit_admin")))) },
+      { id: "access", label: "Tài khoản & phân quyền", show: Boolean(profile?.systemAdmin) },
     ];
     return list.filter((item) => item.show);
   }, [term, profile]);
@@ -186,7 +188,7 @@ export function ThesisPage() {
                 ))}
               </nav>
             )}
-            {!term && activeTab !== "setup" && (
+            {!term && activeTab !== "setup" && activeTab !== "access" && (
               <div className="state-card">
                 <h3>Chưa có đợt đồ án</h3>
                 <p>Bạn chưa thuộc đợt đồ án nào. Giáo vụ khoa cần tạo đợt và ghi danh sinh viên, hoặc phân công bạn làm giảng viên của khoa.</p>
@@ -200,6 +202,7 @@ export function ThesisPage() {
               {activeTab === "projects" && term && <ProjectsPanel />}
               {activeTab === "committees" && term && <CommitteesPanel />}
               {activeTab === "manage" && term && <TermAdminPanel />}
+              {activeTab === "access" && <AccessPanel />}
               {activeTab === "setup" && <SetupPanel onTermCreated={(id) => { void loadTerms(); navigate({ view: "thesis", termId: id }); }} />}
             </div>
           </>

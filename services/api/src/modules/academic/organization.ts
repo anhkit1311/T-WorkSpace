@@ -164,6 +164,26 @@ export async function createAccounts(userId: string, body: Record<string, unknow
   });
 }
 
+/** "Phân quyền": accounts with their grants, lecturer record and enrolments, for the system admin. */
+export async function listAccess(userId: string, params: URLSearchParams) {
+  const search = (params.get("q") ?? "").trim().slice(0, 100);
+  return withTransaction(async (client) => {
+    if (!(await loadActor(client, userId)).systemAdmin) throw forbidden("Chỉ quản trị hệ thống xem được phân quyền.");
+    const rows = await client.query(
+      `SELECT u.id,u.display_name AS "displayName",u.email,
+         COALESCE((SELECT json_agg(json_build_object('role',g.role,'unitId',g.unit_id)) FROM academic_role_grants g WHERE g.user_id=u.id),'[]') AS grants,
+         (SELECT json_build_object('unitId',s.unit_id,'active',s.active) FROM academic_staff s WHERE s.user_id=u.id) AS staff,
+         (SELECT count(*)::int FROM thesis_enrollments e WHERE e.student_id=u.id) AS enrollments
+       FROM users u
+       WHERE $1='' OR u.email ILIKE '%'||$1||'%' OR u.display_name ILIKE '%'||$1||'%'
+       ORDER BY EXISTS(SELECT 1 FROM academic_role_grants g WHERE g.user_id=u.id) DESC,u.display_name
+       LIMIT 100`,
+      [search],
+    );
+    return { users: rows.rows };
+  });
+}
+
 export async function grantRole(userId: string, body: Record<string, unknown>) {
   return withTransaction(async (client) => {
     const actor = await loadActor(client, userId);

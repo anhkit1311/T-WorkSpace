@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, Field } from "../../shared/ui/Primitives";
 import { academicApi } from "./api";
 import { useThesis } from "./context";
-import { parseAccountLines, rankLabel, toLocalInput } from "./labels";
+import { rankLabel, toLocalInput } from "./labels";
 
 interface StaffRow {
   userId: string;
@@ -40,8 +40,6 @@ export function SetupPanel({ onTermCreated }: { onTermCreated: (termId: string) 
 function SystemAdminCard() {
   const { token, run } = useThesis();
   const [unit, setUnit] = useState({ code: "", name: "" });
-  const [grant, setGrant] = useState({ email: "", role: "unit_admin", unitId: "" });
-  const { profile } = useThesis();
   return (
     <section>
       <h2>Quản trị hệ thống</h2>
@@ -55,71 +53,8 @@ function SystemAdminCard() {
           <input placeholder="Tên khoa" value={unit.name} onChange={(e) => setUnit({ ...unit, name: e.target.value })} required aria-label="Tên khoa" />
           <Button type="submit">Tạo khoa</Button>
         </form>
-        <form className="thesis-form" onSubmit={async (event) => {
-          event.preventDefault();
-          await run("Đã cấp quyền", () => academicApi(token, "roles", "POST", { ...grant, unitId: grant.role === "system_admin" ? undefined : grant.unitId }));
-        }}>
-          <h3>Cấp quyền</h3>
-          <input type="email" placeholder="Email tài khoản" value={grant.email} onChange={(e) => setGrant({ ...grant, email: e.target.value })} required aria-label="Email" />
-          <select value={grant.role} onChange={(e) => setGrant({ ...grant, role: e.target.value })} aria-label="Vai trò">
-            <option value="unit_admin">Giáo vụ khoa</option>
-            <option value="unit_head">Lãnh đạo khoa (duyệt đề tài)</option>
-            <option value="system_admin">Quản trị hệ thống</option>
-          </select>
-          {grant.role !== "system_admin" && (
-            <select value={grant.unitId} onChange={(e) => setGrant({ ...grant, unitId: e.target.value })} required aria-label="Khoa">
-              <option value="">Chọn khoa</option>
-              {profile.units.map((u) => <option key={u.id} value={u.id}>{u.code} · {u.name}</option>)}
-            </select>
-          )}
-          <Button type="submit">Cấp quyền</Button>
-        </form>
       </div>
-      <AccountsCard />
     </section>
-  );
-}
-
-type CreatedAccount = { email: string; displayName: string; status: "created" | "exists"; password: string | null };
-
-/** No self sign-up: the system administrator creates accounts here, one or a list pasted from Excel. */
-function AccountsCard() {
-  const { token, run } = useThesis();
-  const [lines, setLines] = useState("");
-  const [created, setCreated] = useState<CreatedAccount[]>([]);
-  const copy = () =>
-    void navigator.clipboard.writeText(created.map((row) => [row.email, row.displayName, row.password ?? "(đã có tài khoản)"].join("\t")).join("\n"));
-  return (
-    <div className="thesis-gap">
-      <form className="thesis-form" onSubmit={async (event) => {
-        event.preventDefault();
-        const result = await run("Đã xử lý danh sách tài khoản", () =>
-          academicApi<{ accounts: CreatedAccount[] }>(token, "accounts", "POST", { accounts: parseAccountLines(lines) }), { reload: false });
-        if (result) {
-          setCreated(result.accounts);
-          setLines("");
-        }
-      }}>
-        <h3>Tạo tài khoản</h3>
-        <p className="thesis-note">Hệ thống không cho tự đăng ký. Mỗi dòng: <code>email, Họ tên</code> (dán thẳng 2 cột từ Excel cũng được), tối đa 200 dòng.</p>
-        <textarea rows={5} value={lines} onChange={(e) => setLines(e.target.value)} required aria-label="Danh sách tài khoản" placeholder={"52100001@student.tdtu.edu.vn, Nguyễn Văn A\ngv.lan@tdtu.edu.vn, Trần Thị Lan"} />
-        <Button type="submit">Tạo tài khoản</Button>
-      </form>
-      {created.length > 0 && (
-        <>
-          <p className="thesis-note" role="status">Mật khẩu chỉ hiện một lần. Hãy sao chép và gửi cho từng người; họ có thể đổi qua "Quên mật khẩu".</p>
-          <table className="thesis-table">
-            <thead><tr><th>Email</th><th>Họ tên</th><th>Mật khẩu</th></tr></thead>
-            <tbody>
-              {created.map((row) => (
-                <tr key={row.email}><td>{row.email}</td><td>{row.displayName}</td><td>{row.password ? <code>{row.password}</code> : "Đã có tài khoản, giữ nguyên"}</td></tr>
-              ))}
-            </tbody>
-          </table>
-          <Button type="button" variant="secondary" onClick={copy}>Sao chép danh sách</Button>
-        </>
-      )}
-    </div>
   );
 }
 
