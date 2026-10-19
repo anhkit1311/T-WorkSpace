@@ -55,6 +55,9 @@ const CallDirectoryPage = lazy(() =>
     default: m.CallDirectoryPage,
   })),
 );
+const AccessPage = lazy(() =>
+  import("../../features/admin/AccessPage").then((m) => ({ default: m.AccessPage })),
+);
 const ELearningPage = lazy(() =>
   import("../../features/elearning/ELearningPage").then((m) => ({
     default: m.ELearningPage,
@@ -91,6 +94,7 @@ const SIDEBAR_MENU_ITEMS: SidebarMenuItem[] = [
   { id: "departments", label: "Khoa / Phòng ban", icon: "building", targetView: "admin" },
   { id: "notifications", label: "Quản lý thông báo", icon: "bell", targetView: "notifications", badgeKey: "notifications" },
   { id: "roles", label: "Quản trị nhóm", icon: "shield", targetView: "admin" },
+  { id: "access", label: "Quản trị hệ thống", icon: "lock", targetView: "access" },
   { id: "profile", label: "Trang cá nhân", icon: "profile", targetView: "profile" },
   { id: "settings", label: "Cài đặt", icon: "settings", targetView: "profile" },
 ];
@@ -104,6 +108,7 @@ const HIDDEN_MENU_ITEMS = new Set(["departments", "settings"]);
 const RESTRICTED_MENU_ITEMS: Record<string, keyof MenuAccess> = {
   roles: "workspaceAdmin",
   thesis: "thesis",
+  access: "systemAdmin",
 };
 /** No English translation exists yet: the VI | EN switch stays hidden until it does. */
 const SHOW_LANGUAGE_SWITCH = false;
@@ -163,6 +168,7 @@ export function AppShell() {
     else if (activeView === "profile") setActiveMenuId("profile");
     else if (activeView === "workspace" || activeView === "tasks" || activeView === "files") setActiveMenuId("staff");
     else if (activeView === "thesis") setActiveMenuId("thesis");
+    else if (activeView === "access") setActiveMenuId("access");
   }, [activeView]);
 
   const [lang, setLang] = useState<"VI" | "EN">("VI");
@@ -247,6 +253,7 @@ export function AppShell() {
     else if (activeView === "notifications") Component = <NotificationsPage />;
     else if (activeView === "elearning") Component = <ELearningPage />;
     else if (activeView === "thesis") Component = <ThesisPage />;
+    else if (activeView === "access") Component = <AccessPage />;
     else Component = <WorkspaceHomePage />;
 
     return (
