@@ -167,13 +167,32 @@ export function AppShell() {
 
   const [lang, setLang] = useState<"VI" | "EN">("VI");
   const [theme, setTheme] = useState<"light" | "dark">(() => {
-    return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem("theme");
+    } catch {
+      // storage blocked: follow the OS
+    }
+    return saved === "dark" || saved === "light" ? saved : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   });
+  // The theme belongs to the signed-in shell; the public pages (landing, login) stay light.
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#0F172A" : "#e8eef6");
+    return () => {
+      document.documentElement.removeAttribute("data-theme");
+      document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#e8eef6");
+    };
+  }, [theme]);
 
   const toggleTheme = () => {
     const nextTheme = theme === "dark" ? "light" : "dark";
     setTheme(nextTheme);
-    document.documentElement.setAttribute("data-theme", nextTheme);
+    try {
+      localStorage.setItem("theme", nextTheme);
+    } catch {
+      // not persisted; the choice still applies to this visit
+    }
   };
 
   const [profileOpen, setProfileOpen] = useState(false);
@@ -390,7 +409,10 @@ export function AppShell() {
                   {displayName.charAt(0).toUpperCase()}
                 </div>
               )}
-              <span className="tdtu-online-dot" />
+              <span
+                className={`tdtu-online-dot is-${presence}`}
+                title={presence === "online" ? "Đang trực tuyến" : presence === "connecting" ? "Đang kết nối lại" : "Ngoại tuyến"}
+              />
             </button>
 
             <AnimatePresence>

@@ -20,7 +20,7 @@
   -webkit-backdrop-filter: blur(var(--editorial-blur, 16px));
   box-shadow: -20px 0 60px rgba(15, 23, 42, 0.12);
   font-family: var(--font-body, 'Inter', sans-serif);
-  color: #0f172a;
+  color: var(--text);
 }
 
 .thread-panel header {
@@ -35,7 +35,7 @@
   font-style: normal;
   font-size: 20px;
   font-weight: 500;
-  color: #0f172a;
+  color: var(--text);
   margin: 0;
 }
 
@@ -44,7 +44,7 @@
   border: 1px solid rgba(15, 23, 42, 0.12);
   border-radius: 9999px;
   background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
-  color: #0f172a;
+  color: var(--text);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -53,7 +53,7 @@
 }
 
 .thread-panel header button:hover {
-  background: #ffffff;
+  background: var(--surface);
   border-color: rgba(15, 23, 42, 0.25);
 }
 
@@ -73,7 +73,7 @@
   overflow-wrap: anywhere;
   line-height: 1.55;
   margin: 8px 0;
-  color: #0f172a;
+  color: var(--text);
   font-size: 13.5px;
 }
 
@@ -115,7 +115,7 @@
   border: 1.5px solid rgba(15, 23, 42, 0.12);
   border-radius: 8px;
   padding: 10px 14px;
-  color: #0f172a;
+  color: var(--text);
   min-height: 70px;
   resize: vertical;
   font-family: inherit;
@@ -136,8 +136,8 @@
 }
 
 .thread-panel select option {
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--surface);
+  color: var(--text);
 }
 
 .thread-panel > p {

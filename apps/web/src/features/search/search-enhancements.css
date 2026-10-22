@@ -22,8 +22,8 @@
   width: 100% !important;
   max-width: 660px !important;
   max-height: min(720px, calc(100vh - 90px)) !important;
-  background: #FFFFFF !important;
-  border: 1px solid #E2E8F0 !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 8px !important;
   box-shadow:
     0 20px 25px -5px rgba(15, 23, 42, 0.1),
@@ -32,7 +32,7 @@
   flex-direction: column !important;
   overflow: hidden !important;
   font-family: var(--font-sans, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif) !important;
-  color: #0F172A !important;
+  color: var(--text) !important;
 }
 
 /* 3. Search Header */
@@ -41,8 +41,8 @@
   align-items: center !important;
   gap: 10px !important;
   padding: 14px 18px !important;
-  border-bottom: 1px solid #E2E8F0 !important;
-  background: #FFFFFF !important;
+  border-bottom: 1px solid var(--border) !important;
+  background: var(--surface) !important;
 }
 
 .notion-search-input-wrap {
@@ -55,7 +55,7 @@
 .notion-search-head-icon {
   position: absolute !important;
   left: 14px !important;
-  color: #64748B !important;
+  color: var(--text-muted) !important;
   pointer-events: none !important;
   z-index: 2 !important;
 }
@@ -65,9 +65,9 @@
   height: 42px !important;
   padding: 0 42px 0 40px !important;
   border-radius: 9999px !important;
-  background: #F1F5F9 !important;
+  background: var(--bg-subtle) !important;
   border: 1px solid transparent !important;
-  color: #0F172A !important;
+  color: var(--text) !important;
   font-size: 14px !important;
   font-family: inherit !important;
   outline: none !important;
@@ -75,12 +75,12 @@
 }
 
 .notion-search-input::placeholder {
-  color: #94A3B8 !important;
+  color: var(--text-muted) !important;
 }
 
 .notion-search-input:focus,
 .notion-search-input:focus-visible {
-  background: #FFFFFF !important;
+  background: var(--surface) !important;
   border-color: #2563EB !important;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
 }
@@ -144,14 +144,14 @@
 }
 
 .notion-search-filter-btn.is-active {
-  background: var(--nexo-text-primary, #1C1B19) !important;
-  color: #ffffff !important;
-  border-color: var(--nexo-text-primary, #1C1B19) !important;
+  background: var(--inverse-bg) !important;
+  color: var(--inverse-fg) !important;
+  border-color: var(--inverse-bg) !important;
 }
 
 .notion-search-filter-badge {
-  background: var(--nexo-text-primary, #1C1B19) !important;
-  color: #ffffff !important;
+  background: var(--inverse-bg) !important;
+  color: var(--inverse-fg) !important;
   font-size: 10px !important;
   font-weight: 700 !important;
   padding: 1px 6px !important;

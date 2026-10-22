@@ -15,7 +15,7 @@
   padding: 10px 12px;
   border-radius: 8px;
   font-size: 12.5px;
-  background: #fef3c7;
+  background: var(--tint-amber-bg);
   color: #92400e;
 }
 

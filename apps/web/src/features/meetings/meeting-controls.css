@@ -6,7 +6,7 @@
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.78);
   box-shadow: none;
-  color: #0f172a;
+  color: var(--text);
 }
 
 .meeting-controls summary {
@@ -19,7 +19,7 @@
 .meeting-session-meta {
   margin: 0 0 6px;
   font-size: 12.5px;
-  color: #475569;
+  color: var(--text-secondary);
 }
 
 .meeting-controls .button {
@@ -52,7 +52,7 @@
 
 .meeting-controls small {
   display: block;
-  color: #64748b;
+  color: var(--text-muted);
   line-height: 1.5;
 }
 
@@ -66,7 +66,7 @@
 
 .meeting-controls-waiting p {
   margin: 4px 0 6px;
-  color: #475569;
+  color: var(--text-secondary);
   font-size: 13px;
 }
 
@@ -75,8 +75,8 @@
   padding: 10px 14px;
   border: 1px solid rgba(185, 28, 28, 0.2);
   border-radius: 8px;
-  background: #fef2f2;
-  color: #b91c1c;
+  background: var(--tint-red-bg);
+  color: var(--tint-red-fg);
   font-size: 13px;
 }
 

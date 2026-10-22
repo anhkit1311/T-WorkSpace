@@ -126,3 +126,8 @@
     padding: 18mm;
   }
 }
+
+/* The certificate is always a white page, whatever the app theme. */
+.certificate .tdtu-logo {
+  color: #002D62;
+}

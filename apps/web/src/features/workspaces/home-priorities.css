@@ -246,8 +246,8 @@
   display: grid;
   place-items: center;
   border-radius: 9999px;
-  background: var(--nexo-text-primary, #1C1B19);
-  color: #fff;
+  background: var(--inverse-bg);
+  color: var(--inverse-fg);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }

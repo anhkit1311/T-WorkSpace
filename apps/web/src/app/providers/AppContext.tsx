@@ -144,12 +144,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   },[screen,isAuthChecking,route]);
 
   useEffect(() => {
-    // The editorial glass UI is light-only; a dark color-scheme turned native selects,
-    // date pickers and scrollbars black on top of light surfaces.
-    document.documentElement.dataset.theme = "light";
-    document.documentElement.style.colorScheme = "light";
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#e8eef6");
-    localStorage.removeItem("collabspace-theme");
+    // Theme key of an older version; the shell now stores "theme" (light/dark, see AppShell).
+    try {
+      localStorage.removeItem("collabspace-theme");
+    } catch {
+      // storage blocked
+    }
   }, []);
 
   useEffect(() => {

@@ -7,7 +7,7 @@
   align-content: start;
   gap: 14px;
   padding: 10px 14px 16px;
-  color: #0f172a;
+  color: var(--text);
   font-size: 13.5px;
 }
 
@@ -32,7 +32,7 @@
 .meeting-outcomes-meta {
   margin: 0;
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .meeting-outcomes-count {
@@ -48,7 +48,7 @@
   margin-left: auto;
   font-size: 11.5px;
   font-weight: 500;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .meeting-outcomes-alert,
@@ -76,7 +76,7 @@
   margin: 0;
   padding: 24px 8px;
   text-align: center;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .meeting-outcomes select,
@@ -87,8 +87,8 @@
   padding: 8px 10px;
   border: 1px solid rgba(15, 23, 42, 0.12);
   border-radius: 6px;
-  background: #fff;
-  color: #0f172a;
+  background: var(--surface);
+  color: var(--text);
   font: inherit;
   font-size: 13px;
 }
@@ -138,7 +138,7 @@
 }
 
 .meeting-agenda li.is-done label span {
-  color: #64748b;
+  color: var(--text-muted);
   text-decoration: line-through;
 }
 
@@ -157,7 +157,7 @@
   margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  color: #334155;
+  color: var(--text-secondary);
 }
 
 .meeting-task-list li {
@@ -178,7 +178,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: #0f172a;
+  color: var(--text);
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -221,7 +221,7 @@
   border: 1px solid rgba(37, 99, 235, 0.18);
   border-radius: 8px;
   background: rgba(239, 246, 255, 0.85);
-  color: #0f172a;
+  color: var(--text);
 }
 
 .meeting-summary-card header {

@@ -80,17 +80,17 @@
 }
 
 .tdtu-home-kpi-card__icon--bell {
-  background: #EDE9FE;
-  color: #7C3AED;
+  background: var(--tint-violet-bg);
+  color: var(--tint-violet-fg);
 }
 
 .tdtu-home-kpi-card__icon--chat {
-  background: #ECFDF5;
-  color: #059669;
+  background: var(--tint-green-bg);
+  color: var(--tint-green-fg);
 }
 
 .tdtu-home-kpi-card__icon--video {
-  background: #F3E8FF;
+  background: var(--tint-violet-bg);
   color: #9333EA;
 }
 
@@ -169,7 +169,7 @@
 }
 
 .tdtu-home-filter-pill:hover:not(.is-active) {
-  background: #F1F5F9;
+  background: var(--bg-subtle);
   color: var(--text);
 }
 
@@ -255,8 +255,8 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: #EFF6FF;
-  color: #2563EB;
+  background: var(--tint-blue-bg);
+  color: var(--tint-blue-fg);
   border: 1px solid #DBEAFE;
   padding: 3px 10px;
   border-radius: 9999px;
@@ -369,7 +369,7 @@
 .tdtu-home-calendar-tile {
   width: 44px;
   height: 48px;
-  background: #EEF2FF;
+  background: var(--tint-blue-bg);
   border-radius: 6px;
   display: flex;
   flex-direction: column;
@@ -422,7 +422,7 @@
   padding: 5px 12px;
   font-size: 12px;
   font-weight: 600;
-  color: #334155;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
@@ -430,7 +430,7 @@
 
 .tdtu-home-detail-btn:hover {
   background: var(--bg-subtle);
-  border-color: #CBD5E1;
+  border-color: var(--border-strong);
 }
 
 /* Lối tắt 2x2 Grid */
@@ -450,7 +450,7 @@
   gap: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: #1E293B;
+  color: var(--text);
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -466,9 +466,9 @@
 }
 
 .tdtu-home-shortcut-btn:hover {
-  background: #EEF2FF;
+  background: var(--tint-blue-bg);
   border-color: #BFDBFE;
-  color: #1D4ED8;
+  color: var(--tint-blue-fg);
 }
 
 /* Responsive adjustments */

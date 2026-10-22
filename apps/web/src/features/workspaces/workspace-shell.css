@@ -472,7 +472,7 @@
   min-width: 230px;
   padding: 6px;
   border-radius: 8px;
-  background: rgba(250, 249, 246, 0.96);
+  background: var(--surface);
   backdrop-filter: blur(22px);
   border: 1px solid var(--nexo-border-beige, #E6E2DA);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
@@ -1240,7 +1240,7 @@
   padding: 8px 14px;
   border-radius: 9999px;
   border: 1px solid var(--nexo-border-beige, #E6E2DA);
-  background: #ffffff;
+  background: var(--surface);
   font-size: 0.85rem;
   color: var(--nexo-text-primary, #1C1B19);
 }

@@ -79,7 +79,7 @@
   margin-top: 12px;
   padding: 18px 16px;
   border-radius: 8px;
-  background: rgba(250, 249, 246, 0.65);
+  background: var(--bg-subtle);
   border: 1px dashed var(--nexo-border-beige, #E6E2DA);
   display: flex;
   flex-direction: column;
@@ -165,8 +165,8 @@
   display: grid;
   place-items: center;
   border-radius: 9999px;
-  background: var(--nexo-text-primary, #1C1B19);
-  color: #fff;
+  background: var(--inverse-bg);
+  color: var(--inverse-fg);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }

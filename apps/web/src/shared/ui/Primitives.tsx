@@ -618,27 +618,10 @@ export function KpiStatCard({
   onClick,
   className = "",
 }: KpiStatCardProps) {
-  const toneBg =
-    tone === "purple"
-      ? "var(--badge-purple-bg, #F3E8FF)"
-      : tone === "green"
-        ? "var(--badge-green-bg, #DCFCE7)"
-        : tone === "blue"
-          ? "#EFF6FF"
-          : tone === "amber"
-            ? "#FEF3C7"
-            : "#FEE2E2";
-
-  const toneText =
-    tone === "purple"
-      ? "var(--badge-purple-text, #7C3AED)"
-      : tone === "green"
-        ? "var(--badge-green-text, #16A34A)"
-        : tone === "blue"
-          ? "#2563EB"
-          : tone === "amber"
-            ? "#D97706"
-            : "#DC2626";
+  // Tint tokens follow the light/dark theme.
+  const tint = tone === "purple" ? "violet" : tone;
+  const toneBg = `var(--tint-${tint}-bg)`;
+  const toneText = `var(--tint-${tint}-fg)`;
 
   return (
     <div

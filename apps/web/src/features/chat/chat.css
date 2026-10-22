@@ -1490,7 +1490,7 @@
 .chat-delete-preview {
   margin: 12px 0 0;
   padding: 8px 12px;
-  border-left: 3px solid var(--border-strong, #cbd5e1);
+  border-left: 3px solid var(--border-strong, var(--border-strong));
   background: var(--chat-subtle);
   color: var(--text-secondary);
   white-space: pre-wrap;

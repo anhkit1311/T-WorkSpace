@@ -101,7 +101,7 @@
 }
 
 .workspace-admin select option {
-  background: #ffffff;
+  background: var(--surface);
   color: var(--nexo-text-primary, #1C1B19);
 }
 

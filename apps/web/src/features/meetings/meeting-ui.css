@@ -9,7 +9,7 @@
   margin: 0 auto;
   width: 100%;
   font-family: var(--font-body, 'Inter', sans-serif);
-  color: #0f172a;
+  color: var(--text);
 }
 
 .meeting-page-title {
@@ -25,7 +25,7 @@
 .meeting-page-description {
   max-width: 65ch;
   margin: 0 0 24px;
-  color: hsl(215, 25%, 32%);
+  color: var(--text-secondary);
   font-size: 14.5px;
   line-height: 1.6;
 }
@@ -245,8 +245,8 @@
   width: 72px;
   height: 72px;
   border-radius: 9999px;
-  background: var(--nexo-text-primary, #1C1B19);
-  color: #ffffff;
+  background: var(--inverse-bg);
+  color: var(--inverse-fg);
   font-size: 26px;
   font-weight: 700;
   display: flex;
@@ -365,7 +365,7 @@
   font-style: normal;
   font-size: 15px;
   font-weight: 500;
-  color: #0f172a;
+  color: var(--text);
   margin: 0;
   display: flex;
   align-items: center;
@@ -663,7 +663,7 @@
 }
 
 .meeting-dock-btn.is-active {
-  background: #ffffff;
+  background: var(--surface);
   color: #000000;
   border-color: #ffffff;
   box-shadow: none;
@@ -720,7 +720,7 @@
   border: 1.5px solid rgba(15, 23, 42, 0.12);
   border-radius: 9999px;
   background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
-  color: #0f172a;
+  color: var(--text);
   padding: 8px 14px;
   font: inherit;
   font-size: 13px;
@@ -728,8 +728,8 @@
 }
 
 .meeting-device-grid select option {
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--surface);
+  color: var(--text);
 }
 
 .meeting-pin {
@@ -758,7 +758,7 @@
 }
 
 .video-tile.is-pinned .meeting-pin {
-  background: #ffffff;
+  background: var(--surface);
   color: #000000;
 }
 
@@ -783,7 +783,7 @@
   border-bottom: 1px solid rgba(15, 23, 42, 0.08);
   font-size: 14px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--text);
 }
 
 .meeting-chat-compose input {
@@ -792,7 +792,7 @@
   padding: 9px 16px;
   border: 1.5px solid rgba(15, 23, 42, 0.12);
   border-radius: 9999px;
-  color: #0f172a;
+  color: var(--text);
   background: var(--editorial-surface-card, rgba(246, 248, 252, 0.64));
   font: inherit;
   font-size: 13px;
@@ -808,6 +808,6 @@
   justify-content: center;
   min-height: 40px;
   padding: 0 12px;
-  border-color: var(--border, #e2e8f0);
+  border-color: var(--border, var(--border));
   white-space: nowrap;
 }

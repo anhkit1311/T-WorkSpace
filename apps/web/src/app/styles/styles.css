@@ -161,10 +161,51 @@
   --nexo-fs-section: 15px;
   --nexo-fs-big-num: 20px;
 
+  /* Tinted accents (icon squares, status chips): a pale fill with a strong foreground. */
+  --tint-blue-bg: #EFF6FF;
+  --tint-blue-fg: #1D4ED8;
+  --tint-green-bg: #ECFDF5;
+  --tint-green-fg: #047857;
+  --tint-amber-bg: #FFFBEB;
+  --tint-amber-fg: #B45309;
+  --tint-red-bg: #FEF2F2;
+  --tint-red-fg: #B91C1C;
+  --tint-violet-bg: #F5F3FF;
+  --tint-violet-fg: #6D28D9;
+  /* Inverted chips (counters, selected filters): dark on light pages, light on dark ones. */
+  --inverse-bg: #0F172A;
+  --inverse-fg: #FFFFFF;
+
   color-scheme: light;
 }
 
 [data-theme="dark"] {
+  /* Base layer too: the aliases above (--nexo-*, --card-*, --border, ...) resolve through it. */
+  --bg-canvas: #0F172A;
+  --bg-surface: #1E293B;
+  --border-color: #334155;
+  --brand-primary: #3B82F6;
+  --brand-primary-hover: #60A5FA;
+  --brand-active-bg: rgba(59, 130, 246, 0.16);
+  --brand-active-text: #93C5FD;
+  --badge-purple-bg: rgba(139, 92, 246, 0.18);
+  --badge-purple-text: #C4B5FD;
+  --badge-green-bg: rgba(16, 185, 129, 0.16);
+  --badge-green-text: #6EE7B7;
+  --accent-red: #F87171;
+  --tint-blue-bg: rgba(59, 130, 246, 0.16);
+  --tint-blue-fg: #93C5FD;
+  --tint-green-bg: rgba(16, 185, 129, 0.16);
+  --tint-green-fg: #6EE7B7;
+  --tint-amber-bg: rgba(245, 158, 11, 0.16);
+  --tint-amber-fg: #FCD34D;
+  --tint-red-bg: rgba(239, 68, 68, 0.16);
+  --tint-red-fg: #FCA5A5;
+  --tint-violet-bg: rgba(139, 92, 246, 0.18);
+  --tint-violet-fg: #C4B5FD;
+  --inverse-bg: #E2E8F0;
+  --inverse-fg: #0F172A;
+
   --bg: #0F172A;
   --bg-subtle: #1E293B;
   --surface: #1E293B;
@@ -504,7 +545,13 @@ img, svg {
   height: 8px;
   border-radius: 50%;
   background: #10B981;
-  border: 2px solid #FFFFFF;
+  border: 2px solid var(--surface);
+}
+.tdtu-online-dot.is-connecting {
+  background: #F59E0B;
+}
+.tdtu-online-dot.is-offline {
+  background: var(--text-muted);
 }
 
 /* User Account Popover */
@@ -793,6 +840,15 @@ img, svg {
   color: var(--text);
   background: var(--bg-subtle);
 }
+/* Link-like action inside a card header ("Xem tất cả"): no box until hovered. */
+.button--text {
+  color: var(--primary-text);
+  background: transparent;
+  border-color: transparent;
+}
+.button--text:hover:not(:disabled) {
+  background: var(--primary-soft);
+}
 .button--sm {
   min-height: 28px;
   padding: 0 10px;
@@ -830,8 +886,8 @@ img, svg {
   place-items: center;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: #EEF2FF;
-  color: #1D4ED8;
+  background: var(--tint-blue-bg);
+  color: var(--tint-blue-fg);
   font-weight: 700;
   border: 1px solid var(--border);
 }
@@ -860,11 +916,11 @@ img, svg {
   line-height: 1;
   white-space: nowrap;
 }
-.badge--blue { background: #EFF6FF; color: #1D4ED8; }
-.badge--green { background: #ECFDF5; color: #059669; }
-.badge--amber { background: #FFFBEB; color: #D97706; }
-.badge--red { background: #FEF2F2; color: #DC2626; }
-.badge--violet { background: #F5F3FF; color: #7C3AED; }
+.badge--blue { background: var(--tint-blue-bg); color: var(--tint-blue-fg); }
+.badge--green { background: var(--tint-green-bg); color: var(--tint-green-fg); }
+.badge--amber { background: var(--tint-amber-bg); color: var(--tint-amber-fg); }
+.badge--red { background: var(--tint-red-bg); color: var(--tint-red-fg); }
+.badge--violet { background: var(--tint-violet-bg); color: var(--tint-violet-fg); }
 
 .chip,
 .nexo-chip {
@@ -995,6 +1051,16 @@ button.nexo-list-item:hover:not(:disabled) {
 .nexo-list-item__meta-primary {
   font-weight: 500;
   color: var(--text-secondary);
+}
+/* Phones: the meta column moves under the title instead of pushing past the edge. */
+@media (max-width: 480px) {
+  .nexo-list-item {
+    flex-wrap: wrap;
+  }
+  .nexo-list-item__meta {
+    flex: 1 1 100%;
+    align-items: flex-start;
+  }
 }
 
 /* Modals & Dialogs (No Heavy Blur) */
@@ -1187,4 +1253,12 @@ button.nexo-list-item:hover:not(:disabled) {
   .meeting-kpi-grid .meeting-kpi-card__number {
     font-size: 20px !important;
   }
+}
+
+/* TDTU navy letters; on dark surfaces they turn light so the mark stays readable (the red accents stay). */
+.tdtu-logo {
+  color: #002D62;
+}
+[data-theme="dark"] .tdtu-logo {
+  color: #F1F5F9;
 }
