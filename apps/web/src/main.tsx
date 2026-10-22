@@ -1,9 +1,8 @@
-import { StrictMode } from "react";
+import { lazy, StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { MotionProvider, motionDebugEnabled } from "./shared/motion/MotionProvider";
 import { ControlFeedback } from "./shared/motion/ControlFeedback";
 import { App } from "./app/App";
-import { VerifyCertificatePage } from "./features/elearning/Certificate";
 import { AppProvider } from "./app/providers/AppContext";
 import { SocketProvider } from "./app/providers/SocketContext";
 import { MeetingProvider } from "./app/providers/MeetingContext";
@@ -20,12 +19,15 @@ if (motionDebugEnabled) {
 }
 
 // EL-8: the QR code on a certificate opens this public page; it needs no session or app shell.
+const VerifyCertificatePage = lazy(() => import("./features/elearning/Certificate").then((m) => ({ default: m.VerifyCertificatePage })));
 const verifyCode = window.location.pathname.match(/^\/verify\/([A-Za-z0-9-]{1,32})\/?$/)?.[1];
 
 createRoot(document.getElementById("root")!).render(
   verifyCode ? (
     <StrictMode>
-      <VerifyCertificatePage code={verifyCode} />
+      <Suspense fallback={null}>
+        <VerifyCertificatePage code={verifyCode} />
+      </Suspense>
     </StrictMode>
   ) : (
     <StrictMode>

@@ -3,7 +3,7 @@ import { AnimatePresence } from "motion/react";
 import { useApp } from "../providers/AppContext";
 import { useSocket } from "../providers/SocketContext";
 import { useMenuAccess, type MenuAccess } from "./useMenuAccess";
-import { useMeeting } from "../providers/MeetingContext";
+import { useMeetingStatus } from "../providers/MeetingContext";
 import { Icon, type IconName } from "../../shared/ui/Icon";
 import { TdtuLogo } from "../../shared/ui/TdtuLogo";
 import { NotionSearchModal } from "../../features/search/NotionSearchModal";
@@ -119,7 +119,7 @@ export function AppShell() {
     openChannel,
   } = useApp();
   const { connectionStatus, reconnect, unreadCount, groupUnreadCount, socket } = useSocket();
-  const meeting = useMeeting();
+  const meeting = useMeetingStatus();
   const menuAccess = useMenuAccess(accessToken);
 
   const [activeMenuId, setActiveMenuId] = useState<string>("home");

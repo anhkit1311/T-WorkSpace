@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useApp } from "../../app/providers/AppContext";
-import { useMeeting } from "../../app/providers/MeetingContext";
+import { useMeetingStatus } from "../../app/providers/MeetingContext";
 import { ConfirmDialog } from "../../shared/ui/Primitives";
 
 /** One logout confirmation for the account menu and the profile page (focus starts on "Hủy"). */
 export function LogoutConfirmDialog({ onClose }: { onClose: () => void }) {
   const { user, logout } = useApp();
-  const { inCall } = useMeeting();
+  const { inCall } = useMeetingStatus();
   const [leaving, setLeaving] = useState(false);
   const account = user ? `${user.displayName} (${user.email})` : "này";
   return (

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { UA, WebSocketInterface } from "jssip";
+import type { UA } from "jssip";
 import type { RTCSession } from "jssip/lib/RTCSession";
 import type { RTCSessionEvent } from "jssip/lib/UA";
 import type { CcSipAccount } from "@doan/shared";
@@ -27,74 +27,84 @@ export function useSoftphone(account: CcSipAccount | null, onError: (message: st
 
   useEffect(() => {
     if (!account) return;
-    audio.current ??= Object.assign(new Audio(), { autoplay: true });
-    const next = new UA({
-      sockets: [new WebSocketInterface(account.wsUrl)],
-      uri: `sip:${account.number}@${account.domain}`,
-      password: account.secret,
-      session_timers: false,
-    });
-    const attach = (call: RTCSession) => {
-      session.current = call;
-      setPeer(call.remote_identity.display_name || call.remote_identity.uri.user);
-      const play = (connection: RTCPeerConnection) =>
-        connection.addEventListener("track", (event) => {
-          audio.current!.srcObject = event.streams[0] ?? new MediaStream([event.track]);
-        });
-      if (call.connection) play(call.connection as unknown as RTCPeerConnection);
-      else call.on("peerconnection", (event) => play(event.peerconnection as unknown as RTCPeerConnection));
-      call.on("confirmed", () => setPhase("active"));
-      const finish = () => {
-        if (session.current !== call) return;
-        session.current = null;
-        audio.current!.srcObject = null;
-        setPhase("none");
-        setPeer("");
-        setMuted(false);
-        setHeld(false);
-      };
-      call.on("ended", finish);
-      call.on("failed", (event) => {
-        if (event.cause === "User Denied Media Access")
-          report.current("Không mở được micro. Hãy cho phép trình duyệt dùng micro rồi thử lại.");
-        finish();
-      });
-    };
     let alive = true; // a stopped UA still reports "unregistered" after its replacement registered
-    const show = (value: PhoneStatus) => () => alive && setStatus(value);
-    // JsSIP reconnects the WebSocket itself but gives up on a failed REGISTER: retry with backoff.
-    let failures = 0;
-    let retry: number | undefined;
-    const reRegister = () => {
-      window.clearTimeout(retry);
-      if (alive && next.isConnected() && !next.isRegistered()) next.register();
-    };
-    next.on("registered", () => {
-      failures = 0;
-      show("registered")();
-    });
-    next.on("unregistered", show("off"));
-    next.on("registrationFailed", () => {
-      show("failed")();
-      retry = window.setTimeout(reRegister, Math.min(30_000, 2_000 * 2 ** failures++));
-    });
-    next.on("disconnected", show("registering"));
-    window.addEventListener("online", reRegister);
-    next.on("newRTCSession", ({ session: call, originator }: RTCSessionEvent) => {
-      if (session.current) return void call.terminate({ status_code: 486 }); // one call at a time
-      setPhase(originator === "remote" ? "incoming" : "outgoing");
-      attach(call);
-    });
+    let stop: (() => void) | undefined;
     setStatus("registering");
-    next.start();
-    ua.current = next;
+    // JsSIP loads only for users with an extension, not with the app's first page.
+    void import("jssip").then(({ UA, WebSocketInterface }) => {
+      if (!alive) return;
+      audio.current ??= Object.assign(new Audio(), { autoplay: true });
+      const next = new UA({
+        sockets: [new WebSocketInterface(account.wsUrl)],
+        uri: `sip:${account.number}@${account.domain}`,
+        password: account.secret,
+        session_timers: false,
+      });
+      const attach = (call: RTCSession) => {
+        session.current = call;
+        setPeer(call.remote_identity.display_name || call.remote_identity.uri.user);
+        const play = (connection: RTCPeerConnection) =>
+          connection.addEventListener("track", (event) => {
+            audio.current!.srcObject = event.streams[0] ?? new MediaStream([event.track]);
+          });
+        if (call.connection) play(call.connection as unknown as RTCPeerConnection);
+        else call.on("peerconnection", (event) => play(event.peerconnection as unknown as RTCPeerConnection));
+        call.on("confirmed", () => setPhase("active"));
+        const finish = () => {
+          if (session.current !== call) return;
+          session.current = null;
+          audio.current!.srcObject = null;
+          setPhase("none");
+          setPeer("");
+          setMuted(false);
+          setHeld(false);
+        };
+        call.on("ended", finish);
+        call.on("failed", (event) => {
+          if (event.cause === "User Denied Media Access")
+            report.current("Không mở được micro. Hãy cho phép trình duyệt dùng micro rồi thử lại.");
+          finish();
+        });
+      };
+      const show = (value: PhoneStatus) => () => alive && setStatus(value);
+      // JsSIP reconnects the WebSocket itself but gives up on a failed REGISTER: retry with backoff.
+      let failures = 0;
+      let retry: number | undefined;
+      const reRegister = () => {
+        window.clearTimeout(retry);
+        if (alive && next.isConnected() && !next.isRegistered()) next.register();
+      };
+      next.on("registered", () => {
+        failures = 0;
+        show("registered")();
+      });
+      next.on("unregistered", show("off"));
+      next.on("registrationFailed", () => {
+        show("failed")();
+        retry = window.setTimeout(reRegister, Math.min(30_000, 2_000 * 2 ** failures++));
+      });
+      next.on("disconnected", show("registering"));
+      window.addEventListener("online", reRegister);
+      next.on("newRTCSession", ({ session: call, originator }: RTCSessionEvent) => {
+        if (session.current) return void call.terminate({ status_code: 486 }); // one call at a time
+        setPhase(originator === "remote" ? "incoming" : "outgoing");
+        attach(call);
+      });
+      next.start();
+      ua.current = next;
+      stop = () => {
+        window.clearTimeout(retry);
+        window.removeEventListener("online", reRegister);
+        session.current?.terminate();
+        next.stop();
+        ua.current = null;
+      };
+    }, () => {
+      if (alive) setStatus("failed");
+    });
     return () => {
       alive = false;
-      window.clearTimeout(retry);
-      window.removeEventListener("online", reRegister);
-      session.current?.terminate();
-      next.stop();
-      ua.current = null;
+      stop?.();
       setStatus("off");
     };
   }, [account]);

@@ -229,20 +229,20 @@ export class AriPbx implements Pbx {
       remove_existing: "yes",
       qualify_frequency: "30",
     }));
+    // Wideband first: Opus (FEC, browser default) for WebRTC, G.722 for IP phones; G.711 as fallback.
     const media: Record<string, string> =
       input.transport === "webrtc"
-        ? { transport: "transport-ws", webrtc: "yes" }
-        : { transport: "transport-udp", rtp_symmetric: "yes", force_rport: "yes", rewrite_contact: "yes", acl: "internal-only" };
+        ? { transport: "transport-ws", webrtc: "yes", allow: "opus,g722,ulaw,alaw" }
+        : { transport: "transport-udp", rtp_symmetric: "yes", force_rport: "yes", rewrite_contact: "yes", acl: "internal-only", allow: "g722,ulaw,alaw" };
     await this.request("PUT", `${dynamic}/endpoint/${input.number}`, fields({
-      ...media,
       // Internal only (no SIP trunk): extensions call each other, browser sessions the hotline.
       context: input.context ?? "from-internal",
       disallow: "all",
-      allow: "ulaw,alaw",
       direct_media: "no",
       aors: input.number,
       auth: input.number,
       callerid: `"${input.callerName.replace(/"/g, "")}" <${input.number}>`,
+      ...media, // after disallow: PJSIP applies allow/disallow in order
     }));
   }
 

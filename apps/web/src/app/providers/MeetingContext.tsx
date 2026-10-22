@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -77,6 +78,11 @@ interface MeetingContextValue {
 }
 
 const MeetingContext = createContext<MeetingContextValue | null>(null);
+/**
+ * Just "is there a call, and where": the app shell and other always-mounted UI read this, so QoS
+ * samples and speaker changes (several per second) re-render only the meeting screens.
+ */
+const MeetingStatusContext = createContext({ inCall: false, roomId: "" });
 
 export function MeetingProvider({ children }: { children: ReactNode }) {
   const { notify, accessToken } = useApp();
@@ -249,6 +255,13 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!inCall) appliedDemandRef.current.clear();
   }, [inCall]);
+  // A background tab shows no video: stop receiving it (audio continues) unless picture-in-picture is on.
+  const [tabHidden, setTabHidden] = useState(() => document.hidden);
+  useEffect(() => {
+    const update = () => setTabHidden(document.hidden && !document.pictureInPictureElement);
+    document.addEventListener("visibilitychange", update);
+    return () => document.removeEventListener("visibilitychange", update);
+  }, []);
   useEffect(() => {
     const ms = mediasoupRef.current;
     if (!inCall || !socket || !ms) return;
@@ -260,7 +273,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
       const consumerId = ms.videoConsumerIdForTrack(peer.videoTrack.id);
       if (!consumerId) continue;
       const demand = videoDemand[peer.socketId];
-      const target = cappedLayer(demand === undefined ? fallback(cameraCount) : demand, networkCap);
+      const target = tabHidden ? null : cappedLayer(demand === undefined ? fallback(cameraCount) : demand, networkCap);
       const previous = applied.has(consumerId) ? applied.get(consumerId) : 2;
       if (applied.has(consumerId) && previous === target) continue;
       applied.set(consumerId, target);
@@ -271,7 +284,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
       if (previous === null) socket.emit("resume_consumer", { roomId, consumerId });
       socket.emit("consumer_layer", { roomId, consumerId, spatialLayer: target });
     }
-  }, [inCall, remotePeers, roomId, socket, videoDemand, networkCap]);
+  }, [inCall, remotePeers, roomId, socket, videoDemand, networkCap, tabHidden]);
 
   // Lắng nghe sự kiện Producer mới từ SFU
   useEffect(() => {
@@ -1049,6 +1062,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
     };
   }, [chatSocket]);
 
+  const status = useMemo(() => ({ inCall, roomId }), [inCall, roomId]);
   return (
     <MeetingContext.Provider
       value={{
@@ -1079,10 +1093,12 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
         lastSpokeAt,
       }}
     >
-      {children}
+      <MeetingStatusContext.Provider value={status}>{children}</MeetingStatusContext.Provider>
     </MeetingContext.Provider>
   );
 }
+
+export const useMeetingStatus = () => useContext(MeetingStatusContext);
 
 export function useMeeting() {
   const context = useContext(MeetingContext);

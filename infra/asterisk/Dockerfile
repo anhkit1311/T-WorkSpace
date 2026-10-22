@@ -20,6 +20,13 @@ RUN ./configure --with-pjproject-bundled --with-jansson-bundled=no --libdir=/usr
 # Debian's /var/run is a symlink to /run; copying a real directory over it fails.
 RUN mkdir -p /out/run && cp -a /out/var/run/. /out/run/ && rm -rf /out/var/run
 
+# Opus transcoder for the WebRTC legs: Sangoma's binary build for Asterisk 22 (free to use under its
+# EULA, LICENSE in the tarball). A separate stage, so it does not invalidate the long compile above.
+FROM debian:bookworm-slim AS opus
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates wget \
+  && wget -qO- https://downloads.digium.com/pub/telephony/codec_opus/asterisk-22.0/x86-64/codec_opus-22.0_1.3.0-x86_64.tar.gz \
+     | tar xz -C /tmp && mv /tmp/codec_opus-22.0_1.3.0-x86_64 /opus
+
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates libssl3 libncurses6 libnewt0.52 libxml2 libsqlite3-0 libuuid1 \
@@ -27,6 +34,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/* \
   && useradd --system --home /var/lib/asterisk asterisk
 COPY --from=build /out/ /
+COPY --from=opus /opus/codec_opus.so /usr/lib/asterisk/modules/
+COPY --from=opus /opus/codec_opus_config-en_US.xml /var/lib/asterisk/documentation/thirdparty/
 COPY config/ /opt/nexo-asterisk/
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
