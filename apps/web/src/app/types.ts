@@ -11,7 +11,6 @@ export type ViewId =
   | "invitation"
   | "notifications"
   | "tasks"
-  | "thesis"
   | "call-center"
   | "call-directory"
   | "elearning"

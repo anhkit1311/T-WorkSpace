@@ -37,9 +37,6 @@ const WorkspaceAdminPage = lazy(() =>
 const InvitationPage = lazy(() =>
   import("../../features/workspaces/InvitationPage").then((m) => ({ default: m.InvitationPage })),
 );
-const ThesisPage = lazy(() =>
-  import("../../features/thesis/ThesisPage").then((m) => ({ default: m.ThesisPage })),
-);
 const NotificationsPage = lazy(() =>
   import("../../features/notifications/NotificationsPage").then((m) => ({
     default: m.NotificationsPage,
@@ -88,7 +85,6 @@ const SIDEBAR_MENU_ITEMS: SidebarMenuItem[] = [
   { id: "call-list", label: "Danh sách cuộc gọi", icon: "phone-call", targetView: "call-directory" },
   { id: "meetings", label: "Họp trực tuyến", icon: "video", targetView: "meetings" },
   { id: "elearning", label: "Khóa học", icon: "graduation-cap", targetView: "elearning" },
-  { id: "thesis", label: "Đồ án tốt nghiệp", icon: "book", targetView: "thesis" },
   { id: "messages", label: "Tin nhắn", icon: "message", targetView: "chat", badgeKey: "messages" },
   { id: "staff", label: "Nhóm làm việc", icon: "users", targetView: "workspace", badgeKey: "groups" },
   { id: "departments", label: "Khoa / Phòng ban", icon: "building", targetView: "admin" },
@@ -107,7 +103,6 @@ const HIDDEN_MENU_ITEMS = new Set(["departments", "settings"]);
  */
 const RESTRICTED_MENU_ITEMS: Record<string, keyof MenuAccess> = {
   roles: "workspaceAdmin",
-  thesis: "thesis",
   access: "systemAdmin",
 };
 /** No English translation exists yet: the VI | EN switch stays hidden until it does. */
@@ -167,7 +162,6 @@ export function AppShell() {
     else if (activeView === "admin") setActiveMenuId("roles");
     else if (activeView === "profile") setActiveMenuId("profile");
     else if (activeView === "workspace" || activeView === "tasks" || activeView === "files") setActiveMenuId("staff");
-    else if (activeView === "thesis") setActiveMenuId("thesis");
     else if (activeView === "access") setActiveMenuId("access");
   }, [activeView]);
 
@@ -252,7 +246,6 @@ export function AppShell() {
     else if (activeView === "invitation") Component = <InvitationPage />;
     else if (activeView === "notifications") Component = <NotificationsPage />;
     else if (activeView === "elearning") Component = <ELearningPage />;
-    else if (activeView === "thesis") Component = <ThesisPage />;
     else if (activeView === "access") Component = <AccessPage />;
     else Component = <WorkspaceHomePage />;
 

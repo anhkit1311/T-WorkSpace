@@ -12,21 +12,7 @@ type ScheduleInput = {
   startsAt?: unknown;
   endsAt?: unknown;
   agenda?: unknown;
-  committeeId?: unknown;
 };
-
-/** MT-3: a schedule may name a defense committee the organizer sits on (null clears it). */
-async function committeeFor(userId: string, value: unknown): Promise<string | null> {
-  if (value === null || value === "") return null;
-  validateId(value);
-  const member = await query(
-    `SELECT 1 FROM thesis_committees c JOIN thesis_committee_members m ON m.committee_id=c.id AND m.lecturer_id=$2
-     WHERE c.id=$1 AND c.status='confirmed'`,
-    [value, userId],
-  );
-  if (!member.rowCount) throw new HttpError(403, "NOT_COMMITTEE_MEMBER", "Bạn không thuộc hội đồng này.");
-  return value;
-}
 
 function validateSchedule(input: ScheduleInput) {
   validateId(input.roomId);
@@ -68,7 +54,7 @@ function validateSchedule(input: ScheduleInput) {
 const selectSchedule = `SELECT s.id, s.channel_id AS "roomId", c.workspace_id AS "workspaceId",
   c.name AS "roomName", w.name AS "workspaceName", s.created_by AS "createdBy",
   u.display_name AS "organizerName", s.title, s.description,
-  s.starts_at AS "startsAt", s.ends_at AS "endsAt", s.committee_id AS "committeeId",
+  s.starts_at AS "startsAt", s.ends_at AS "endsAt",
   COALESCE((SELECT json_agg(i.label ORDER BY i.position,i.id) FROM meeting_agenda_items i WHERE i.schedule_id=s.id),'[]'::json) AS agenda,
   (s.created_by=$1 OR m.role IN ('owner','admin')) AS "canManage"
   FROM meeting_schedules s
@@ -98,13 +84,12 @@ export async function createMeetingSchedule(
   if (!room.rowCount)
     throw new HttpError(404, "ROOM_NOT_FOUND", "Không tìm thấy phòng họp trong nhóm của bạn.");
   const agenda = normalizeAgenda(input.agenda);
-  const committeeId = input.committeeId === undefined ? null : await committeeFor(userId, input.committeeId);
   const id = randomUUID();
   await withTransaction(async (client) => {
     await client.query(
-      `INSERT INTO meeting_schedules(id,channel_id,created_by,title,description,starts_at,ends_at,committee_id)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,
-      [id, data.roomId, userId, data.title, data.description, data.startsAt, data.endsAt, committeeId],
+      `INSERT INTO meeting_schedules(id,channel_id,created_by,title,description,starts_at,ends_at)
+       VALUES($1,$2,$3,$4,$5,$6,$7)`,
+      [id, data.roomId, userId, data.title, data.description, data.startsAt, data.endsAt],
     );
     await replaceScheduleAgenda(client, id, agenda);
   });
@@ -140,13 +125,11 @@ export async function updateMeetingSchedule(
   if (!room.rowCount)
     throw new HttpError(404, "ROOM_NOT_FOUND", "Không tìm thấy phòng họp trong nhóm của bạn.");
   const agenda = input.agenda === undefined ? null : normalizeAgenda(input.agenda);
-  const committeeId = input.committeeId === undefined ? undefined : await committeeFor(userId, input.committeeId);
   await withTransaction(async (client) => {
     const result = await client.query(
-      `UPDATE meeting_schedules SET channel_id=$2,title=$3,description=$4,starts_at=$5,ends_at=$6,updated_at=now(),
-         committee_id=CASE WHEN $7 THEN $8::uuid ELSE committee_id END
+      `UPDATE meeting_schedules SET channel_id=$2,title=$3,description=$4,starts_at=$5,ends_at=$6,updated_at=now()
        WHERE id=$1 AND canceled_at IS NULL RETURNING id`,
-      [id, data.roomId, data.title, data.description, data.startsAt, data.endsAt, committeeId !== undefined, committeeId ?? null],
+      [id, data.roomId, data.title, data.description, data.startsAt, data.endsAt],
     );
     if (!result.rowCount)
       throw new HttpError(404, "SCHEDULE_NOT_FOUND", "Không tìm thấy lịch họp.");

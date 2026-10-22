@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { CcQaCriterion, CcQaReview } from "@doan/shared";
 import { query, withTransaction } from "../../../infrastructure/database/db.js";
-import { notify } from "../../academic/access.js";
 import type { QaScoreItem } from "../domain/qa.js";
 
 const REVIEW = `SELECT r.id,r.call_id AS "callId",r.department_id AS "departmentId",r.agent_id AS "agentId",au.display_name AS "agentName",
@@ -86,9 +85,6 @@ export class QaRepository {
         [input.coachingCourseId, input.agentId, input.reviewerId],
       );
       await client.query(`UPDATE cc_qa_reviews SET coaching_assigned=true WHERE id=$1`, [saved.rows[0].id]);
-      const course = (await client.query<{ code: string; title: string }>(`SELECT code,title FROM courses WHERE id=$1`, [input.coachingCourseId])).rows[0];
-      await notify(client, [input.agentId], "coaching_assigned", "course", input.coachingCourseId,
-        `Bạn được gán khóa bồi dưỡng ${course.code} — ${course.title} sau buổi chấm điểm cuộc gọi (${input.percent}%).`);
     });
   }
 }

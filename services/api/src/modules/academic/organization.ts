@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { query, withTransaction } from "../../infrastructure/database/db.js";
+import { withTransaction } from "../../infrastructure/database/db.js";
 import { hashPassword } from "../auth/password.js";
 import { normalizeEmail, validateDisplayName } from "../auth/service.js";
 import {
@@ -26,16 +26,11 @@ export async function getAcademicProfile(userId: string) {
       `SELECT id,code,name FROM academic_units WHERE $1::boolean OR id=ANY($2::uuid[]) ORDER BY code`,
       [actor.systemAdmin, [...actor.unitRoles.keys(), ...(actor.staff ? [actor.staff.unitId] : [])]],
     );
-    const enrollments = await client.query(
-      `SELECT e.term_id AS "termId",t.code AS "termCode",t.name AS "termName",t.status AS "termStatus",e.student_code AS "studentCode",e.eligible,e.withdrawn_at AS "withdrawnAt" FROM thesis_enrollments e JOIN thesis_terms t ON t.id=e.term_id WHERE e.student_id=$1 ORDER BY t.created_at DESC`,
-      [userId],
-    );
     return {
       systemAdmin: actor.systemAdmin,
       unitRoles: Object.fromEntries([...actor.unitRoles].map(([unit, roles]) => [unit, [...roles]])),
       staff: actor.staff,
       units: units.rows,
-      enrollments: enrollments.rows,
     };
   });
 }
@@ -164,7 +159,7 @@ export async function createAccounts(userId: string, body: Record<string, unknow
   });
 }
 
-/** "Phân quyền": accounts with their grants, lecturer record and enrolments, for the system admin. */
+/** "Phân quyền": accounts with their grants and lecturer record, for the system admin. */
 export async function listAccess(userId: string, params: URLSearchParams) {
   const search = (params.get("q") ?? "").trim().slice(0, 100);
   return withTransaction(async (client) => {
@@ -172,8 +167,7 @@ export async function listAccess(userId: string, params: URLSearchParams) {
     const rows = await client.query(
       `SELECT u.id,u.display_name AS "displayName",u.email,
          COALESCE((SELECT json_agg(json_build_object('role',g.role,'unitId',g.unit_id)) FROM academic_role_grants g WHERE g.user_id=u.id),'[]') AS grants,
-         (SELECT json_build_object('unitId',s.unit_id,'active',s.active) FROM academic_staff s WHERE s.user_id=u.id) AS staff,
-         (SELECT count(*)::int FROM thesis_enrollments e WHERE e.student_id=u.id) AS enrollments
+         (SELECT json_build_object('unitId',s.unit_id,'active',s.active) FROM academic_staff s WHERE s.user_id=u.id) AS staff
        FROM users u
        WHERE $1='' OR u.email ILIKE '%'||$1||'%' OR u.display_name ILIKE '%'||$1||'%'
        ORDER BY EXISTS(SELECT 1 FROM academic_role_grants g WHERE g.user_id=u.id) DESC,u.display_name
@@ -216,19 +210,4 @@ export async function grantRole(userId: string, body: Record<string, unknown>) {
 
 export async function listUnits(userId: string) {
   return (await getAcademicProfile(userId)).units;
-}
-
-export async function listAudit(userId: string, termId: string, params: URLSearchParams) {
-  id(termId);
-  const term = await query<{ unit_id: string }>(`SELECT unit_id FROM thesis_terms WHERE id=$1`, [termId]);
-  if (!term.rowCount) throw notFound("Không tìm thấy đợt đồ án.");
-  return withTransaction(async (client) => {
-    requireUnitRole(await loadActor(client, userId), term.rows[0].unit_id, "unit_admin", "unit_head");
-    const before = params.get("before");
-    const rows = await client.query(
-      `SELECT a.id,a.entity,a.entity_id AS "entityId",a.action,a.details,a.created_at AS "createdAt",u.display_name AS "actorName" FROM academic_audit_events a LEFT JOIN users u ON u.id=a.actor_id WHERE a.term_id=$1 AND ($2::timestamptz IS NULL OR a.created_at<$2) ORDER BY a.created_at DESC,a.id DESC LIMIT 100`,
-      [termId, before && Number.isFinite(Date.parse(before)) ? before : null],
-    );
-    return { events: rows.rows };
-  });
 }

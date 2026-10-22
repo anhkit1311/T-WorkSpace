@@ -68,7 +68,7 @@ const QUESTIONS = [
 
 try {
   const adminRow = await pool.query(`SELECT user_id FROM academic_role_grants WHERE role='system_admin' ORDER BY created_at LIMIT 1`);
-  if (!adminRow.rowCount) throw new Error("Cần một tài khoản system_admin (chạy seed:academic trước).");
+  if (!adminRow.rowCount) throw new Error("Cần một tài khoản system_admin (scripts/ops/create-user.mjs --admin).");
   const adminId = adminRow.rows[0].user_id;
   const unit = (await pool.query(`SELECT id FROM academic_units ORDER BY (code='CNTT') DESC, created_at LIMIT 1`)).rows[0];
   if (!unit) throw new Error("Chưa có đơn vị học thuật nào.");

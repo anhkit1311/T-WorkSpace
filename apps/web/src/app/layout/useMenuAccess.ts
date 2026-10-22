@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import type { CcAgentProfile, WorkspaceItem } from "@doan/shared";
 import { callCenterApi } from "../../features/call-center/api";
 import { getWorkspacesApi } from "../../features/chat/api";
-import { academicApi, type AcademicProfile } from "../../features/thesis/api";
+import { academicApi, type AcademicProfile } from "../../features/admin/api";
 
 /** Sidebar entries that only some users can use. */
-export type MenuAccess = { callCenter: boolean; workspaceAdmin: boolean; thesis: boolean; systemAdmin: boolean };
+export type MenuAccess = { callCenter: boolean; workspaceAdmin: boolean; systemAdmin: boolean };
 
 /**
  * What the signed-in user takes part in, from the APIs that enforce it. Until it is known (or if a
@@ -27,9 +27,6 @@ export function useMenuAccess(accessToken: string | null): MenuAccess | null {
         callCenter: Boolean(callCenter && (callCenter.isAdmin || callCenter.departments.length || callCenter.extension)),
         workspaceAdmin: workspaces.some((item) => item.role === "owner" || item.role === "admin"),
         systemAdmin: Boolean(academic?.systemAdmin),
-        thesis: Boolean(
-          academic && (academic.systemAdmin || Object.keys(academic.unitRoles).length || academic.staff || academic.enrollments.length),
-        ),
       });
     });
     return () => {

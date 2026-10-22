@@ -6,7 +6,7 @@
 /* Pre-call KPI Cards */
 .meeting-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -47,11 +47,6 @@
 .meeting-kpi-card__icon--schedules {
   background: #F0FDF4;
   color: #16A34A;
-}
-
-.meeting-kpi-card__icon--thesis {
-  background: #FAF5FF;
-  color: #7C3AED;
 }
 
 .meeting-kpi-card__number {
@@ -304,174 +299,6 @@
 .meeting-chat-list p strong {
   font-size: 12px;
   color: var(--text);
-}
-
-/* Thesis Defense Council Panel (Hội đồng Chấm Đồ án) */
-.meeting-council-panel {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.meeting-council-alert {
-  padding: 10px 14px;
-  border-radius: 6px;
-  font-size: 12.5px;
-  line-height: 1.45;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.meeting-council-alert--private {
-  background: #FEF2F2;
-  border: 1px solid #FCA5A5;
-  color: #991B1B;
-}
-
-.meeting-council-alert--public {
-  background: #EFF6FF;
-  border: 1px solid #BFDBFE;
-  color: #1E40AF;
-}
-
-.meeting-council-toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  background: var(--bg-subtle);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-}
-
-.meeting-council-toggle-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.meeting-rubric-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12.5px;
-}
-
-.meeting-rubric-table th {
-  background: var(--bg-subtle);
-  padding: 8px 10px;
-  text-align: left;
-  font-weight: 600;
-  color: var(--text-secondary);
-  border-bottom: 1px solid var(--border);
-}
-
-.meeting-rubric-table td {
-  padding: 8px 10px;
-  border-bottom: 1px solid #F1F5F9;
-  color: #1E293B;
-  vertical-align: middle;
-}
-
-.meeting-rubric-input {
-  width: 60px;
-  padding: 5px 8px;
-  border: 1px solid #CBD5E1;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  text-align: center;
-}
-
-.meeting-rubric-input:focus {
-  border-color: #2563EB;
-  outline: none;
-}
-
-.meeting-council-total {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  background: #EEF2FF;
-  border: 1px solid #C7D2FE;
-  border-radius: 6px;
-  font-weight: 700;
-  font-size: 14px;
-  color: #1E40AF;
-}
-
-/* Live Quiz Panel */
-.meeting-quiz-panel {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.meeting-quiz-card {
-  padding: 14px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-}
-
-.meeting-quiz-question {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 12px;
-}
-
-.meeting-quiz-option {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 8px;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 140ms ease;
-}
-
-.meeting-quiz-option:hover {
-  background: var(--bg-subtle);
-  border-color: #CBD5E1;
-}
-
-.meeting-quiz-option.is-selected {
-  border-color: #2563EB;
-  background: #EFF6FF;
-}
-
-.meeting-quiz-bar-wrap {
-  width: 100%;
-  height: 6px;
-  background: #E2E8F0;
-  border-radius: 3px;
-  overflow: hidden;
-  margin-top: 4px;
-}
-
-.meeting-quiz-bar-fill {
-  height: 100%;
-  background: #2563EB;
-  transition: width 300ms ease;
-}
-
-.meeting-quiz-stat {
-  font-size: 11.5px;
-  color: var(--text-muted);
-  display: flex;
-  justify-content: space-between;
 }
 
 .meeting-policy-select {

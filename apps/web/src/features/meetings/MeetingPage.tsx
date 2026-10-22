@@ -6,7 +6,6 @@ import {
   getMeetingSchedulesApi,
   saveMeetingScheduleApi,
   cancelMeetingScheduleApi,
-  getMyCommitteesApi,
   getDialInApi,
   type MeetingHistoryItem,
 } from "./api";
@@ -41,21 +40,8 @@ type Room = {
   role: WorkspaceItem["role"];
 };
 
-/** Room filters from real data: schedules, committees (MT-3) and the user's role in the group. */
-export const MEETING_BRANCH_PILLS = ["Tất cả", "Có lịch sắp tới", "Hội đồng bảo vệ", "Nhóm tôi quản lý"] as const;
-
-export const THESIS_RUBRICS = [
-  { id: "r1", name: "Tổng quan đề tài & Mục tiêu nghiên cứu", weight: 20 },
-  { id: "r2", name: "Kiến trúc hệ thống & Demo sản phẩm", weight: 40 },
-  { id: "r3", name: "Báo cáo tiến độ & Kỹ năng thuyết trình", weight: 20 },
-  { id: "r4", name: "Trả lời câu hỏi phản biện của hội đồng", weight: 20 },
-];
-
-/**
- * The council scoring and live-quiz side panels were UI prototypes (scores were never saved). Real
- * committee scoring is MeetingCommitteePanel (MT-3) and quizzes live in e-learning; kept hidden.
- */
-const SHOW_PROTOTYPE_PANELS = false;
+/** Room filters from real data: schedules and the user's role in the group. */
+export const MEETING_BRANCH_PILLS = ["Tất cả", "Có lịch sắp tới", "Nhóm tôi quản lý"] as const;
 
 const NETWORK_CAP_LABEL: Record<string, string> = {
   2: "Tốt (theo ô hiển thị)",
@@ -63,14 +49,6 @@ const NETWORK_CAP_LABEL: Record<string, string> = {
   0: "Đã hạ xuống thấp (mạng yếu)",
   null: "Chỉ âm thanh (mạng rất yếu)",
 };
-
-export const QUIZ_QUESTION = "Kiến trúc WebRTC SFU phân phối luồng media như thế nào?";
-export const QUIZ_OPTIONS = [
-  "Server SFU chọn lọc và chuyển tiếp (Selective Forwarding Unit)",
-  "P2P thuần túy giữa từng client (Peer-to-Peer Full Mesh)",
-  "Client-Server qua HTTP polling định kỳ",
-  "Tải qua RTSP broadcast streaming",
-];
 
 function localDateTime(date: Date) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
@@ -338,9 +316,6 @@ export function MeetingPage() {
   const [scheduleTitle, setScheduleTitle] = useState("");
   const [scheduleDescription, setScheduleDescription] = useState("");
   const [scheduleAgenda, setScheduleAgenda] = useState("");
-  // MT-3: committees the user sits on; a schedule can make its meeting that committee's room.
-  const [committees, setCommittees] = useState<{ id: string; code: string; name: string }[]>([]);
-  const [scheduleCommitteeId, setScheduleCommitteeId] = useState("");
   const [scheduleRoomId, setScheduleRoomId] = useState("");
   const [scheduleStart, setScheduleStart] = useState("");
   const [scheduleEnd, setScheduleEnd] = useState("");
@@ -385,30 +360,9 @@ export function MeetingPage() {
   const [gridSize, setGridSize] = useState({ width: 0, height: 0 });
   const [gridPage, setGridPage] = useState(0);
   const [sidePanel, setSidePanel] = useState<
-    "none" | "people" | "chat" | "notes" | "council" | "quiz"
+    "none" | "people" | "chat" | "notes"
   >("none");
   const [meetingPill, setMeetingPill] = useState<string>("Tất cả");
-
-  // Thesis council state (Hội đồng Chấm Đồ án)
-  const [isPrivateSession, setIsPrivateSession] = useState(false);
-  const [rubricScores, setRubricScores] = useState<Record<string, number>>({
-    r1: 8.5,
-    r2: 9.0,
-    r3: 8.0,
-    r4: 8.5,
-  });
-  const [councilComment, setCouncilComment] = useState(
-    "Đề tài ứng dụng công nghệ tốt, demo chạy mượt mà, trả lời phản biện rõ ràng.",
-  );
-  const councilTotal =
-    Math.round(
-      THESIS_RUBRICS.reduce((acc, r) => acc + (rubricScores[r.id] ?? 8) * r.weight, 0),
-    ) / 100;
-
-  // Live quiz state
-  const [quizActive, setQuizActive] = useState(true);
-  const [myQuizVote, setMyQuizVote] = useState<number | null>(null);
-  const [quizVotes, setQuizVotes] = useState<Record<number, number>>({ 0: 14, 1: 3, 2: 1, 3: 0 });
 
   const [callMessages, setCallMessages] = useState<ChatMessageItem[]>([]);
   const [callDraft, setCallDraft] = useState("");
@@ -421,13 +375,9 @@ export function MeetingPage() {
   const sidePanelTitle =
     sidePanel === "people"
       ? "Người tham gia & Điểm danh"
-      : sidePanel === "council"
-        ? "Hội đồng Chấm Đồ án"
-        : sidePanel === "quiz"
-          ? "Live Quiz Trắc nghiệm"
-          : sidePanel === "notes"
-            ? "Ghi chú & việc cần làm"
-            : "Chat cuộc họp";
+      : sidePanel === "notes"
+        ? "Ghi chú & việc cần làm"
+        : "Chat cuộc họp";
   useEffect(() => {
     const list = callListRef.current;
     if(sidePanel === "chat") {
@@ -606,10 +556,6 @@ export function MeetingPage() {
   }, [accessToken, meeting.inCall]);
 
   useEffect(() => {
-    if (accessToken) void getMyCommitteesApi(accessToken).then(setCommittees, () => setCommittees([]));
-  }, [accessToken]);
-
-  useEffect(() => {
     if (!accessToken || meeting.inCall) return;
     let active = true;
     setSchedulesLoading(true);
@@ -716,15 +662,12 @@ export function MeetingPage() {
     : schedules;
 
   const scheduledRooms = new Set(visibleSchedules.filter((item) => new Date(item.endsAt) > new Date()).map((item) => item.roomId));
-  const committeeRooms = new Set(visibleSchedules.filter((item) => item.committeeId).map((item) => item.roomId));
   const pillMatches = (pill: string, room: Room) =>
     pill === "Có lịch sắp tới"
       ? scheduledRooms.has(room.id)
-      : pill === "Hội đồng bảo vệ"
-        ? committeeRooms.has(room.id)
-        : pill === "Nhóm tôi quản lý"
-          ? room.role === "owner" || room.role === "admin"
-          : true;
+      : pill === "Nhóm tôi quản lý"
+        ? room.role === "owner" || room.role === "admin"
+        : true;
   const pillCount = (pill: string) => visibleRooms.filter((room) => pillMatches(pill, room)).length;
   const filteredRooms = visibleRooms.filter((room) => {
     return pillMatches(meetingPill, room);
@@ -825,7 +768,6 @@ export function MeetingPage() {
     setScheduleTitle(item?.title ?? "");
     setScheduleDescription(item?.description ?? "");
     setScheduleAgenda((item?.agenda ?? []).join("\n"));
-    setScheduleCommitteeId(item?.committeeId ?? "");
     setScheduleRoomId(item?.roomId ?? selectedId ?? visibleRooms[0]?.id ?? rooms[0]?.id ?? "");
     setScheduleStart(localDateTime(item ? new Date(item.startsAt) : start));
     setScheduleEnd(
@@ -859,7 +801,6 @@ export function MeetingPage() {
             .filter(Boolean),
           startsAt: startsAt.toISOString(),
           endsAt: endsAt.toISOString(),
-          ...(committees.length ? { committeeId: scheduleCommitteeId || null } : {}),
         },
         editingScheduleId || undefined,
       );
@@ -1153,15 +1094,6 @@ export function MeetingPage() {
               </div>
             </div>
 
-            <div className="meeting-kpi-card">
-              <div className="meeting-kpi-card__icon meeting-kpi-card__icon--thesis">
-                <Icon name="graduation-cap" size={22} strokeWidth={1.8} />
-              </div>
-              <div>
-                <div className="meeting-kpi-card__number">{committees.length}</div>
-                <div className="meeting-kpi-card__label">Hội đồng bạn tham gia</div>
-              </div>
-            </div>
           </div>
 
           {/* Dãy pill lọc phân loại hội nghị */}
@@ -1498,19 +1430,6 @@ export function MeetingPage() {
                       placeholder="Nội dung, tài liệu cần chuẩn bị…"
                     />
                   </label>
-                  {committees.length > 0 && (
-                    <label className="meeting-schedule-wide">
-                      Hội đồng bảo vệ
-                      <select value={scheduleCommitteeId} onChange={(event) => setScheduleCommitteeId(event.target.value)}>
-                        <option value="">Không phải buổi bảo vệ</option>
-                        {committees.map((committee) => (
-                          <option key={committee.id} value={committee.id}>
-                            {committee.code} · {committee.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
                   <label className="meeting-schedule-wide">
                     Agenda (mỗi dòng một mục)
                     <textarea
@@ -1818,24 +1737,6 @@ export function MeetingPage() {
                     <Icon name="users" size={14} />
                     <span>Điểm danh ({participantCount})</span>
                   </button>
-                  {SHOW_PROTOTYPE_PANELS && <>
-                  <button
-                    type="button"
-                    className={`meeting-panel-tab ${sidePanel === "council" ? "is-active" : ""}`}
-                    onClick={() => setSidePanel("council")}
-                  >
-                    <Icon name="graduation-cap" size={14} />
-                    <span>Chấm Đồ án</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`meeting-panel-tab ${sidePanel === "quiz" ? "is-active" : ""}`}
-                    onClick={() => setSidePanel("quiz")}
-                  >
-                    <Icon name="help-circle" size={14} />
-                    <span>Live Quiz</span>
-                  </button>
-                  </>}
                   <button
                     type="button"
                     className={`meeting-panel-tab ${sidePanel === "notes" ? "is-active" : ""}`}
@@ -1907,253 +1808,6 @@ export function MeetingPage() {
                       ))}
                     </div>
                   </>
-                ) : sidePanel === "council" ? (
-                  <div className="meeting-council-panel">
-                    <div className="meeting-council-toggle-row">
-                      <div>
-                        <div className="meeting-council-toggle-label">Hội đồng thảo luận kín</div>
-                        <div style={{ fontSize: "11.5px", color: "#64748B" }}>
-                          Cách ly âm thanh sinh viên &amp; khách để thống nhất điểm
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant={isPrivateSession ? "danger" : "secondary"}
-                        onClick={() => {
-                          setIsPrivateSession(!isPrivateSession);
-                          notify(
-                            !isPrivateSession
-                              ? "Đã bật Hội đồng thảo luận kín"
-                              : "Đã tắt Hội đồng thảo luận kín",
-                            !isPrivateSession
-                              ? "Đã cách ly âm thanh khách tham dự. Phiên thảo luận kín bắt đầu."
-                              : "Đã mở lại âm thanh công khai cho sinh viên.",
-                            !isPrivateSession ? "warning" : "info",
-                          );
-                        }}
-                      >
-                        {isPrivateSession ? "Đang bật kín" : "Bật kín"}
-                      </Button>
-                    </div>
-
-                    <div
-                      className={`meeting-council-alert ${isPrivateSession ? "meeting-council-alert--private" : "meeting-council-alert--public"}`}
-                    >
-                      <Icon name={isPrivateSession ? "shield" : "info"} size={16} />
-                      <span>
-                        {isPrivateSession
-                          ? "ĐANG BẬT THẢO LUẬN KÍN: Toàn bộ sinh viên và khách tham dự đã được tạm ngắt kết nối âm thanh / hình ảnh. Điểm số và nhận xét hoàn toàn bảo mật."
-                          : "CHẾ ĐỘ CÔNG KHAI: Sinh viên và khách mời đang theo dõi buổi bảo vệ trực tuyến."}
-                      </span>
-                    </div>
-
-                    <div>
-                      <h4 style={{ margin: "0 0 8px", fontSize: "13px", fontWeight: 600, color: "#0F172A" }}>
-                        Tiêu chí Rubric Đánh giá Đồ án
-                      </h4>
-                      <table className="meeting-rubric-table">
-                        <thead>
-                          <tr>
-                            <th>Tiêu chí</th>
-                            <th style={{ width: "50px", textAlign: "center" }}>Tỷ trọng</th>
-                            <th style={{ width: "70px", textAlign: "center" }}>Điểm (0-10)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {THESIS_RUBRICS.map((rubric) => (
-                            <tr key={rubric.id}>
-                              <td>{rubric.name}</td>
-                              <td style={{ textAlign: "center", color: "#64748B" }}>{rubric.weight}%</td>
-                              <td style={{ textAlign: "center" }}>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="10"
-                                  step="0.25"
-                                  className="meeting-rubric-input"
-                                  value={rubricScores[rubric.id] ?? 8}
-                                  onChange={(e) => {
-                                    const val = parseFloat(e.target.value) || 0;
-                                    setRubricScores((prev) => ({
-                                      ...prev,
-                                      [rubric.id]: Math.min(10, Math.max(0, val)),
-                                    }));
-                                  }}
-                                />
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <div className="meeting-council-total">
-                      <span>Tổng điểm trung bình trọng số:</span>
-                      <span style={{ fontSize: "18px" }}>{councilTotal} / 10</span>
-                    </div>
-
-                    <div>
-                      <label
-                        style={{
-                          fontSize: "12px",
-                          fontWeight: 600,
-                          color: "#475569",
-                          display: "block",
-                          marginBottom: "4px",
-                        }}
-                      >
-                        Nhận xét của Hội đồng:
-                      </label>
-                      <textarea
-                        rows={3}
-                        style={{
-                          width: "100%",
-                          padding: "8px 10px",
-                          borderRadius: "8px",
-                          border: "1px solid #CBD5E1",
-                          fontSize: "12.5px",
-                          fontFamily: "inherit",
-                          resize: "vertical",
-                        }}
-                        value={councilComment}
-                        onChange={(e) => setCouncilComment(e.target.value)}
-                        placeholder="Ghi nhận xét đánh giá, ưu nhược điểm và yêu cầu chỉnh sửa đồ án…"
-                      />
-                    </div>
-
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        style={{ flex: 1 }}
-                        onClick={() =>
-                          notify("Đã lưu nháp", "Phiếu điểm nháp đã được lưu vào phiên họp.", "info")
-                        }
-                      >
-                        Lưu nháp
-                      </Button>
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        style={{ flex: 1 }}
-                        onClick={() =>
-                          notify(
-                            "Đã nộp biên bản hội đồng",
-                            `Điểm tổng kết: ${councilTotal}/10. Đã khóa điểm bảo vệ đồ án của sinh viên.`,
-                            "success",
-                          )
-                        }
-                      >
-                        Nộp biên bản
-                      </Button>
-                    </div>
-                  </div>
-                ) : sidePanel === "quiz" ? (
-                  <div className="meeting-quiz-panel">
-                    <div className="meeting-quiz-card">
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          marginBottom: "8px",
-                        }}
-                      >
-                        <Badge tone={quizActive ? "green" : "neutral"}>
-                          {quizActive ? "Live Quiz đang diễn ra" : "Đã kết thúc bình chọn"}
-                        </Badge>
-                        <span style={{ fontSize: "11.5px", color: "#64748B" }}>
-                          {Object.values(quizVotes).reduce((a, b) => a + b, 0)} lượt phản hồi
-                        </span>
-                      </div>
-
-                      <div className="meeting-quiz-question">{QUIZ_QUESTION}</div>
-
-                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                        {QUIZ_OPTIONS.map((opt, idx) => {
-                          const total =
-                            Object.values(quizVotes).reduce((a, b) => a + b, 0) || 1;
-                          const count = quizVotes[idx] || 0;
-                          const pct = Math.round((count / total) * 100);
-                          const isSelected = myQuizVote === idx;
-                          return (
-                            <div
-                              key={idx}
-                              className={`meeting-quiz-option ${isSelected ? "is-selected" : ""}`}
-                              onClick={() => {
-                                if (myQuizVote === null) {
-                                  setMyQuizVote(idx);
-                                  setQuizVotes((prev) => ({
-                                    ...prev,
-                                    [idx]: (prev[idx] || 0) + 1,
-                                  }));
-                                  notify(
-                                    "Đã gửi câu trả lời",
-                                    `Bạn đã chọn đáp án: ${String.fromCharCode(65 + idx)}`,
-                                    "success",
-                                  );
-                                }
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  fontSize: "12.5px",
-                                  fontWeight: isSelected ? 600 : 500,
-                                }}
-                              >
-                                <span>
-                                  <strong>{String.fromCharCode(65 + idx)}.</strong> {opt}
-                                </span>
-                                <span style={{ color: "#2563EB", fontWeight: 700 }}>{pct}%</span>
-                              </div>
-                              <div className="meeting-quiz-bar-wrap">
-                                <div
-                                  className="meeting-quiz-bar-fill"
-                                  style={{ width: `${pct}%` }}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <div style={{ display: "flex", gap: "8px", marginTop: "14px" }}>
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          style={{ flex: 1 }}
-                          onClick={() => {
-                            setQuizActive(true);
-                            setQuizVotes({ 0: 0, 1: 0, 2: 0, 3: 0 });
-                            setMyQuizVote(null);
-                            notify(
-                              "Đã đẩy câu hỏi thời gian thực",
-                              "Toàn bộ sinh viên trong phòng đã nhận được câu hỏi trắc nghiệm.",
-                              "success",
-                            );
-                          }}
-                        >
-                          Đẩy câu hỏi mới
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => {
-                            setQuizActive(false);
-                            notify(
-                              "Đã đóng Live Quiz",
-                              "Đáp án chính xác là: A (Selective Forwarding Unit).",
-                              "info",
-                            );
-                          }}
-                        >
-                          Công bố kết quả
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
                 ) : (
                   <>
                     <div ref={callListRef} className="meeting-chat-list" role="log" aria-label="Tin nhắn cuộc họp" onScroll={event => {const el=event.currentTarget;followCallChat.current=el.scrollHeight-el.scrollTop-el.clientHeight<90;}}>
@@ -2254,28 +1908,6 @@ export function MeetingPage() {
             >
               <Icon name="users" size={18} />
             </button>
-            {SHOW_PROTOTYPE_PANELS && <>
-            <button
-              type="button"
-              className={`meeting-dock-btn ${sidePanel === "council" ? "is-active" : ""}`}
-              aria-label="Hội đồng Chấm Đồ án"
-              aria-pressed={sidePanel === "council"}
-              title="Hội đồng Chấm Đồ án"
-              onClick={() => setSidePanel(sidePanel === "council" ? "none" : "council")}
-            >
-              <Icon name="graduation-cap" size={18} />
-            </button>
-            <button
-              type="button"
-              className={`meeting-dock-btn ${sidePanel === "quiz" ? "is-active" : ""}`}
-              aria-label="Live Quiz"
-              aria-pressed={sidePanel === "quiz"}
-              title="Live Quiz Trắc nghiệm"
-              onClick={() => setSidePanel(sidePanel === "quiz" ? "none" : "quiz")}
-            >
-              <Icon name="help-circle" size={18} />
-            </button>
-            </>}
             <button
               type="button"
               className={`meeting-dock-btn ${sidePanel === "notes" ? "is-active" : ""}`}

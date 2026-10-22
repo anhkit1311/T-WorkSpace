@@ -20,8 +20,6 @@ import {
 } from "./outcomes.js";
 import { publishOutcomeChange } from "./outcome-events.js";
 import { exportMeetingAttendance, getMeetingAttendance } from "./attendance.js";
-import { sessionCommittee } from "./committee-room.js";
-import { myCommittees } from "../academic/evaluation.js";
 import {
   listRecordings,
   recordingFile,
@@ -54,16 +52,6 @@ export async function meetingRoutes({
       "Content-Disposition": `attachment; filename="${file.fileName}"`,
     });
     response.end("﻿" + file.content); // BOM so Excel reads Vietnamese correctly
-    return;
-  }
-  const committee = pathname.match(/^\/api\/meetings\/sessions\/([^/]+)\/committee$/);
-  if (committee && request.method === "GET") {
-    response.setHeader("Cache-Control", "no-store");
-    sendJson(response, 200, { committee: await sessionCommittee(await getAuthUserId(request), committee[1]) });
-    return;
-  }
-  if (pathname === "/api/meetings/committees" && request.method === "GET") {
-    sendJson(response, 200, { committees: await myCommittees(await getAuthUserId(request)) });
     return;
   }
   const dialIn = pathname.match(/^\/api\/meetings\/rooms\/([^/]+)\/dial-in$/);

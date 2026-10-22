@@ -56,8 +56,6 @@ export type MeetingScheduleItem = {
   endsAt: string;
   canManage: boolean;
   agenda?: string[];
-  /** MT-3: the defense committee that meets here, if any. */
-  committeeId?: string | null;
 };
 
 export type AuthResponse = {

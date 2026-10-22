@@ -63,12 +63,6 @@ const pages: { id: ViewId; title: string; desc: string; icon: IconName }[] = [
     icon: "graduation-cap",
   },
   {
-    id: "thesis",
-    title: "Đồ án tốt nghiệp",
-    desc: "Đề tài, hướng dẫn, hội đồng bảo vệ & điểm",
-    icon: "book",
-  },
-  {
     id: "workspace",
     title: "Nhóm làm việc",
     desc: "Không gian nhóm, tổng quan hoạt động, thành viên & chức năng nhóm",

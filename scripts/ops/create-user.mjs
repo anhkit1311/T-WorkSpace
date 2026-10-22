@@ -35,7 +35,7 @@ try {
        SELECT $1, id, 'system_admin' FROM users WHERE lower(email) = lower($2) ON CONFLICT DO NOTHING`,
       [randomUUID(), email],
     );
-    console.log(`${email} is a system administrator (Đồ án → Tài khoản & phân quyền).`);
+    console.log(`${email} is a system administrator (menu "Quản trị hệ thống").`);
   }
 } finally {
   await pool.end();

@@ -32,7 +32,6 @@ export type MeetingScheduleInput = {
   startsAt: string;
   endsAt: string;
   agenda?: string[];
-  committeeId?: string | null;
 };
 
 async function scheduleRequest<T>(
@@ -216,33 +215,6 @@ export const requestRecordingTranscriptApi = (accessToken: string, recordingId: 
   meetingsRequest<{ transcriptStatus: "processing" }>(accessToken, `recordings/${recordingId}/transcript`, "POST");
 export const meetingRecordingPlaylist = (recordingId: string) =>
   `${recordingsBase()}/recordings/${recordingId}/files/index.m3u8`;
-
-// MT-3: defense committees. Types mirror academic's committeeRoom(); the thesis feature keeps its own.
-export type CommitteeSlot = {
-  id: string;
-  projectId: string;
-  projectCode: string;
-  topicTitle: string;
-  status: string;
-  startsAt: string;
-  endsAt: string;
-  version: number;
-  result: { finalScore: number; letter: string; passed: boolean; conclusion: string | null } | null;
-};
-export type MeetingCommittee = {
-  id: string;
-  code: string;
-  name: string;
-  room: string;
-  myRole: "chair" | "secretary" | "member" | null;
-  members: { lecturerId: string; displayName: string; role: string }[];
-  slots: CommitteeSlot[];
-};
-
-export const getSessionCommitteeApi = async (accessToken: string, sessionId: string) =>
-  (await meetingsRequest<{ committee: MeetingCommittee | null }>(accessToken, `sessions/${sessionId}/committee`)).committee;
-export const getMyCommitteesApi = async (accessToken: string) =>
-  (await meetingsRequest<{ committees: { id: string; code: string; name: string }[] }>(accessToken, "committees")).committees;
 
 /** M1: number and 6-digit code to join this room from a phone (internal extension). */
 export async function getDialInApi(accessToken: string, roomId: string): Promise<{ number: string; code: string }> {

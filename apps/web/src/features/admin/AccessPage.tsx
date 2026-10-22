@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useApp } from "../../app/providers/AppContext";
 import { Badge, Button } from "../../shared/ui/Primitives";
-import { academicApi, type AcademicProfile } from "../thesis/api";
-import { parseAccountLines } from "../thesis/labels";
+import { academicApi, type AcademicProfile } from "./api";
+import { parseAccountLines } from "./labels";
+import { FacultyPanel } from "./FacultyPanel";
 import "../workspaces/workspace-admin.css";
-import "../thesis/thesis.css";
+import "./admin.css";
 
 type Role = "system_admin" | "unit_admin" | "unit_head";
 interface AccessRow {
@@ -13,7 +14,6 @@ interface AccessRow {
   email: string;
   grants: { role: Role; unitId: string | null }[];
   staff: { unitId: string; active: boolean } | null;
-  enrollments: number;
 }
 
 type Run = <T>(label: string, action: () => Promise<T>) => Promise<T | undefined>;
@@ -42,24 +42,29 @@ export function AccessPage() {
   if (failed) return <p className="loading-note" role="alert">Không tải được dữ liệu phân quyền.</p>;
   if (!profile) return <p className="loading-note" role="status">Đang tải…</p>;
   return (
-    <div className="workspace-admin thesis-page">
-      <header className="thesis-header">
+    <div className="workspace-admin admin-page">
+      <header className="admin-header">
         <div>
-          <p className="thesis-eyebrow">Chỉ dành cho quản trị hệ thống</p>
+          <p className="admin-eyebrow">Chỉ dành cho quản trị hệ thống</p>
           <h1>Tài khoản & phân quyền</h1>
-          <p className="thesis-subtitle">Hệ thống không cho tự đăng ký: tạo tài khoản ở đây rồi cấp quyền quản trị, giáo vụ hoặc lãnh đạo khoa.</p>
+          <p className="admin-subtitle">Hệ thống không cho tự đăng ký: tạo tài khoản, khoa và giảng viên ở đây rồi cấp quyền quản trị, giáo vụ hoặc lãnh đạo khoa.</p>
         </div>
       </header>
       {profile.systemAdmin ? (
-        <AccessPanel token={token} run={run} units={profile.units} />
+        <AccessPanel
+          token={token}
+          run={run}
+          units={profile.units}
+          onUnitCreated={(unit) => setProfile({ ...profile, units: [...profile.units, unit].sort((a, b) => a.code.localeCompare(b.code)) })}
+        />
       ) : (
-        <p className="thesis-note" role="alert">Trang này chỉ dành cho tài khoản quản trị hệ thống.</p>
+        <p className="admin-note" role="alert">Trang này chỉ dành cho tài khoản quản trị hệ thống.</p>
       )}
     </div>
   );
 }
 
-function AccessPanel({ token, run, units }: { token: string; run: Run; units: Unit[] }) {
+function AccessPanel({ token, run, units, onUnitCreated }: { token: string; run: Run; units: Unit[]; onUnitCreated: (unit: Unit) => void }) {
   const { user } = useApp();
   const [query, setQuery] = useState("");
   const [rows, setRows] = useState<AccessRow[] | null>(null);
@@ -94,19 +99,20 @@ function AccessPanel({ token, run, units }: { token: string; run: Run; units: Un
   );
 
   return (
-    <div className="thesis-stack">
+    <div className="admin-stack">
       <AccountsCard token={token} run={run} onCreated={() => void load()} />
+      <FacultyPanel token={token} run={run} units={units} onUnitCreated={onUnitCreated} />
       <section>
         <h2>Phân quyền</h2>
-        <p className="thesis-note">
-          Tích để cấp, bỏ tích để thu hồi. Giảng viên và sinh viên không cấp ở đây: thêm giảng viên trong Đồ án → "Thiết lập khoa", ghi danh sinh viên trong Đồ án → "Quản trị đợt".
+        <p className="admin-note">
+          Tích để cấp, bỏ tích để thu hồi. Giảng viên được thêm ở mục "Khoa & giảng viên" phía trên.
         </p>
-        <div className="thesis-toolbar">
+        <div className="admin-toolbar">
           <input type="search" placeholder="Tìm theo tên hoặc email" value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Tìm người dùng" />
-          <span className="thesis-note">{rows ? `${rows.length} người${rows.length === 100 ? " (tối đa 100, hãy lọc thêm)" : ""}` : "Đang tải…"}</span>
+          <span className="admin-note">{rows ? `${rows.length} người${rows.length === 100 ? " (tối đa 100, hãy lọc thêm)" : ""}` : "Đang tải…"}</span>
         </div>
-        <div className="thesis-scroll">
-          <table className="thesis-table">
+        <div className="admin-scroll">
+          <table className="admin-table">
             <thead>
               <tr>
                 <th rowSpan={2}>Người dùng</th>
@@ -128,17 +134,16 @@ function AccessPanel({ token, run, units }: { token: string; run: Run; units: Un
                     <td key={`${unit.id}-h`}>{box(row, "unit_head", unit.id, `Lãnh đạo ${unit.code}`)}</td>,
                   ])}
                   <td>
-                    {row.staff && <Badge tone={row.staff.active ? "blue" : "neutral"}>Giảng viên {unitCode(row.staff.unitId)}{row.staff.active ? "" : " (ngừng)"}</Badge>}{" "}
-                    {row.enrollments > 0 && <Badge tone="green">Sinh viên · {row.enrollments} đợt</Badge>}
-                    {!row.staff && !row.enrollments && "—"}
+                    {row.staff && <Badge tone={row.staff.active ? "blue" : "neutral"}>Giảng viên {unitCode(row.staff.unitId)}{row.staff.active ? "" : " (ngừng)"}</Badge>}
+                    {!row.staff && "—"}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {rows && !rows.length && <p className="thesis-note">Không có người dùng khớp.</p>}
-        {!units.length && <p className="thesis-note">Chưa có khoa nào: tạo khoa trong Đồ án → "Thiết lập khoa" để cấp quyền giáo vụ / lãnh đạo.</p>}
+        {rows && !rows.length && <p className="admin-note">Không có người dùng khớp.</p>}
+        {!units.length && <p className="admin-note">Chưa có khoa nào: tạo khoa ở mục "Khoa & giảng viên" để cấp quyền giáo vụ / lãnh đạo.</p>}
       </section>
     </div>
   );
@@ -155,7 +160,7 @@ function AccountsCard({ token, run, onCreated }: { token: string; run: Run; onCr
   return (
     <section>
       <h2>Tạo tài khoản</h2>
-      <form className="thesis-form" onSubmit={async (event) => {
+      <form className="admin-form" onSubmit={async (event) => {
         event.preventDefault();
         const result = await run("Đã xử lý danh sách tài khoản", () =>
           academicApi<{ accounts: CreatedAccount[] }>(token, "accounts", "POST", { accounts: parseAccountLines(lines) }));
@@ -165,14 +170,14 @@ function AccountsCard({ token, run, onCreated }: { token: string; run: Run; onCr
           onCreated();
         }
       }}>
-        <p className="thesis-note">Mỗi dòng: <code>email, Họ tên</code> (dán thẳng 2 cột từ Excel cũng được), tối đa 200 dòng.</p>
+        <p className="admin-note">Mỗi dòng: <code>email, Họ tên</code> (dán thẳng 2 cột từ Excel cũng được), tối đa 200 dòng.</p>
         <textarea rows={5} value={lines} onChange={(e) => setLines(e.target.value)} required aria-label="Danh sách tài khoản" placeholder={"52100001@student.tdtu.edu.vn, Nguyễn Văn A\ngv.lan@tdtu.edu.vn, Trần Thị Lan"} />
         <Button type="submit">Tạo tài khoản</Button>
       </form>
       {created.length > 0 && (
         <>
-          <p className="thesis-note" role="status">Mật khẩu chỉ hiện một lần. Hãy sao chép và gửi cho từng người; họ có thể đổi qua "Quên mật khẩu".</p>
-          <table className="thesis-table">
+          <p className="admin-note" role="status">Mật khẩu chỉ hiện một lần. Hãy sao chép và gửi cho từng người; họ có thể đổi qua "Quên mật khẩu".</p>
+          <table className="admin-table">
             <thead><tr><th>Email</th><th>Họ tên</th><th>Mật khẩu</th></tr></thead>
             <tbody>
               {created.map((row) => (

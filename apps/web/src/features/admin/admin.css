@@ -1,0 +1,130 @@
+/* "Quản trị hệ thống" page. Builds on .workspace-admin surfaces and the shared nexo tokens. */
+/* .workspace-admin styles every <li> as a settings row; the page's lists opt out of that. */
+.admin-page li {
+  display: list-item;
+  min-height: 0;
+  padding: 0;
+  border-bottom: 0;
+}
+.admin-page {
+  max-width: 1280px;
+  gap: 20px;
+}
+
+.admin-page .admin-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-page .admin-eyebrow {
+  margin: 0 0 4px !important;
+  font-size: 12px !important;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin-page .admin-subtitle {
+  margin: 0 !important;
+}
+
+.admin-page .admin-stack {
+  display: grid;
+  gap: 20px;
+}
+
+.admin-page .admin-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.admin-page .admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.admin-page .admin-toolbar > input,
+.admin-page .admin-toolbar > select {
+  width: auto !important;
+  min-width: 160px;
+  flex: 0 1 240px;
+}
+
+.admin-page .admin-gap {
+  margin-top: 18px !important;
+}
+
+.admin-page .admin-note {
+  font-size: 13px;
+  color: var(--nexo-text-muted);
+}
+
+.admin-page .admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.admin-page .admin-table th {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--nexo-border-beige);
+  color: var(--nexo-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.admin-page .admin-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--nexo-border-beige);
+  vertical-align: top;
+}
+
+.admin-page .admin-table input {
+  min-height: 36px !important;
+}
+
+@media (max-width: 760px) {
+  .admin-table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+.admin-page .admin-members {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.workspace-admin .admin-form {
+  margin: 0;
+  gap: 10px;
+}
+
+.admin-page .admin-form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.admin-page .admin-scroll {
+  overflow-x: auto;
+}
+
+.admin-page .admin-scroll td:has(> input[type="checkbox"]) {
+  text-align: center;
+}

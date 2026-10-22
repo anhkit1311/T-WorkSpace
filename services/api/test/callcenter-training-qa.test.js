@@ -115,12 +115,10 @@ test(
       assert.equal(low.coachingAssigned, true);
       assert.equal(low.items.length, 2);
       assert.ok((await pool.query(`SELECT 1 FROM course_enrollments WHERE course_id=$1 AND user_id=$2`, [courseIds[1], agentId])).rowCount);
-      const notices = await pool.query(`SELECT kind FROM academic_notifications WHERE user_id=$1 AND entity_id=$2`, [agentId, courseIds[1]]);
-      assert.deepEqual(notices.rows.map((row) => row.kind), ["coaching_assigned"]);
 
       const rescored = await qa.saveReview(supervisorId, callId, { scores: scores(6, 2) });
       assert.equal(rescored.percent, 30);
-      assert.equal((await pool.query(`SELECT 1 FROM academic_notifications WHERE user_id=$1 AND entity_id=$2`, [agentId, courseIds[1]])).rowCount, 1, "re-scoring does not assign again");
+      assert.equal((await pool.query(`SELECT 1 FROM course_enrollments WHERE course_id=$1 AND user_id=$2`, [courseIds[1], agentId])).rowCount, 1, "re-scoring does not assign again");
 
       assert.equal((await qa.review(agentId, callId)).percent, 30, "the agent sees their own review");
       await rejects(qa.review(outsiderId, callId), "FORBIDDEN");
@@ -138,7 +136,6 @@ test(
       assert.deepEqual(members.map((row) => row.role).sort(), ["member", "owner"]);
       assert.deepEqual((await agents.videoRoom(agentId, callId)).workspaceId, room.workspaceId, "invited again: same room");
     } finally {
-      await pool.query(`DELETE FROM academic_notifications WHERE entity_id=ANY($1::uuid[])`, [courseIds]);
       if (departmentId) {
         await pool.query(`DELETE FROM cc_calls WHERE department_id=$1`, [departmentId]);
         await pool.query(`DELETE FROM cc_departments WHERE unit_id=$1`, [departmentId]);

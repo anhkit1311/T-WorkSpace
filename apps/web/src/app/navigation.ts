@@ -26,7 +26,6 @@ const views = new Set([
   "invitation",
   "notifications",
   "tasks",
-  "thesis",
   "call-center",
   "call-directory",
   "elearning",

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseAccountLines } from "../src/features/thesis/labels.ts";
+import { parseAccountLines } from "../src/features/admin/labels.ts";
 
 test("account lines: comma, semicolon and Excel tabs; header and blank lines skipped", () => {
   assert.deepEqual(parseAccountLines("Email\tHọ tên\n52100001@student.tdtu.edu.vn\tNguyễn Văn A\n\n  b@tdtu.edu.vn, Trần B  \r\nc@tdtu.edu.vn;Lê C"), [

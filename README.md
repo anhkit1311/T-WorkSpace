@@ -18,7 +18,7 @@ Chat nhóm giữ làm kênh trao đổi nội bộ: ảnh/file/voice, reaction, 
 
 Nền tảng chung: đăng nhập email OTP và Google, hồ sơ, presence, lưu file DB/S3, metrics, migration có khóa.
 
-Ngoài phạm vi đề tài, vẫn giữ code nhưng đã ẩn khỏi menu chính: Kanban (`/app/tasks`) và phân hệ quản lý đồ án tốt nghiệp (`/app/thesis`, migration 022–024, đặc tả [docs/academic/01-dac-ta-nghiep-vu.md](docs/academic/01-dac-ta-nghiep-vu.md)).
+Ngoài phạm vi đề tài, vẫn giữ code nhưng đã ẩn khỏi menu chính: Kanban (`/app/tasks`). Phân hệ quản lý đồ án tốt nghiệp đã được gỡ; chỉ còn khoa, bộ môn, giảng viên và phân quyền (trang "Quản trị hệ thống"). Các bảng `thesis_*` (migration 022–024) vẫn giữ trong DB, không còn code dùng.
 
 ## Chạy local
 
@@ -79,7 +79,7 @@ node scripts/benchmarks/summarize-chat-load.mjs
 npm run verify:restore
 ```
 
-Dữ liệu demo phân hệ đồ án: đặt `SEED_ACADEMIC_PASSWORD` trong `.env` rồi chạy `npm run seed:academic` (thêm `-- --reset` để tạo lại). Tài khoản `giaovu@demo.nexo.test` là quản trị hệ thống kiêm giáo vụ; `truongkhoa@…`, `gv.son@…` là lãnh đạo khoa; `gv.*@…` là giảng viên; `sv01…sv30@…` là sinh viên.
+Dữ liệu demo khoa CNTT: tạo quản trị hệ thống trước (`node scripts/ops/create-user.mjs admin@tdtu.edu.vn "Quản trị hệ thống" --admin`), đặt `SEED_ACADEMIC_PASSWORD` trong `.env` rồi chạy `npm run seed:academic` (thêm `-- --reset` để tạo lại). `giaovu@demo.nexo.test` là giáo vụ khoa, `truongkhoa@…` là lãnh đạo khoa, `gv.*@…` là giảng viên, `sv01…sv30@…` là sinh viên.
 
 Benchmark local50/100/200 socket,2 API process,4tin/giây,30s ×2/mức:732tin,0lỗi/trùng trong kịch bản. Raw, phân vị và giới hạn ở [báo cáo20](docs/benchmarks/20-benchmark-va-nghiem-thu.md). Restore dùng hai DB QA mới, kiểm20 migration/dữ liệu Unicode và dọn đúng fixtures.
 
