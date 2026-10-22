@@ -1031,7 +1031,7 @@ export function MeetingPage() {
           )}
           {meeting.interruptedRoomId && (
             <div className="meeting-return-notice" role="status">
-              Kết nối cuộc họp đã bị ngắt. Thiết bị đã được tắt; chọn “Tham gia” để kết nối lại.
+              Kết nối cuộc họp đã bị ngắt. Hệ thống đang tự vào lại khi mạng ổn định; nếu không được, chọn “Tham gia”.
             </div>
           )}
           {loading ? (

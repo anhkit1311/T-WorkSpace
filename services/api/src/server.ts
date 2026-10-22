@@ -3,7 +3,7 @@ import type { HealthResponse } from "@doan/shared";
 import { config, getJwtSecret } from "./config/config.js";
 import { HttpError } from "./shared/http/http-error.js";
 import { initSocketServer } from "./infrastructure/realtime/socket.js";
-import { sendError, sendJson, setCorsHeaders, webOrigin } from "./shared/http/utils.js";
+import { getAuthUserId, sendError, sendJson, setCorsHeaders, webOrigin } from "./shared/http/utils.js";
 import { taskRoutes } from "./modules/tasks/routes.js";
 import { conversationRoutes } from "./modules/chat/routes.js";
 import { workspaceRoutes } from "./modules/workspaces/routes.js";
@@ -12,10 +12,12 @@ import { profileRoutes } from "./modules/profiles/routes.js";
 import { meetingRoutes } from "./modules/meetings/routes.js";
 import { fileRoutes } from "./modules/files/routes.js";
 import { academicRoutes } from "./modules/academic/routes.js";
-import { callCenterMetrics, callcenterRoutes, startCallCenter } from "./modules/callcenter/index.js";
+import { callCenterMetrics, callcenterRoutes, pbxConnected, startCallCenter } from "./modules/callcenter/index.js";
 import { elearningRoutes, startElearning } from "./modules/elearning/index.js";
 import { startJobWorker } from "./infrastructure/jobs/queue.js";
 import { randomUUID } from "node:crypto";
+import { readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { pool, query } from "./infrastructure/database/db.js";
 import { roomManager } from "./modules/meetings/media/room-manager.js";
 import { recoverRecordings, stopAllRecordings } from "./modules/meetings/recording/recordings.js";
@@ -25,6 +27,16 @@ import { openapi } from "./shared/http/openapi.js";
 import { renderMetrics, type Metric } from "./infrastructure/operations/prometheus.js";
 const port = Number(process.env.API_PORT ?? 3001);
 const metrics = { requests: 0, errors: 0, totalDurationMs: 0 };
+// /ready waits for the newest migration shipped with this build (dist/migrations or the source tree).
+const latestMigration = (() => {
+  for (const relative of ["../migrations", "../../services/api/migrations"])
+    try {
+      return readdirSync(fileURLToPath(new URL(relative, import.meta.url))).filter((file) => file.endsWith(".sql")).sort().at(-1);
+    } catch {
+      // try the next layout
+    }
+  return undefined;
+})();
 const ioForShutdown = new WeakMap<Server, ReturnType<typeof initSocketServer>>();
 
 export function createApiServer(): Server {
@@ -109,7 +121,7 @@ async function handleRequest(
     ).catch(() => {
       throw new HttpError(503, "NOT_READY", "Máy chủ chưa sẵn sàng.");
     });
-    if (version.rows[0]?.name !== "037_voip_completion.sql")
+    if (!latestMigration || version.rows[0]?.name !== latestMigration)
       throw new HttpError(503, "NOT_READY", "Cần chạy migration trước khi phục vụ.");
     sendJson(response, 200, { status: "ready" });
     return;
@@ -177,6 +189,49 @@ async function handleRequest(
       media: roomManager.metrics(),
       workerResources: await roomManager.resourceUsage(),
       sockets: io.engine.clientsCount,
+    });
+    return;
+  }
+  if (request.method === "GET" && pathname === "/api/operations/health") {
+    // System-health page for system administrators (same numbers Prometheus scrapes, plus probes).
+    const userId = await getAuthUserId(request);
+    const admin = await query(`SELECT 1 FROM academic_role_grants WHERE user_id=$1 AND role='system_admin'`, [userId]);
+    if (!admin.rowCount) throw new HttpError(403, "FORBIDDEN", "Chỉ quản trị hệ thống xem được trang này.");
+    const started = performance.now();
+    await query(`SELECT 1`);
+    const dbLatencyMs = Math.round((performance.now() - started) * 10) / 10;
+    const [jobs, calls] = await Promise.all([
+      query<{ status: string; count: number }>(
+        `SELECT status,count(*)::int AS count FROM media_jobs WHERE status IN ('queued','running','failed') GROUP BY status`,
+      ),
+      query<{ total: number; answered: number; wait: number | null }>(
+        `SELECT count(*)::int AS total, count(*) FILTER (WHERE answered_at IS NOT NULL)::int AS answered,
+                avg(extract(epoch FROM answered_at - coalesce(queued_at, started_at)))::float AS wait
+         FROM cc_calls WHERE started_at > now() - interval '24 hours'`,
+      ),
+    ]);
+    const acd = callCenterMetrics();
+    sendJson(response, 200, {
+      checkedAt: new Date().toISOString(),
+      api: {
+        uptimeSeconds: Math.round(process.uptime()),
+        memoryMb: Math.round(process.memoryUsage().rss / 1048576),
+        requests: metrics.requests,
+        errors: metrics.errors,
+        avgResponseMs: metrics.requests ? Math.round(metrics.totalDurationMs / metrics.requests) : 0,
+        sockets: io.engine.clientsCount,
+      },
+      db: { latencyMs: dbLatencyMs, total: pool.totalCount, idle: pool.idleCount, waiting: pool.waitingCount },
+      media: { ...roomManager.metrics(), qos: roomManager.qosMetrics() },
+      jobs: Object.fromEntries(["queued", "running", "failed"].map((status) => [status, jobs.rows.find((row) => row.status === status)?.count ?? 0])),
+      callCenter: {
+        asterisk: pbxConnected(),
+        acdLeader: Boolean(acd),
+        activeCalls: acd?.activeCalls ?? 0,
+        waiting: acd?.queues.reduce((sum, queue) => sum + queue.waiting, 0) ?? 0,
+        agents: acd?.agents ?? {},
+        last24h: { total: calls.rows[0].total, answered: calls.rows[0].answered, avgWaitSeconds: Math.round(calls.rows[0].wait ?? 0) },
+      },
     });
     return;
   }

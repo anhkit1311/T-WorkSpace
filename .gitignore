@@ -30,3 +30,4 @@ backups/
 
 # Meeting recordings and video lessons (MEDIA_DIR)
 services/api/data/
+test-results/

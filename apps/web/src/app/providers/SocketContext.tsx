@@ -234,7 +234,16 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         .catch(() => { /* Do not send a toast when the mute preference is unknown. Unread data remains in the inbox and reconnect retries. */ });
     });
 
+    // socket.io stops after reconnectionAttempts; coming back online or to the tab starts it again.
+    const revive = () => {
+      if (document.visibilityState === "visible" && navigator.onLine && !socket.connected && !socket.active) socket.connect();
+    };
+    window.addEventListener("online", revive);
+    document.addEventListener("visibilitychange", revive);
+
     return () => {
+      window.removeEventListener("online", revive);
+      document.removeEventListener("visibilitychange", revive);
       socket.disconnect();
       window.clearTimeout(accessRefreshTimer);
       socketRef.current = null;

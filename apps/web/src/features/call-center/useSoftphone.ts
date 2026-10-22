@@ -62,10 +62,24 @@ export function useSoftphone(account: CcSipAccount | null, onError: (message: st
     };
     let alive = true; // a stopped UA still reports "unregistered" after its replacement registered
     const show = (value: PhoneStatus) => () => alive && setStatus(value);
-    next.on("registered", show("registered"));
+    // JsSIP reconnects the WebSocket itself but gives up on a failed REGISTER: retry with backoff.
+    let failures = 0;
+    let retry: number | undefined;
+    const reRegister = () => {
+      window.clearTimeout(retry);
+      if (alive && next.isConnected() && !next.isRegistered()) next.register();
+    };
+    next.on("registered", () => {
+      failures = 0;
+      show("registered")();
+    });
     next.on("unregistered", show("off"));
-    next.on("registrationFailed", show("failed"));
+    next.on("registrationFailed", () => {
+      show("failed")();
+      retry = window.setTimeout(reRegister, Math.min(30_000, 2_000 * 2 ** failures++));
+    });
     next.on("disconnected", show("registering"));
+    window.addEventListener("online", reRegister);
     next.on("newRTCSession", ({ session: call, originator }: RTCSessionEvent) => {
       if (session.current) return void call.terminate({ status_code: 486 }); // one call at a time
       setPhase(originator === "remote" ? "incoming" : "outgoing");
@@ -76,6 +90,8 @@ export function useSoftphone(account: CcSipAccount | null, onError: (message: st
     ua.current = next;
     return () => {
       alive = false;
+      window.clearTimeout(retry);
+      window.removeEventListener("online", reRegister);
       session.current?.terminate();
       next.stop();
       ua.current = null;

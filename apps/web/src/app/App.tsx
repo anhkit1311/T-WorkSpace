@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
 import { useApp } from "./providers/AppContext";
-import { useMeeting } from "./providers/MeetingContext";
 import { AnimatePresence, motion } from "motion/react";
 import { DURATION, EASE_OUT } from "../shared/motion/tokens";
 import { useMotionSafe, motionDebugEnabled } from "../shared/motion/MotionProvider";
@@ -31,10 +30,9 @@ function ScreenFallback() {
 
 export function App() {
   const safe = useMotionSafe();
-  const { screen, activeView, isAuthChecking } = useApp();
+  const { screen, isAuthChecking } = useApp();
   // An /app/ link reloads into the landing screen until the session is restored; show a skeleton instead.
   const restoring = isAuthChecking && screen === "landing" && window.location.pathname.startsWith("/app/");
-  const { inCall } = useMeeting();
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [screen]);

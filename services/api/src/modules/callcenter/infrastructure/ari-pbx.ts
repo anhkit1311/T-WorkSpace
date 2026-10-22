@@ -16,6 +16,11 @@ export class AriPbx implements Pbx {
   private stopped = false;
   private retryMs = 1000;
 
+  /** True while the ARI event socket is open (health page). */
+  get connected(): boolean {
+    return this.socket?.readyState === WebSocket.OPEN;
+  }
+
   constructor(private readonly options: AriOptions) {
     this.base = `${options.url.replace(/\/$/, "")}/ari`;
     this.authorization = `Basic ${Buffer.from(`${options.user}:${options.password}`).toString("base64")}`;

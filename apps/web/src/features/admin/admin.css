@@ -128,3 +128,61 @@
 .admin-page .admin-scroll td:has(> input[type="checkbox"]) {
   text-align: center;
 }
+
+.admin-page .admin-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.admin-page .admin-health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.admin-page .admin-health-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--nexo-border-beige);
+  border-radius: 12px;
+}
+
+.admin-page .admin-health-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.admin-page .admin-health-card h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.admin-page .admin-health-card dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.admin-page .admin-health-card dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-page .admin-health-card dt {
+  color: var(--nexo-text-muted);
+}
+
+.admin-page .admin-health-card dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}

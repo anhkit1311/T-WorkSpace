@@ -69,6 +69,8 @@ export const trainingRecording = (userId: string, callId: string) => agents.trai
 
 /** Q5: ACD gauges; null on instances that are not the ACD leader. */
 export const callCenterMetrics = () => acd?.metrics() ?? null;
+/** null when no Asterisk is configured. */
+export const pbxConnected = () => (pbx ? pbx.connected : null);
 
 export const callcenterRoutes = callCenterRoutes(admin, agents, tickets, reports, qa, voip);
 

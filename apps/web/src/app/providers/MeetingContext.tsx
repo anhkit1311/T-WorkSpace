@@ -122,6 +122,10 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
   const streamsRef = useRef<MediaStream[]>([]);
   const roomIdRef = useRef("");
   const lastMeasuredRoomIdRef = useRef("");
+  // Network drops rejoin on their own; a kick, logout or refresh does not.
+  const rejoinRef = useRef<{ roomId: string; devices: JoinMediaOptions; attempts: number } | null>(null);
+  const deviceStateRef = useRef({ mic, camera });
+  deviceStateRef.current = { mic, camera };
   useEffect(() => {
     roomIdRef.current = roomId;
   }, [roomId]);
@@ -156,8 +160,16 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
     // The return banner only renders on the meetings view; say why the call ended wherever
     // the user is. A logout clears the token first and already warned about leaving.
     const dropped = (reason: string) => {
-      if (cleanup() && tokenRef.current)
+      const lostRoomId = roomIdRef.current;
+      if (!cleanup() || !tokenRef.current) return;
+      if (["io server disconnect", "io client disconnect", "replaced"].includes(reason)) {
         notify("Cuộc họp bị ngắt", callDropMessage(reason), "warning");
+        return;
+      }
+      const { mic: micEnabled, camera: cameraEnabled } = deviceStateRef.current;
+      rejoinRef.current = { roomId: lostRoomId, devices: { ...devicesRef.current, micEnabled, cameraEnabled }, attempts: 0 };
+      notify("Mất kết nối cuộc họp", "Đang tự kết nối lại khi mạng ổn định…", "warning");
+      scheduleRejoinRef.current(1500);
     };
     socket.on("disconnect", dropped);
     const closed = (data: { roomId: string; reason: string }) => {
@@ -805,6 +817,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
   };
 
   const leaveCall = async () => {
+    rejoinRef.current = null;
     joinAbortRef.current?.abort();
     joiningRef.current = false;
     setWaitingRoomId("");
@@ -997,6 +1010,44 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
     document.body.removeChild(link);
     notify("Đã xuất file JSON", "Dữ liệu đo kiểm QoS đã tải về máy tính.", "success");
   };
+
+  const joinCallRef = useRef(joinCall);
+  joinCallRef.current = joinCall;
+  const rejoinTimerRef = useRef<number | undefined>(undefined);
+  const scheduleRejoinRef = useRef((delay: number) => void delay);
+  scheduleRejoinRef.current = (delay: number) => {
+    window.clearTimeout(rejoinTimerRef.current);
+    rejoinTimerRef.current = window.setTimeout(() => {
+      const pending = rejoinRef.current;
+      // Not connected yet: the chat socket's "connect" below retries.
+      if (!pending || !chatSocket?.connected || !navigator.onLine) return;
+      pending.attempts += 1;
+      joinCallRef.current(pending.roomId, pending.devices).then(
+        () => {
+          rejoinRef.current = null;
+        },
+        () => {
+          if (rejoinRef.current !== pending) return;
+          if (pending.attempts < 3) scheduleRejoinRef.current(pending.attempts * 4000);
+          else {
+            rejoinRef.current = null;
+            notify("Không tự vào lại được", "Hãy chọn “Tham gia” để vào lại phòng.", "warning");
+          }
+        },
+      );
+    }, delay);
+  };
+  useEffect(() => {
+    if (!chatSocket) return;
+    const reconnected = () => rejoinRef.current && scheduleRejoinRef.current(800);
+    chatSocket.on("connect", reconnected);
+    window.addEventListener("online", reconnected);
+    return () => {
+      chatSocket.off("connect", reconnected);
+      window.removeEventListener("online", reconnected);
+      window.clearTimeout(rejoinTimerRef.current);
+    };
+  }, [chatSocket]);
 
   return (
     <MeetingContext.Provider

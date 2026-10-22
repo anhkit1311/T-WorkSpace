@@ -36,9 +36,11 @@
     "test": "npm run build --workspace @doan/shared && npm run build --workspace @doan/api && npm run test --workspaces --if-present",
     "start:api": "npm --workspace @doan/api run start",
     "start:web": "npm --workspace @doan/web run preview",
-    "lab": "npm run build --workspace @doan/shared && npm run build --workspace @doan/api && node experiments/media-lab/harness.mjs"
+    "lab": "npm run build --workspace @doan/shared && npm run build --workspace @doan/api && node experiments/media-lab/harness.mjs",
+    "test:e2e": "npm run build --workspace @doan/shared && npm run build --workspace @doan/api && playwright test -c e2e/playwright.config.ts"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "concurrently": "^9.2.5",
     "prettier": "^3.5.3"
   }

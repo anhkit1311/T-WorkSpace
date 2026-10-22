@@ -68,8 +68,11 @@ npm run typecheck
 npm run lint
 npm test
 npm run test:sfu
+npm run test:e2e
 npm run build
 ```
+
+`test:e2e` (Playwright, dùng Chrome đã cài) chạy trên `npm run dev` và DB local: đăng nhập, trang Quản trị hệ thống, hai người họp video với camera giả và tự vào lại phòng sau khi mất mạng. Tài khoản test tạo trong `e2e/global-setup.mjs` và bị xoá khi chạy xong.
 
 npm test có5 frontend unit và15 API unit qua;8 DB/SFU suite skip theo mặc định. test:sfu chạy riêng9 test có PostgreSQL và mediasoup,0 skip. Kiểm signaling/worker không chứng minh RTP đa mạng.
 

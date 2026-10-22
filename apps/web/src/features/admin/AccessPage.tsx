@@ -4,6 +4,7 @@ import { Badge, Button } from "../../shared/ui/Primitives";
 import { academicApi, type AcademicProfile } from "./api";
 import { parseAccountLines } from "./labels";
 import { FacultyPanel } from "./FacultyPanel";
+import { HealthPanel } from "./HealthPanel";
 import "../workspaces/workspace-admin.css";
 import "./admin.css";
 
@@ -46,7 +47,7 @@ export function AccessPage() {
       <header className="admin-header">
         <div>
           <p className="admin-eyebrow">Chỉ dành cho quản trị hệ thống</p>
-          <h1>Tài khoản & phân quyền</h1>
+          <h1>Quản trị hệ thống</h1>
           <p className="admin-subtitle">Hệ thống không cho tự đăng ký: tạo tài khoản, khoa và giảng viên ở đây rồi cấp quyền quản trị, giáo vụ hoặc lãnh đạo khoa.</p>
         </div>
       </header>
@@ -100,6 +101,7 @@ function AccessPanel({ token, run, units, onUnitCreated }: { token: string; run:
 
   return (
     <div className="admin-stack">
+      <HealthPanel token={token} />
       <AccountsCard token={token} run={run} onCreated={() => void load()} />
       <FacultyPanel token={token} run={run} units={units} onUnitCreated={onUnitCreated} />
       <section>
