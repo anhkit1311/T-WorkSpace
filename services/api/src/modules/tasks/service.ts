@@ -1,6 +1,6 @@
 import { randomUUID, createHash } from "node:crypto";
 import type { PoolClient } from "pg";
-import type { TaskItem, TaskDetail } from "@doan/shared";
+import type { TaskBoardItem, TaskItem, TaskDetail } from "@doan/shared";
 import { query, withTransaction } from "../../infrastructure/database/db.js";
 import { HttpError } from "../../shared/http/http-error.js";
 import { requireChannelAccess, validateId } from "../workspaces/service.js";
@@ -81,6 +81,25 @@ export async function listTasks(userId: string, channelId: string, params = new 
   const rows = await query<TaskItem>(
     `${projection} WHERE t.channel_id=$2 AND ($3::text IS NULL OR t.status=$3) AND ($4::text IS NULL OR t.priority=$4) AND ($5::uuid IS NULL OR t.assignee_id=$5) AND (($6::boolean AND t.archived_at IS NOT NULL) OR (NOT $6::boolean AND t.archived_at IS NULL)) AND ($7::text IS NULL OR ($7='overdue' AND t.due_at<now() AND t.status<>'done') OR ($7='upcoming' AND t.due_at>=now() AND t.due_at<now()+interval '7 days') OR ($7='none' AND t.due_at IS NULL)) ORDER BY t.status,t.position,t.id LIMIT 501`,
     [userId, channelId, status, priority, assigned, params.get("archived") === "true", deadline],
+  );
+  return { tasks: rows.rows.slice(0, 500), truncated: rows.rows.length > 500 };
+}
+/** "Công việc": tasks in every channel the user can see, assigned to them unless assignee=all. */
+export async function listAllTasks(userId: string, params = new URLSearchParams()) {
+  const assignee = params.get("assignee") ?? "me",
+    workspace = params.get("workspace"),
+    status = params.get("status"),
+    priority = params.get("priority"),
+    deadline = params.get("deadline");
+  if (assignee !== "me" && assignee !== "all") throw new HttpError(400, "INVALID_FILTER", "Bộ lọc người phụ trách không hợp lệ.");
+  if (workspace) validateId(workspace);
+  if (status) choice(status, statuses);
+  if (priority) choice(priority, priorities);
+  if (deadline && !["overdue", "upcoming", "none"].includes(deadline))
+    throw new HttpError(400, "INVALID_FILTER", "Bộ lọc hạn không hợp lệ.");
+  const rows = await query<TaskBoardItem>(
+    `${projection.replace(" FROM tasks t", `,w.id AS "workspaceId",w.name AS "workspaceName",c.name AS "channelName",(w.archived_at IS NOT NULL) AS "workspaceArchived" FROM tasks t JOIN channels c ON c.id=t.channel_id JOIN workspaces w ON w.id=c.workspace_id`)} WHERE ($2::uuid IS NULL OR w.id=$2) AND (NOT $3::boolean OR t.assignee_id=$1) AND ($4::text IS NULL OR t.status=$4) AND ($5::text IS NULL OR t.priority=$5) AND (($6::boolean AND t.archived_at IS NOT NULL) OR (NOT $6::boolean AND t.archived_at IS NULL)) AND ($7::text IS NULL OR ($7='overdue' AND t.due_at<now() AND t.status<>'done') OR ($7='upcoming' AND t.due_at>=now() AND t.due_at<now()+interval '7 days') OR ($7='none' AND t.due_at IS NULL)) ORDER BY t.status,t.due_at NULLS LAST,t.updated_at DESC,t.id LIMIT 501`,
+    [userId, workspace, assignee === "me", status, priority, params.get("archived") === "true", deadline],
   );
   return { tasks: rows.rows.slice(0, 500), truncated: rows.rows.length > 500 };
 }

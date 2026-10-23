@@ -3,7 +3,7 @@ import { getAuthUserId, readJson, sendJson } from "../../shared/http/utils.js";
 import { HttpError } from "../../shared/http/http-error.js";
 import { query } from "../../infrastructure/database/db.js";
 import { limitRequest } from "../../shared/http/rate-limit.js";
-import { createTask, getTask, listTasks, mutateTask } from "./service.js";
+import { createTask, getTask, listAllTasks, listTasks, mutateTask } from "./service.js";
 export async function taskRoutes({
   request,
   response,
@@ -11,6 +11,12 @@ export async function taskRoutes({
   pathname,
   params,
 }: RouteContext): Promise<void> {
+  if (pathname === "/api/tasks" && request.method === "GET") {
+    const userId = await getAuthUserId(request);
+    response.setHeader("Cache-Control", "no-store");
+    sendJson(response, 200, await listAllTasks(userId, params));
+    return;
+  }
   const boardRoute = pathname.match(/^\/api\/channels\/([^/]+)\/tasks$/);
   const taskRoute = pathname.match(/^\/api\/tasks\/([^/]+)$/);
   if (boardRoute || taskRoute) {

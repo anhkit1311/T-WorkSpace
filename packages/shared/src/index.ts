@@ -270,6 +270,13 @@ export interface TaskItem {
   checklistTotal: number;
   checklistDone: number;
 }
+/** A task on the "Công việc" page, which gathers every group the user belongs to. */
+export interface TaskBoardItem extends TaskItem {
+  workspaceId: string;
+  workspaceName: string;
+  channelName: string;
+  workspaceArchived: boolean;
+}
 export interface TaskDetail extends TaskItem {
   checklist: { id: string; label: string; done: boolean }[];
   comments: {
