@@ -1677,3 +1677,114 @@
     animation: none;
   }
 }
+
+/* "Tin nhắn" gathers every group: one collapsible section per group, direct conversations last. */
+.chat-nav-group {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.chat-nav-group__head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 2px;
+}
+
+.chat-nav-group__toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-nav-group__toggle:hover {
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.chat-nav-group__toggle:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.chat-nav-group__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-nav-group__tag {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.chat-header-group {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.chat-header-meet-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chat-header-meet-btn:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-soft);
+}
+
+.chat-header-meet-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .chat-header-group {
+    display: none;
+  }
+
+  .chat-header-meet-btn span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .chat-header-meet-btn {
+    padding: 0 8px;
+  }
+}

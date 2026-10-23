@@ -9,7 +9,7 @@ export function MessagesPage() {
         <div>
           <h1 className="messages-page__title">Tin nhắn</h1>
           <p className="messages-page__subtitle">
-            Nhắn tin trực tiếp với đồng nghiệp; kênh nhóm nằm trong tab Trao đổi của từng nhóm
+            Kênh của mọi nhóm bạn tham gia và trò chuyện riêng với đồng nghiệp
           </p>
         </div>
       </header>

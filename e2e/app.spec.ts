@@ -120,4 +120,24 @@ test("tài khoản chưa có nhóm thấy hướng dẫn tạo nhóm", async ({ 
   await page.goto("/app/groups");
   await expect(page.locator("main").getByRole("button", { name: "Tạo nhóm" }).first()).toBeVisible();
   await expect(page.locator("main").getByRole("button", { name: "Nhập mã mời" }).first()).toBeVisible();
+  await page.goto("/app/chat");
+  await expect(page.locator("main").getByRole("button", { name: "Tạo nhóm" }).first()).toBeVisible();
+});
+
+test("Tin nhắn liệt kê kênh của nhóm và gửi được tin", async ({ browser }) => {
+  const { users, workspaceId } = fixtures();
+  const page = await signedIn(browser, users.alice);
+  await page.goto("/app/chat");
+  const nav = page.getByRole("navigation", { name: "Hội thoại" });
+  await expect(nav.getByText(/^E2E \d+$/)).toBeVisible();
+  await expect(nav.getByRole("button", { name: /#tong-quan/ })).toBeVisible();
+  await nav.getByRole("button", { name: /#tong-quan/ }).click();
+  const text = `xin chào e2e ${Date.now()}`;
+  await page.locator("#chat-message").fill(text);
+  await page.locator("#chat-message").press("Enter");
+  await expect(page.locator(".message-row__text").getByText(text)).toBeVisible();
+  // An old group link lands on the same page, in that group's channel.
+  await page.goto(`/app/workspace?workspace=${workspaceId}`);
+  await expect(page).toHaveURL(/\/app\/chat\?workspace=/);
+  await expect(page.locator(".message-row__text").getByText(text)).toBeVisible();
 });
