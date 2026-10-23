@@ -12,129 +12,6 @@
   color: var(--text);
 }
 
-.meeting-page-title {
-  margin: 0 0 4px;
-  color: var(--text);
-  font-style: normal;
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.15;
-  letter-spacing: normal;
-}
-
-.meeting-page-description {
-  max-width: 65ch;
-  margin: 0 0 24px;
-  color: var(--text-secondary);
-  font-size: 14.5px;
-  line-height: 1.6;
-}
-
-/* --------------------------------------------------------------------------
-   Room Selection & Cards Grid (Divided Columns inside Unified Frame)
-   -------------------------------------------------------------------------- */
-.meeting-rooms-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.meeting-section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0;
-}
-
-.meeting-section-header h3 {
-  font-style: normal;
-  font-size: var(--nexo-fs-col, 17.5px);
-  font-weight: 600;
-  color: var(--nexo-text-primary, #1C1B19);
-  margin: 0;
-  letter-spacing: -0.015em;
-}
-
-.meeting-room-card {
-  width: 100%;
-  min-height: 64px;
-  padding: 16px 28px;
-  border: 0;
-  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA);
-  border-radius: 0;
-  background: transparent;
-  cursor: pointer;
-  text-align: left;
-  transition:
-    transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
-    background-color 150ms ease,
-    border-color 150ms ease,
-    box-shadow 150ms ease;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  box-shadow: none;
-}
-
-.meeting-room-card:hover {
-  background: var(--nexo-bg-subtle, #EEECE7);
-  transform: none;
-  box-shadow: none;
-}
-
-.meeting-room-card.is-selected {
-  background: var(--nexo-bg-ivory, #FAF9F6);
-  box-shadow: inset 2px 0 0 var(--primary);
-}
-
-.meeting-room-card:active {
-  transform: scale(0.97);
-}
-
-.meeting-room-card:focus-visible {
-  outline: 2px solid var(--nexo-text-primary, #1C1B19);
-  outline-offset: -2px;
-}
-
-.meeting-room-card__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.meeting-room-card__icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 9999px;
-  background: var(--nexo-bg-subtle, #EEECE7);
-  color: var(--nexo-text-primary, #1C1B19);
-  display: inline-grid;
-  place-items: center;
-  flex-shrink: 0;
-}
-
-.meeting-room-card__title {
-  font-family: var(--font-body, 'Inter', sans-serif);
-  font-size: 15.5px;
-  font-weight: 600;
-  color: var(--nexo-text-primary, #1C1B19);
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.meeting-room-card__meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-left: 56px;
-  font-size: 12.5px;
-  color: var(--nexo-text-muted, #8A8780);
-  flex-wrap: wrap;
-}
-
 .meeting-device-error {
   display: flex;
   align-items: center;
@@ -146,26 +23,6 @@
   background: rgba(239, 68, 68, 0.08);
   color: #b91c1c;
   font-size: 13px;
-}
-
-.meeting-history {
-  margin-top: 0;
-  border-top: 1px solid var(--nexo-border-beige, #E6E2DA);
-  padding: 28px clamp(28px, 3.2vw, 44px);
-}
-
-.meeting-history h2 {
-  margin: 0 0 16px;
-  color: var(--nexo-text-primary, #1C1B19);
-  font-style: normal;
-  font-size: var(--nexo-fs-col, 17.5px);
-  font-weight: 600;
-}
-
-.meeting-history > p {
-  color: var(--nexo-text-muted, #8A8780);
-  font-size: 14px;
-  margin: 16px 0 0;
 }
 
 .meeting-history-list {
@@ -188,7 +45,6 @@
   flex-direction: column;
   gap: 24px;
 }
-
 
 .meeting-preview-screen {
   position: relative;
@@ -470,8 +326,6 @@
   height: 8px;
   animation-delay: 0.36s;
 }
-
-
 
 .meeting-reconnecting-overlay {
   position: absolute;
@@ -796,17 +650,6 @@
   font-size: 24px;
   letter-spacing: -0.02em;
 }
-.meeting-lobby-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
-  gap: 20px;
-  align-items: start;
-}
-.meeting-lobby-main {
-  display: grid;
-  gap: 16px;
-  min-width: 0;
-}
 .meeting-lobby-main > .meeting-rooms-section,
 .meeting-lobby-main > .meeting-schedules,
 .meeting-lobby-main > .meeting-history,
@@ -816,40 +659,12 @@
   border-radius: 14px;
   background: var(--surface);
 }
-.meeting-rooms-section {
-  gap: 4px;
-}
-.meeting-rooms-section .meeting-section-header h2,
-.meeting-lobby-main .meeting-schedules-head h2,
-.meeting-lobby-main .meeting-history h2 {
-  margin: 0 0 8px;
-  color: var(--text);
-  font-size: 16px;
-}
-.meeting-rooms-section .meeting-filter-row {
-  margin-bottom: 8px;
-}
-.meeting-rooms-section .meeting-room-card {
-  padding: 12px;
-  border: 0;
-  border-radius: 12px;
-}
-.meeting-rooms-section .meeting-room-card.is-selected {
-  background: var(--primary-soft);
-  box-shadow: inset 3px 0 0 var(--primary-text);
-}
-.meeting-lobby-main .meeting-history {
-  border-top: 1px solid var(--border);
-}
 .meeting-lobby-preview-box {
   position: sticky;
   top: 16px;
   gap: 16px;
 }
 @media (max-width: 1024px) {
-  .meeting-lobby-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
   /* Device check first on small screens: it is what the user came to do. */
   .meeting-lobby-preview-box {
     position: static;

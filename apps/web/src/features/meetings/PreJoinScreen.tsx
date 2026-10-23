@@ -12,7 +12,7 @@ export type PreJoinChoice = JoinMediaOptions & { outputDeviceId: string };
 /** The check before entering one room: preview camera and mic, pick devices, see who is already in. */
 export function PreJoinScreen({
   room,
-  title,
+  scheduleId,
   autoPreview,
   joining,
   onJoin,
@@ -20,7 +20,7 @@ export function PreJoinScreen({
   onBack,
 }: {
   room: { id: string; name: string; workspaceId: string; workspace: string };
-  title?: string;
+  scheduleId?: string;
   /** Off while a dropped call rejoins on its own, so the preview does not compete for the camera. */
   autoPreview: boolean;
   joining: boolean;
@@ -44,21 +44,25 @@ export function PreJoinScreen({
   const [outputDeviceId, setOutputDeviceId] = useState("");
   const [quality, setQuality] = useState<"low" | "standard" | "high">("standard");
   const [people, setPeople] = useState<string[] | null>(null);
+  const [title, setTitle] = useState<string>();
   const previewVideoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     if (!accessToken) return;
     let active = true;
     const now = Date.now();
-    getMeetingCalendarApi(accessToken, new Date(now - 86_400_000), new Date(now + 60_000))
+    // From yesterday (a meeting still running) to next week (joining a schedule early).
+    getMeetingCalendarApi(accessToken, new Date(now - 86_400_000), new Date(now + 7 * 86_400_000))
       .then((calendar) => {
-        if (active) setPeople(calendar.sessions.find((session) => session.roomId === room.id && !session.endedAt)?.people ?? []);
+        if (!active) return;
+        setPeople(calendar.sessions.find((session) => session.roomId === room.id && !session.endedAt)?.people ?? []);
+        setTitle(calendar.schedules.find((item) => item.id === scheduleId)?.title);
       })
       .catch(() => active && setPeople(null));
     return () => {
       active = false;
     };
-  }, [accessToken, room.id]);
+  }, [accessToken, room.id, scheduleId]);
 
   useEffect(() => {
     if (!previewEnabled || !navigator.mediaDevices?.enumerateDevices) return;

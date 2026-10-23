@@ -124,6 +124,7 @@ test("tài khoản chưa có nhóm thấy hướng dẫn tạo nhóm", async ({ 
   await expect(page.locator("main").getByRole("button", { name: "Tạo nhóm" }).first()).toBeVisible();
   await page.goto("/app/tasks");
   await expect(page.locator("main").getByRole("button", { name: "Tạo nhóm" }).first()).toBeVisible();  await page.goto("/app/files");
+  await expect(page.locator("main").getByRole("button", { name: "Tạo nhóm" }).first()).toBeVisible();  await page.goto("/app/meetings");
   await expect(page.locator("main").getByRole("button", { name: "Tạo nhóm" }).first()).toBeVisible();
 });
 
@@ -175,4 +176,27 @@ test("Tài liệu: tải tệp lên nhóm rồi tìm thấy", async ({ browser }
   const row = page.getByRole("listitem").filter({ hasText: name });
   await expect(row).toBeVisible();
   await expect(row.getByText(group, { exact: true })).toBeVisible();
+});
+
+test("Họp: lên lịch rồi thấy trên lịch tuần, vào được phòng", async ({ browser }) => {
+  test.setTimeout(90_000);
+  const page = await signedIn(browser, fixtures().users.alice);
+  await page.goto("/app/meetings");
+  await page.getByRole("button", { name: "Lên lịch" }).click();
+  const dialog = page.getByRole("dialog");
+  const group = (await dialog.getByLabel("Nhóm").locator("option").filter({ hasText: /^E2E \d+$/ }).first().textContent()) ?? "";
+  await dialog.getByLabel("Nhóm").selectOption({ label: group });
+  const title = `Họp e2e ${Date.now()}`;
+  await dialog.getByLabel("Tên cuộc họp").fill(title);
+  await dialog.getByRole("button", { name: "Tạo lịch họp" }).click();
+  await expect(dialog).toHaveCount(0);
+  // Created an hour from now: on this week's grid, or next week's once that hour is past Sunday.
+  await page.getByRole("button", { name: new RegExp(title) }).click();
+  await page.getByRole("button", { name: "Vào", exact: true }).click();
+  await page.getByRole("button", { name: "Vào phòng" }).click();
+  await expect.poll(() => playingVideos(page), { timeout: 30_000 }).toBeGreaterThanOrEqual(1);
+  // In a call the item reads "Họp đang diễn ra".
+  await page.locator(".tdtu-sidebar").getByRole("button", { name: /^Họp( |$)/ }).click();
+  await expect.poll(() => playingVideos(page), { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
+  await expect(page.getByRole("button", { name: "Hôm nay" })).toHaveCount(0);
 });

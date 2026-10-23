@@ -1,15 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import type { ChatMessageItem, MeetingScheduleItem, WorkspaceItem, MeetingState } from "@doan/shared";
+import type { ChatMessageItem, WorkspaceItem, MeetingState } from "@doan/shared";
 import { getChannelsApi, getMessagesApi, getWorkspacesApi } from "../chat/api";
-import {
-  getMeetingHistoryApi,
-  getMeetingSchedulesApi,
-  saveMeetingScheduleApi,
-  cancelMeetingScheduleApi,
-  getDialInApi,
-  downloadMeetingAttendanceApi,
-  type MeetingHistoryItem,
-} from "./api";
+import { getDialInApi, downloadMeetingAttendanceApi } from "./api";
+import { MeetingsCalendar } from "./MeetingsCalendar";
 import { useApp } from "../../app/providers/AppContext";
 import { useMeeting, type RemotePeer } from "../../app/providers/MeetingContext";
 import { bestGridLayout, layerForTile, pageSizeFor, paginate } from "./grid-layout";
@@ -24,12 +17,11 @@ import { MeetingControls } from "./MeetingControls";
 import { MeetingOutcomesPanel } from "./MeetingOutcomesPanel";
 import { PreJoinScreen, type PreJoinChoice } from "./PreJoinScreen";
 import { useSocket } from "../../app/providers/SocketContext";
-import { Button, Chip, IconButton, ListItem, ConfirmDialog } from "../../shared/ui/Primitives";
+import { Button, IconButton, ConfirmDialog } from "../../shared/ui/Primitives";
 import { AnimatePresence } from "motion/react";
 import { meetingShortcut } from "../../shared/lib/interaction";
 import { Icon } from "../../shared/ui/Icon";
 import "./meeting-ui.css";
-import "./meeting-schedules.css";
 import "./meeting-panels.css";
 
 type Room = {
@@ -41,50 +33,12 @@ type Room = {
 };
 
 /** Room filters from real data: schedules and the user's role in the group. */
-export const MEETING_BRANCH_PILLS = ["Tất cả", "Có lịch sắp tới", "Nhóm tôi quản lý"] as const;
-
 const NETWORK_CAP_LABEL: Record<string, string> = {
   2: "Tốt (theo ô hiển thị)",
   1: "Đã hạ xuống trung bình (mạng yếu)",
   0: "Đã hạ xuống thấp (mạng yếu)",
   null: "Chỉ âm thanh (mạng rất yếu)",
 };
-
-function localDateTime(date: Date) {
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-}
-
-function downloadCalendarEvent(item: MeetingScheduleItem) {
-  const escape = (value: string) =>
-    value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
-  const stamp = (value: string) =>
-    new Date(value)
-      .toISOString()
-      .replace(/[-:]/g, "")
-      .replace(/\.\d{3}/, "");
-  const calendar = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//nexo//Meeting Schedule//VI",
-    "BEGIN:VEVENT",
-    `UID:${item.id}@collabspace`,
-    `DTSTAMP:${stamp(new Date().toISOString())}`,
-    `DTSTART:${stamp(item.startsAt)}`,
-    `DTEND:${stamp(item.endsAt)}`,
-    `SUMMARY:${escape(item.title)}`,
-    `DESCRIPTION:${escape(item.description)}`,
-    `LOCATION:${escape(`${item.workspaceName} - ${item.roomName} (nexo)`)}`,
-    "END:VEVENT",
-    "END:VCALENDAR",
-    "",
-  ].join("\r\n");
-  const url = URL.createObjectURL(new Blob([calendar], { type: "text/calendar;charset=utf-8" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `lich-hop-${item.id.slice(0, 8)}.ics`;
-  link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-}
 
 // Video elements never play sound: remote audio plays once, from the stable <Audio> list in the room.
 /** A student number (8 digits starting with 5) when the display name carries one. */
@@ -318,32 +272,16 @@ function ParticipantTile({
 }
 
 export function MeetingPage() {
-  const { accessToken, user, notify, setActiveView, route, navigate, openChannel } = useApp();
+  const { accessToken, user, notify, route, navigate, openChannel } = useApp();
   const meeting = useMeeting();
   const { isConnected, socket, joinChannel, leaveChannel, sendMessage } = useSocket();
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [groups, setGroups] = useState<WorkspaceItem[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [participantCount, setParticipantCount] = useState(1);
   const [exportingAttendance, setExportingAttendance] = useState(false);
   const [error, setError] = useState("");
-  const [history, setHistory] = useState<MeetingHistoryItem[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(true);
-  const [historyError, setHistoryError] = useState("");
-  const [schedules, setSchedules] = useState<MeetingScheduleItem[]>([]);
-  const [schedulesLoading, setSchedulesLoading] = useState(true);
-  const [schedulesError, setSchedulesError] = useState("");
-  const [scheduleFormOpen, setScheduleFormOpen] = useState(false);
-  const [editingScheduleId, setEditingScheduleId] = useState("");
-  const [scheduleTitle, setScheduleTitle] = useState("");
-  const [scheduleDescription, setScheduleDescription] = useState("");
-  const [scheduleAgenda, setScheduleAgenda] = useState("");
-  const [scheduleRoomId, setScheduleRoomId] = useState("");
-  const [scheduleStart, setScheduleStart] = useState("");
-  const [scheduleEnd, setScheduleEnd] = useState("");
-  const [savingSchedule, setSavingSchedule] = useState(false);
-  const [cancelScheduleId, setCancelScheduleId] = useState("");
-
   const [outputDeviceId, setOutputDeviceId] = useState("");
   // Devices chosen before joining, reused when the waiting room lets the user in.
   const joinChoice = useRef<PreJoinChoice | null>(null);
@@ -374,7 +312,6 @@ export function MeetingPage() {
   const [sidePanel, setSidePanel] = useState<
     "none" | "people" | "chat" | "notes"
   >("none");
-  const [meetingPill, setMeetingPill] = useState<string>("Tất cả");
 
   const [callMessages, setCallMessages] = useState<ChatMessageItem[]>([]);
   const [callDraft, setCallDraft] = useState("");
@@ -470,6 +407,7 @@ export function MeetingPage() {
     let mounted = true;
     getWorkspacesApi(accessToken)
       .then(async (workspaces) => {
+        if (mounted) setGroups(workspaces);
         const lists = await Promise.all(
           workspaces.map(async (workspace) =>
             (await getChannelsApi(accessToken, workspace.id))
@@ -503,79 +441,11 @@ export function MeetingPage() {
     };
   }, [accessToken]);
 
-  useEffect(() => {
-    if (!accessToken || meeting.inCall) return;
-    let active = true;
-    setHistoryLoading(true);
-    getMeetingHistoryApi(accessToken)
-      .then((items) => {
-        if (active) {
-          setHistory(items);
-          setHistoryError("");
-        }
-      })
-      .catch((cause: unknown) => {
-        if (active)
-          setHistoryError(
-            cause instanceof Error ? cause.message : "Không tải được lịch sử cuộc họp.",
-          );
-      })
-      .finally(() => {
-        if (active) setHistoryLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [accessToken, meeting.inCall]);
-
-  useEffect(() => {
-    if (!accessToken || meeting.inCall) return;
-    let active = true;
-    setSchedulesLoading(true);
-    getMeetingSchedulesApi(accessToken)
-      .then((items) => {
-        if (active) {
-          setSchedules(items);
-          setSchedulesError("");
-        }
-      })
-      .catch((cause) => {
-        if (active)
-          setSchedulesError(cause instanceof Error ? cause.message : "Không tải được lịch họp.");
-      })
-      .finally(() => {
-        if (active) setSchedulesLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [accessToken, meeting.inCall]);
-
-  const visibleRooms = route.workspaceId
-    ? rooms.filter((room) => room.workspaceId === route.workspaceId)
-    : rooms;
-  const visibleSchedules = route.workspaceId
-    ? schedules.filter((item) => item.workspaceId === route.workspaceId)
-    : schedules;
-
-  const scheduledRooms = new Set(visibleSchedules.filter((item) => new Date(item.endsAt) > new Date()).map((item) => item.roomId));
-  const pillMatches = (pill: string, room: Room) =>
-    pill === "Có lịch sắp tới"
-      ? scheduledRooms.has(room.id)
-      : pill === "Nhóm tôi quản lý"
-        ? room.role === "owner" || room.role === "admin"
-        : true;
   const roleLabel = (userId?: string) => {
     const role = meetingState?.participants.find((person) => person.userId === userId)?.role;
     return role === "host" ? "Chủ trì" : role === "cohost" ? "Đồng chủ trì" : "Thành viên";
   };
-  const pillCount = (pill: string) => visibleRooms.filter((room) => pillMatches(pill, room)).length;
-  const filteredRooms = visibleRooms.filter((room) => {
-    return pillMatches(meetingPill, room);
-  });
-  const displayRooms = filteredRooms.length ? filteredRooms : visibleRooms;
-  const selectedId = route.channelId ?? "";
-  const selected = rooms.find((room) => room.id === selectedId);
+  const selected = rooms.find((room) => room.id === route.channelId);
 
   // The register comes from the server (join/leave of every connection); only the host and co-hosts keep it.
   const myMeetingRole = meetingState?.participants.find((person) => person.userId === user?.id)?.role;
@@ -604,6 +474,11 @@ export function MeetingPage() {
     setJoining(true);
     setError("");
     joinChoice.current = choice;
+    try {
+      localStorage.setItem("meeting:lastWorkspace", rooms.find((item) => item.id === roomId)?.workspaceId ?? "");
+    } catch {
+      // Storage may be blocked; "Họp ngay" then starts from the first group.
+    }
     if (choice) setOutputDeviceId(choice.outputDeviceId);
     try {
       const room = rooms.find((item) => item.id === roomId);
@@ -624,84 +499,6 @@ export function MeetingPage() {
     }
   }
 
-  function openScheduleForm(item?: MeetingScheduleItem) {
-    const start = new Date(Date.now() + 3_600_000);
-    start.setMinutes(0, 0, 0);
-    if (start.getTime() < Date.now() + 60_000) start.setHours(start.getHours() + 1);
-    setEditingScheduleId(item?.id ?? "");
-    setScheduleTitle(item?.title ?? "");
-    setScheduleDescription(item?.description ?? "");
-    setScheduleAgenda((item?.agenda ?? []).join("\n"));
-    setScheduleRoomId(item?.roomId ?? selectedId ?? visibleRooms[0]?.id ?? rooms[0]?.id ?? "");
-    setScheduleStart(localDateTime(item ? new Date(item.startsAt) : start));
-    setScheduleEnd(
-      localDateTime(item ? new Date(item.endsAt) : new Date(start.getTime() + 3_600_000)),
-    );
-    setSchedulesError("");
-    setScheduleFormOpen(true);
-  }
-
-  async function submitSchedule(event: FormEvent) {
-    event.preventDefault();
-    if (!accessToken) return;
-    const startsAt = new Date(scheduleStart);
-    const endsAt = new Date(scheduleEnd);
-    if (!Number.isFinite(startsAt.getTime()) || !Number.isFinite(endsAt.getTime())) {
-      setSchedulesError("Chọn thời gian bắt đầu và kết thúc hợp lệ.");
-      return;
-    }
-    setSavingSchedule(true);
-    setSchedulesError("");
-    try {
-      const saved = await saveMeetingScheduleApi(
-        accessToken,
-        {
-          roomId: scheduleRoomId,
-          title: scheduleTitle.trim(),
-          description: scheduleDescription.trim(),
-          agenda: scheduleAgenda
-            .split("\n")
-            .map((line) => line.replace(/^\s*[-•*]\s*/, "").trim())
-            .filter(Boolean),
-          startsAt: startsAt.toISOString(),
-          endsAt: endsAt.toISOString(),
-        },
-        editingScheduleId || undefined,
-      );
-      setSchedules((previous) =>
-        [...previous.filter((item) => item.id !== saved.id), saved].sort(
-          (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
-        ),
-      );
-      setScheduleFormOpen(false);
-      notify(
-        "Đã lưu lịch họp",
-        `${saved.title} · ${new Date(saved.startsAt).toLocaleString("vi-VN")}`,
-        "success",
-      );
-    } catch (cause) {
-      setSchedulesError(cause instanceof Error ? cause.message : "Không lưu được lịch họp.");
-    } finally {
-      setSavingSchedule(false);
-    }
-  }
-
-  async function cancelSchedule(id: string) {
-    if (!accessToken) return;
-    setSavingSchedule(true);
-    try {
-      await cancelMeetingScheduleApi(accessToken, id);
-      setSchedules((previous) => previous.filter((item) => item.id !== id));
-      setSchedulesError("");
-      setCancelScheduleId("");
-      notify("Đã huỷ lịch họp", "Lịch họp đã được gỡ khỏi danh sách của nhóm.", "success");
-    } catch (cause) {
-      setSchedulesError(cause instanceof Error ? cause.message : "Không huỷ được lịch họp.");
-    } finally {
-      setSavingSchedule(false);
-    }
-  }
-
   async function sendCallChat(event: FormEvent) {
     event.preventDefault();
     const text = callDraft.trim();
@@ -717,16 +514,6 @@ export function MeetingPage() {
       setCallChatError(reason instanceof Error ? reason.message : "Không gửi được tin nhắn.");
     }
   }
-
-  const renderRoleBadge = (role: WorkspaceItem["role"]) => {
-    if (role === "owner") {
-      return <Chip icon="admin">Chủ nhóm</Chip>;
-    }
-    if (role === "admin") {
-      return <Chip icon="admin">Quản trị viên</Chip>;
-    }
-    return <Chip icon="users">Thành viên</Chip>;
-  };
 
   // ----- Dynamic grid -----
   useEffect(() => {
@@ -894,7 +681,7 @@ export function MeetingPage() {
               <PreJoinScreen
                 key={selected.id}
                 room={selected}
-                title={schedules.find((item) => item.id === route.scheduleId)?.title}
+                scheduleId={route.scheduleId}
                 autoPreview={!meeting.interruptedRoomId}
                 joining={joining}
                 onJoin={(choice) => enterRoom(selected.id, route.scheduleId, choice)}
@@ -915,311 +702,7 @@ export function MeetingPage() {
               </section>
             )
           ) : (
-          <>
-          <header className="page-hero meeting-lobby__head">
-            <h1 className="meeting-page-title">Họp trực tuyến</h1>
-            <p className="meeting-page-description">
-              Chọn cuộc họp hoặc phòng của nhóm, kiểm tra camera và micro rồi vào phòng.
-            </p>
-          </header>
-          <div className="meeting-lobby-grid">
-            <div className="meeting-lobby-main">
-              {loading ? (
-                <>
-                  <p role="status" className="loading-note">
-                    Đang tải danh sách phòng họp…
-                  </p>
-                </>
-              ) : visibleRooms.length === 0 ? (
-                <>
-                  <div className="state-card state-card--compact">
-                    <span className="state-card__icon">
-                      <Icon name="video" size={26} />
-                    </span>
-                    <h3>Chưa có phòng họp nào</h3>
-                    <p>
-                      Nhóm này hiện chưa có phòng họp khả dụng hoặc đã lưu trữ. Hãy kiểm tra cài đặt
-                      kênh của nhóm.
-                    </p>
-                    <Button variant="secondary" size="sm" onClick={() => setActiveView("overview")}>
-                      Xem nhóm làm việc
-                    </Button>
-                  </div>
-                </>
-              ) : (
-              <section className="meeting-rooms-section" aria-label="Phòng của các nhóm">
-                <div className="meeting-section-header">
-                  <h2>Phòng của các nhóm</h2>
-                </div>
-                <div className="meeting-filter-row" role="tablist" aria-label="Bộ lọc phân loại hội nghị">
-                  {MEETING_BRANCH_PILLS.filter((pill) => pill === "Tất cả" || pill === meetingPill || pillCount(pill) > 0).map((pill) => (
-                    <button
-                      key={pill}
-                      type="button"
-                      className={`meeting-filter-pill ${meetingPill === pill ? "is-active" : ""}`}
-                      onClick={() => setMeetingPill(pill)}
-                    >
-                      {pill} ({pillCount(pill)})
-                    </button>
-                  ))}
-                </div>
-                {displayRooms.map((room) => (
-                  <button
-                    type="button"
-                    key={room.id}
-                    className={`meeting-room-card ${room.id === selectedId ? "is-selected" : ""}`}
-                    aria-pressed={room.id === selectedId}
-                    onClick={() => openChannel(room.workspaceId, room.id, true)}
-                  >
-                    <div className="meeting-room-card__header">
-                      <h4 className="meeting-room-card__title">
-                        <span className="meeting-room-card__icon" aria-hidden="true">
-                          <Icon name="video" size={18} />
-                        </span>
-                        {room.name}
-                      </h4>
-                      {renderRoleBadge(room.role)}
-                    </div>
-                    <div className="meeting-room-card__meta">
-                      <span>
-                        Thuộc nhóm: <strong>{room.workspace}</strong>
-                      </span>
-                      <span>· Có thể tham gia</span>
-                    </div>
-                  </button>
-                ))}
-              </section>
-              )}
-              <section className="meeting-schedules" aria-label="Lịch họp sắp tới">
-                <div className="meeting-schedules-head">
-                  <div>
-                    <h2>Lịch họp sắp tới</h2>
-                    <p>Lên kế hoạch trong phòng của nhóm và tham gia trực tiếp khi đến giờ.</p>
-                  </div>
-                  {visibleRooms.length > 0 && (
-                    <Button
-                      size="sm"
-                      icon="plus"
-                      onClick={() =>
-                        scheduleFormOpen ? setScheduleFormOpen(false) : openScheduleForm()
-                      }
-                    >
-                      {scheduleFormOpen ? "Đóng biểu mẫu" : "Lên lịch họp"}
-                    </Button>
-                  )}
-                </div>
-                {scheduleFormOpen && (
-                  <form className="meeting-schedule-form" onSubmit={submitSchedule}>
-                    <div className="meeting-schedule-form-grid">
-                      <label className="meeting-schedule-wide">
-                        Tên cuộc họp
-                        <input
-                          required
-                          minLength={3}
-                          maxLength={120}
-                          value={scheduleTitle}
-                          onChange={(event) => setScheduleTitle(event.target.value)}
-                          placeholder="Ví dụ: Họp tiến độ đồ án"
-                        />
-                      </label>
-                      <label>
-                        Phòng họp
-                        <select
-                          required
-                          value={scheduleRoomId}
-                          onChange={(event) => setScheduleRoomId(event.target.value)}
-                        >
-                          {visibleRooms
-                            .filter(
-                              (room) =>
-                                !editingScheduleId ||
-                                room.workspaceId ===
-                                  schedules.find((item) => item.id === editingScheduleId)?.workspaceId,
-                            )
-                            .map((room) => (
-                              <option key={room.id} value={room.id}>
-                                {room.workspace} · {room.name}
-                              </option>
-                            ))}
-                        </select>
-                      </label>
-                      <label>
-                        Bắt đầu
-                        <input
-                          required
-                          type="datetime-local"
-                          value={scheduleStart}
-                          onChange={(event) => setScheduleStart(event.target.value)}
-                        />
-                      </label>
-                      <label>
-                        Kết thúc
-                        <input
-                          required
-                          type="datetime-local"
-                          value={scheduleEnd}
-                          onChange={(event) => setScheduleEnd(event.target.value)}
-                        />
-                      </label>
-                      <label className="meeting-schedule-wide">
-                        Nội dung chuẩn bị
-                        <textarea
-                          rows={2}
-                          maxLength={1000}
-                          value={scheduleDescription}
-                          onChange={(event) => setScheduleDescription(event.target.value)}
-                          placeholder="Nội dung, tài liệu cần chuẩn bị…"
-                        />
-                      </label>
-                      <label className="meeting-schedule-wide">
-                        Agenda (mỗi dòng một mục)
-                        <textarea
-                          rows={3}
-                          value={scheduleAgenda}
-                          onChange={(event) => setScheduleAgenda(event.target.value)}
-                          placeholder={"Báo cáo tiến độ\nPhân công tuần tới"}
-                        />
-                      </label>
-                    </div>
-                    <div className="meeting-schedule-form-actions">
-                      <span>Thời gian theo múi giờ của thiết bị bạn.</span>
-                      <Button
-                        type="submit"
-                        size="sm"
-                        loading={savingSchedule}
-                        disabled={savingSchedule}
-                      >
-                        {editingScheduleId ? "Lưu thay đổi" : "Tạo lịch họp"}
-                      </Button>
-                    </div>
-                  </form>
-                )}
-                {schedulesError && (
-                  <p className="meeting-schedule-error" role="alert">
-                    {schedulesError}
-                  </p>
-                )}
-                {schedulesLoading ? (
-                  <p className="meeting-schedule-empty" role="status">
-                    Đang tải lịch họp…
-                  </p>
-                ) : visibleSchedules.length === 0 ? (
-                  <p className="meeting-schedule-empty">Chưa có lịch họp sắp tới trong nhóm này.</p>
-                ) : (
-                  <div className="meeting-schedule-list">
-                    {visibleSchedules.map((item) => {
-                      const start = new Date(item.startsAt);
-                      const end = new Date(item.endsAt);
-                      return (
-                        <article className="meeting-schedule-item" key={item.id}>
-                          <div className="meeting-schedule-date">
-                            <strong>
-                              {start.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })}
-                            </strong>
-                            <span>
-                              {start.toLocaleTimeString("vi-VN", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </span>
-                          </div>
-                          <div className="meeting-schedule-content">
-                            <h3>{item.title}</h3>
-                            <p>
-                              {item.workspaceName} · {item.roomName} · đến{" "}
-                              {end.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
-                            </p>
-                            {item.description && (
-                              <p className="meeting-schedule-description">{item.description}</p>
-                            )}
-                            <span>Tạo bởi {item.organizerName}</span>
-                          </div>
-                          <div className="meeting-schedule-actions">
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              icon="video"
-                              onClick={() => navigate({ view: "meetings", workspaceId: item.workspaceId, channelId: item.roomId, scheduleId: item.id })}
-                            >
-                              Tham gia
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="text"
-                              icon="calendar"
-                              onClick={() => downloadCalendarEvent(item)}
-                            >
-                              Thêm vào lịch
-                            </Button>
-                            {item.canManage && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="text"
-                                  icon="edit"
-                                  onClick={() => openScheduleForm(item)}
-                                >
-                                  Sửa
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="text"
-                                  onClick={() => setCancelScheduleId(item.id)}
-                                >
-                                  Huỷ lịch
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-              <section className="meeting-history" aria-label="Lịch sử cuộc họp">
-                <h2>Cuộc họp gần đây</h2>
-                {historyLoading ? (
-                  <p role="status">Đang tải lịch sử cuộc họp…</p>
-                ) : historyError ? (
-                  <p role="alert">{historyError}</p>
-                ) : history.length === 0 ? (
-                  <p>Bạn chưa tham gia cuộc họp nào.</p>
-                ) : (
-                  <div className="meeting-history-list" role="list">
-                    {history.map((item) => {
-                      const joinedDate = new Date(item.joinedAt);
-                      const timeStr = Number.isNaN(joinedDate.getTime())
-                        ? ""
-                        : joinedDate.toLocaleTimeString("vi-VN", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          });
-                      const dateStr = Number.isNaN(joinedDate.getTime())
-                        ? ""
-                        : joinedDate.toLocaleDateString("vi-VN", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                          });
-                      return (
-                        <ListItem
-                          key={item.id}
-                          role="listitem"
-                          icon="video"
-                          title={item.name}
-                          subtitle={item.leftAt ? "Đã kết thúc phiên họp" : "Chưa ghi nhận rời phòng"}
-                          metaPrimary={timeStr || (item.leftAt ? "Đã kết thúc" : "Đang mở")}
-                          metaSecondary={dateStr}
-                        />
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-            </div>
-          </div>
-          </>
+          <MeetingsCalendar groups={groups} rooms={rooms} />
           )}
         </div>
       ) : (
@@ -1632,7 +1115,6 @@ export function MeetingPage() {
         </div>
       )}
       <AnimatePresence>{leaveConfirm && <ConfirmDialog title="Rời phòng" description={meeting.sharing ? "Bạn đang chia sẻ màn hình. Rời phòng sẽ dừng chia sẻ và ngắt thiết bị của bạn." : "Bạn đang là host. Rời phòng sẽ chuyển quyền host cho người phù hợp; nếu không còn người tham gia, phiên sẽ kết thúc."} confirmLabel="Rời phòng" loading={leaving} onClose={() => setLeaveConfirm(false)} onConfirm={() => {setLeaving(true); void meeting.leaveCall().finally(() => {setLeaving(false);setLeaveConfirm(false);});}} />}</AnimatePresence>
-      <AnimatePresence>{cancelScheduleId && <ConfirmDialog title="Huỷ lịch" description="Hủy lịch họp này? Lịch sẽ không còn xuất hiện trong danh sách cuộc họp sắp tới của nhóm." confirmLabel="Xác nhận huỷ" loading={savingSchedule} onClose={() => setCancelScheduleId("")} onConfirm={() => void cancelSchedule(cancelScheduleId)} />}</AnimatePresence>
     </div>
   );
 }
