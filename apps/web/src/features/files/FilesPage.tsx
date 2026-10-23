@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
-import type { WorkspaceFileItem, WorkspaceItem } from "@doan/shared";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { AnimatePresence } from "motion/react";
+import type { ChannelItem, WorkspaceFileItem, WorkspaceItem } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
+import { useSocket } from "../../app/providers/SocketContext";
 import { formatFileSize } from "../../shared/lib/file-size";
 import { Icon } from "../../shared/ui/Icon";
-import { Button } from "../../shared/ui/Primitives";
-import { getAttachmentBlobApi, getWorkspacesApi } from "../chat/api";
+import { Button, Field, Modal } from "../../shared/ui/Primitives";
+import { getAttachmentBlobApi, getChannelsApi, getWorkspacesApi, uploadAttachmentApi } from "../chat/api";
 import { governanceApi } from "../workspaces/api";
 import { NoGroups } from "../workspaces/GroupDialogs";
 import "./files-page.css";
@@ -25,6 +27,7 @@ export function FilesPage() {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<Kind>("all");
   const [revision, setRevision] = useState(0);
+  const [uploading, setUploading] = useState(false);
   const groupId = route.workspaceId ?? "";
 
   useEffect(() => {
@@ -143,6 +146,9 @@ export function FilesPage() {
               </button>
             ))}
           </div>
+          <Button icon="upload" onClick={() => setUploading(true)} disabled={!groups?.some((group) => !group.archivedAt)}>
+            Tải lên
+          </Button>
         </div>
       </div>
 
@@ -218,6 +224,126 @@ export function FilesPage() {
           )}
         </>
       )}
+      <AnimatePresence>
+        {uploading && groups && (
+          <UploadDialog
+            groups={groups.filter((group) => !group.archivedAt)}
+            defaultGroupId={groupId}
+            onClose={() => setUploading(false)}
+            onUploaded={() => {
+              setUploading(false);
+              setRevision((value) => value + 1);
+              notify("Đã tải tệp lên", undefined, "success");
+            }}
+          />
+        )}
+      </AnimatePresence>
     </section>
+  );
+}
+
+/** A file always lives in a channel, so uploading sends it there as a message, the same way the chat does. */
+function UploadDialog({
+  groups,
+  defaultGroupId,
+  onClose,
+  onUploaded,
+}: {
+  groups: WorkspaceItem[];
+  defaultGroupId: string;
+  onClose: () => void;
+  onUploaded: () => void;
+}) {
+  const { accessToken } = useApp();
+  const { sendMessage } = useSocket();
+  const [groupId, setGroupId] = useState(() => (groups.some((group) => group.id === defaultGroupId) ? defaultGroupId : (groups[0]?.id ?? "")));
+  const [channels, setChannels] = useState<ChannelItem[]>([]);
+  const [channelId, setChannelId] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
+  const [error, setError] = useState("");
+  const attachmentId = useRef<string | null>(null);
+  const clientMessageId = useRef(crypto.randomUUID());
+  const busy = progress !== null;
+
+  useEffect(() => {
+    setChannels([]);
+    setChannelId("");
+    if (!accessToken || !groupId) return;
+    let active = true;
+    getChannelsApi(accessToken, groupId)
+      .then((items) => {
+        if (!active) return;
+        const text = items.filter((item) => item.type === "text" && !item.archivedAt);
+        setChannels(text);
+        setChannelId(text[0]?.id ?? "");
+      })
+      .catch((reason) => active && setError(reason instanceof Error ? reason.message : "Không tải được kênh."));
+    return () => {
+      active = false;
+    };
+  }, [accessToken, groupId]);
+
+  const submit = async (event?: FormEvent) => {
+    event?.preventDefault();
+    if (!accessToken || !channelId || !file || busy) return;
+    setError("");
+    setProgress(0);
+    try {
+      // Retrying after a failed send reuses the uploaded file and message id, so nothing is posted twice.
+      attachmentId.current ??= (await uploadAttachmentApi(accessToken, channelId, file, setProgress)).id;
+      await sendMessage(channelId, "", { attachmentId: attachmentId.current, clientMessageId: clientMessageId.current });
+      onUploaded();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Không tải được tệp lên.");
+      setProgress(null);
+    }
+  };
+  const pick = (next: () => void) => {
+    attachmentId.current = null;
+    clientMessageId.current = crypto.randomUUID();
+    next();
+  };
+
+  return (
+    <Modal
+      title="Tải tệp lên"
+      initialFocus="select"
+      onClose={() => !busy && onClose()}
+      footer={
+        <div className="modal-footer-actions">
+          <Button variant="ghost" disabled={busy} onClick={onClose}>
+            Hủy
+          </Button>
+          <Button icon="upload" loading={busy} disabled={!channelId || !file} onClick={() => void submit()}>
+            {busy && progress ? `Tải lên ${progress}%` : "Tải lên"}
+          </Button>
+        </div>
+      }
+    >
+      <form className="ws-modal-form" onSubmit={(event) => void submit(event)}>
+        <Field label="Nhóm">
+          <select value={groupId} disabled={busy} onChange={(event) => pick(() => setGroupId(event.target.value))}>
+            {groups.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Kênh" hint="Tệp được gửi vào kênh này như một tin nhắn.">
+          <select value={channelId} disabled={busy || !channels.length} onChange={(event) => pick(() => setChannelId(event.target.value))}>
+            {channels.map((channel) => (
+              <option key={channel.id} value={channel.id}>
+                #{channel.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Tệp" error={error}>
+          <input type="file" disabled={busy} onChange={(event) => pick(() => setFile(event.target.files?.[0] ?? null))} />
+        </Field>
+      </form>
+    </Modal>
   );
 }

@@ -123,6 +123,7 @@ test("tài khoản chưa có nhóm thấy hướng dẫn tạo nhóm", async ({ 
   await page.goto("/app/chat");
   await expect(page.locator("main").getByRole("button", { name: "Tạo nhóm" }).first()).toBeVisible();
   await page.goto("/app/tasks");
+  await expect(page.locator("main").getByRole("button", { name: "Tạo nhóm" }).first()).toBeVisible();  await page.goto("/app/files");
   await expect(page.locator("main").getByRole("button", { name: "Tạo nhóm" }).first()).toBeVisible();
 });
 
@@ -157,4 +158,21 @@ test("Công việc: tạo việc ở nhóm và thấy trên bảng của tôi", 
   const card = page.getByRole("region", { name: "Cần làm" }).locator("article").filter({ hasText: title });
   await expect(card).toBeVisible();
   await expect(card.getByText(/^E2E \d+$/)).toBeVisible();
+});
+
+test("Tài liệu: tải tệp lên nhóm rồi tìm thấy", async ({ browser }) => {
+  const page = await signedIn(browser, fixtures().users.alice);
+  await page.goto("/app/files");
+  await page.getByRole("button", { name: "Tải lên" }).click();
+  const dialog = page.getByRole("dialog");
+  const group = (await dialog.getByLabel("Nhóm").locator("option").filter({ hasText: /^E2E \d+$/ }).first().textContent()) ?? "";
+  await dialog.getByLabel("Nhóm").selectOption({ label: group });
+  const name = `e2e-tai-lieu-${Date.now()}.txt`;
+  await dialog.getByLabel("Tệp").setInputFiles({ name, mimeType: "text/plain", buffer: Buffer.from("tài liệu e2e") });
+  await dialog.getByRole("button", { name: "Tải lên" }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByLabel("Tìm tệp").fill("tai-lieu");
+  const row = page.getByRole("listitem").filter({ hasText: name });
+  await expect(row).toBeVisible();
+  await expect(row.getByText(group, { exact: true })).toBeVisible();
 });
