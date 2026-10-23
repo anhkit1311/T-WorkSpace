@@ -20,7 +20,11 @@ const STATUS_LABEL = { live: "Đang diễn ra", upcoming: "Sắp tới", past: "
 const WEEKDAYS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"];
 // Day labels and times in Vietnam time, matching how the week is cut.
 const zone = { timeZone: "Asia/Ho_Chi_Minh" } as const;
-const dayMonth = (date: Date) => date.toLocaleDateString("vi-VN", { ...zone, day: "2-digit", month: "2-digit" });
+// vi-VN prints "19-10"; the page uses dd/mm.
+const dayMonth = (date: Date) => {
+  const [{ value: day }, , { value: month }] = new Intl.DateTimeFormat("en-GB", { ...zone, day: "2-digit", month: "2-digit" }).formatToParts(date);
+  return `${day}/${month}`;
+};
 const clock = (date: Date) => date.toLocaleTimeString("vi-VN", { ...zone, hour: "2-digit", minute: "2-digit" });
 
 function localDateTime(date: Date) {

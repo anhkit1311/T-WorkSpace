@@ -295,7 +295,8 @@
   .meeting-detail {
     position: fixed;
     inset: 0;
-    z-index: 40;
+    /* Over the app header (50) and bottom bar, under dialogs (300) such as "Huỷ". */
+    z-index: 200;
     align-content: start;
     overflow-y: auto;
     border: 0;
