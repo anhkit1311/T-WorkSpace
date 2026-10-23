@@ -180,7 +180,16 @@ test("E-learning: course → enrollment → document, quiz, live class with repl
     assert.equal(report.learners.find((learner) => learner.userId === id("other")).quizPercents[quiz.id], 100, "best of the late (25%) and drawn (100%) attempts");
     await rejects(courses.progress(id("student"), course.id), "FORBIDDEN");
     assert.match(await courses.progressCsv(id("lecturer"), course.id), /Hoàn thành \(%\)/);
-    await learning.complete(id("student"), replay.id);
+    // EL-5: the 3500 s replay is done by watching 90% of it, not by a click.
+    assert.deepEqual((await learning.lesson(id("student"), replay.id)).watch, { watchedSeconds: 0, positionSeconds: 0 });
+    await rejects(learning.complete(id("student"), replay.id), "NOT_WATCHED");
+    const first = await learning.watch(id("student"), replay.id, { from: 0, to: 600, position: 600 });
+    assert.deepEqual(first, { watchedSeconds: 30, positionSeconds: 600, completed: false }, "one report adds at most 30 s");
+    await sql(`UPDATE course_video_watch SET ranges='[[0,3140]]',updated_at=now()-interval '1 minute' WHERE lesson_id=$1 AND user_id=$2`, [replay.id, id("student")]);
+    const done = await learning.watch(id("student"), replay.id, { from: 3140, to: 3160, position: 3160 });
+    assert.deepEqual(done, { watchedSeconds: 3160, positionSeconds: 3160, completed: true });
+    assert.equal((await learning.lesson(id("student"), replay.id)).completed, true);
+    await rejects(learning.watch(id("lecturer"), replay.id, { from: 0, to: 10, position: 10 }), "FORBIDDEN");
     assert.ok((await sql(`SELECT completed_at FROM course_enrollments WHERE course_id=$1 AND user_id=$2`, [course.id, id("student")])).rows[0].completed_at);
 
     // ---- LT-1 support ------------------------------------------------------------------------------------

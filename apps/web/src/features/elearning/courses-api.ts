@@ -43,6 +43,8 @@ export const coursesApi = {
   updateLesson: (t: string, id: string, body: object) => request<{ ok: true }>(t, `lessons/${id}`, "PATCH", body),
   deleteLesson: (t: string, id: string) => request<{ ok: true }>(t, `lessons/${id}`, "DELETE"),
   complete: (t: string, id: string) => request<{ ok: true }>(t, `lessons/${id}/complete`, "POST"),
+  watch: (t: string, id: string, body: { from: number; to: number; position: number }) =>
+    request<{ watchedSeconds: number; positionSeconds: number; completed: boolean }>(t, `lessons/${id}/watch`, "POST", body),
   transcript: (t: string, id: string) => request<{ transcriptStatus: "processing" }>(t, `lessons/${id}/transcript`, "POST"),
   startQuiz: (t: string, lessonId: string) => request<QuizAttempt>(t, `lessons/${lessonId}/attempts`, "POST"),
   submitQuiz: (t: string, attemptId: string, answers: Record<string, (string | boolean)[]>) =>

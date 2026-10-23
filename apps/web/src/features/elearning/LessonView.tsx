@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CourseDetail, CourseQuestion, LessonDetail, LiveAttendanceRow } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import { Badge, Button, Modal } from "../../shared/ui/Primitives";
@@ -10,6 +10,7 @@ import { QuizRunner } from "./QuizRunner";
 
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString("vi-VN", { hour12: false }) : "—");
 const MEDIA = { none: "Chưa có tệp", processing: "Đang chuyển sang HLS…", ready: "Sẵn sàng", failed: "Lỗi xử lý" } as const;
+const minutes = (seconds: number) => Math.max(0, Math.round(seconds / 60));
 
 export function LessonView({ lessonId, course, onChanged, onDeleted }: { lessonId: string; course: CourseDetail; onChanged: () => void; onDeleted: () => void }) {
   const { accessToken, notify } = useApp();
@@ -17,6 +18,8 @@ export function LessonView({ lessonId, course, onChanged, onDeleted }: { lessonI
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
   const [support, setSupport] = useState(false);
+  const completed = useRef(false);
+  completed.current = Boolean(lesson?.completed);
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -52,6 +55,19 @@ export function LessonView({ lessonId, course, onChanged, onDeleted }: { lessonI
   if (!lesson) return <p role={error ? "alert" : "status"}>{error || "Đang tải bài học…"}</p>;
   const token = accessToken!;
   const learner = course.enrolled;
+  // EL-5: each stretch played counts toward 90% of the video; the server completes the lesson.
+  const reportWatch = (from: number, to: number, position: number) =>
+    void coursesApi.watch(token, lesson.id, { from: Math.floor(from), to: Math.ceil(to), position: Math.floor(position) }).then(
+      (result) => {
+        setLesson((current) => current && { ...current, completed: current.completed || result.completed, watch: { watchedSeconds: result.watchedSeconds, positionSeconds: result.positionSeconds } });
+        if (result.completed && !completed.current) {
+          completed.current = true;
+          notify("Đã hoàn thành bài học");
+          onChanged();
+        }
+      },
+      () => undefined, // a lost report only delays completion; the next one carries on
+    );
 
   return (
     <article className="lesson">
@@ -87,7 +103,8 @@ export function LessonView({ lessonId, course, onChanged, onDeleted }: { lessonI
                 src={lessonFileUrl(lesson.id, "index.m3u8")}
                 label={lesson.title}
                 captions={lesson.transcriptStatus === "ready"}
-                onEnded={() => learner && !lesson.completed && void run("Đã hoàn thành bài học", () => coursesApi.complete(token, lesson.id))}
+                startAt={lesson.watch?.positionSeconds}
+                onPlayed={lesson.watch ? reportWatch : undefined}
               />
             ) : (
               <p className="courses-empty">{MEDIA[lesson.mediaStatus]}</p>
@@ -115,9 +132,14 @@ export function LessonView({ lessonId, course, onChanged, onDeleted }: { lessonI
               )}
             </p>
           )}
+          {lesson.watch && lesson.durationSeconds && !lesson.completed && (
+            <p className="lesson-watch" role="status">
+              Đã xem {minutes(lesson.watch.watchedSeconds)}/{minutes(lesson.durationSeconds)} phút · xem ít nhất 90% video để hoàn thành bài học.
+            </p>
+          )}
           {lesson.kind === "quiz" && lesson.quiz && <QuizRunner lesson={lesson} onFinished={() => { void load(); onChanged(); }} />}
           {lesson.kind === "live" && lesson.live && <LivePanel lesson={lesson} run={run} />}
-          {learner && !lesson.completed && (lesson.kind === "video" || lesson.kind === "document") && (
+          {learner && !lesson.completed && (lesson.kind === "document" || (lesson.kind === "video" && !lesson.watch)) && (
             <Button icon="check" onClick={() => void run("Đã hoàn thành bài học", () => coursesApi.complete(token, lesson.id))}>
               Đánh dấu đã học xong
             </Button>

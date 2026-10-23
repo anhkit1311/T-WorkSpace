@@ -38,7 +38,8 @@ Kiến trúc modular monolith: React/TypeScript + Node.js/Socket.IO + PostgreSQL
 - Giảng viên: danh sách người học, tiến độ từng người, xuất CSV tiến độ.
 - Thảo luận khóa học qua một nhóm làm việc riêng (chat, tệp, phòng họp); gửi yêu cầu hỗ trợ ngay từ bài học.
 - Chép lời video bài học (cùng dịch vụ Whisper như bản ghi họp).
-- Chưa có: theo dõi thời gian xem video (bài video/tài liệu do người học tự bấm hoàn thành); bài tự luận/nộp bài chấm tay; tệp bài học đang lưu trên đĩa của máy chủ API (một máy chủ).
+- Theo dõi thời gian xem video: trình phát gửi từng đoạn đã thực sự phát (tua không tính, mỗi lần gửi bị giới hạn theo thời gian thực), bài video chỉ hoàn thành khi đã xem đủ 90%, mở lại thì phát tiếp từ chỗ xem dở. Bài tài liệu và video chưa rõ thời lượng vẫn do người học tự bấm hoàn thành.
+- Chưa có: bài tự luận/nộp bài chấm tay; tệp bài học đang lưu trên đĩa của máy chủ API (một máy chủ).
 
 Chat nhóm giữ làm kênh trao đổi nội bộ: ảnh/file/voice, reaction, thread/mention, ghim, tìm kiếm, gửi lại không trùng. Trang "Tin nhắn" gồm cả kênh nhóm và trò chuyện 1-1 (`026_direct_messages`).
 
@@ -67,7 +68,7 @@ npm run dev
 
 Cần chạy riêng thì dùng `npm run dev:api` hoặc `npm run dev:web`.
 
-Web localhost:5173; API localhost:3001. Vite dùng polling watcher trong development Windows. DB đã có dữ liệu nâng cấp bằng migrate, không xóa volume. Tổng 39 migration (`services/api/migrations`), bytea cũ vẫn tương thích.
+Web localhost:5173; API localhost:3001. Vite dùng polling watcher trong development Windows. DB đã có dữ liệu nâng cấp bằng migrate, không xóa volume. Tổng 40 migration (`services/api/migrations`), bytea cũ vẫn tương thích.
 
 Google Sign-In cần đăng ký đúng origin của web trong Google Cloud; xem [xử lý lỗi origin_mismatch](docs/guides/google-oauth-local.md). Dev server dùng cổng của `WEB_ORIGIN` trong `.env` (mẫu mặc định 5173), báo lỗi nếu cổng bận.
 

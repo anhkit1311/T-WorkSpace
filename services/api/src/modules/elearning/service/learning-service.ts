@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import type { LessonDetail, QuizAttempt } from "@doan/shared";
-import { query } from "../../../infrastructure/database/db.js";
-import { conflict, forbidden, id, invalid, notFound, text, type Body } from "../../callcenter/service/input.js";
+import { query, withTransaction } from "../../../infrastructure/database/db.js";
+import { conflict, forbidden, id, integer, invalid, notFound, text, type Body } from "../../callcenter/service/input.js";
 import { draftProblem, drawQuestions, gradeAttempt, isLate, shuffledOptions } from "../domain/quiz.js";
+import { addWatched, maxReportSeconds, watchedEnough, watchedSeconds } from "../domain/watch.js";
 import type { ElearningRepository } from "../repository/elearning-repository.js";
 import type { CourseService } from "./course-service.js";
 
@@ -14,8 +15,13 @@ export class LearningService {
   ) {}
 
   async lesson(userId: string, lessonId: string): Promise<LessonDetail> {
-    const { lesson, manages } = await this.courses.lessonCourse(userId, lessonId, "see");
+    const { lesson, manages, enrolled } = await this.courses.lessonCourse(userId, lessonId, "see");
     const completed = (await this.repo.lessons(lesson.courseId, userId)).find((item) => item.id === lesson.id)?.completed ?? false;
+    let watch: LessonDetail["watch"] = null;
+    if (enrolled && lesson.kind === "video" && lesson.durationSeconds) {
+      const row = await this.repo.videoWatch(null, lesson.id, userId);
+      watch = { watchedSeconds: Math.round(watchedSeconds(row?.ranges ?? [])), positionSeconds: row?.positionSeconds ?? 0 };
+    }
     let quiz: LessonDetail["quiz"] = null;
     if (lesson.kind === "quiz") {
       const [questionIds, best, openAttemptId] = await Promise.all([
@@ -68,6 +74,7 @@ export class LearningService {
       canManage: manages,
       quiz,
       live,
+      watch,
     };
   }
 
@@ -76,8 +83,31 @@ export class LearningService {
     const { lesson, enrolled } = await this.courses.lessonCourse(userId, lessonId, "see");
     if (!enrolled) throw forbidden();
     if (lesson.kind !== "video" && lesson.kind !== "document") throw conflict("NOT_SELF_COMPLETED", "Bài này hoàn thành theo kết quả kiểm tra hoặc điểm danh.");
+    // A video of known length is done by watching it (see watch); one without a length is marked by hand.
+    if (lesson.kind === "video" && lesson.durationSeconds && !watchedEnough((await this.repo.videoWatch(null, lesson.id, userId))?.ranges ?? [], lesson.durationSeconds))
+      throw conflict("NOT_WATCHED", "Xem ít nhất 90% video để hoàn thành bài học.");
     await this.repo.complete(null, lesson.id, userId);
     return { ok: true };
+  }
+
+  /** EL-5: the player reports each stretch it played; 90% of the video played completes the lesson. */
+  async watch(userId: string, lessonId: string, body: Body) {
+    const { lesson, enrolled } = await this.courses.lessonCourse(userId, lessonId, "see");
+    if (!enrolled) throw forbidden();
+    const duration = lesson.durationSeconds;
+    if (lesson.kind !== "video" || !duration) throw conflict("NOT_TRACKED", "Bài này không theo dõi thời gian xem.");
+    const from = integer(body, "from", 0, 86400);
+    const to = integer(body, "to", 0, 86400);
+    const position = Math.min(integer(body, "position", 0, 86400), duration);
+    return withTransaction(async (client) => {
+      const current = await this.repo.videoWatch(client, lesson.id, userId);
+      const cap = maxReportSeconds(current ? Date.now() - current.updatedAt.getTime() : null);
+      const ranges = addWatched(current?.ranges ?? [], from, to, duration, cap);
+      await this.repo.saveVideoWatch(client, lesson.id, userId, ranges, position);
+      const completed = watchedEnough(ranges, duration);
+      if (completed) await this.repo.complete(client, lesson.id, userId);
+      return { watchedSeconds: Math.round(watchedSeconds(ranges)), positionSeconds: position, completed };
+    });
   }
 
   // ---- quiz (EL-4) -----------------------------------------------------------------------------

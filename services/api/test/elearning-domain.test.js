@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { draftProblem, drawQuestions, gradeAttempt, isCorrect, isLate, questionProblem, shuffledOptions } from "../../../dist/api/modules/elearning/domain/quiz.js";
 import { completionPercent, liveAttendance } from "../../../dist/api/modules/elearning/domain/progress.js";
 import { CourseAccess } from "../../../dist/api/modules/elearning/domain/access.js";
+import { addWatched, maxReportSeconds, watchedEnough, watchedSeconds } from "../../../dist/api/modules/elearning/domain/watch.js";
 
 const options = [{ id: "a", text: "A" }, { id: "b", text: "B" }, { id: "c", text: "C" }];
 
@@ -79,4 +80,25 @@ test("Quiz draws N questions at random and keeps option order stable per attempt
   assert.ok(draftProblem({ q9: ["a"] }, ["q1"]), "foreign question");
   assert.ok(draftProblem({ q1: "a" }, ["q1"]), "not an array");
   assert.ok(draftProblem([], ["q1"]));
+});
+
+test("Video watch time: played stretches merge, are capped per report, 90% completes", () => {
+  // Overlaps and touching stretches merge; seconds watched twice count once.
+  let ranges = addWatched([], 0, 20, 100, 30);
+  ranges = addWatched(ranges, 10, 30, 100, 30);
+  ranges = addWatched(ranges, 31, 40, 100, 30);
+  assert.deepEqual(ranges, [[0, 40]]);
+  ranges = addWatched(ranges, 60, 70, 100, 30);
+  assert.equal(watchedSeconds(ranges), 50);
+  // Clamped to the video and to what one report may add.
+  assert.deepEqual(addWatched([], 90, 500, 100, 30), [[90, 100]]);
+  assert.deepEqual(addWatched([], 0, 100, 100, 30), [[0, 30]]);
+  assert.deepEqual(addWatched([[0, 5]], 20, 10, 100, 30), [[0, 5]], "a backwards stretch adds nothing");
+  // At most 2.2x the time since the previous report, 30 s for the first one.
+  assert.equal(maxReportSeconds(null), 30);
+  assert.equal(maxReportSeconds(10_000), 22);
+  assert.equal(maxReportSeconds(600_000), 30);
+  assert.equal(watchedEnough([[0, 89]], 100), false);
+  assert.equal(watchedEnough([[0, 50], [55, 95]], 100), true);
+  assert.equal(watchedEnough([[0, 10]], 0), false);
 });

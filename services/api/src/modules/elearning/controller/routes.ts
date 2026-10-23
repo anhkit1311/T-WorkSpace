@@ -47,6 +47,7 @@ export function elearningRoutes(courses: CourseService, learning: LearningServic
     r("DELETE", "/lessons/:id", (u, m) => courses.deleteLesson(u, m[1])),
     r("POST", "/lessons/:id/transcript", (u, m) => media.requestTranscript(u, m[1]), 202),
     r("POST", "/lessons/:id/complete", (u, m) => learning.complete(u, m[1])),
+    r("POST", "/lessons/:id/watch", (u, m, b) => learning.watch(u, m[1], b)),
     r("POST", "/lessons/:id/attempts", (u, m) => learning.startQuiz(u, m[1]), 201),
     r("GET", "/attempts/:id", (u, m) => learning.attempt(u, m[1])),
     r("POST", "/attempts/:id/submit", (u, m, b) => learning.submitQuiz(u, m[1], b)),

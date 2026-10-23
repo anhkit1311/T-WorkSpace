@@ -101,6 +101,8 @@ export interface LessonDetail extends LessonSummary {
   canManage: boolean;
   quiz: QuizInfo | null;
   live: LiveInfo | null;
+  /** EL-5: the learner's watch time of a video of known length; null for others and for staff. */
+  watch: { watchedSeconds: number; positionSeconds: number } | null;
 }
 
 export interface CourseQuestion {

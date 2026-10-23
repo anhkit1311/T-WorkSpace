@@ -397,7 +397,8 @@
 .courses > button:first-child {
   justify-self: start;
 }
-.lesson-captions {
+.lesson-captions,
+.lesson-watch {
   margin: 6px 0 0;
   color: var(--text-muted);
   font-size: 13px;

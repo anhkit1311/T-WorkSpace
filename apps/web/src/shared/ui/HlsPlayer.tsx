@@ -34,13 +34,56 @@ function useTranscript(src: string, enabled: boolean, token: string | null) {
   return state;
 }
 
+/** How often a stretch still playing is reported (EL-5 watch time). */
+const REPORT_MS = 15_000;
+
 /**
  * Plays an HLS stream from the API (meeting recordings, video lessons). Playlists and segments
  * need the access token, so requests go through hls.js with the latest token on each one.
+ * `onPlayed` receives each stretch actually played (not skipped) with the current position;
+ * `startAt` resumes there once the video is loaded.
  */
-export function HlsPlayer({ src, label, onEnded, captions = false }: { src: string; label: string; onEnded?: () => void; captions?: boolean }) {
+export function HlsPlayer({
+  src,
+  label,
+  onEnded,
+  captions = false,
+  startAt = 0,
+  onPlayed,
+}: {
+  src: string;
+  label: string;
+  onEnded?: () => void;
+  captions?: boolean;
+  startAt?: number;
+  onPlayed?: (from: number, to: number, position: number) => void;
+}) {
   const { accessToken } = useApp();
   const video = useRef<HTMLVideoElement>(null);
+  const played = useRef<{ from: number; to: number } | null>(null);
+  const lastElement = useRef<HTMLVideoElement | null>(null);
+  const onPlayedRef = useRef(onPlayed);
+  onPlayedRef.current = onPlayed;
+  const startRef = useRef(startAt);
+  startRef.current = startAt;
+  /** Reports the stretch played so far; a stretch still playing continues from where it was cut. */
+  const flush = () => {
+    // On unmount React has already detached the ref; the last element still has its position.
+    const element = video.current ?? lastElement.current;
+    const span = played.current;
+    if (!element || !span) return;
+    if (span.to > span.from) onPlayedRef.current?.(span.from, span.to, element.currentTime);
+    played.current = element.paused || element.seeking ? null : { from: span.to, to: span.to };
+  };
+  const flushRef = useRef(flush);
+  flushRef.current = flush;
+  useEffect(() => {
+    const timer = window.setInterval(() => flushRef.current(), REPORT_MS);
+    return () => {
+      window.clearInterval(timer);
+      flushRef.current();
+    };
+  }, []);
   const token = useRef(accessToken);
   token.current = accessToken;
   const [error, setError] = useState("");
@@ -55,6 +98,7 @@ export function HlsPlayer({ src, label, onEnded, captions = false }: { src: stri
   useEffect(() => {
     const element = video.current;
     if (!element) return;
+    lastElement.current = element;
     if (!Hls.isSupported()) {
       setError("Trình duyệt này không phát được HLS.");
       return;
@@ -71,12 +115,44 @@ export function HlsPlayer({ src, label, onEnded, captions = false }: { src: stri
     });
     hls.loadSource(src);
     hls.attachMedia(element);
-    return () => hls.destroy();
+    // Resume where the learner stopped, unless that was the very start or the end.
+    const resume = () => {
+      if (startRef.current > 5 && startRef.current < element.duration - 10) element.currentTime = startRef.current;
+    };
+    element.addEventListener("loadedmetadata", resume, { once: true });
+    return () => {
+      element.removeEventListener("loadedmetadata", resume);
+      hls.destroy();
+    };
   }, [src]);
 
   return (
     <div className="hls-player">
-      <video ref={video} controls playsInline aria-label={label} onEnded={onEnded} onTimeUpdate={(event) => setNow(event.currentTarget.currentTime)}>
+      <video
+        ref={video}
+        controls
+        playsInline
+        aria-label={label}
+        onEnded={() => {
+          flush();
+          onEnded?.();
+        }}
+        onPause={flush}
+        onSeeking={flush}
+        onTimeUpdate={(event) => {
+          const element = event.currentTarget;
+          const time = element.currentTime;
+          setNow(time);
+          if (element.paused || element.seeking) return;
+          const span = played.current;
+          // A jump (seek, buffering skip) ends the stretch; normal playback extends it.
+          if (span && time >= span.to && time - span.to < 3) span.to = time;
+          else {
+            flush();
+            played.current = { from: time, to: time };
+          }
+        }}
+      >
         {vtt && <track kind="captions" src={vtt} srcLang={transcript?.language ?? "vi"} label="Phụ đề tự động" default />}
       </video>
       {error && <p role="alert">{error}</p>}

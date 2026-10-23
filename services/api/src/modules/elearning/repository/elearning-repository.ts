@@ -11,6 +11,7 @@ import type {
 } from "@doan/shared";
 import { query, withTransaction } from "../../../infrastructure/database/db.js";
 import { CourseAccess, type CourseRef } from "../domain/access.js";
+import type { WatchRange } from "../domain/watch.js";
 
 export type CourseRow = CourseRef & {
   code: string;
@@ -515,6 +516,26 @@ export class ElearningRepository {
         [scheduleId],
       )
     ).rows[0] ?? null;
+  }
+
+  /** EL-5 video watch time; inside a transaction the row is locked so two tabs cannot lose each other's report. */
+  async videoWatch(client: PoolClient | null, lessonId: string, userId: string) {
+    const run = client ? client.query.bind(client) : query;
+    return (
+      (await run(
+        `SELECT ranges,position_seconds AS "positionSeconds",updated_at AS "updatedAt" FROM course_video_watch
+         WHERE lesson_id=$1 AND user_id=$2${client ? " FOR UPDATE" : ""}`,
+        [lessonId, userId],
+      )).rows[0] as { ranges: WatchRange[]; positionSeconds: number; updatedAt: Date } | undefined
+    ) ?? null;
+  }
+
+  async saveVideoWatch(client: PoolClient, lessonId: string, userId: string, ranges: WatchRange[], positionSeconds: number) {
+    await client.query(
+      `INSERT INTO course_video_watch(lesson_id,user_id,ranges,position_seconds) VALUES($1,$2,$3,$4)
+       ON CONFLICT (lesson_id,user_id) DO UPDATE SET ranges=EXCLUDED.ranges,position_seconds=EXCLUDED.position_seconds,updated_at=now()`,
+      [lessonId, userId, JSON.stringify(ranges), positionSeconds],
+    );
   }
 
   async liveAttendance(lessonId: string, userId: string) {
