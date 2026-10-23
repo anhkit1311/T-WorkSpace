@@ -208,7 +208,9 @@ test("Họp: lên lịch rồi thấy trên lịch tuần, vào được phòng"
   await page.getByRole("button", { name: new RegExp(title) }).click();
   await page.getByRole("button", { name: "Vào", exact: true }).click();
   await enter();
-  // In a call the item reads "Họp đang diễn ra".
+  // The room covers the app; "Thu nhỏ" goes back to the app with the call still running,
+  // and the "Họp" item (now "Họp đang diễn ra") brings the room back.
+  await page.getByRole("button", { name: "Thu nhỏ cuộc họp" }).click();
   await page.locator(".tdtu-sidebar").getByRole("button", { name: /^Họp( |$)/ }).click();
   await expect.poll(() => playingVideos(page), { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
   await expect(page.getByRole("button", { name: "Hôm nay" })).toHaveCount(0);

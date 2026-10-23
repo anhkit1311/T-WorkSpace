@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import type { ChatMessageItem, WorkspaceItem, MeetingState } from "@doan/shared";
+import type { MeetingState } from "@doan/shared";
+import type { ChatMessageItem, WorkspaceItem } from "@doan/shared";
 import { getChannelsApi, getMessagesApi, getWorkspacesApi } from "../chat/api";
 import { getDialInApi, downloadMeetingAttendanceApi } from "./api";
 import { MeetingsCalendar } from "./MeetingsCalendar";
@@ -12,15 +13,15 @@ import {
   spotlightDelay,
   type LayerPolicy,
 } from "./speaker-policy";
-import { handToastTitle, raisedHandUserIds } from "./hand-raise";
-import { MeetingControls } from "./MeetingControls";
+import { handToastTitle, newAttention, raisedHandUserIds } from "./hand-raise";
+import { MeetingControls, useMeetingControl } from "./MeetingControls";
 import { MeetingOutcomesPanel } from "./MeetingOutcomesPanel";
 import { PreJoinScreen, type PreJoinChoice } from "./PreJoinScreen";
 import { useSocket } from "../../app/providers/SocketContext";
-import { Button, IconButton, ConfirmDialog } from "../../shared/ui/Primitives";
+import { Avatar, Button, IconButton, ConfirmDialog } from "../../shared/ui/Primitives";
 import { AnimatePresence } from "motion/react";
 import { meetingShortcut } from "../../shared/lib/interaction";
-import { Icon } from "../../shared/ui/Icon";
+import { Icon, type IconName } from "../../shared/ui/Icon";
 import "./meeting-ui.css";
 import "./meeting-panels.css";
 
@@ -59,7 +60,7 @@ function MeetingClock({ since }: { since: string }) {
   const total = Math.max(0, Math.floor((Date.now() - Date.parse(since)) / 1000));
   const pad = (value: number) => String(value).padStart(2, "0");
   return (
-    <time className="meeting-active-header__clock">
+    <time className="meeting-topbar__clock">
       {total >= 3600 ? `${Math.floor(total / 3600)}:` : ""}
       {pad(Math.floor(total / 60) % 60)}:{pad(total % 60)}
     </time>
@@ -192,9 +193,88 @@ function DialInBadge({ accessToken, roomId }: { accessToken: string; roomId: str
   if (!dialIn) return null;
   const code = `${dialIn.code.slice(0, 3)} ${dialIn.code.slice(3)}`;
   return (
-    <span className="meeting-active-header__meta" title={`Từ máy lẻ: gọi ${dialIn.number}, nhập mã ${dialIn.code} rồi nhấn #`}>
+    <span className="meeting-topbar__meta" title={`Từ máy lẻ: gọi ${dialIn.number}, nhập mã ${dialIn.code} rồi nhấn #`}>
       <Icon name="phone" size={14} /> Gọi {dialIn.number} · mã {code}
     </span>
+  );
+}
+
+type MenuItem =
+  | { heading: string }
+  | { label: string; onSelect: () => void; icon?: IconName; checked?: boolean; danger?: boolean };
+
+/** A small menu that opens above (control bar) or below (people list) its round button. */
+function PopoverMenu({
+  label,
+  icon,
+  items,
+  buttonClass,
+  placement = "up",
+}: {
+  label: string;
+  icon: IconName;
+  items: MenuItem[];
+  buttonClass: string;
+  placement?: "up" | "down";
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: MouseEvent) => {
+      if (!ref.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [open]);
+  return (
+    <div className="meeting-menu" ref={ref}>
+      <button
+        type="button"
+        className={buttonClass}
+        aria-label={label}
+        title={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        <Icon name={icon} size={18} />
+      </button>
+      {open && (
+        <div className={`meeting-menu__list is-${placement}`} role="menu" aria-label={label}>
+          {items.map((item, index) =>
+            "heading" in item ? (
+              <div key={index} className="meeting-menu__heading" role="presentation">
+                {item.heading}
+              </div>
+            ) : (
+              <button
+                key={index}
+                type="button"
+                role={item.checked === undefined ? "menuitem" : "menuitemradio"}
+                aria-checked={item.checked}
+                className={`meeting-menu__item ${item.danger ? "is-danger" : ""}`}
+                onClick={() => {
+                  setOpen(false);
+                  item.onSelect();
+                }}
+              >
+                {item.icon && <Icon name={item.icon} size={16} />}
+                <span>{item.label}</span>
+                {item.checked && <Icon name="check" size={14} className="meeting-menu__check" />}
+              </button>
+            ),
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -232,7 +312,9 @@ function ParticipantTile({
       {hasVideo && stream ? (
         <Video stream={stream} />
       ) : (
-        <div className="participant-visual">{displayName.slice(0, 1).toUpperCase()}</div>
+        <div className="participant-visual">
+          <Avatar name={displayName} size="lg" />
+        </div>
       )}
       {onPin && (
         <button
@@ -242,7 +324,7 @@ function ParticipantTile({
           aria-label={pinned ? `Bỏ ghim ${displayName}` : `Ghim ${displayName}`}
           title={pinned ? "Bỏ ghim" : "Ghim người tham gia"}
         >
-          <Icon name="star" size={14} />
+          <Icon name="pin" size={14} />
         </button>
       )}
       {raisedHand && (
@@ -251,11 +333,7 @@ function ParticipantTile({
         </span>
       )}
       <div className="participant-label">
-        <Icon
-          name={hasAudio ? "mic" : "mic-off"}
-          size={13}
-          style={{ color: hasAudio ? "#10b981" : "#ef4444" }}
-        />
+        {!hasAudio && <Icon name="mic-off" size={13} className="participant-label__muted" aria-label="Micro đang tắt" />}
         <span>
           {displayName} {isLocal ? "(bạn)" : ""}
         </span>
@@ -279,7 +357,6 @@ export function MeetingPage() {
   const [groups, setGroups] = useState<WorkspaceItem[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
-  const [participantCount, setParticipantCount] = useState(1);
   const [exportingAttendance, setExportingAttendance] = useState(false);
   const [error, setError] = useState("");
   const [outputDeviceId, setOutputDeviceId] = useState("");
@@ -316,9 +393,7 @@ export function MeetingPage() {
   const gridRef = useRef<HTMLDivElement>(null);
   const [gridSize, setGridSize] = useState({ width: 0, height: 0 });
   const [gridPage, setGridPage] = useState(0);
-  const [sidePanel, setSidePanel] = useState<
-    "none" | "people" | "chat" | "notes"
-  >("none");
+  const [sidePanel, setSidePanel] = useState<"none" | "people" | "chat" | "notes" | "network">("none");
 
   const [callMessages, setCallMessages] = useState<ChatMessageItem[]>([]);
   const [callDraft, setCallDraft] = useState("");
@@ -330,10 +405,12 @@ export function MeetingPage() {
   const [callUnread, setCallUnread] = useState(0);
   const sidePanelTitle =
     sidePanel === "people"
-      ? "Người tham gia & Điểm danh"
+      ? "Mọi người"
       : sidePanel === "notes"
-        ? "Ghi chú & việc cần làm"
-        : "Chat cuộc họp";
+        ? "Biên bản cuộc họp"
+        : sidePanel === "network"
+          ? "Chất lượng mạng"
+          : "Chat cuộc họp";
   useEffect(() => {
     const list = callListRef.current;
     if(sidePanel === "chat") {
@@ -341,7 +418,22 @@ export function MeetingPage() {
       if(list && followCallChat.current) list.scrollTop = list.scrollHeight;
     }
   },[callMessages,sidePanel]);
-  const [meetingState, setMeetingState] = useState<MeetingState | null>(null);
+  const control = useMeetingControl(meeting.inCall ? meeting.roomId : "");
+  const meetingState = control.state;
+  const participantCount = control.admitted.length || meeting.remotePeers.length + 1;
+  // Corner toasts: someone waits to be let in (hosts only) or raises a hand.
+  const previousState = useRef<MeetingState | null>(null);
+  useEffect(() => {
+    const { waiting, hands } = newAttention(previousState.current, meetingState, user?.id);
+    previousState.current = meetingState;
+    if (control.canManage)
+      for (const person of waiting)
+        notify(`${person.displayName} đang chờ vào phòng`, undefined, "info", {
+          label: "Cho vào",
+          onClick: () => void control.action("admit", person.userId),
+        });
+    for (const person of hands) notify(`${person.displayName} đang giơ tay`, undefined, "info", undefined, { icon: "hand" });
+  }, [meetingState]);
   const raisedHands = raisedHandUserIds(meetingState);
   // Confirm the local hand state from the server, whether it changed via H or the button.
   const myRaisedHand = meetingState?.participants.find((p) => p.userId === user?.id)?.raisedHand;
@@ -354,7 +446,7 @@ export function MeetingPage() {
   const [leaveConfirm, setLeaveConfirm] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const requestLeave = () => {
-    if (meeting.sharing || meetingState?.participants.some(p => p.userId === user?.id && p.role === "host")) setLeaveConfirm(true);
+    if (meeting.sharing || control.isHost) setLeaveConfirm(true);
     else void meeting.leaveCall();
   };
   useEffect(() => {
@@ -369,14 +461,11 @@ export function MeetingPage() {
       if (key === "s") void meeting.toggleScreenShare();
       if (key === "c") setSidePanel(old => old === "chat" ? "none" : "chat");
       if (key === "escape") setSidePanel("none");
-      if (key === "h") {
-        const me = meetingState?.participants.find(p => p.userId === user?.id);
-        if (me) void meeting.controlSocket?.timeout(10000).emitWithAck("meeting_action",{roomId:meeting.roomId,action:"hand",enabled:!me.raisedHand}).then(result => {if(!result.success)setCallChatError(result.error || "Không thể giơ tay.");}).catch(reason => setCallChatError(reason.message));
-      }
+      if (key === "h" && control.me) void control.action("hand", undefined, !control.me.raisedHand);
     };
     document.addEventListener("keydown",onKey);
     return () => document.removeEventListener("keydown",onKey);
-  },[meeting,meetingState,user?.id]);
+  },[meeting,control]);
   useEffect(() => {
     if (!meeting.inCall || !meeting.roomId || !accessToken) return;
     const roomId = meeting.roomId;
@@ -448,15 +537,10 @@ export function MeetingPage() {
     };
   }, [accessToken]);
 
-  const roleLabel = (userId?: string) => {
-    const role = meetingState?.participants.find((person) => person.userId === userId)?.role;
-    return role === "host" ? "Chủ trì" : role === "cohost" ? "Đồng chủ trì" : "Thành viên";
-  };
   const selected = rooms.find((room) => room.id === route.channelId);
 
   // The register comes from the server (join/leave of every connection); only the host and co-hosts keep it.
-  const myMeetingRole = meetingState?.participants.find((person) => person.userId === user?.id)?.role;
-  const keepsRegister = myMeetingRole === "host" || myMeetingRole === "cohost";
+  const keepsRegister = control.canManage;
   const handleExportAttendanceCsv = async () => {
     if (!accessToken || !meetingState) return;
     setExportingAttendance(true);
@@ -629,6 +713,73 @@ export function MeetingPage() {
     setPinnedId(pinnedId === id ? "" : id);
     setLayout("spotlight");
   };
+  const roomName = rooms.find((room) => room.id === meeting.roomId)?.name ?? "Phòng họp trực tuyến";
+  const tone = networkTone(meeting.qos?.rtt, meeting.qos?.packetLoss, isConnected);
+  const networkLabel = !isConnected
+    ? "Mất kết nối"
+    : meeting.qos?.rtt != null
+      ? `${tone === "good" ? "Mạng tốt" : "Mạng yếu"} · ${meeting.qos.rtt} ms`
+      : "Đang đo mạng…";
+  const waitingPeople = meetingState?.participants.filter((p) => p.state === "waiting") ?? [];
+  // Who is in the room: the server register when loaded, else the media peers.
+  const roster = (
+    control.admitted.length
+      ? control.admitted.map((p) => ({ userId: p.userId, displayName: p.displayName, role: p.role, raisedHand: p.raisedHand }))
+      : [
+          { userId: user?.id ?? "local", displayName: user?.displayName || "Bạn", role: "member" as const, raisedHand: false },
+          ...meeting.remotePeers.map((peer) => ({ userId: peer.userId, displayName: peer.displayName, role: "member" as const, raisedHand: false })),
+        ]
+  ).map((person) => {
+    const isMe = person.userId === user?.id;
+    const peer = meeting.remotePeers.find((item) => item.userId === person.userId);
+    return { ...person, isMe, tileId: isMe ? "local" : (peer?.socketId ?? ""), micOn: isMe ? meeting.mic : Boolean(peer?.audioTrack) };
+  });
+  const personMenu = (person: (typeof roster)[number]): MenuItem[] => {
+    const items: MenuItem[] = [];
+    if (person.tileId)
+      items.push({ label: pinnedId === person.tileId ? "Bỏ ghim" : "Ghim lên khung chính", icon: "pin", onSelect: () => togglePin(person.tileId) });
+    if (control.canManage && !person.isMe && person.role !== "host") {
+      items.push({
+        label: "Tắt micro",
+        icon: "mic-off",
+        onSelect: () => control.setConfirmation({ name: "mute", target: person.userId, label: "Tắt nguồn mic", description: `Tắt nguồn microphone của ${person.displayName}? Người này phải tự bật lại thiết bị.` }),
+      });
+      if (control.isHost) {
+        items.push({ label: person.role === "cohost" ? "Bỏ đồng chủ trì" : "Đặt làm đồng chủ trì", icon: "user-plus", onSelect: () => void control.action("cohost", person.userId, person.role !== "cohost") });
+        items.push({
+          label: "Chuyển quyền chủ trì",
+          icon: "shield",
+          onSelect: () => control.setConfirmation({ name: "transfer", target: person.userId, label: "Chuyển host", description: `Chuyển quyền host cho ${person.displayName}? Bạn sẽ mất quyền host và không thể tự lấy lại quyền.` }),
+        });
+      }
+      items.push({
+        label: "Loại khỏi phiên",
+        icon: "logout",
+        danger: true,
+        onSelect: () => control.setConfirmation({ name: "kick", target: person.userId, label: "Loại khỏi phiên", description: `Ngắt kết nối của ${person.displayName} và loại người này khỏi phiên họp hiện tại?` }),
+      });
+    }
+    return items.length ? items : [{ heading: "Không có tùy chọn" }];
+  };
+  const moreMenu: MenuItem[] = [
+    { heading: "Bố cục" },
+    { label: "Lưới", icon: "grid", checked: layout === "grid", onSelect: () => setLayout("grid") },
+    { label: "Tiêu điểm", icon: "monitor", checked: layout === "spotlight", onSelect: () => setLayout("spotlight") },
+    { label: "Người đang nói", icon: "mic", checked: layout === "auto", onSelect: () => setLayout("auto") },
+    { heading: "Cuộc họp" },
+    { label: "Chất lượng mạng", icon: "activity", onSelect: () => setSidePanel("network") },
+    { label: "Biên bản và ghi hình", icon: "record", onSelect: () => setSidePanel("notes") },
+    ...(control.canManage && meetingState
+      ? ([
+          { heading: "Điều hành" },
+          { label: meetingState.waitingEnabled ? "Tắt phòng chờ" : "Bật phòng chờ", icon: "clock", onSelect: () => void control.action("waiting", undefined, !meetingState.waitingEnabled) },
+          { label: meetingState.locked ? "Mở khóa phòng" : "Khóa phòng", icon: "lock", onSelect: () => void control.action("lock", undefined, !meetingState.locked) },
+          ...(control.isHost
+            ? [{ label: "Kết thúc cho tất cả", icon: "x" as IconName, danger: true, onSelect: () => control.setConfirmation({ name: "end", label: "Xác nhận kết thúc", description: "Kết thúc phiên này và ngắt media của mọi người?" }) }]
+            : []),
+        ] as MenuItem[])
+      : []),
+  ];
   const renderTile = (tile: GridTile, main = false) =>
     tile.peer ? (
       <ParticipantTile
@@ -673,7 +824,6 @@ export function MeetingPage() {
           {meeting.waitingRoomId && (
             <MeetingControls
               roomId={meeting.waitingRoomId}
-              waiting
               onJoin={() => void enterRoom(meeting.waitingRoomId)}
               onCancel={() => void meeting.leaveCall()}
             />
@@ -713,8 +863,8 @@ export function MeetingPage() {
           )}
         </div>
       ) : (
-        /* In-Call Active Video Room */
-        <div className="meeting-room-active">
+        /* In-call room: full screen over the app, like Meet or Teams. */
+        <div className="meeting-room-active" role="region" aria-label="Phòng họp">
           {!isConnected && (
             <div className="meeting-reconnecting-overlay" role="alert">
               <span className="network-reconnect-dot" />
@@ -722,32 +872,45 @@ export function MeetingPage() {
             </div>
           )}
 
-          <header className="meeting-active-header">
-            <h2>{rooms.find((room) => room.id === meeting.roomId)?.name ?? "Phòng họp trực tuyến"}</h2>
+          <header className="meeting-topbar">
+            <h2>{roomName}</h2>
             {meetingState?.startedAt && <MeetingClock since={meetingState.startedAt} />}
-            <span className="meeting-active-header__meta">
-              <Icon name="users" size={14} /> {participantCount} người
+            <span className="meeting-topbar__meta">
+              <Icon name="users" size={14} /> {participantCount}
             </span>
+            {meetingState?.locked && (
+              <span className="meeting-topbar__meta" title="Phòng đã khóa">
+                <Icon name="lock" size={14} /> Đã khóa
+              </span>
+            )}
             {accessToken && <DialInBadge accessToken={accessToken} roomId={meeting.roomId} />}
-            <span className={`meeting-network is-${networkTone(meeting.qos?.rtt, meeting.qos?.packetLoss, isConnected)}`}>
-              <Icon name="activity" size={14} />
-              {!isConnected
-                ? "Mất kết nối"
-                : meeting.qos?.rtt != null
-                  ? `${networkTone(meeting.qos.rtt, meeting.qos.packetLoss, true) === "good" ? "Mạng tốt" : "Mạng yếu"} · ${meeting.qos.rtt} ms`
-                  : "Đang đo mạng…"}
-            </span>
+            <span className="meeting-topbar__spacer" />
+            <button
+              type="button"
+              className={`meeting-network is-${tone}`}
+              aria-pressed={sidePanel === "network"}
+              onClick={() => setSidePanel(sidePanel === "network" ? "none" : "network")}
+              title={networkLabel}
+              aria-label={`Chất lượng mạng: ${networkLabel}`}
+            >
+              <Icon name={isConnected ? "wifi" : "warning"} size={16} />
+            </button>
+            <button
+              type="button"
+              className="meeting-topbar__btn"
+              title="Thu nhỏ: làm việc khác, cuộc họp vẫn tiếp tục"
+              aria-label="Thu nhỏ cuộc họp"
+              onClick={() => navigate({ view: "overview" })}
+            >
+              <Icon name="minus" size={16} />
+            </button>
           </header>
 
-          {/* Shared Screen View */}
-          <MeetingControls
-            roomId={meeting.roomId}
-            waiting={false}
-            onJoin={() => {}}
-            onCancel={() => void meeting.leaveCall()}
-            onCount={setParticipantCount}
-            onState={setMeetingState}
-          />
+          {control.error && (
+            <p className="meeting-controls-alert" role="alert">
+              {control.error}
+            </p>
+          )}
           {meeting.localScreenStream && (
             <div className="shared-screen">
               <Video stream={meeting.localScreenStream} />
@@ -763,39 +926,6 @@ export function MeetingPage() {
               </div>
             ))}
 
-          <div className="meeting-stage-toolbar">
-            <span>{participantCount} người trong phòng</span>
-            <div className="meeting-layout-switch" role="group" aria-label="Kiểu hiển thị">
-              <Button
-                size="sm"
-                variant={layout === "grid" ? "primary" : "ghost"}
-                icon="grid"
-                aria-pressed={layout === "grid"}
-                onClick={() => setLayout("grid")}
-              >
-                Lưới
-              </Button>
-              <Button
-                size="sm"
-                variant={layout === "spotlight" ? "primary" : "ghost"}
-                icon="monitor"
-                aria-pressed={layout === "spotlight"}
-                onClick={() => setLayout("spotlight")}
-              >
-                Tiêu điểm
-              </Button>
-              <Button
-                size="sm"
-                variant={layout === "auto" ? "primary" : "ghost"}
-                icon="mic"
-                aria-pressed={layout === "auto"}
-                title="Tự đưa người đang nói lên khung chính"
-                onClick={() => setLayout("auto")}
-              >
-                Người nói
-              </Button>
-            </div>
-          </div>
           <div className={`meeting-stage-layout ${sidePanel !== "none" ? "has-panel" : ""}`}>
             {/* Dynamic video grid: best-fit columns, paging, demand-driven SFU layers */}
             <div
@@ -846,41 +976,10 @@ export function MeetingPage() {
               ))}
 
             {sidePanel !== "none" && (
-              <aside
-                className="meeting-side-panel"
-                aria-label={sidePanelTitle}
-              >
+              <aside className="meeting-side-panel" aria-label={sidePanelTitle}>
                 <div className="meeting-side-panel-head">
                   <strong>{sidePanelTitle}</strong>
                   <IconButton icon="x" label="Đóng bảng phụ" onClick={() => setSidePanel("none")} />
-                </div>
-
-                {/* Tab selector on top of side panel */}
-                <div className="meeting-panel-tabs" role="tablist">
-                  <button
-                    type="button"
-                    className={`meeting-panel-tab ${sidePanel === "chat" ? "is-active" : ""}`}
-                    onClick={() => setSidePanel("chat")}
-                  >
-                    <Icon name="message" size={14} />
-                    <span>Chat ({callMessages.length})</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`meeting-panel-tab ${sidePanel === "people" ? "is-active" : ""}`}
-                    onClick={() => setSidePanel("people")}
-                  >
-                    <Icon name="users" size={14} />
-                    <span>Điểm danh ({participantCount})</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`meeting-panel-tab ${sidePanel === "notes" ? "is-active" : ""}`}
-                    onClick={() => setSidePanel("notes")}
-                  >
-                    <Icon name="file" size={14} />
-                    <span>Ghi chú</span>
-                  </button>
                 </div>
 
                 {sidePanel === "notes" ? (
@@ -889,65 +988,120 @@ export function MeetingPage() {
                   ) : (
                     <p className="meeting-outcomes-empty">Đang tải phiên họp…</p>
                   )
+                ) : sidePanel === "network" ? (
+                  <div className="meeting-network-panel">
+                    <dl className="meeting-network-stats">
+                      <div><dt>Độ trễ (RTT)</dt><dd>{meeting.qos?.rtt ?? "—"} ms</dd></div>
+                      <div><dt>Băng thông</dt><dd>{meeting.qos?.bitrate ?? "—"} kbps</dd></div>
+                      <div><dt>Mất gói</dt><dd>{meeting.qos?.packetLoss ?? "—"}%</dd></div>
+                      <div><dt>Jitter</dt><dd>{meeting.qos?.jitter ?? "—"} ms</dd></div>
+                    </dl>
+                    <p className="meeting-network-cap">
+                      Chất lượng nhận: <strong>{NETWORK_CAP_LABEL[String(meeting.networkCap)]}</strong>
+                    </p>
+                    <label className="meeting-policy-select">
+                      Chọn luồng video
+                      <select
+                        value={layerPolicy}
+                        onChange={(event) => changeLayerPolicy(event.target.value as LayerPolicy)}
+                        title="Chính sách chọn lớp simulcast cho các ô video"
+                      >
+                        <option value="combined">Kết hợp</option>
+                        <option value="visible">Theo ô hiển thị</option>
+                        <option value="speaker">Theo người nói</option>
+                      </select>
+                    </label>
+                    <div className="meeting-network-actions">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={!meeting.qosHistory.length}
+                        onClick={() => {
+                          meeting.exportQosCsv();
+                          notify("Thành công", "Đã xuất báo cáo QoS định dạng CSV.", "success");
+                        }}
+                      >
+                        Xuất CSV
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={!meeting.qosHistory.length}
+                        onClick={() => {
+                          meeting.exportQosJson();
+                          notify("Thành công", "Đã xuất báo cáo QoS định dạng JSON.", "success");
+                        }}
+                      >
+                        Xuất JSON
+                      </Button>
+                    </div>
+                  </div>
                 ) : sidePanel === "people" ? (
-                  <>
-                    <div className="meeting-attendance-bar">
-                      <span>{participantCount} người tham gia</span>
-                      {keepsRegister && (
-                        <button
-                          type="button"
-                          className="meeting-attendance-btn"
+                  <div className="meeting-people">
+                    {keepsRegister && (
+                      <div className="meeting-attendance-bar">
+                        <span>{participantCount} người trong phòng</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          icon="download"
                           disabled={exportingAttendance}
                           onClick={() => void handleExportAttendanceCsv()}
                           title="Giờ vào, giờ rời và thời gian có mặt của từng người (mở được bằng Excel)"
                         >
-                          <Icon name="download" size={14} />
-                          <span>{exportingAttendance ? "Đang xuất…" : "Xuất điểm danh (CSV)"}</span>
-                        </button>
-                      )}
-                    </div>
-                    <div className="meeting-people-list">
-                      <div className="meeting-person-row">
-                        <div className="meeting-person-info">
-                          <span className="meeting-person-name">{user?.displayName || "Bạn"} (bạn)</span>
-                          <span className="meeting-person-mssv">{roleLabel(user?.id)}</span>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          icon="pin"
-                          onClick={() => {
-                            setPinnedId("local");
-                            setLayout("spotlight");
-                          }}
-                        >
-                          Ghim
+                          {exportingAttendance ? "Đang xuất…" : "Xuất điểm danh"}
                         </Button>
                       </div>
-                      {meeting.remotePeers.map((peer) => (
-                        <div key={peer.socketId} className="meeting-person-row">
+                    )}
+                    {control.canManage && waitingPeople.length > 0 && (
+                      <section className="meeting-people__group">
+                        <h3>Đang chờ vào ({waitingPeople.length})</h3>
+                        {waitingPeople.map((person) => (
+                          <div key={person.userId} className="meeting-person-row">
+                            <Avatar name={person.displayName} size="sm" />
+                            <div className="meeting-person-info">
+                              <span className="meeting-person-name">{person.displayName}</span>
+                            </div>
+                            <Button size="sm" disabled={control.busy} onClick={() => void control.action("admit", person.userId)}>
+                              Cho vào
+                            </Button>
+                          </div>
+                        ))}
+                      </section>
+                    )}
+                    <section className="meeting-people__group">
+                      <h3>Trong cuộc họp ({participantCount})</h3>
+                      {roster.map((person) => (
+                        <div key={person.userId} className="meeting-person-row">
+                          <Avatar name={person.displayName} size="sm" />
                           <div className="meeting-person-info">
-                            <span className="meeting-person-name">{peer.displayName}</span>
+                            <span className="meeting-person-name">
+                              {person.displayName}
+                              {person.isMe ? " (bạn)" : ""}
+                            </span>
                             <span className="meeting-person-mssv">
-                              {roleLabel(peer.userId)}
-                              {studentIdOf(peer.displayName) && ` · MSSV ${studentIdOf(peer.displayName)}`}
+                              {person.role === "host" ? "Chủ trì" : person.role === "cohost" ? "Đồng chủ trì" : "Thành viên"}
+                              {studentIdOf(person.displayName) && ` · MSSV ${studentIdOf(person.displayName)}`}
                             </span>
                           </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            icon="pin"
-                            onClick={() => {
-                              setPinnedId(peer.socketId);
-                              setLayout("spotlight");
-                            }}
-                          >
-                            Ghim
-                          </Button>
+                          {person.raisedHand && <Icon name="hand" size={16} className="meeting-person-hand" aria-label="Đang giơ tay" />}
+                          <Icon
+                            name={person.micOn ? "mic" : "mic-off"}
+                            size={16}
+                            className={person.micOn ? "meeting-person-mic" : "meeting-person-mic is-off"}
+                            aria-label={person.micOn ? "Micro đang bật" : "Micro đang tắt"}
+                          />
+                          <PopoverMenu
+                            label={`Tùy chọn cho ${person.displayName}`}
+                            icon="more"
+                            buttonClass="meeting-person-more"
+                            placement="down"
+                            items={personMenu(person)}
+                          />
                         </div>
                       ))}
-                    </div>
-                  </>
+                    </section>
+                  </div>
                 ) : (
                   <>
                     <div ref={callListRef} className="meeting-chat-list" role="log" aria-label="Tin nhắn cuộc họp" onScroll={event => {const el=event.currentTarget;followCallChat.current=el.scrollHeight-el.scrollTop-el.clientHeight<90;}}>
@@ -992,133 +1146,103 @@ export function MeetingPage() {
             )}
           </div>
 
-          {/* Controls Dock */}
+          {/* Control bar: devices in the middle, panels and leave on the right. */}
           <div className="meeting-controls-dock" role="toolbar" aria-label="Điều khiển cuộc họp">
-            <button
-              type="button"
-              className={`meeting-dock-btn ${!meeting.mic ? "is-muted" : ""}`}
-              aria-label={meeting.mic ? "Tắt micro" : "Bật micro"}
-              aria-pressed={meeting.mic}
-              onClick={() => void meeting.toggleMic()}
-              title={meeting.mic ? "Tắt micro (M)" : "Bật micro (M)"}
-            >
-              <Icon name={meeting.mic ? "mic" : "mic-off"} size={18} />
-            </button>
-
-            <button
-              type="button"
-              className={`meeting-dock-btn ${!meeting.camera ? "is-muted" : ""}`}
-              aria-label={meeting.camera ? "Tắt camera" : "Bật camera"}
-              aria-pressed={meeting.camera}
-              onClick={() => void meeting.toggleCamera()}
-              title={meeting.camera ? "Tắt camera (V)" : "Bật camera (V)"}
-            >
-              <Icon name={meeting.camera ? "camera" : "camera-off"} size={18} />
-            </button>
-
-            <button
-              type="button"
-              className={`meeting-dock-btn ${meeting.sharing ? "is-active" : ""}`}
-              aria-label={meeting.sharing ? "Dừng chia sẻ màn hình" : "Chia sẻ màn hình"}
-              aria-pressed={meeting.sharing}
-              onClick={() => void meeting.toggleScreenShare()}
-              title={meeting.sharing ? "Dừng chia sẻ màn hình (S)" : "Chia sẻ màn hình (S)"}
-            >
-              <Icon name="share" size={18} />
-            </button>
-
-            <button
-              type="button"
-              className={`meeting-dock-btn ${sidePanel === "chat" ? "is-active" : ""}`}
-              aria-label="Chat cuộc họp"
-              aria-pressed={sidePanel === "chat"}
-              title="Chat cuộc họp (C)"
-              onClick={() => setSidePanel(sidePanel === "chat" ? "none" : "chat")}
-            >
-              <Icon name="message" size={18} />
-              {callUnread > 0 && <span className="badge" aria-label={`${callUnread} tin nhắn mới`}>{callUnread}</span>}
-            </button>
-            <button
-              type="button"
-              className={`meeting-dock-btn ${sidePanel === "people" ? "is-active" : ""}`}
-              aria-label="Xem người tham gia & Điểm danh"
-              aria-pressed={sidePanel === "people"}
-              title="Người tham gia & Điểm danh"
-              onClick={() => setSidePanel(sidePanel === "people" ? "none" : "people")}
-            >
-              <Icon name="users" size={18} />
-            </button>
-            <button
-              type="button"
-              className={`meeting-dock-btn ${sidePanel === "notes" ? "is-active" : ""}`}
-              aria-label="Ghi chú và việc cần làm"
-              aria-pressed={sidePanel === "notes"}
-              title="Ghi chú và việc cần làm"
-              onClick={() => setSidePanel(sidePanel === "notes" ? "none" : "notes")}
-            >
-              <Icon name="file" size={18} />
-            </button>
-            <button
-              type="button"
-              className="meeting-dock-btn is-leave"
-              aria-label="Rời khỏi phòng họp"
-              onClick={requestLeave}
-              title="Rời khỏi phòng họp"
-            >
-              <Icon name="phone" size={16} />
-              <span>Rời phòng</span>
-            </button>
+            <div className="meeting-dock-group meeting-dock-group--left">
+              <span className="meeting-dock-room">{roomName}</span>
+            </div>
+            <div className="meeting-dock-group">
+              <button
+                type="button"
+                className={`meeting-dock-btn ${!meeting.mic ? "is-muted" : ""}`}
+                aria-label={meeting.mic ? "Tắt micro" : "Bật micro"}
+                aria-pressed={meeting.mic}
+                onClick={() => void meeting.toggleMic()}
+                title={meeting.mic ? "Tắt micro (M)" : "Bật micro (M)"}
+              >
+                <Icon name={meeting.mic ? "mic" : "mic-off"} size={20} />
+              </button>
+              <button
+                type="button"
+                className={`meeting-dock-btn ${!meeting.camera ? "is-muted" : ""}`}
+                aria-label={meeting.camera ? "Tắt camera" : "Bật camera"}
+                aria-pressed={meeting.camera}
+                onClick={() => void meeting.toggleCamera()}
+                title={meeting.camera ? "Tắt camera (V)" : "Bật camera (V)"}
+              >
+                <Icon name={meeting.camera ? "camera" : "camera-off"} size={20} />
+              </button>
+              <button
+                type="button"
+                className={`meeting-dock-btn ${meeting.sharing ? "is-active" : ""}`}
+                aria-label={meeting.sharing ? "Dừng chia sẻ màn hình" : "Chia sẻ màn hình"}
+                aria-pressed={meeting.sharing}
+                onClick={() => void meeting.toggleScreenShare()}
+                title={meeting.sharing ? "Dừng chia sẻ màn hình (S)" : "Chia sẻ màn hình (S)"}
+              >
+                <Icon name="monitor" size={20} />
+              </button>
+              <button
+                type="button"
+                className={`meeting-dock-btn ${control.me?.raisedHand ? "is-active" : ""}`}
+                aria-label={control.me?.raisedHand ? "Hạ tay" : "Giơ tay"}
+                aria-pressed={Boolean(control.me?.raisedHand)}
+                aria-keyshortcuts="H"
+                disabled={!control.me || control.busy}
+                onClick={() => control.me && void control.action("hand", undefined, !control.me.raisedHand)}
+                title={control.me?.raisedHand ? "Hạ tay (H)" : "Giơ tay (H)"}
+              >
+                <Icon name="hand" size={20} />
+              </button>
+              <PopoverMenu label="Tùy chọn khác" icon="more" buttonClass="meeting-dock-btn" items={moreMenu} />
+              <button
+                type="button"
+                className="meeting-dock-btn is-leave"
+                aria-label="Rời khỏi phòng họp"
+                onClick={requestLeave}
+                title="Rời khỏi phòng họp"
+              >
+                <Icon name="phone" size={20} />
+              </button>
+            </div>
+            <div className="meeting-dock-group meeting-dock-group--right">
+              <button
+                type="button"
+                className={`meeting-dock-btn is-plain ${sidePanel === "people" ? "is-active" : ""}`}
+                aria-label="Mọi người"
+                aria-pressed={sidePanel === "people"}
+                title="Mọi người"
+                onClick={() => setSidePanel(sidePanel === "people" ? "none" : "people")}
+              >
+                <Icon name="users" size={20} />
+                {control.canManage && waitingPeople.length > 0 && (
+                  <span className="badge" aria-label={`${waitingPeople.length} người đang chờ`}>{waitingPeople.length}</span>
+                )}
+              </button>
+              <button
+                type="button"
+                className={`meeting-dock-btn is-plain ${sidePanel === "chat" ? "is-active" : ""}`}
+                aria-label="Chat cuộc họp"
+                aria-pressed={sidePanel === "chat"}
+                title="Chat cuộc họp (C)"
+                onClick={() => setSidePanel(sidePanel === "chat" ? "none" : "chat")}
+              >
+                <Icon name="message" size={20} />
+                {callUnread > 0 && <span className="badge" aria-label={`${callUnread} tin nhắn mới`}>{callUnread}</span>}
+              </button>
+              <button
+                type="button"
+                className={`meeting-dock-btn is-plain ${sidePanel === "notes" ? "is-active" : ""}`}
+                aria-label="Biên bản cuộc họp"
+                aria-pressed={sidePanel === "notes"}
+                title="Biên bản: chương trình, ghi chú, việc cần làm, ghi hình"
+                onClick={() => setSidePanel(sidePanel === "notes" ? "none" : "notes")}
+              >
+                <Icon name="file" size={20} />
+              </button>
+            </div>
           </div>
-
-          {/* QoS measurements, folded: the header already shows the network state. */}
-          <details className="meeting-qos-card">
-            <summary>Chi tiết chất lượng mạng (QoS)</summary>
-            <div className="meeting-qos-info">
-              <p>
-                Độ trễ RTT: <strong>{meeting.qos?.rtt ?? "—"} ms</strong> · Băng thông:{" "}
-                <strong>{meeting.qos?.bitrate ?? "—"} kbps</strong> · Tỷ lệ mất gói:{" "}
-                <strong>{meeting.qos?.packetLoss ?? "—"}%</strong> · Jitter:{" "}
-                <strong>{meeting.qos?.jitter ?? "—"} ms</strong> · Chất lượng nhận:{" "}
-                <strong>{NETWORK_CAP_LABEL[String(meeting.networkCap)]}</strong>
-              </p>
-            </div>
-            <div className="meeting-qos-actions">
-              <label className="meeting-policy-select">
-                Chọn luồng
-                <select
-                  value={layerPolicy}
-                  onChange={(event) => changeLayerPolicy(event.target.value as LayerPolicy)}
-                  title="Chính sách chọn lớp simulcast cho các ô video"
-                >
-                  <option value="combined">Kết hợp</option>
-                  <option value="visible">Theo ô hiển thị</option>
-                  <option value="speaker">Theo người nói</option>
-                </select>
-              </label>
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={!meeting.qosHistory.length}
-                onClick={() => {
-                  meeting.exportQosCsv();
-                  notify("Thành công", "Đã xuất báo cáo QoS định dạng CSV.", "success");
-                }}
-              >
-                Xuất CSV
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={!meeting.qosHistory.length}
-                onClick={() => {
-                  meeting.exportQosJson();
-                  notify("Thành công", "Đã xuất báo cáo QoS định dạng JSON.", "success");
-                }}
-              >
-                Xuất JSON
-              </Button>
-            </div>
-          </details>
+          {control.confirmDialog}
         </div>
       )}
       <AnimatePresence>{leaveConfirm && <ConfirmDialog title="Rời phòng" description={meeting.sharing ? "Bạn đang chia sẻ màn hình. Rời phòng sẽ dừng chia sẻ và ngắt thiết bị của bạn." : "Bạn đang là host. Rời phòng sẽ chuyển quyền host cho người phù hợp; nếu không còn người tham gia, phiên sẽ kết thúc."} confirmLabel="Rời phòng" loading={leaving} onClose={() => setLeaveConfirm(false)} onConfirm={() => {setLeaving(true); void meeting.leaveCall().finally(() => {setLeaving(false);setLeaveConfirm(false);});}} />}</AnimatePresence>

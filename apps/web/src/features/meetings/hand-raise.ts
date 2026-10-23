@@ -21,3 +21,21 @@ export function handToastTitle(
   if (previous === undefined || next === undefined || previous === next) return null;
   return next ? "Bạn đã giơ tay" : "Đã hạ tay";
 }
+
+/**
+ * People who started waiting or raised a hand since the previous state, for the corner toasts.
+ * The first state after joining is not compared, so joining never floods toasts.
+ */
+export function newAttention(
+  previous: MeetingState | null,
+  next: MeetingState | null,
+  selfId: string | undefined,
+): { waiting: MeetingState["participants"]; hands: MeetingState["participants"] } {
+  if (!previous || !next || previous.id !== next.id) return { waiting: [], hands: [] };
+  const before = new Map(previous.participants.map((p) => [p.userId, p]));
+  const others = next.participants.filter((p) => p.userId !== selfId);
+  return {
+    waiting: others.filter((p) => p.state === "waiting" && before.get(p.userId)?.state !== "waiting"),
+    hands: others.filter((p) => p.state === "admitted" && p.raisedHand && !before.get(p.userId)?.raisedHand),
+  };
+}

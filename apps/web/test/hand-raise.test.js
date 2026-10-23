@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { handToastTitle, raisedHandUserIds } from "../src/features/meetings/hand-raise.ts";
+import { handToastTitle, newAttention, raisedHandUserIds } from "../src/features/meetings/hand-raise.ts";
 
 const participant = (userId, raisedHand, state = "admitted") => ({
   userId,
@@ -33,4 +33,20 @@ test("hand toast fires only on a real change of the local hand", () => {
   assert.equal(handToastTitle(undefined, true), null);
   assert.equal(handToastTitle(undefined, false), null);
   assert.equal(handToastTitle(true, undefined), null);
+});
+
+test("toasts only for people who just started waiting or just raised a hand", () => {
+  const state = (...participants) => ({ id: "s1", participants });
+  const before = state(participant("me", false), participant("a", false), participant("w", false, "waiting"));
+  const after = state(
+    participant("me", true),
+    participant("a", true),
+    participant("w", false, "waiting"),
+    participant("n", false, "waiting"),
+  );
+  const { waiting, hands } = newAttention(before, after, "me");
+  assert.deepEqual(waiting.map((p) => p.userId), ["n"]);
+  assert.deepEqual(hands.map((p) => p.userId), ["a"]);
+  assert.deepEqual(newAttention(null, after, "me"), { waiting: [], hands: [] });
+  assert.deepEqual(newAttention({ ...before, id: "old" }, after, "me"), { waiting: [], hands: [] });
 });

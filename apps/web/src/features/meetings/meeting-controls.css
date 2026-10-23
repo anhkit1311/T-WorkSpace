@@ -9,51 +9,8 @@
   color: var(--text);
 }
 
-.meeting-controls summary {
-  cursor: pointer;
-  font-size: 13.5px;
-  font-weight: 600;
-  padding: 6px 0;
-}
-
-.meeting-session-meta {
-  margin: 0 0 6px;
-  font-size: 12.5px;
-  color: var(--text-secondary);
-}
-
 .meeting-controls .button {
   margin: 6px 6px 6px 0;
-}
-
-.meeting-host-actions,
-.meeting-participant-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0;
-}
-
-.meeting-controls ul {
-  margin: 8px 0;
-  padding: 0;
-  list-style: none;
-}
-
-.meeting-controls li {
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border);
-  overflow-wrap: anywhere;
-  font-size: 13.5px;
-}
-
-.meeting-controls li:last-child {
-  border-bottom: 0;
-}
-
-.meeting-controls small {
-  display: block;
-  color: var(--text-muted);
-  line-height: 1.5;
 }
 
 .meeting-controls-waiting {
