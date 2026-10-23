@@ -16,8 +16,8 @@ Kiến trúc modular monolith: React/TypeScript + Node.js/Socket.IO + PostgreSQL
 
 ### Họp trực tuyến
 
-- Lịch họp theo phòng của nhóm: tạo, sửa, hủy, tải tệp `.ics`; lịch sử các cuộc họp đã tham gia.
-- Trước khi vào: xem trước camera, đo mức micro, chọn micro/camera/loa và chất lượng video (360p–720p).
+- Trang "Họp" là lịch tuần (thứ 2 → chủ nhật, 7h–21h, giờ Việt Nam) của mọi nhóm: lịch họp và cả cuộc họp mở nhanh đã diễn ra; xanh lá đang diễn ra, xanh dương sắp tới, xám đã qua. Bấm một cuộc họp mở cột chi tiết: vào phòng, sửa, hủy, tải `.ics`; cuộc họp đã qua có bản ghi, biên bản và điểm danh. "Họp ngay" chọn nhóm (nhớ nhóm dùng gần nhất) rồi vào bước kiểm tra. Điện thoại xem danh sách theo ngày.
+- Màn hình kiểm tra trước khi vào (riêng cho từng phòng): xem trước camera, đo mức micro, chọn micro/camera/loa và chất lượng video (360p–720p), ai đang trong phòng, nút "Vào phòng".
 - SFU mediasoup: simulcast, chọn lớp video theo ô đang hiển thị hoặc người đang nói, bố cục lưới / tiêu điểm / người nói, ghim, phân trang lưới, chia sẻ màn hình, chat trong phòng.
 - Điều hành: phòng chờ, cho vào, mời ra, khóa phòng, tắt micro người khác, giơ tay, đồng chủ trì, chuyển chủ trì, kết thúc phiên.
 - Ổn định: tự vào lại phòng khi mất mạng (rớt socket hoặc lỗi ICE), khởi động lại ICE, tạm dừng nhận video khi tab bị ẩn.
@@ -41,11 +41,13 @@ Kiến trúc modular monolith: React/TypeScript + Node.js/Socket.IO + PostgreSQL
 - Theo dõi thời gian xem video: trình phát gửi từng đoạn đã thực sự phát (tua không tính, mỗi lần gửi bị giới hạn theo thời gian thực), bài video chỉ hoàn thành khi đã xem đủ 90%, mở lại thì phát tiếp từ chỗ xem dở. Bài tài liệu và video chưa rõ thời lượng vẫn do người học tự bấm hoàn thành.
 - Chưa có: bài tự luận/nộp bài chấm tay; tệp bài học đang lưu trên đĩa của máy chủ API (một máy chủ).
 
-Chat nhóm giữ làm kênh trao đổi nội bộ: ảnh/file/voice, reaction, thread/mention, ghim, tìm kiếm, gửi lại không trùng. Trang "Tin nhắn" gồm cả kênh nhóm và trò chuyện 1-1 (`026_direct_messages`).
+Menu đi theo chức năng, không theo nhóm: "Tin nhắn", "Họp", "Công việc", "Tài liệu" gom dữ liệu của mọi nhóm bạn tham gia (nhóm chỉ là bộ lọc); "Nhóm của tôi" để tạo nhóm, nhập mã mời, xem thành viên, rời nhóm và vào trang quản lý. Link cũ `/app/workspace?...` tự chuyển sang trang tương ứng.
+
+Chat nhóm giữ làm kênh trao đổi nội bộ: ảnh/file/voice, reaction, thread/mention, ghim, tìm kiếm, gửi lại không trùng. Trang "Tin nhắn" liệt kê kênh theo từng nhóm (thu gọn được) cùng trò chuyện 1-1 (`026_direct_messages`); đầu kênh có nhãn nhóm và nút "Họp ngay". "Tài liệu" tìm tệp theo tên ở mọi nhóm và tải tệp lên một kênh.
 
 Nền tảng chung: đăng nhập email OTP và Google, hồ sơ, presence, lưu file DB/S3, metrics, migration có khóa.
 
-Kanban vẫn dùng trong nhóm làm việc (việc cần làm từ biên bản họp đi vào đây). Phân hệ quản lý đồ án tốt nghiệp đã được gỡ; chỉ còn khoa, bộ môn, giảng viên và phân quyền (trang "Quản trị hệ thống"). Các bảng `thesis_*` (migration 022–024) vẫn giữ trong DB, không còn code dùng.
+"Công việc" là một bảng Kanban cho việc ở mọi nhóm (mặc định việc giao cho tôi; lọc theo nhóm, sắp hết hạn, trạng thái, ưu tiên); mỗi thẻ ghi tên nhóm và kênh, việc cần làm từ biên bản họp cũng vào đây. Phân hệ quản lý đồ án tốt nghiệp đã được gỡ; chỉ còn khoa, bộ môn, giảng viên và phân quyền (trang "Quản trị hệ thống"). Các bảng `thesis_*` (migration 022–024) vẫn giữ trong DB, không còn code dùng.
 
 ## Chạy local
 
@@ -99,7 +101,7 @@ npm run test:e2e
 npm run build
 ```
 
-`test:e2e` (Playwright, dùng Chrome đã cài) chạy trên `npm run dev` và DB local: đăng nhập, trang Quản trị hệ thống, hai người họp video với camera giả và tự vào lại phòng sau khi mất mạng, mở trang Khóa học và Tổng đài. Tài khoản test tạo trong `e2e/global-setup.mjs` và bị xoá khi chạy xong.
+`test:e2e` (Playwright, dùng Chrome đã cài) chạy trên `npm run dev` và DB local: đăng nhập, trang Quản trị hệ thống, hai người họp video với camera giả và tự vào lại phòng sau khi mất mạng, mở trang Khóa học và Tổng đài, menu theo chức năng, tài khoản chưa có nhóm, gửi tin trong kênh, tạo việc từ "Công việc", tải tệp từ "Tài liệu", lên lịch rồi vào phòng từ lịch tuần. Tài khoản test tạo trong `e2e/global-setup.mjs` và bị xoá khi chạy xong.
 
 `npm test` chạy unit test của web và API; các test cần PostgreSQL chỉ chạy khi đặt `RUN_DB_TESTS=1` (gồm luồng e-learning đầy đủ, phiên họp, biên bản, ghi hình, QoS). `test:sfu` chạy riêng các test có PostgreSQL và mediasoup. Kiểm signaling/worker không chứng minh RTP đa mạng.
 
@@ -118,6 +120,7 @@ Benchmark local50/100/200 socket,2 API process,4tin/giây,30s ×2/mức:732tin,0
 - GET /health: liveness.
 - GET /ready: PostgreSQL và schema đã migrate tới migration mới nhất.
 - GET /api/openapi.json: danh mục REST; socket types trong packages/shared/src/socket.ts.
+- Gom theo người dùng (mọi nhóm đang tham gia): `GET /api/tasks?assignee=me|all&workspace&status&priority&deadline&archived` (tối đa 500), `GET /api/files?workspace&q&before&limit`, `GET /api/meetings/calendar?from&to` (tối đa 42 ngày; lịch họp chưa hủy và các phiên họp kèm người tham gia).
 - GET /api/operations/metrics: cần OPERATIONS_TOKEN riêng.
 - SOCKET_ADAPTER=postgres: đồng bộ chat/task/notification giữa node, lease45s/heartbeat15s. WebSocket hoặc sticky-session nếu polling.
 - SFU_PUBLIC_URL/room affinity: media socket đến đúng owner; một room/router trên một worker/node. Adapter không chia sẻ media transport.
