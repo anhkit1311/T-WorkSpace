@@ -15,7 +15,7 @@ export default async function globalSetup() {
   const users = {};
   // The pool stays open: teardown runs in this same process and ends it.
   {
-    for (const [key, name] of [["admin", "E2E Quản trị"], ["alice", "E2E Alice"], ["bob", "E2E Bob"]]) {
+    for (const [key, name] of [["admin", "E2E Quản trị"], ["alice", "E2E Alice"], ["bob", "E2E Bob"], ["carol", "E2E Carol"]]) {
       const id = randomUUID();
       const email = `e2e-${key}-${id.slice(0, 8)}@example.test`;
       await pool.query(`INSERT INTO users(id,email,password_hash,display_name,email_verified) VALUES($1,$2,$3,$4,true)`, [id, email, hash, name]);

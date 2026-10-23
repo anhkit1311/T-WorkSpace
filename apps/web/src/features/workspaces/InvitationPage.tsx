@@ -18,7 +18,7 @@ export function InvitationPage() {
         "POST",
         { token: route.invitationToken },
       );
-      openWorkspace(result.workspaceId, "workspace");
+      openWorkspace(result.workspaceId);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Không nhận được lời mời.");
     } finally {

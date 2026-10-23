@@ -14,7 +14,8 @@ export type ViewId =
   | "call-center"
   | "call-directory"
   | "elearning"
-  | "access";
+  | "access"
+  | "groups";
 
 export type PublicScreen = "landing" | "login" | "app";
 

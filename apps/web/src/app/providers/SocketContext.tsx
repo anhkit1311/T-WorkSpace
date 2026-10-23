@@ -203,8 +203,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         !current.accessToken ||
         !current.user?.notificationsEnabled ||
         message.authorId === current.user.id ||
-        current.activeView === "chat" ||
-        current.activeView === "workspace"
+        current.activeView === "chat"
       )
         return;
       void fetch(

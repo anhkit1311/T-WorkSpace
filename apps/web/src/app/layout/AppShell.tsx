@@ -15,17 +15,23 @@ import { LogoutConfirmDialog } from "../../features/auth/LogoutConfirmDialog";
 import { PageErrorBoundary } from "../../shared/ui/PageErrorBoundary";
 import { governanceApi } from "../../features/workspaces/api";
 import type { ViewId } from "../types";
-import { isWorkspaceTabView } from "../navigation";
 
 const WorkspaceHomePage = lazy(() =>
   import("../../features/workspaces/WorkspaceHomePage").then((m) => ({
     default: m.WorkspaceHomePage,
   })),
 );
-const WorkspaceShell = lazy(() =>
-  import("../../features/workspaces/WorkspaceShell").then((m) => ({
-    default: m.WorkspaceShell,
-  })),
+const TaskBoardPage = lazy(() =>
+  import("../../features/tasks/TaskBoardPage").then((m) => ({ default: m.TaskBoardPage })),
+);
+const FilesPage = lazy(() =>
+  import("../../features/files/FilesPage").then((m) => ({ default: m.FilesPage })),
+);
+const MeetingPage = lazy(() =>
+  import("../../features/meetings/MeetingPage").then((m) => ({ default: m.MeetingPage })),
+);
+const GroupsPage = lazy(() =>
+  import("../../features/workspaces/GroupsPage").then((m) => ({ default: m.GroupsPage })),
 );
 const MessagesPage = lazy(() =>
   import("../../features/chat/MessagesPage").then((m) => ({ default: m.MessagesPage })),
@@ -87,35 +93,31 @@ interface SidebarMenuItem {
 
 const SIDEBAR_MENU_ITEMS: SidebarMenuItem[] = [
   { id: "home", label: "Trang chủ", icon: "home", targetView: "overview" },
+  { id: "messages", label: "Tin nhắn", icon: "message", targetView: "chat", badgeKey: "messages" },
+  { id: "meetings", label: "Họp", icon: "video", targetView: "meetings" },
+  { id: "tasks", label: "Công việc", icon: "check-square", targetView: "tasks" },
+  { id: "files", label: "Tài liệu", icon: "folder", targetView: "files" },
+  { id: "elearning", label: "Khóa học", icon: "graduation-cap", targetView: "elearning" },
   { id: "switchboard", label: "Tổng đài", icon: "headset", targetView: "call-center" },
   { id: "call-list", label: "Danh sách cuộc gọi", icon: "phone-call", targetView: "call-directory" },
-  { id: "meetings", label: "Họp trực tuyến", short: "Họp", icon: "video", targetView: "meetings" },
-  { id: "elearning", label: "Khóa học", icon: "graduation-cap", targetView: "elearning" },
-  { id: "messages", label: "Tin nhắn", icon: "message", targetView: "chat", badgeKey: "messages" },
-  { id: "staff", label: "Nhóm làm việc", icon: "users", targetView: "workspace", badgeKey: "groups" },
-  { id: "departments", label: "Khoa / Phòng ban", icon: "building", targetView: "admin" },
+  { id: "groups", label: "Nhóm của tôi", icon: "users", targetView: "groups", badgeKey: "groups" },
   { id: "notifications", label: "Quản lý thông báo", icon: "bell", targetView: "notifications", badgeKey: "notifications" },
-  { id: "roles", label: "Quản trị nhóm", icon: "shield", targetView: "admin" },
   { id: "access", label: "Quản trị hệ thống", icon: "lock", targetView: "access" },
   { id: "profile", label: "Trang cá nhân", icon: "profile", targetView: "profile" },
   { id: "settings", label: "Cài đặt", icon: "settings", targetView: "profile" },
 ];
 
-/**
- * Entries that only duplicated another page ("departments" = admin, "settings" = profile,
- * "call-list" = the switchboard's "Lịch sử cuộc gọi" tab).
- */
-const HIDDEN_MENU_ITEMS = new Set(["departments", "settings", "call-list"]);
+/** Entries that only duplicate another page ("settings" = profile, "call-list" = the switchboard's history tab). */
+const HIDDEN_MENU_ITEMS = new Set(["settings", "call-list"]);
 /** The phone bottom bar shows these; the rest open from "Thêm". */
-const BOTTOM_BAR_ITEMS = new Set(["home", "switchboard", "meetings", "elearning"]);
+const BOTTOM_BAR_ITEMS = new Set(["home", "messages", "meetings", "elearning"]);
 /** Account and administration entries sit under a divider, after the services. */
-const FIRST_MANAGE_ITEM = "notifications";
+const FIRST_MANAGE_ITEM = "groups";
 /**
  * Entries shown only to users with that role (see useMenuAccess). The switchboard and call list
  * are the core of the system and always stay visible; the page itself explains missing access.
  */
 const RESTRICTED_MENU_ITEMS: Record<string, keyof MenuAccess> = {
-  roles: "workspaceAdmin",
   access: "systemAdmin",
 };
 /** No English translation exists yet: the VI | EN switch stays hidden until it does. */
@@ -173,9 +175,10 @@ export function AppShell() {
     else if (activeView === "meetings") setActiveMenuId("meetings");
     else if (activeView === "notifications") setActiveMenuId("notifications");
     else if (activeView === "elearning") setActiveMenuId("elearning");
-    else if (activeView === "admin") setActiveMenuId("roles");
+    else if (activeView === "admin" || activeView === "groups") setActiveMenuId("groups");
     else if (activeView === "profile") setActiveMenuId("profile");
-    else if (activeView === "workspace" || activeView === "tasks" || activeView === "files") setActiveMenuId("staff");
+    else if (activeView === "tasks") setActiveMenuId("tasks");
+    else if (activeView === "files") setActiveMenuId("files");
     else if (activeView === "access") setActiveMenuId("access");
   }, [activeView]);
 
@@ -272,8 +275,8 @@ export function AppShell() {
     return () => window.removeEventListener("keydown", shortcut);
   }, []);
 
-  const isWorkspaceScope = isWorkspaceTabView(activeView);
-  const shellViewKey = activeView === "chat" ? "messages" : isWorkspaceScope ? "workspace-shell" : activeView;
+  /** Pages that fill the viewport edge to edge (their own columns scroll). */
+  const isWorkspaceScope = activeView === "chat" || activeView === "tasks" || activeView === "meetings";
 
   const renderPage = () => {
     if (route.invalid)
@@ -291,7 +294,10 @@ export function AppShell() {
     else if (activeView === "call-center") Component = <CallCenterWorkspace />;
     else if (activeView === "call-directory") Component = <CallDirectoryPage />;
     else if (activeView === "chat") Component = <MessagesPage />;
-    else if (isWorkspaceScope) Component = <WorkspaceShell />;
+    else if (activeView === "tasks") Component = <TaskBoardPage />;
+    else if (activeView === "files") Component = <FilesPage />;
+    else if (activeView === "meetings") Component = <MeetingPage />;
+    else if (activeView === "groups") Component = <GroupsPage />;
     else if (activeView === "profile") Component = <ProfilePage />;
     else if (activeView === "admin") Component = <WorkspaceAdminPage />;
     else if (activeView === "invitation") Component = <InvitationPage />;
@@ -301,7 +307,7 @@ export function AppShell() {
     else Component = <WorkspaceHomePage />;
 
     return (
-      <PageErrorBoundary key={shellViewKey}>
+      <PageErrorBoundary key={activeView}>
         <Suspense fallback={<ViewFallback />}>
           {Component}
         </Suspense>

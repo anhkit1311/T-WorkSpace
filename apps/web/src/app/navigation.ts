@@ -30,42 +30,9 @@ const views = new Set([
   "call-directory",
   "elearning",
   "access",
+  "groups",
 ]);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export type WorkspaceTabId = "workspace" | "tasks" | "chat" | "meetings" | "files";
-
-export function isWorkspaceTabView(view: ViewId): view is WorkspaceTabId {
-  return (
-    view === "workspace" ||
-    view === "tasks" ||
-    view === "chat" ||
-    view === "meetings" ||
-    view === "files"
-  );
-}
-
-export function selectWorkspaceRoute(
-  workspaceId: string,
-  tab: WorkspaceTabId = "workspace",
-): AppRoute {
-  return {
-    view: tab,
-    workspaceId,
-  };
-}
-
-export function switchWorkspaceTabRoute(
-  currentRoute: AppRoute,
-  targetTab: WorkspaceTabId,
-  fallbackWorkspaceId?: string,
-): AppRoute {
-  const workspaceId = currentRoute.workspaceId ?? fallbackWorkspaceId;
-  return {
-    view: targetTab,
-    workspaceId,
-  };
-}
 
 const publicAuthPath = /^\/(login|register)\/?$/;
 
@@ -94,7 +61,8 @@ export function readAppRoute(url: URL): AppRoute {
   }
   // Direct conversations live outside any workspace, so a chat link may carry only the channel.
   if (route.channelId && !route.workspaceId && route.view !== "chat") route.invalid = true;
-  if (route.view === "chat" && route.workspaceId) route.view = "workspace";
+  // The group shell is gone: an old group link opens that group's channels in "Tin nhắn".
+  if (route.view === "workspace") route.view = "chat";
   const query = url.searchParams.get("q");
   if (query) route.query = query;
   if (route.view === "invitation")

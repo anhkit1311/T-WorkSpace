@@ -1,0 +1,367 @@
+/* "Tài liệu": files of every group (rules moved from the old group shell). */
+.ws-channel-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(28, 27, 25, 0.06);
+  color: var(--nexo-text-primary, #1C1B19);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.ws-file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 8px;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA);
+}
+
+.ws-meeting-item__body,
+.ws-file-item__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ws-meeting-item__top,
+.ws-file-item__top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.ws-file-item__top strong {
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 210px;
+}
+
+.ws-meeting-item__meta,
+.ws-file-item__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 0.76rem;
+  color: var(--nexo-text-muted, #8A8780);
+}
+
+.ws-file-item__icon,
+.ws-file-row__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  background: var(--nexo-bg-subtle, #EEECE7);
+  color: var(--nexo-text-primary, #1C1B19);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ws-file-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--nexo-bg-subtle, #EEECE7);
+  color: var(--nexo-text-muted, #8A8780);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.ws-file-tag.is-pinned {
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+}
+
+/* --------------------------------------------------------------------------
+   5. TAB 5 — TÀI LIỆU NHÓM (WorkspaceFilesTab — Divided Inside Unified Frame)
+   -------------------------------------------------------------------------- */
+.ws-files-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-bottom: 18px;
+}
+
+.ws-files-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 20px 26px;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  border: 0;
+  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA);
+  box-shadow: none;
+}
+
+.ws-files-toolbar__left h2 {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.ws-files-toolbar__left p {
+  margin: 3px 0 0;
+  font-size: 0.84rem;
+  color: var(--nexo-text-muted, #8A8780);
+}
+
+.ws-files-toolbar__controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ws-files-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 9999px;
+  background: var(--nexo-bg-ivory, #FAF9F6);
+  border: 1px solid var(--nexo-border-beige, #E6E2DA);
+  min-width: 240px;
+}
+
+.ws-files-search input {
+  border: 0;
+  background: transparent;
+  width: 100%;
+  font-size: 0.85rem;
+  color: var(--nexo-text-primary, #1C1B19);
+  outline: none;
+}
+
+.ws-files-filters {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 9999px;
+  background: var(--nexo-bg-subtle, #EEECE7);
+  border: 1px solid var(--nexo-border-beige, #E6E2DA);
+}
+
+.ws-files-filter-btn {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--nexo-text-muted, #8A8780);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.ws-files-filter-btn:hover {
+  color: var(--nexo-text-primary, #1C1B19);
+}
+
+.ws-files-filter-btn:active {
+  transform: scale(0.97);
+}
+
+.ws-files-filter-btn:focus-visible {
+  outline: 2px solid var(--nexo-text-primary, #1C1B19);
+  outline-offset: 2px;
+}
+
+.ws-files-filter-btn.is-active {
+  background: var(--nexo-bg-ivory, #FAF9F6);
+  color: var(--nexo-text-primary, #1C1B19);
+  box-shadow: none;
+}
+
+.ws-files-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.ws-files-empty-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.ws-file-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 16px;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  transition: background-color 150ms ease;
+}
+
+.ws-file-row::after {
+  content: "";
+  position: absolute;
+  left: 72px;
+  right: 16px;
+  bottom: 0;
+  height: 1px;
+  background: var(--nexo-border-beige, #E6E2DA);
+  pointer-events: none;
+}
+
+.ws-file-row:hover {
+  background: var(--nexo-bg-subtle, #EEECE7);
+}
+
+.ws-file-row__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ws-file-row__title-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ws-file-row__name {
+  font-size: 0.94rem;
+  font-weight: 600;
+  color: var(--nexo-text-primary, #1C1B19);
+  word-break: break-word;
+}
+
+.ws-file-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 0.81rem;
+  color: var(--nexo-text-muted, #8A8780);
+}
+
+.ws-file-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ws-files-empty,
+.ws-empty-stage__card {
+  padding: 28px 24px;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.ws-empty-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 20px;
+}
+
+.ws-empty-stage__card {
+  max-width: 520px;
+}
+
+.ws-empty-stage__card h1 {
+  margin: 4px 0;
+  font-size: 1.45rem;
+}
+
+.ws-empty-stage__card p {
+  margin: 0;
+  color: var(--nexo-text-muted, #8A8780);
+  font-size: 0.9rem;
+}
+
+.ws-empty-stage__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.ws-files-more {
+  display: flex;
+  justify-content: center;
+  padding-top: 12px;
+}
+
+@media (max-width: 640px) {
+  .ws-file-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ws-file-row__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+.files-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.files-page h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.files-page__group select {
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+}
+
+@media (max-width: 480px) {
+  .files-page {
+    padding: 16px;
+  }
+}

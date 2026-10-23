@@ -1,0 +1,131 @@
+.groups-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+  color: var(--text);
+}
+
+.groups-page__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.groups-page__head h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.groups-page__head p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.groups-page__actions,
+.groups-page__item-actions,
+.no-groups__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.groups-page__list,
+.groups-page__members {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.groups-page__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.groups-page__info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.groups-page__info strong {
+  font-size: 15px;
+}
+
+.groups-page__info span,
+.groups-page__member-name span,
+.groups-page__presence {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.groups-page__members li {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.groups-page__member-name {
+  display: grid;
+  min-width: 0;
+}
+
+.groups-page__member-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.groups-page__presence.is-online {
+  color: var(--live-text);
+}
+
+.ws-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.no-groups {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--text);
+}
+
+.no-groups h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.no-groups p {
+  margin: 0 0 8px;
+  max-width: 46ch;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 480px) {
+  .groups-page {
+    padding: 16px;
+  }
+
+  .groups-page__members li {
+    grid-template-columns: auto 1fr;
+  }
+}

@@ -63,33 +63,27 @@ const pages: { id: ViewId; title: string; desc: string; icon: IconName }[] = [
     icon: "graduation-cap",
   },
   {
-    id: "workspace",
-    title: "Nhóm làm việc",
-    desc: "Không gian nhóm, tổng quan hoạt động, thành viên & chức năng nhóm",
-    icon: "users",
-  },
-  {
     id: "chat",
-    title: "Trao đổi (Kênh chat)",
-    desc: "Tin nhắn theo kênh #kênh, chủ đề phản hồi & tệp chia sẻ trong nhóm",
+    title: "Tin nhắn",
+    desc: "Kênh của mọi nhóm và trò chuyện riêng, chủ đề phản hồi & tệp chia sẻ",
     icon: "message",
   },
   {
     id: "tasks",
     title: "Công việc",
-    desc: "Bảng công việc Kanban theo nhóm và kênh",
+    desc: "Bảng Kanban gom việc của bạn ở mọi nhóm",
     icon: "tasks",
   },
   {
     id: "meetings",
-    title: "Cuộc họp",
-    desc: "Phòng họp video SFU, lịch họp & chia sẻ màn hình trong nhóm",
+    title: "Họp",
+    desc: "Lịch họp theo tuần của mọi nhóm, họp ngay, bản ghi & biên bản",
     icon: "video",
   },
   {
     id: "files",
-    title: "Tài liệu nhóm",
-    desc: "Kho tệp đính kèm đã ghim và gần đây trong nhóm làm việc",
+    title: "Tài liệu",
+    desc: "Tệp gửi trong mọi nhóm, tìm theo tên và lọc theo nhóm",
     icon: "folder",
   },
   {
@@ -99,9 +93,9 @@ const pages: { id: ViewId; title: string; desc: string; icon: IconName }[] = [
     icon: "bell",
   },
   {
-    id: "admin",
-    title: "Quản trị nhóm",
-    desc: "Thành viên, lời mời, kênh & nhật ký nhóm",
+    id: "groups",
+    title: "Nhóm của tôi",
+    desc: "Tạo nhóm, nhập mã mời, thành viên, kênh & quản trị nhóm",
     icon: "admin",
   },
   {

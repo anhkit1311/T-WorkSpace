@@ -3,11 +3,13 @@ import { expect, test, type Browser, type BrowserContext, type Page } from "@pla
 import { fixturesFile } from "./fixtures.mjs";
 
 type User = { id: string; email: string; name: string };
-const fixtures = (): { password: string; users: Record<"admin" | "alice" | "bob", User>; workspaceId: string; roomId: string } =>
+const fixtures = (): { password: string; users: Record<"admin" | "alice" | "bob" | "carol", User>; workspaceId: string; roomId: string } =>
   JSON.parse(readFileSync(fixturesFile, "utf8"));
 
 async function signIn(page: Page, user: User) {
   await page.goto("/login");
+  // The login screen first tries to restore a session; filling before it settles loses the input.
+  await page.waitForLoadState("networkidle");
   await page.getByLabel("Email tài khoản").fill(user.email);
   await page.locator('input[type="password"]:visible').fill(fixtures().password);
   await page.locator('form:visible button[type="submit"]').first().click();
@@ -72,6 +74,8 @@ test("chỉ quản trị hệ thống thấy trang Quản trị và sức khoẻ
 });
 
 test("hai người vào cùng phòng họp thấy video của nhau và tự vào lại sau khi mất mạng", async ({ browser }) => {
+  // Losing the network is only noticed after the ICE/socket timeouts (up to 45 s), then the rejoin.
+  test.setTimeout(150_000);
   const { users, workspaceId, roomId } = fixtures();
   const room = `/app/meetings?workspace=${workspaceId}&channel=${roomId}`;
   const [alice, bob] = [await signedIn(browser, users.alice), await signedIn(browser, users.bob)];
@@ -96,4 +100,24 @@ test("trang Khóa học và Tổng đài mở được", async ({ browser }) => 
   await expect(page.locator("main")).toContainText(/Khóa học/);
   await page.goto("/app/call-directory");
   await expect(page.locator("main")).not.toBeEmpty();
+});
+
+test("menu theo chức năng", async ({ browser }) => {
+  const page = await signedIn(browser, fixtures().users.alice);
+  const menu = page.locator(".tdtu-sidebar");
+  // A menu button's name ends with its unread badge, if any.
+  const item = (name: string) => menu.getByRole("button", { name: new RegExp(`^${name}( \\d+)?$`) });
+  for (const name of ["Tin nhắn", "Họp", "Công việc", "Tài liệu", "Nhóm của tôi"]) await expect(item(name)).toBeVisible();
+  for (const name of ["Nhóm làm việc", "Quản trị nhóm"]) await expect(item(name)).toHaveCount(0);
+  await item("Nhóm của tôi").click();
+  const group = page.locator("main").getByRole("listitem").filter({ hasText: /^E2E \d+/ });
+  await expect(group).toBeVisible();
+  await expect(group.getByRole("button", { name: "Quản lý" })).toBeVisible();
+});
+
+test("tài khoản chưa có nhóm thấy hướng dẫn tạo nhóm", async ({ browser }) => {
+  const page = await signedIn(browser, fixtures().users.carol);
+  await page.goto("/app/groups");
+  await expect(page.locator("main").getByRole("button", { name: "Tạo nhóm" }).first()).toBeVisible();
+  await expect(page.locator("main").getByRole("button", { name: "Nhập mã mời" }).first()).toBeVisible();
 });

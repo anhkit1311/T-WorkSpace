@@ -21,11 +21,8 @@ import type { PublicScreen, ToastMessage, ViewId } from "../types";
 import {
   appEntryRoute,
   appRouteUrl,
-  isWorkspaceTabView,
   readAppRoute,
-  selectWorkspaceRoute,
   type AppRoute,
-  type WorkspaceTabId,
 } from "../navigation";
 import { clearAccountDrafts } from "../../shared/lib/drafts";
 import { readSessionHint, shouldTryRestore, writeSessionHint } from "../session-hint";
@@ -41,7 +38,8 @@ interface AppContextValue {
   setActiveView: (view: ViewId) => void;
   route: AppRoute;
   navigate: (route: AppRoute, replace?: boolean) => void;
-  openWorkspace: (workspaceId: string, tab?: WorkspaceTabId) => void;
+  /** Opens a group's channels in "Tin nhắn". */
+  openWorkspace: (workspaceId: string) => void;
   openChannel: (workspaceId: string, channelId?: string, meeting?: boolean) => void;
   chatNavigation: {
     workspaceId?: string;
@@ -88,8 +86,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [route, setRoute] = useState(() => readAppRoute(new URL(window.location.href)));
   const activeView = route.view;
   const navigate = useCallback((target: AppRoute, replace = false) => {
-    // "Tin nhắn" holds direct conversations only; a group channel opens in its workspace's "Trao đổi" tab.
-    if (target.view === "chat" && target.workspaceId) target = { ...target, view: "workspace" };
     const url = appRouteUrl(target);
     if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== url)
       window.history[replace ? "replaceState" : "pushState"]({}, "", url);
@@ -98,10 +94,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
   const setActiveView = useCallback(
     (view: ViewId) => {
-      const keepWorkspace =
-        ((isWorkspaceTabView(view) && view !== "chat") || view === "admin") && route.workspaceId
-          ? route.workspaceId
-          : undefined;
+      // Each page keeps its own group filter; only group administration stays on the same group.
+      const keepWorkspace = view === "admin" && route.workspaceId ? route.workspaceId : undefined;
       navigate({ view, workspaceId: keepWorkspace });
     },
     [navigate, route.workspaceId],
@@ -306,8 +300,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       activeView,
       route,
       navigate,
-      openWorkspace: (workspaceId, tab = "workspace") =>
-        navigate(selectWorkspaceRoute(workspaceId, tab)),
+      openWorkspace: (workspaceId) => navigate({ view: "chat", workspaceId }),
       openChannel: (workspaceId, channelId, meeting = false) =>
         navigate({ view: meeting ? "meetings" : "chat", workspaceId, channelId }),
       chatNavigation,
