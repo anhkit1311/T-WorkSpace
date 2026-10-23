@@ -10,7 +10,6 @@ interface StaffRow {
   email: string;
   staffCode: string;
   rank: string;
-  defaultQuota: number;
   active: boolean;
   departmentCode: string | null;
 }
@@ -57,7 +56,7 @@ function StaffCard({ unitId, token, run }: { unitId: string; token: string; run:
   const [revision, setRevision] = useState(0);
   const [staff, setStaff] = useState<StaffRow[]>([]);
   const [departments, setDepartments] = useState<{ id: string; code: string; name: string }[]>([]);
-  const [form, setForm] = useState({ email: "", staffCode: "", rank: "ths", defaultQuota: 8, departmentId: "" });
+  const [form, setForm] = useState({ email: "", staffCode: "", rank: "ths", departmentId: "" });
   const [department, setDepartment] = useState({ code: "", name: "" });
   useEffect(() => {
     void academicApi<{ staff: StaffRow[]; departments: { id: string; code: string; name: string }[] }>(token, `units/${unitId}/staff`).then((d) => {
@@ -69,7 +68,7 @@ function StaffCard({ unitId, token, run }: { unitId: string; token: string; run:
     <>
       <h3>Giảng viên của khoa ({staff.length})</h3>
       <table className="admin-table">
-        <thead><tr><th>Mã</th><th>Họ tên</th><th>Học vị</th><th>Bộ môn</th><th>Định mức</th><th>Trạng thái</th></tr></thead>
+        <thead><tr><th>Mã</th><th>Họ tên</th><th>Học vị</th><th>Bộ môn</th><th>Trạng thái</th></tr></thead>
         <tbody>
           {staff.map((s) => (
             <tr key={s.userId}>
@@ -77,7 +76,6 @@ function StaffCard({ unitId, token, run }: { unitId: string; token: string; run:
               <td>{s.displayName}<br /><small>{s.email}</small></td>
               <td>{rankLabel[s.rank]}</td>
               <td>{s.departmentCode ?? "—"}</td>
-              <td>{s.defaultQuota}</td>
               <td>{s.active ? "Đang hoạt động" : "Ngừng"}</td>
             </tr>
           ))}
@@ -86,7 +84,7 @@ function StaffCard({ unitId, token, run }: { unitId: string; token: string; run:
       <div className="admin-columns admin-gap">
         <form className="admin-form" onSubmit={async (event) => {
           event.preventDefault();
-          if (await run("Đã lưu giảng viên", () => academicApi(token, `units/${unitId}/staff`, "POST", { ...form, departmentId: form.departmentId || undefined, defaultQuota: Number(form.defaultQuota) })))
+          if (await run("Đã lưu giảng viên", () => academicApi(token, `units/${unitId}/staff`, "POST", { ...form, departmentId: form.departmentId || undefined })))
           {
             setForm({ ...form, email: "", staffCode: "" });
             setRevision((n) => n + 1);
@@ -100,13 +98,10 @@ function StaffCard({ unitId, token, run }: { unitId: string; token: string; run:
               {Object.entries(rankLabel).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </div>
-          <div className="admin-form-row">
-            <select value={form.departmentId} onChange={(e) => setForm({ ...form, departmentId: e.target.value })} aria-label="Bộ môn">
-              <option value="">Không thuộc bộ môn</option>
-              {departments.map((d) => <option key={d.id} value={d.id}>{d.code} · {d.name}</option>)}
-            </select>
-            <input type="number" min={0} max={30} value={form.defaultQuota} onChange={(e) => setForm({ ...form, defaultQuota: Number(e.target.value) })} aria-label="Định mức mặc định" />
-          </div>
+          <select value={form.departmentId} onChange={(e) => setForm({ ...form, departmentId: e.target.value })} aria-label="Bộ môn">
+            <option value="">Không thuộc bộ môn</option>
+            {departments.map((d) => <option key={d.id} value={d.id}>{d.code} · {d.name}</option>)}
+          </select>
           <Button type="submit">Lưu</Button>
         </form>
         <form className="admin-form" onSubmit={async (event) => {

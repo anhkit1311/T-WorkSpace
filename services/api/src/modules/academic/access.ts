@@ -49,7 +49,7 @@ export function hasUnitRole(actor: Actor, unitId: string, ...roles: UnitRole[]):
 
 export function requireUnitRole(actor: Actor, unitId: string, ...roles: UnitRole[]): void {
   if (!hasUnitRole(actor, unitId, ...roles))
-    throw forbidden("Thao tác này dành cho giáo vụ hoặc lãnh đạo khoa.");
+    throw forbidden("Thao tác này dành cho giáo vụ khoa.");
 }
 
 export async function audit(

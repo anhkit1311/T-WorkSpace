@@ -8,7 +8,7 @@ import { HealthPanel } from "./HealthPanel";
 import "../workspaces/workspace-admin.css";
 import "./admin.css";
 
-type Role = "system_admin" | "unit_admin" | "unit_head";
+type Role = "system_admin" | "unit_admin";
 interface AccessRow {
   id: string;
   displayName: string;
@@ -48,7 +48,7 @@ export function AccessPage() {
         <div>
           <p className="admin-eyebrow">Chỉ dành cho quản trị hệ thống</p>
           <h1>Quản trị hệ thống</h1>
-          <p className="admin-subtitle">Hệ thống không cho tự đăng ký: tạo tài khoản, khoa và giảng viên ở đây rồi cấp quyền quản trị, giáo vụ hoặc lãnh đạo khoa.</p>
+          <p className="admin-subtitle">Hệ thống không cho tự đăng ký: tạo tài khoản, khoa và giảng viên ở đây rồi cấp quyền quản trị hệ thống hoặc giáo vụ khoa.</p>
         </div>
       </header>
       {profile.systemAdmin ? (
@@ -117,13 +117,10 @@ function AccessPanel({ token, run, units, onUnitCreated }: { token: string; run:
           <table className="admin-table">
             <thead>
               <tr>
-                <th rowSpan={2}>Người dùng</th>
-                <th rowSpan={2}>Quản trị hệ thống</th>
-                {units.map((unit) => <th key={unit.id} colSpan={2} title={unit.name}>{unit.code}</th>)}
-                <th rowSpan={2}>Hồ sơ</th>
-              </tr>
-              <tr>
-                {units.flatMap((unit) => [<th key={`${unit.id}-a`}>Giáo vụ</th>, <th key={`${unit.id}-h`}>Lãnh đạo</th>])}
+                <th>Người dùng</th>
+                <th>Quản trị hệ thống</th>
+                {units.map((unit) => <th key={unit.id} title={unit.name}>Giáo vụ {unit.code}</th>)}
+                <th>Hồ sơ</th>
               </tr>
             </thead>
             <tbody>
@@ -131,10 +128,7 @@ function AccessPanel({ token, run, units, onUnitCreated }: { token: string; run:
                 <tr key={row.id}>
                   <td>{row.displayName}<br /><small>{row.email}</small></td>
                   <td>{box(row, "system_admin", null, "Quản trị hệ thống")}</td>
-                  {units.flatMap((unit) => [
-                    <td key={`${unit.id}-a`}>{box(row, "unit_admin", unit.id, `Giáo vụ ${unit.code}`)}</td>,
-                    <td key={`${unit.id}-h`}>{box(row, "unit_head", unit.id, `Lãnh đạo ${unit.code}`)}</td>,
-                  ])}
+                  {units.map((unit) => <td key={unit.id}>{box(row, "unit_admin", unit.id, `Giáo vụ ${unit.code}`)}</td>)}
                   <td>
                     {row.staff && <Badge tone={row.staff.active ? "blue" : "neutral"}>Giảng viên {unitCode(row.staff.unitId)}{row.staff.active ? "" : " (ngừng)"}</Badge>}
                     {!row.staff && "—"}
@@ -145,7 +139,7 @@ function AccessPanel({ token, run, units, onUnitCreated }: { token: string; run:
           </table>
         </div>
         {rows && !rows.length && <p className="admin-note">Không có người dùng khớp.</p>}
-        {!units.length && <p className="admin-note">Chưa có khoa nào: tạo khoa ở mục "Khoa & giảng viên" để cấp quyền giáo vụ / lãnh đạo.</p>}
+        {!units.length && <p className="admin-note">Chưa có khoa nào: tạo khoa ở mục "Khoa & giảng viên" để cấp quyền giáo vụ.</p>}
       </section>
     </div>
   );
