@@ -124,31 +124,6 @@
   align-items: start;
 }
 
-/* Left Column: Bảng tin */
-.tdtu-home-feed__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 14px;
-}
-
-.tdtu-home-feed__title {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-[data-theme="dark"] .tdtu-home-feed__title {
-  color: #F8FAFC;
-}
-
-.tdtu-home-feed__filters {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-}
-
 .tdtu-home-filter-pill {
   border: 1px solid var(--border);
   background: transparent;
@@ -178,138 +153,6 @@
   color: var(--primary-text);
   border-color: transparent;
   font-weight: 600;
-}
-
-/* Featured Article Card (Split 2 Halves) */
-.tdtu-home-featured-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  min-height: 250px;
-  box-shadow: none;
-}
-
-[data-theme="dark"] .tdtu-home-featured-card {
-  background: #1E293B;
-  border-color: #334155;
-}
-
-.tdtu-home-featured-banner {
-  background: var(--primary-soft);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-  min-height: 160px;
-}
-
-.tdtu-home-featured-banner__deco-circle-1 {
-  position: absolute;
-  top: -40px;
-  right: -40px;
-  width: 180px;
-  height: 180px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.12);
-  pointer-events: none;
-  display: none;
-}
-
-.tdtu-home-featured-banner__deco-circle-2 {
-  position: absolute;
-  bottom: -50px;
-  left: -30px;
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  pointer-events: none;
-  display: none;
-}
-
-.tdtu-home-featured-banner__icon {
-  position: relative;
-  z-index: 2;
-  color: var(--primary);
-}
-
-.tdtu-home-featured-content {
-  padding: 24px 28px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.tdtu-home-featured-content__tags {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.tdtu-home-featured-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: var(--tint-blue-bg);
-  color: var(--tint-blue-fg);
-  border: 1px solid #DBEAFE;
-  padding: 3px 10px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.tdtu-home-featured-badge {
-  background: #EF4444;
-  color: #FFFFFF;
-  padding: 2px 8px;
-  border-radius: 9999px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.tdtu-home-featured-title {
-  margin: 0 0 8px;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-[data-theme="dark"] .tdtu-home-featured-title {
-  color: #F8FAFC;
-}
-
-.tdtu-home-featured-desc {
-  margin: 0;
-  font-size: 14px;
-  color: var(--text-muted);
-  line-height: 1.5;
-}
-
-.tdtu-home-featured-footer {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 24px;
-}
-
-.tdtu-home-featured-author-dot {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: #0F172A;
-  flex-shrink: 0;
-}
-
-.tdtu-home-featured-author-text {
-  font-size: 13px;
-  color: var(--text-muted);
-  font-weight: 500;
 }
 
 /* Right Column: Cuộc họp sắp tới & Lối tắt */
@@ -483,9 +326,6 @@
     padding: 16px 16px 40px;
   }
   .tdtu-home-kpi-grid {
-    grid-template-columns: 1fr;
-  }
-  .tdtu-home-featured-card {
     grid-template-columns: 1fr;
   }
 }

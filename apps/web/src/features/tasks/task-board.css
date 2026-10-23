@@ -58,25 +58,6 @@
   font-weight: 600;
 }
 
-/* Call Center Integration Alert in Task Board */
-.task-callcenter-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 18px;
-  background: var(--tint-blue-bg);
-  border: 1px solid #BFDBFE;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  color: var(--tint-blue-fg);
-  font-size: 13px;
-}
-
-.task-callcenter-banner strong {
-  color: #1E40AF;
-}
-
 /* --------------------------------------------------------------------------
    Toolbar & Filters
    -------------------------------------------------------------------------- */
@@ -292,21 +273,6 @@
 
 .task-card.priority-low {
   border-left: 4px solid #10B981;
-}
-
-/* Call Center Ticket indicator in card */
-.task-card-cc-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  background: var(--tint-blue-bg);
-  border: 1px solid #BFDBFE;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--tint-blue-fg);
-  width: fit-content;
 }
 
 /* --------------------------------------------------------------------------

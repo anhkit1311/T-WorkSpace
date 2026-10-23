@@ -2,22 +2,10 @@ import { useMemo, useState, useEffect } from "react";
 import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
 import { Icon } from "../../shared/ui/Icon";
-import { FilterPills, KpiStatCard } from "../../shared/ui/Primitives";
+import { KpiStatCard } from "../../shared/ui/Primitives";
 import { governanceApi } from "./api";
 import { RoleHome, roleSubtitle, useRoleData } from "./RoleHome";
 import "./workspace-home.css";
-
-interface NewsItem {
-  id: string;
-  category: string;
-  badge?: string;
-  title: string;
-  summary: string;
-  author: string;
-  time: string;
-  scope: string;
-  filterKey: "general" | "training" | "event" | "urgent";
-}
 
 export function WorkspaceHomePage() {
   const { setActiveView, user, accessToken } = useApp();
@@ -26,9 +14,6 @@ export function WorkspaceHomePage() {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const roleData = useRoleData();
   const nextMeeting = roleData?.meetings[0] ?? null;
-  // The news feed has no backend yet; its sample post stays hidden until it does.
-  const showSampleNews = false;
-  const [selectedFilter, setSelectedFilter] = useState<string>("all");
 
   useEffect(() => {
     if (!accessToken) return;
@@ -67,26 +52,6 @@ export function WorkspaceHomePage() {
   };
 
   const displayName = user?.displayName?.trim() || "bạn";
-
-  const filterTabs = [
-    { key: "all", label: "Tất cả" },
-    { key: "general", label: "Thông báo chung" },
-    { key: "training", label: "Đào tạo" },
-    { key: "event", label: "Sự kiện" },
-    { key: "urgent", label: "Khẩn" },
-  ];
-
-  const featuredPost: NewsItem = {
-    id: "1",
-    category: "Thông báo chung",
-    badge: "Mới",
-    title: "đâ",
-    summary: "sdasdas",
-    author: displayName,
-    time: "Vừa xong",
-    scope: "Toàn trường",
-    filterKey: "general",
-  };
 
   return (
     <div className="tdtu-home-container">
@@ -131,54 +96,6 @@ export function WorkspaceHomePage() {
         {/* Cột trái: Bảng tin */}
         <div className="tdtu-home-feed">
           <RoleHome data={roleData} />
-          {showSampleNews && <div className="tdtu-home-feed__head">
-            <h2 className="tdtu-home-feed__title">Bảng tin</h2>
-            <FilterPills
-              options={filterTabs}
-              activeKey={selectedFilter}
-              onChange={(key) => {
-                setSelectedFilter(key);
-                if (key === "training") {
-                  setActiveView("elearning");
-                }
-              }}
-            />
-          </div>}
-
-          {/* Thẻ bài viết nổi bật chia 2 nửa */}
-          {showSampleNews && <div className="tdtu-home-featured-card">
-            {/* Nửa trái: Khối màu xanh gradient có icon cái loa */}
-            <div className="tdtu-home-featured-banner">
-              <div className="tdtu-home-featured-banner__deco-circle-1" />
-              <div className="tdtu-home-featured-banner__deco-circle-2" />
-              <div className="tdtu-home-featured-banner__icon">
-                <Icon name="megaphone" size={54} strokeWidth={1.7} />
-              </div>
-            </div>
-
-            {/* Nửa phải: Nhãn, badge, tiêu đề, tóm tắt, tác giả */}
-            <div className="tdtu-home-featured-content">
-              <div>
-                <div className="tdtu-home-featured-content__tags">
-                  <span className="tdtu-home-featured-chip">
-                    📢 {featuredPost.category}
-                  </span>
-                  {featuredPost.badge && (
-                    <span className="tdtu-home-featured-badge">{featuredPost.badge}</span>
-                  )}
-                </div>
-                <h3 className="tdtu-home-featured-title">{featuredPost.title}</h3>
-                <p className="tdtu-home-featured-desc">{featuredPost.summary}</p>
-              </div>
-
-              <div className="tdtu-home-featured-footer">
-                <div className="tdtu-home-featured-author-dot" />
-                <span className="tdtu-home-featured-author-text">
-                  {featuredPost.author} · {featuredPost.time} · {featuredPost.scope}
-                </span>
-              </div>
-            </div>
-          </div>}
         </div>
 
         {/* Cột phải: 2 thẻ xếp dọc */}

@@ -99,16 +99,12 @@ const SIDEBAR_MENU_ITEMS: SidebarMenuItem[] = [
   { id: "files", label: "Tài liệu", icon: "folder", targetView: "files" },
   { id: "elearning", label: "Khóa học", icon: "graduation-cap", targetView: "elearning" },
   { id: "switchboard", label: "Tổng đài", icon: "headset", targetView: "call-center" },
-  { id: "call-list", label: "Danh sách cuộc gọi", icon: "phone-call", targetView: "call-directory" },
   { id: "groups", label: "Nhóm của tôi", icon: "users", targetView: "groups", badgeKey: "groups" },
   { id: "notifications", label: "Quản lý thông báo", icon: "bell", targetView: "notifications", badgeKey: "notifications" },
   { id: "access", label: "Quản trị hệ thống", icon: "lock", targetView: "access" },
   { id: "profile", label: "Trang cá nhân", icon: "profile", targetView: "profile" },
-  { id: "settings", label: "Cài đặt", icon: "settings", targetView: "profile" },
 ];
 
-/** Entries that only duplicate another page ("settings" = profile, "call-list" = the switchboard's history tab). */
-const HIDDEN_MENU_ITEMS = new Set(["settings", "call-list"]);
 /** The phone bottom bar shows these; the rest open from "Thêm". */
 const BOTTOM_BAR_ITEMS = new Set(["home", "messages", "meetings", "elearning"]);
 /** Account and administration entries sit under a divider, after the services. */
@@ -120,8 +116,6 @@ const FIRST_MANAGE_ITEM = "groups";
 const RESTRICTED_MENU_ITEMS: Record<string, keyof MenuAccess> = {
   access: "systemAdmin",
 };
-/** No English translation exists yet: the VI | EN switch stays hidden until it does. */
-const SHOW_LANGUAGE_SWITCH = false;
 
 export function AppShell() {
   const {
@@ -182,7 +176,6 @@ export function AppShell() {
     else if (activeView === "access") setActiveMenuId("access");
   }, [activeView]);
 
-  const [lang, setLang] = useState<"VI" | "EN">("VI");
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     let saved: string | null = null;
     try {
@@ -363,24 +356,6 @@ export function AppShell() {
             </button>
           )}
 
-          {/* Language Switcher VI | EN */}
-          {SHOW_LANGUAGE_SWITCH && <div className="tdtu-lang-switcher" aria-label="Chuyển đổi ngôn ngữ">
-            <Icon name="languages" size={13} className="tdtu-lang-switcher__icon" />
-            <button
-              type="button"
-              className={`tdtu-lang-switcher__btn ${lang === "VI" ? "is-active" : ""}`}
-              onClick={() => setLang("VI")}
-            >
-              VI
-            </button>
-            <button
-              type="button"
-              className={`tdtu-lang-switcher__btn ${lang === "EN" ? "is-active" : ""}`}
-              onClick={() => setLang("EN")}
-            >
-              EN
-            </button>
-          </div>}
 
           {/* Dark Mode Toggle */}
           <button
@@ -462,19 +437,6 @@ export function AppShell() {
                   >
                     <Icon name="profile" size={15} /> Trang cá nhân
                   </button>
-                  {/* Same profile page as above while the settings screen is hidden. */}
-                  {!HIDDEN_MENU_ITEMS.has("settings") && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveMenuId("settings");
-                        setActiveView("profile");
-                        setProfileOpen(false);
-                      }}
-                    >
-                      <Icon name="settings" size={15} /> Cài đặt hệ thống
-                    </button>
-                  )}
                   <button
                     type="button"
                     className="is-logout"
@@ -523,7 +485,7 @@ export function AppShell() {
           aria-label="Menu chức năng chính"
         >
           {SIDEBAR_MENU_ITEMS.filter(
-            (item) => !HIDDEN_MENU_ITEMS.has(item.id) && (!RESTRICTED_MENU_ITEMS[item.id] || menuAccess?.[RESTRICTED_MENU_ITEMS[item.id]]),
+            (item) => (!RESTRICTED_MENU_ITEMS[item.id] || menuAccess?.[RESTRICTED_MENU_ITEMS[item.id]]),
           ).map((item) => {
             const isSelected = activeMenuId === item.id;
             const badgeCount =

@@ -422,39 +422,6 @@ img, svg {
   gap: 10px;
 }
 
-/* Language Switcher VI | EN */
-.tdtu-lang-switcher {
-  display: flex;
-  align-items: center;
-  padding: 2px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: var(--bg-subtle);
-  gap: 3px;
-}
-[data-theme="dark"] .tdtu-lang-switcher {
-  background: #1E293B;
-}
-.tdtu-lang-switcher__icon {
-  color: var(--text-muted);
-  margin-left: 3px;
-}
-.tdtu-lang-switcher__btn {
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  background: transparent;
-  color: var(--text-muted);
-  transition: all 0.15s ease;
-}
-.tdtu-lang-switcher__btn.is-active {
-  background: var(--primary);
-  color: #FFFFFF;
-}
-
 /* Topbar Icon Button */
 .tdtu-icon-btn {
   width: 40px;
@@ -1001,9 +968,6 @@ img, svg {
   .tdtu-header__search-input,
   .tdtu-header__search-input:focus {
     width: 140px;
-  }
-  .tdtu-lang-switcher {
-    display: none;
   }
   .live-strip {
     padding: 8px 12px;

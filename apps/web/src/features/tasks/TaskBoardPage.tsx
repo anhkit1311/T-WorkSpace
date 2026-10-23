@@ -18,17 +18,6 @@ import { useDraft } from "../../shared/hooks/useDraft";
 
 const statuses = { todo: "Cần làm", doing: "Đang làm", done: "Hoàn thành" } as const;
 const priorities = { low: "Thấp", normal: "Bình thường", high: "Cao", urgent: "Khẩn cấp" } as const;
-interface CallCenterTicket {
-  id: string;
-  title: string;
-  studentId: string;
-  description: string;
-  status: "todo" | "doing" | "done";
-  priority: "low" | "normal" | "high" | "urgent";
-  branch: string;
-  createdAt: string;
-}
-
 type Board = { tasks: TaskBoardItem[]; truncated: boolean };
 /** "Công việc": one Kanban board for the tasks of every group (assigned to me by default). */
 export function TaskBoardPage() {
@@ -37,16 +26,6 @@ export function TaskBoardPage() {
   const [groups, setGroups] = useState<WorkspaceItem[] | null>(null),
     [members, setMembers] = useState<ChannelMember[]>([]),
     [board, setBoard] = useState<Board>({ tasks: [], truncated: false });
-  const [ccTickets, setCcTickets] = useState<CallCenterTicket[]>([]);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("tdtu_callcenter_tickets");
-      if (raw) setCcTickets(JSON.parse(raw));
-    } catch {
-      // Storage unavailable or corrupt: start with no tickets.
-    }
-  }, []);
   const [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
     [boardRevision, setBoardRevision] = useState(0);
@@ -240,35 +219,6 @@ export function TaskBoardPage() {
       {loading && <p role="status">Đang tải công việc…</p>}
       {board.truncated && <p>Hiển thị tối đa 500 nhiệm vụ. Dùng bộ lọc để thu hẹp kết quả.</p>}
 
-      {/* Call Center Integration Alert Banner */}
-      {ccTickets.length > 0 && (
-        <div className="task-callcenter-banner">
-          <div>
-            <strong>Liên thông Tổng đài:</strong> Đang có {ccTickets.length} phiếu yêu cầu học vụ
-            được chuyên viên tạo trực tiếp từ bàn trực Softphone.
-          </div>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => {
-              try {
-                localStorage.removeItem("tdtu_callcenter_tickets");
-                setCcTickets([]);
-                notify(
-                  "Đã xử lý tất cả phiếu",
-                  "Toàn bộ phiếu tổng đài đã được hoàn tất và lưu trữ.",
-                  "info",
-                );
-              } catch {
-                // Storage unavailable: nothing to clear.
-              }
-            }}
-          >
-            Đánh dấu đã hoàn thành
-          </Button>
-        </div>
-      )}
-
       <div className="task-columns">
         {Object.entries(statuses).map(([key, label]) => {
           const items = board.tasks.filter((t) => t.status === key);
@@ -290,29 +240,9 @@ export function TaskBoardPage() {
               }}
             >
               <h3>
-                {label} <span>{items.length + (key === "todo" ? ccTickets.length : 0)}</span>
+                {label} <span>{items.length}</span>
               </h3>
-              {key === "todo" &&
-                ccTickets.map((ticket) => (
-                  <article key={ticket.id} className="task-card priority-high">
-                    <span className="task-card-cc-badge">
-                      <Icon name="phone-call" size={12} />
-                      {ticket.branch} · MSSV: {ticket.studentId}
-                    </span>
-                    <div className="task-title" style={{ cursor: "default" }}>
-                      {ticket.title}
-                    </div>
-                    <small style={{ color: "#475569" }}>{ticket.description}</small>
-                    <time>
-                      Tiếp nhận:{" "}
-                      {new Date(ticket.createdAt).toLocaleTimeString("vi-VN", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </time>
-                  </article>
-                ))}
-              {!items.length && (key !== "todo" || !ccTickets.length) && (
+              {!items.length && (
                 <p className="task-empty">Chưa có công việc</p>
               )}
               {items.map((task) => (
