@@ -1,5 +1,5 @@
 import { ApiError } from "../auth/api";
-import type { MeetingAttendance, MeetingRecordings, MeetingNotes, MeetingOutcomes, MeetingScheduleItem, TaskItem } from "@doan/shared";
+import type { MeetingAttendance, MeetingCalendar, MeetingRecordings, MeetingNotes, MeetingOutcomes, MeetingScheduleItem, TaskItem } from "@doan/shared";
 
 export type MeetingHistoryItem = {
   id: string;
@@ -60,6 +60,19 @@ async function scheduleRequest<T>(
       data.error?.message ?? "Không thể xử lý lịch họp.",
     );
   return data as T;
+}
+
+/** Schedules and sessions (with who took part) that overlap [from, to); at most 42 days. */
+export async function getMeetingCalendarApi(accessToken: string, from: Date, to: Date): Promise<MeetingCalendar> {
+  const params = new URLSearchParams({ from: from.toISOString(), to: to.toISOString() });
+  const response = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/meetings/calendar?${params}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    credentials: "include",
+  });
+  const data = await response.json();
+  if (!response.ok)
+    throw new ApiError(response.status, data.error?.code ?? "UNKNOWN_ERROR", data.error?.message ?? "Không tải được lịch họp.");
+  return data as MeetingCalendar;
 }
 
 export async function getMeetingSchedulesApi(accessToken: string): Promise<MeetingScheduleItem[]> {

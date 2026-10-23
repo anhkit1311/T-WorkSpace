@@ -81,7 +81,7 @@ test("hai người vào cùng phòng họp thấy video của nhau và tự vào
   const [alice, bob] = [await signedIn(browser, users.alice), await signedIn(browser, users.bob)];
   for (const page of [alice, bob]) {
     await page.goto(room);
-    await page.locator(".meeting-lobby-action").getByRole("button", { name: /^Tham gia / }).click();
+    await page.getByRole("button", { name: "Vào phòng" }).click();
   }
   // Each side: own camera + the other's.
   await expect.poll(() => playingVideos(alice), { timeout: 30_000 }).toBeGreaterThanOrEqual(2);
