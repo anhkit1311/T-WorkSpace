@@ -81,8 +81,7 @@
    Toolbar & Filters
    -------------------------------------------------------------------------- */
 .task-toolbar,
-.task-filters,
-.task-create {
+.task-filters {
   display: flex;
   gap: 14px;
   align-items: flex-end;
@@ -144,20 +143,6 @@
 .task-page select option {
   background: var(--surface);
   color: var(--text);
-}
-
-.task-create {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  padding: 16px 20px;
-  margin-bottom: 24px;
-  border-radius: 8px;
-  box-shadow: none;
-}
-
-.task-create label {
-  flex: 1;
-  min-width: 260px;
 }
 
 .task-checkbox,
@@ -468,4 +453,104 @@
   align-items: center;
   gap: 4px;
   color: #2563EB;
+}
+
+/* Cross-group board: filter row and group/channel tags */
+.task-toolbar {
+  align-items: center;
+  gap: 10px;
+}
+
+.task-toolbar__spacer {
+  flex: 1;
+}
+
+.task-segment {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface-soft);
+}
+
+.task-segment button,
+.task-chip {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.task-segment button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+}
+
+.task-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+
+.task-chip[aria-pressed="true"],
+.task-chip[aria-expanded="true"] {
+  border-color: var(--focus);
+  color: var(--text);
+}
+
+.task-chip__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--focus);
+}
+
+.task-page .task-group-filter select {
+  min-height: 36px;
+  border-radius: var(--radius-pill);
+}
+
+.task-filters {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.task-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.task-card-group {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.task-card-channel {
+  padding: 2px 0;
+  color: var(--text-muted);
+}
+
+.task-new-form {
+  display: grid;
+  gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .task-toolbar__spacer {
+    display: none;
+  }
 }

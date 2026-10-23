@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import type { ChannelItem, WorkspaceItem, TaskItem, TaskDetail } from "@doan/shared";
+import type { ChannelItem, WorkspaceItem, TaskBoardItem, TaskItem, TaskDetail } from "@doan/shared";
 import { getWorkspacesApi, getChannelsApi, uploadAttachmentApi } from "../chat/api";
 import { governanceApi } from "../workspaces/api";
 import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
-import { Button, IconButton, ConfirmDialog } from "../../shared/ui/Primitives";
+import { Button, IconButton, ConfirmDialog, Field, Modal } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
 import { AnimatePresence, motion, useIsPresent } from "motion/react";
 import { useMotionSafe } from "../../shared/motion/MotionProvider";
@@ -12,6 +12,7 @@ import { beforeTaskAt } from "../../shared/lib/interaction";
 import { AttachmentView } from "../chat/ChatAttachment";
 import type { ChannelMember } from "../chat/ThreadPanel";
 import "./task-board.css";
+import { NoGroups } from "../workspaces/GroupDialogs";
 import { usePanelDialog } from "../../shared/hooks/usePanelDialog";
 import { useDraft } from "../../shared/hooks/useDraft";
 
@@ -28,12 +29,12 @@ interface CallCenterTicket {
   createdAt: string;
 }
 
-type Board = { tasks: TaskItem[]; truncated: boolean };
+type Board = { tasks: TaskBoardItem[]; truncated: boolean };
+/** "Công việc": one Kanban board for the tasks of every group (assigned to me by default). */
 export function TaskBoardPage() {
-  const { accessToken, user, route, navigate, notify } = useApp();
+  const { accessToken, route, navigate, notify } = useApp();
   const { socket, isConnected } = useSocket();
-  const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]),
-    [channels, setChannels] = useState<ChannelItem[]>([]),
+  const [groups, setGroups] = useState<WorkspaceItem[] | null>(null),
     [members, setMembers] = useState<ChannelMember[]>([]),
     [board, setBoard] = useState<Board>({ tasks: [], truncated: false });
   const [ccTickets, setCcTickets] = useState<CallCenterTicket[]>([]);
@@ -48,105 +49,48 @@ export function TaskBoardPage() {
   }, []);
   const [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
-    [busy, setBusy] = useState(false),
-    [revision, setRevision] = useState(0);
-  const [boardRevision, setBoardRevision] = useState(0);
-  const [createSuccess, setCreateSuccess] = useState(0);
-  const [loadedBoardRevision, setLoadedBoardRevision] = useState(-1);
-  const [creation, setCreation, creationReady] = useDraft<{ title: string; id: string }>(
-    `${user?.id ?? "anonymous"}:task-create:${route.channelId ?? ""}`,
-    { title: "", id: crypto.randomUUID() },
-  );
-  const title = creation.title,
-    setTitle = (title: string) => setCreation((old) => ({ ...old, title }));
-  const [assigned, setAssigned] = useState(""),
+    [boardRevision, setBoardRevision] = useState(0);
+  const [mine, setMine] = useState(true),
+    [dueSoon, setDueSoon] = useState(false),
+    [moreOpen, setMoreOpen] = useState(false),
     [statusFilter, setStatusFilter] = useState(""),
     [priorityFilter, setPriorityFilter] = useState(""),
-    [deadline, setDeadline] = useState(""),
-    [archived, setArchived] = useState(false);
+    [archived, setArchived] = useState(false),
+    [creating, setCreating] = useState(false);
+  const groupId = route.workspaceId ?? "";
   const dragId = useRef<string | null>(null);
-  const createInputRef = useRef<HTMLInputElement>(null);
-  const focusCreateRef = useRef(false);
-  useEffect(() => {
-    if (!busy && !loading && loadedBoardRevision === boardRevision && creationReady && focusCreateRef.current && createInputRef.current) {
-      // Restore after the board refresh settles.
-      createInputRef.current.focus();
-      focusCreateRef.current = false;
-    }
-  }, [busy, loading, creationReady, boardRevision, loadedBoardRevision]);
   const [movingIds, setMovingIds] = useState<Set<string>>(() => new Set());
   const movingRef = useRef(new Set<string>());
   const [dropTarget, setDropTarget] = useState<{status:string; before:string | null} | null>(null);
-  const workspace = workspaces.find((w) => w.id === route.workspaceId),
-    channel = channels.find((c) => c.id === route.channelId);
-  const readOnly = Boolean(workspace?.archivedAt || channel?.archivedAt);
+  const openTask = board.tasks.find((task) => task.id === route.taskId);
+  // Old links carry the task's channel; otherwise it comes from the board.
+  const panelChannelId = openTask?.channelId ?? route.channelId;
+
+  useEffect(() => {
+    if (!accessToken) return;
+    getWorkspacesApi(accessToken)
+      .then(setGroups)
+      .catch((reason) => setError(reason instanceof Error ? reason.message : "Không tải được danh sách nhóm."));
+  }, [accessToken]);
+
   useEffect(() => {
     if (!accessToken || route.view !== "tasks") return;
-    let active = true;
-    setLoading(true);
-    setError("");
-    void getWorkspacesApi(accessToken)
-      .then((items) => {
-        if (!active) return;
-        setWorkspaces(items);
-        if (route.workspaceId && !items.some((w) => w.id === route.workspaceId))
-          throw new Error("Bạn không có quyền xem nhóm trong liên kết.");
-        if (!route.workspaceId && items[0])
-          navigate({ view: "tasks", workspaceId: items[0].id }, true);
-      })
-      .catch((reason) => {
-        if (active) setError(reason.message);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [accessToken, route.view, route.workspaceId, navigate, revision]);
-  useEffect(() => {
-    setChannels([]);
-    setMembers([]);
-    setBoard({ tasks: [], truncated: false });
-    if (!accessToken || !route.workspaceId || route.view !== "tasks") return;
-    let active = true;
-    setLoading(true);
-    void getChannelsApi(accessToken, route.workspaceId)
-      .then((items) => {
-        if (!active) return;
-        const text = items.filter((c) => c.type === "text");
-        setChannels(text);
-        if (route.channelId && !text.some((c) => c.id === route.channelId))
-          throw new Error("Kênh không tồn tại hoặc quyền đã thay đổi.");
-        if (!route.channelId && text[0]) navigate({ ...route, channelId: text[0].id }, true);
-      })
-      .catch((reason) => {
-        if (active) setError(reason.message);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [accessToken, route.workspaceId, route.channelId, route.view, navigate, revision]);
-  useEffect(() => {
-    if (!accessToken || !route.channelId || route.view !== "tasks") return;
     let active = true;
     let generation = 0;
     setLoading(true);
     setError("");
     const params = new URLSearchParams({
-      assignee: assigned,
+      assignee: mine ? "me" : "all",
+      workspace: groupId,
+      deadline: dueSoon ? "upcoming" : "",
       status: statusFilter,
       priority: priorityFilter,
-      deadline,
       archived: String(archived),
     });
     for (const [key, value] of [...params]) if (!value) params.delete(key);
     const load = () => {
       const request = ++generation;
-      void governanceApi<Board>(accessToken, `channels/${route.channelId}/tasks?${params}`)
+      void governanceApi<Board>(accessToken, `tasks?${params}`)
         .then((data) => {
           if (active && request === generation) setBoard(data);
         })
@@ -157,79 +101,43 @@ export function TaskBoardPage() {
           }
         })
         .finally(() => {
-          if (active && request === generation) {
-            setLoading(false);
-            setLoadedBoardRevision(boardRevision);
-          }
+          if (active && request === generation) setLoading(false);
         });
     };
-    const changed = (event: { channelId: string }) => {
-      if (event.channelId === route.channelId) load();
-    };
-    const revoked = () => {
-      setBoard({ tasks: [], truncated: false });
-      setMembers([]);
-      setRevision((n) => n + 1);
-      load();
-    };
     load();
-    void governanceApi<{ members: ChannelMember[] }>(
-      accessToken,
-      `channels/${route.channelId}/members`,
-    )
+    // Any group's change can move a card on this board.
+    socket?.on("task_changed", load);
+    socket?.on("connect", load);
+    socket?.on("access_revoked", load);
+    return () => {
+      active = false;
+      socket?.off("task_changed", load);
+      socket?.off("connect", load);
+      socket?.off("access_revoked", load);
+    };
+  }, [accessToken, route.view, groupId, mine, dueSoon, statusFilter, priorityFilter, archived, boardRevision, socket]);
+
+  useEffect(() => {
+    setMembers([]);
+    if (!accessToken || !panelChannelId) return;
+    let active = true;
+    void governanceApi<{ members: ChannelMember[] }>(accessToken, `channels/${panelChannelId}/members`)
       .then((data) => {
         if (active) setMembers(data.members);
       })
-      .catch(reason => {if(active)setError(reason instanceof Error ? reason.message : "Không tải được người phụ trách.");});
-    socket?.on("task_changed", changed);
-    socket?.on("connect", load);
-    socket?.on("access_revoked", revoked);
+      .catch((reason) => {
+        if (active) setError(reason instanceof Error ? reason.message : "Không tải được người phụ trách.");
+      });
     return () => {
       active = false;
-      socket?.off("task_changed", changed);
-      socket?.off("connect", load);
-      socket?.off("access_revoked", revoked);
     };
-  }, [
-    accessToken,
-    route.channelId,
-    route.view,
-    assigned,
-    statusFilter,
-    priorityFilter,
-    deadline,
-    archived,
-    revision,
-    boardRevision,
-    socket,
-  ]);
+  }, [accessToken, panelChannelId]);
+
   const fail = (reason: unknown) =>
     setError(reason instanceof Error ? reason.message : "Không thể cập nhật nhiệm vụ.");
-  const create = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!accessToken || !channel || busy || readOnly || !creationReady) return;
-    setBusy(true);
-    setError("");
-    try {
-      const data = await governanceApi<{ task: TaskDetail }>(
-        accessToken,
-        `channels/${channel.id}/tasks`,
-        "POST",
-        { title, clientTaskId: creation.id },
-      );
-      setCreation({ title: "", id: crypto.randomUUID() });
-      focusCreateRef.current = true;
-      setBoardRevision((n) => n + 1);
-      setCreateSuccess(n => n + 1);
-      notify("Đã tạo nhiệm vụ", undefined, "success", {label:"Mở",onClick:() => navigate({...route,taskId:data.task.id})});
-    } catch (reason) {
-      fail(reason);
-    } finally {
-      setBusy(false);
-    }
-  };
-  const move = async (task: TaskItem, status: TaskItem["status"], beforeTaskId?: string | null) => {
-    if (!accessToken || busy || movingRef.current.has(task.id) || readOnly || task.archivedAt) return;
+  const locked = (task: TaskBoardItem) => task.workspaceArchived || Boolean(task.archivedAt);
+  const move = async (task: TaskBoardItem, status: TaskItem["status"], beforeTaskId?: string | null) => {
+    if (!accessToken || movingRef.current.has(task.id) || locked(task)) return;
     movingRef.current.add(task.id);
     setMovingIds(new Set(movingRef.current));
     setError("");
@@ -252,295 +160,353 @@ export function TaskBoardPage() {
       setMovingIds(new Set(movingRef.current));
     }
   };
+  if (groups?.length === 0) return <NoGroups text="Việc trong các nhóm bạn tham gia sẽ hiện ở đây." />;
   return (
-    <section className="task-page" aria-label="Bảng công việc">
+    <section className="task-page" aria-label="Công việc">
       <header className="task-page-heading">
         <div>
-          <h2>Bảng công việc Kanban{channel ? ` — #${channel.name}` : ""}</h2>
-          <p>Theo dõi tiến độ nhiệm vụ theo từng kênh trong nhóm {workspace?.name ?? ""}.</p>
+          <h1>Công việc</h1>
+          <p>Việc ở mọi nhóm bạn tham gia; mỗi thẻ ghi tên nhóm và kênh.</p>
         </div>
         <span role="status">{isConnected ? "Đồng bộ trực tiếp" : "Đang chờ kết nối"}</span>
       </header>
       <div className="task-toolbar">
-        <label>
-          Bảng theo kênh
-          <select
-            value={route.channelId ?? ""}
-            onChange={(event) => {
-              setError("");
-              navigate({
-                view: "tasks",
-                workspaceId: route.workspaceId,
-                channelId: event.target.value,
-              });
-            }}
-          >
-            <option value="">Chọn kênh</option>
-            {channels.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-                {c.isPrivate ? " · Riêng tư" : ""}
+        <div className="task-segment" role="group" aria-label="Người phụ trách">
+          <button type="button" aria-pressed={mine} onClick={() => setMine(true)}>
+            Của tôi
+          </button>
+          <button type="button" aria-pressed={!mine} onClick={() => setMine(false)}>
+            Tất cả
+          </button>
+        </div>
+        <label className="task-group-filter">
+          <span className="sr-only">Nhóm</span>
+          <select value={groupId} onChange={(event) => navigate({ view: "tasks", workspaceId: event.target.value || undefined }, true)}>
+            <option value="">Nhóm: Tất cả</option>
+            {groups?.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.name}
               </option>
             ))}
           </select>
         </label>
-        <Button
-          variant="secondary"
-          size="sm"
-          icon="refresh"
-          onClick={() => setRevision((n) => n + 1)}
-        >
-          Tải lại bảng
+        <button type="button" className="task-chip" aria-pressed={dueSoon} onClick={() => setDueSoon(!dueSoon)}>
+          Sắp hết hạn
+        </button>
+        <button type="button" className="task-chip" aria-expanded={moreOpen} onClick={() => setMoreOpen(!moreOpen)}>
+          <Icon name="filter" size={14} /> Lọc thêm
+          {(statusFilter || priorityFilter || archived) && <span className="task-chip__dot" aria-label="đang lọc" />}
+        </button>
+        <span className="task-toolbar__spacer" />
+        <Button icon="plus" onClick={() => setCreating(true)} disabled={!groups?.some((group) => !group.archivedAt)}>
+          Việc mới
         </Button>
       </div>
+      {moreOpen && (
+        <div className="task-filters">
+          <label>
+            Trạng thái
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              <option value="">Tất cả</option>
+              {Object.entries(statuses).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Ưu tiên
+            <select value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)}>
+              <option value="">Tất cả</option>
+              {Object.entries(priorities).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="task-checkbox">
+            <input type="checkbox" checked={archived} onChange={(event) => setArchived(event.target.checked)} />
+            Đã lưu trữ
+          </label>
+        </div>
+      )}
       {error && (
         <p className="task-alert" role="alert">
           {error}
         </p>
       )}
-      {readOnly && <p role="status">Nhóm/kênh đã lưu trữ. Bạn có thể xem công việc.</p>}
-      {!workspaces.length && !loading && !error && (
-        <p>Tạo nhóm ở trang chủ để bắt đầu quản lý công việc.</p>
-      )}
-      {channel && (
-        <>
-          <form className="task-create" onSubmit={create}>
-            <label>
-              Nhiệm vụ mới
-              <input
-                ref={createInputRef}
-                value={title}
-                maxLength={160}
-                disabled={busy || readOnly || !creationReady}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="Ví dụ: Hoàn thiện tài liệu thiết kế"
-                required
-              />
-            </label>
-            <Button icon="plus" successFlash={createSuccess} type="submit" loading={busy} disabled={busy || readOnly || !title.trim()}>
-              Tạo nhiệm vụ
-            </Button>
-          </form>
-          <div className="task-filters">
-            <label>
-              Người phụ trách
-              <select value={assigned} onChange={(event) => setAssigned(event.target.value)}>
-                <option value="">Mọi người</option>
-                <option value={user?.id}>Của tôi</option>
-                {members
-                  .filter((m) => m.userId !== user?.id)
-                  .map((m) => (
-                    <option key={m.userId} value={m.userId}>
-                      {m.displayName}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label>
-              Trạng thái
-              <select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-              >
-                <option value="">Tất cả</option>
-                {Object.entries(statuses).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Ưu tiên
-              <select
-                value={priorityFilter}
-                onChange={(event) => setPriorityFilter(event.target.value)}
-              >
-                <option value="">Tất cả</option>
-                {Object.entries(priorities).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Hạn chót
-              <select value={deadline} onChange={(event) => setDeadline(event.target.value)}>
-                <option value="">Tất cả</option>
-                <option value="overdue">Quá hạn</option>
-                <option value="upcoming">Trong 7 ngày</option>
-                <option value="none">Chưa có hạn</option>
-              </select>
-            </label>
-            <label className="task-checkbox">
-              <input
-                type="checkbox"
-                checked={archived}
-                onChange={(event) => setArchived(event.target.checked)}
-              />
-              Đã lưu trữ
-            </label>
+      {loading && <p role="status">Đang tải công việc…</p>}
+      {board.truncated && <p>Hiển thị tối đa 500 nhiệm vụ. Dùng bộ lọc để thu hẹp kết quả.</p>}
+
+      {/* Call Center Integration Alert Banner */}
+      {ccTickets.length > 0 && (
+        <div className="task-callcenter-banner">
+          <div>
+            <strong>Liên thông Tổng đài:</strong> Đang có {ccTickets.length} phiếu yêu cầu học vụ
+            được chuyên viên tạo trực tiếp từ bàn trực Softphone.
           </div>
-          {loading && <p role="status">Đang tải công việc…</p>}
-          {board.truncated && <p>Hiển thị tối đa 500 nhiệm vụ. Dùng bộ lọc để thu hẹp kết quả.</p>}
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              try {
+                localStorage.removeItem("tdtu_callcenter_tickets");
+                setCcTickets([]);
+                notify(
+                  "Đã xử lý tất cả phiếu",
+                  "Toàn bộ phiếu tổng đài đã được hoàn tất và lưu trữ.",
+                  "info",
+                );
+              } catch {
+                // Storage unavailable: nothing to clear.
+              }
+            }}
+          >
+            Đánh dấu đã hoàn thành
+          </Button>
+        </div>
+      )}
 
-          {/* Call Center Integration Alert Banner */}
-          {ccTickets.length > 0 && (
-            <div className="task-callcenter-banner">
-              <div>
-                <strong>Liên thông Tổng đài:</strong> Đang có {ccTickets.length} phiếu yêu cầu học vụ
-                được chuyên viên tạo trực tiếp từ bàn trực Softphone.
-              </div>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => {
-                  try {
-                    localStorage.removeItem("tdtu_callcenter_tickets");
-                    setCcTickets([]);
-                    notify(
-                      "Đã xử lý tất cả phiếu",
-                      "Toàn bộ phiếu tổng đài đã được hoàn tất và lưu trữ.",
-                      "info",
-                    );
-                  } catch {
-                    // Storage unavailable: nothing to clear.
-                  }
-                }}
-              >
-                Đánh dấu đã hoàn thành
-              </Button>
-            </div>
-          )}
-
-          <div className="task-columns">
-            {Object.entries(statuses).map(([key, label]) => {
-              const items = board.tasks
-                .filter((t) => t.status === key)
-                .sort((a, b) => a.position - b.position || a.id.localeCompare(b.id));
-              return (
-                <section
-                  key={key}
-                  className={`task-column ${dropTarget?.status === key ? "is-drop-target" : ""}`}
-                  aria-label={label}
-                  onDragOver={(event) => {event.preventDefault(); setDropTarget({status:key,before:beforeTaskAt(Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[data-task-id]')).map(el => ({id:el.dataset.taskId!,top:el.getBoundingClientRect().top,height:el.getBoundingClientRect().height})),event.clientY,dragId.current)});}}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    const task = board.tasks.find((t) => t.id === dragId.current);
-                    const before = beforeTaskAt(Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[data-task-id]')).map(el => ({id:el.dataset.taskId!,top:el.getBoundingClientRect().top,height:el.getBoundingClientRect().height})),event.clientY,dragId.current);
-                    dragId.current = null;
-                    setDropTarget(null);
-                    if (task) void move(task, key as TaskItem["status"], before);
+      <div className="task-columns">
+        {Object.entries(statuses).map(([key, label]) => {
+          const items = board.tasks.filter((t) => t.status === key);
+          return (
+            <section
+              key={key}
+              className={`task-column ${dropTarget?.status === key ? "is-drop-target" : ""}`}
+              aria-label={label}
+              onDragOver={(event) => {event.preventDefault(); setDropTarget({status:key,before:beforeTaskAt(Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[data-task-id]')).map(el => ({id:el.dataset.taskId!,top:el.getBoundingClientRect().top,height:el.getBoundingClientRect().height})),event.clientY,dragId.current)});}}
+              onDrop={(event) => {
+                event.preventDefault();
+                const task = board.tasks.find((t) => t.id === dragId.current);
+                const before = beforeTaskAt(Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[data-task-id]')).map(el => ({id:el.dataset.taskId!,top:el.getBoundingClientRect().top,height:el.getBoundingClientRect().height})),event.clientY,dragId.current);
+                dragId.current = null;
+                setDropTarget(null);
+                // Order is kept per channel: a card dropped before another channel's card only changes status.
+                const sameChannel = before && board.tasks.find((t) => t.id === before)?.channelId === task?.channelId;
+                if (task) void move(task, key as TaskItem["status"], sameChannel ? before : undefined);
+              }}
+            >
+              <h3>
+                {label} <span>{items.length + (key === "todo" ? ccTickets.length : 0)}</span>
+              </h3>
+              {key === "todo" &&
+                ccTickets.map((ticket) => (
+                  <article key={ticket.id} className="task-card priority-high">
+                    <span className="task-card-cc-badge">
+                      <Icon name="phone-call" size={12} />
+                      {ticket.branch} · MSSV: {ticket.studentId}
+                    </span>
+                    <div className="task-title" style={{ cursor: "default" }}>
+                      {ticket.title}
+                    </div>
+                    <small style={{ color: "#475569" }}>{ticket.description}</small>
+                    <time>
+                      Tiếp nhận:{" "}
+                      {new Date(ticket.createdAt).toLocaleTimeString("vi-VN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </time>
+                  </article>
+                ))}
+              {!items.length && (key !== "todo" || !ccTickets.length) && (
+                <p className="task-empty">Chưa có công việc</p>
+              )}
+              {items.map((task) => (
+                <article
+                  key={task.id}
+                  className={`task-card priority-${task.priority} ${dropTarget?.before === task.id ? "is-insert-before" : ""}`}
+                  data-task-id={task.id}
+                  aria-busy={movingIds.has(task.id) || undefined}
+                  draggable={!movingIds.has(task.id) && !locked(task)}
+                  onDragEnd={() => {dragId.current=null;setDropTarget(null);}}
+                  onDragStart={(event) => {
+                    dragId.current = task.id;
+                    event.dataTransfer.setData("text/plain", task.id);
                   }}
                 >
-                  <h3>
-                    {label} <span>{items.length + (key === "todo" ? ccTickets.length : 0)}</span>
-                  </h3>
-                  {key === "todo" &&
-                    ccTickets.map((ticket) => (
-                      <article key={ticket.id} className="task-card priority-high">
-                        <span className="task-card-cc-badge">
-                          <Icon name="phone-call" size={12} />
-                          {ticket.branch} · MSSV: {ticket.studentId}
-                        </span>
-                        <div className="task-title" style={{ cursor: "default" }}>
-                          {ticket.title}
-                        </div>
-                        <small style={{ color: "#475569" }}>{ticket.description}</small>
-                        <time>
-                          Tiếp nhận:{" "}
-                          {new Date(ticket.createdAt).toLocaleTimeString("vi-VN", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </time>
-                      </article>
-                    ))}
-                  {!items.length && (key !== "todo" || !ccTickets.length) && (
-                    <p className="task-empty">Chưa có công việc</p>
+                  <span className="task-card-tags">
+                    <span className="task-card-group">{task.workspaceName}</span>
+                    <span className="task-card-channel">#{task.channelName}</span>
+                  </span>
+                  <button
+                    className="task-title"
+                    onClick={() => navigate({ ...route, channelId: task.channelId, taskId: task.id })}
+                  >
+                    {task.title}
+                  </button>
+                  <small>
+                    {priorities[task.priority]} · {task.assigneeName ?? "Chưa giao"}
+                  </small>
+                  {task.meetingSessionId && (
+                    <small className="task-origin">
+                      <Icon name="video" size={12} /> Từ cuộc họp
+                    </small>
                   )}
-                  {items.map((task, index) => (
-                    <article
-                      key={task.id}
-                      className={`task-card priority-${task.priority} ${dropTarget?.before === task.id ? "is-insert-before" : ""}`}
-                      data-task-id={task.id}
-                      aria-busy={movingIds.has(task.id) || undefined}
-                      draggable={!busy && !movingIds.has(task.id) && !readOnly && !archived}
-                      onDragEnd={() => {dragId.current=null;setDropTarget(null);}}
-                      onDragStart={(event) => {
-                        dragId.current = task.id;
-                        event.dataTransfer.setData("text/plain", task.id);
-                      }}
+                  {task.dueAt && (
+                    <time dateTime={task.dueAt}>
+                      Hạn: {new Date(task.dueAt).toLocaleDateString("vi-VN")}
+                    </time>
+                  )}
+                  {task.checklistTotal > 0 && (
+                    <small>
+                      Checklist {task.checklistDone}/{task.checklistTotal}
+                    </small>
+                  )}
+                  <label>
+                    Chuyển trạng thái
+                    <select
+                      value={task.status}
+                      disabled={movingIds.has(task.id) || locked(task)}
+                      onChange={(event) =>
+                        void move(task, event.target.value as TaskItem["status"])
+                      }
                     >
-                      <button
-                        className="task-title"
-                        onClick={() => navigate({ ...route, taskId: task.id })}
-                      >
-                        {task.title}
-                      </button>
-                      <small>
-                        {priorities[task.priority]} · {task.assigneeName ?? "Chưa giao"}
-                      </small>
-                      {task.meetingSessionId && (
-                        <small className="task-origin">
-                          <Icon name="video" size={12} /> Từ cuộc họp
-                        </small>
-                      )}
-                      {task.dueAt && (
-                        <time dateTime={task.dueAt}>
-                          Hạn: {new Date(task.dueAt).toLocaleDateString("vi-VN")}
-                        </time>
-                      )}
-                      {task.checklistTotal > 0 && (
-                        <small>
-                          Checklist {task.checklistDone}/{task.checklistTotal}
-                        </small>
-                      )}
-                      <label>
-                        Chuyển trạng thái
-                        <select
-                          value={task.status}
-                          disabled={busy || movingIds.has(task.id) || readOnly || archived}
-                          onChange={(event) =>
-                            void move(task, event.target.value as TaskItem["status"])
-                          }
-                        >
-                          {Object.entries(statuses).map(([value, name]) => (
-                            <option key={value} value={value}>
-                              {name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={index === 0 || busy || movingIds.has(task.id) || readOnly || archived}
-                        onClick={() => void move(task, task.status, items[index - 1].id)}
-                      >
-                        Đưa lên trên
-                      </Button>
-                    </article>
-                  ))}
-                </section>
-              );
-            })}
-          </div>
-        </>
-      )}
+                      {Object.entries(statuses).map(([value, name]) => (
+                        <option key={value} value={value}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </article>
+              ))}
+            </section>
+          );
+        })}
+      </div>
       <AnimatePresence mode="wait" initial={false}>{route.taskId && accessToken && (
         <TaskPanel
           key={route.taskId}
           taskId={route.taskId}
           token={accessToken}
-          readOnly={readOnly}
+          readOnly={Boolean(openTask?.workspaceArchived)}
           members={members}
-          onClose={() => navigate({ ...route, taskId: undefined })}
+          onClose={() => navigate({ ...route, channelId: undefined, taskId: undefined })}
           onSaved={() => setBoardRevision((n) => n + 1)}
         />
       )}</AnimatePresence>
+      <AnimatePresence>
+        {creating && groups && (
+          <NewTaskDialog
+            groups={groups.filter((group) => !group.archivedAt)}
+            defaultGroupId={groupId}
+            onClose={() => setCreating(false)}
+            onCreated={(task) => {
+              setCreating(false);
+              setBoardRevision((n) => n + 1);
+              notify("Đã tạo việc", undefined, "success", { label: "Mở", onClick: () => navigate({ ...route, channelId: task.channelId, taskId: task.id }) });
+            }}
+          />
+        )}
+      </AnimatePresence>
     </section>
+  );
+}
+
+/** "Việc mới": the task still belongs to a channel, so the dialog asks for the group then the channel. */
+function NewTaskDialog({
+  groups,
+  defaultGroupId,
+  onClose,
+  onCreated,
+}: {
+  groups: WorkspaceItem[];
+  defaultGroupId: string;
+  onClose: () => void;
+  onCreated: (task: TaskDetail) => void;
+}) {
+  const { accessToken, user } = useApp();
+  const [groupId, setGroupId] = useState(() => (groups.some((group) => group.id === defaultGroupId) ? defaultGroupId : (groups[0]?.id ?? ""))),
+    [channels, setChannels] = useState<ChannelItem[]>([]),
+    [channelId, setChannelId] = useState(""),
+    [title, setTitle] = useState(""),
+    [mineToo, setMineToo] = useState(true),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  const clientTaskId = useRef(crypto.randomUUID());
+  useEffect(() => {
+    setChannels([]);
+    setChannelId("");
+    if (!accessToken || !groupId) return;
+    let active = true;
+    getChannelsApi(accessToken, groupId)
+      .then((items) => {
+        if (!active) return;
+        const text = items.filter((item) => item.type === "text" && !item.archivedAt);
+        setChannels(text);
+        setChannelId(text[0]?.id ?? "");
+      })
+      .catch((reason) => active && setError(reason instanceof Error ? reason.message : "Không tải được kênh."));
+    return () => {
+      active = false;
+    };
+  }, [accessToken, groupId]);
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!accessToken || !channelId || !title.trim() || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const data = await governanceApi<{ task: TaskDetail }>(accessToken, `channels/${channelId}/tasks`, "POST", {
+        title: title.trim(),
+        clientTaskId: clientTaskId.current,
+        ...(mineToo && user ? { assigneeId: user.id } : {}),
+      });
+      onCreated(data.task);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Không tạo được việc.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal
+      title="Việc mới"
+      initialFocus="input:not(:disabled)"
+      onClose={() => !busy && onClose()}
+      footer={
+        <div className="modal-footer-actions">
+          <Button variant="ghost" disabled={busy} onClick={onClose}>
+            Hủy
+          </Button>
+          <Button icon="plus" loading={busy} disabled={!channelId || !title.trim()} onClick={(event) => void submit(event as unknown as FormEvent)}>
+            Tạo việc
+          </Button>
+        </div>
+      }
+    >
+      <form className="task-new-form" onSubmit={(event) => void submit(event)}>
+        <Field label="Tên việc" error={error}>
+          <input value={title} maxLength={160} required onChange={(event) => setTitle(event.target.value)} placeholder="Ví dụ: Hoàn thiện biên bản họp" />
+        </Field>
+        <Field label="Nhóm">
+          <select value={groupId} onChange={(event) => setGroupId(event.target.value)}>
+            {groups.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Kênh">
+          <select value={channelId} onChange={(event) => setChannelId(event.target.value)} disabled={!channels.length}>
+            {channels.map((channel) => (
+              <option key={channel.id} value={channel.id}>
+                #{channel.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <label className="task-checkbox">
+          <input type="checkbox" checked={mineToo} onChange={(event) => setMineToo(event.target.checked)} />
+          Giao cho tôi
+        </label>
+      </form>
+    </Modal>
   );
 }
 

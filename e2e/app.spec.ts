@@ -122,6 +122,8 @@ test("tài khoản chưa có nhóm thấy hướng dẫn tạo nhóm", async ({ 
   await expect(page.locator("main").getByRole("button", { name: "Nhập mã mời" }).first()).toBeVisible();
   await page.goto("/app/chat");
   await expect(page.locator("main").getByRole("button", { name: "Tạo nhóm" }).first()).toBeVisible();
+  await page.goto("/app/tasks");
+  await expect(page.locator("main").getByRole("button", { name: "Tạo nhóm" }).first()).toBeVisible();
 });
 
 test("Tin nhắn liệt kê kênh của nhóm và gửi được tin", async ({ browser }) => {
@@ -140,4 +142,19 @@ test("Tin nhắn liệt kê kênh của nhóm và gửi được tin", async ({ 
   await page.goto(`/app/workspace?workspace=${workspaceId}`);
   await expect(page).toHaveURL(/\/app\/chat\?workspace=/);
   await expect(page.locator(".message-row__text").getByText(text)).toBeVisible();
+});
+
+test("Công việc: tạo việc ở nhóm và thấy trên bảng của tôi", async ({ browser }) => {
+  const page = await signedIn(browser, fixtures().users.alice);
+  await page.goto("/app/tasks");
+  await page.getByRole("button", { name: "Việc mới" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Nhóm").selectOption({ label: (await dialog.getByLabel("Nhóm").locator("option").filter({ hasText: /^E2E \d+$/ }).first().textContent()) ?? "" });
+  const title = `Viết biên bản e2e ${Date.now()}`;
+  await dialog.getByLabel("Tên việc").fill(title);
+  await expect(dialog.getByLabel("Giao cho tôi")).toBeChecked();
+  await dialog.getByRole("button", { name: "Tạo việc" }).click();
+  const card = page.getByRole("region", { name: "Cần làm" }).locator("article").filter({ hasText: title });
+  await expect(card).toBeVisible();
+  await expect(card.getByText(/^E2E \d+$/)).toBeVisible();
 });
