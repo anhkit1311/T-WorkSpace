@@ -45,6 +45,14 @@ export async function workspaceRoutes({
     sendJson(response, 200, await workspaceOverview(userId, workspaceId));
     return;
   }
+  if (request.method === "GET" && pathname === "/api/files") {
+    const userId = await getAuthUserId(request);
+    const workspaceId = params.get("workspace") || null;
+    if (workspaceId) validateId(workspaceId);
+    response.setHeader("Cache-Control", "no-store");
+    sendJson(response, 200, await listWorkspaceFiles(userId, workspaceId, params.get("before") ?? undefined, Number(params.get("limit")) || 24, false, params.get("q") ?? undefined));
+    return;
+  }
   const workspaceFilesMatch = pathname.match(/^\/api\/workspaces\/([^/]+)\/files$/);
   if (request.method === "GET" && workspaceFilesMatch) {
     const userId = await getAuthUserId(request);

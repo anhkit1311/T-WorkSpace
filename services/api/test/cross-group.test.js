@@ -2,9 +2,10 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, before, test } from "node:test";
 import { pool } from "../../../dist/api/infrastructure/database/db.js";
-import { createWorkspace, addWorkspaceMember, getWorkspaceChannels } from "../../../dist/api/modules/workspaces/service.js";
+import { createWorkspace, addWorkspaceMember, getWorkspaceChannels, saveMessage } from "../../../dist/api/modules/workspaces/service.js";
 import { updateWorkspace } from "../../../dist/api/modules/workspaces/governance.js";
 import { createTask, listAllTasks } from "../../../dist/api/modules/tasks/service.js";
+import { listWorkspaceFiles } from "../../../dist/api/modules/workspaces/home.js";
 
 // Pages that gather every group (Tin nhắn, Công việc, Tài liệu, Họp): owner is in A and B, member only in A.
 const skip = process.env.RUN_DB_TESTS !== "1";
@@ -59,4 +60,31 @@ test("Cross-group: tasks of every group, mine by default, outsiders see none", {
   const archived = (await list(owner)).find((task) => task.title === "B cho chủ");
   assert.equal(archived?.workspaceArchived, true);
   await updateWorkspace(owner, groups.b.id, { archived: false });
+});
+
+test("Cross-group: files of every group, filtered by group and name", { skip }, async () => {
+  const send = async (channelId, fileName) => {
+    const id = randomUUID();
+    await pool.query(
+      `INSERT INTO message_attachments(id,channel_id,uploader_id,file_name,mime_type,file_size,data) VALUES($1,$2,$3,$4,'text/plain',4,$5)`,
+      [id, channelId, owner, fileName, Buffer.from("test")],
+    );
+    await saveMessage(owner, channelId, "", { attachmentId: id });
+  };
+  await send(groups.aText.id, "de-cuong-mang.pdf");
+  await send(groups.bText.id, "lich-thi.pdf");
+
+  const all = (await listWorkspaceFiles(owner, null)).files;
+  assert.deepEqual(all.map((file) => file.fileName).sort(), ["de-cuong-mang.pdf", "lich-thi.pdf"]);
+  const lich = all.find((file) => file.fileName === "lich-thi.pdf");
+  assert.equal(lich.workspaceName, "Cross B");
+  assert.equal(lich.workspaceId, groups.b.id);
+  assert.equal(lich.uploaderName, "Cross Owner");
+
+  assert.deepEqual((await listWorkspaceFiles(owner, null, undefined, 30, false, "CUONG")).files.map((file) => file.fileName), ["de-cuong-mang.pdf"]);
+  assert.equal((await listWorkspaceFiles(owner, null, undefined, 30, false, "%")).files.length, 0);
+  assert.deepEqual((await listWorkspaceFiles(member, null)).files.map((file) => file.fileName), ["de-cuong-mang.pdf"]);
+  assert.equal((await listWorkspaceFiles(outsider, null)).files.length, 0);
+  // The per-group list still checks membership.
+  await assert.rejects(listWorkspaceFiles(member, groups.b.id));
 });

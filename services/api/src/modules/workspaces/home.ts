@@ -57,12 +57,14 @@ async function requireWorkspaceMembership(userId: string, workspaceId: string): 
 
 export async function listWorkspaceFiles(
   userId: string,
-  workspaceId: string,
+  workspaceId: string | null,
   before?: string,
   limit = 30,
   prioritizePinned = false,
+  search?: string,
 ): Promise<{ files: WorkspaceFileItem[]; hasMore: boolean }> {
-  await requireWorkspaceMembership(userId, workspaceId);
+  // null = every group ("Tài liệu" page); channel_access below already limits it to the user's channels.
+  if (workspaceId !== null) await requireWorkspaceMembership(userId, workspaceId);
   if (before !== undefined) {
     validateId(before);
   }
@@ -75,6 +77,8 @@ export async function listWorkspaceFiles(
        a.file_size AS "fileSize",
        a.channel_id AS "channelId",
        c.name AS "channelName",
+       c.workspace_id AS "workspaceId",
+       w.name AS "workspaceName",
        a.uploader_id AS "uploaderId",
        u.display_name AS "uploaderName",
        a.created_at AS "createdAt",
@@ -84,6 +88,7 @@ export async function listWorkspaceFiles(
        EXISTS(SELECT 1 FROM message_pins mp WHERE mp.message_id = a.message_id) AS "pinned"
      FROM message_attachments a
      JOIN channels c ON c.id = a.channel_id
+     JOIN workspaces w ON w.id = c.workspace_id
      JOIN channel_access access ON access.channel_id = c.id AND access.user_id = $1
      JOIN users u ON u.id = a.uploader_id
      LEFT JOIN messages m ON m.id = a.message_id AND m.deleted_at IS NULL
@@ -95,7 +100,8 @@ export async function listWorkspaceFiles(
        ORDER BY t.updated_at DESC
        LIMIT 1
      ) task_link ON true
-     WHERE c.workspace_id = $2
+     WHERE ($2::uuid IS NULL OR c.workspace_id = $2)
+       AND ($5::text IS NULL OR a.file_name ILIKE '%' || $5 || '%' ESCAPE '\\')
        AND (
          (m.id IS NOT NULL AND (m.thread_root_id IS NULL OR EXISTS(SELECT 1 FROM messages root WHERE root.id = m.thread_root_id AND root.deleted_at IS NULL)))
          OR task_link.task_id IS NOT NULL
@@ -103,7 +109,7 @@ export async function listWorkspaceFiles(
        AND ($3::uuid IS NULL OR (a.created_at, a.id) < (SELECT created_at, id FROM message_attachments WHERE id = $3::uuid))
      ORDER BY ${prioritizePinned ? 'EXISTS(SELECT 1 FROM message_pins mp WHERE mp.message_id = a.message_id) DESC, ' : ''}a.created_at DESC, a.id DESC
      LIMIT $4`,
-    [userId, workspaceId, before ?? null, safeLimit + 1],
+    [userId, workspaceId, before ?? null, safeLimit + 1, search?.trim() ? search.trim().replace(/[\\%_]/g, "\\$&") : null],
   );
   return {
     files: result.rows.slice(0, safeLimit),

@@ -370,6 +370,8 @@ export interface WorkspaceFileItem {
   fileSize: number;
   channelId: string;
   channelName: string;
+  workspaceId: string;
+  workspaceName: string;
   uploaderId: string;
   uploaderName: string;
   createdAt: string;
