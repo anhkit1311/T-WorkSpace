@@ -10,7 +10,6 @@ Người dùng thấy phần Nhóm làm việc và Họp trực tuyến rối, k
 - Lối vào trùng nhau: "Họp trực tuyến" ở menu và tab "Cuộc họp" trong nhóm mở cùng một trang; "Tin nhắn" và tab "Trao đổi" đều là chat.
 - Trang họp gộp 4 việc cùng lúc: chọn phòng, lịch họp, lịch sử, kiểm tra camera.
 - Bảng công việc gắn theo từng kênh và có một hàng bộ lọc dài.
-- Bấm "Tham gia phong-hop" ở trang họp thì bị đưa về Trang chủ (chỉ còn thanh "Đang họp · Quay lại phòng") thay vì vào phòng.
 
 Thành công nghĩa là: người dùng tìm thấy chức năng từ menu chính trong một lần bấm, không phải chọn nhóm trước.
 
@@ -26,7 +25,6 @@ Mục tiêu:
 - Bỏ khái niệm "vào một nhóm rồi chọn tab". Không còn cột danh sách nhóm và hàng tab nhóm.
 - Mỗi chức năng có đúng một lối vào trên menu.
 - Trang Họp chỉ còn lịch và chi tiết; kiểm tra camera là một bước riêng trước khi vào phòng.
-- Sửa lỗi bấm tham gia phòng mà bị đưa về Trang chủ.
 
 Không làm lần này:
 - Phòng họp bên trong (lưới video, thanh điều khiển, bảng bên): đã làm lại ở d10b10a, giữ nguyên.
@@ -102,7 +100,7 @@ Tránh (làm vậy là hỏng dù chạy được):
 Cần thêm (đọc thuần, theo quyền thành viên kênh như API hiện có):
 - `GET /api/tasks` : việc ở mọi kênh người dùng xem được, có tham số lọc `assignee=me|all`, `workspace`, `due=soon`, `archived`; mỗi việc kèm tên nhóm và tên kênh.
 - `GET /api/files` : tệp ở mọi nhóm của người dùng, phân trang `before`/`limit` như API theo nhóm, có `workspace` và `q` (tên tệp); mỗi tệp kèm tên nhóm.
-- Nếu lịch và lịch sử họp chưa trả tên nhóm thì thêm vào.
+- `GET /api/meetings/calendar?from&to` : lịch họp (kể cả đã qua, không tính lịch đã huỷ) và các phiên họp đã diễn ra hoặc đang diễn ra trong khoảng ngày đó, ở các phòng người dùng xem được, kèm tên nhóm. `GET /api/meetings/schedules` hiện chỉ trả lịch sắp tới, còn `/api/meetings/history` không có mã phiên, nên chưa đủ để vẽ lịch tuần và mở bản ghi/biên bản/điểm danh của cuộc họp đã qua.
 
 ## Quyết định nhỏ do người viết thiết kế chốt (người dùng chưa nói)
 
