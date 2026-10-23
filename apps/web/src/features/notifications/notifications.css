@@ -1,6 +1,6 @@
 /* Notification center styled with shared Nexo touch target tokens */
 .notifications-page > header {
-  padding: clamp(24px, 2.8vw, 32px) clamp(28px, 3.2vw, 44px);
+  padding: 10px 14px;
   border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA);
 }
 

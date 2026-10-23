@@ -102,13 +102,6 @@ export type ResendOtpResponse = {
   cooldownSeconds: number;
 };
 
-export type GoogleAuthInput = {
-  credential?: string;
-  idToken?: string;
-  code?: string;
-  redirectUri?: string;
-};
-
 export type ApiErrorResponse = {
   error: {
     code: string;
@@ -437,3 +430,52 @@ export * from "./callcenter.js";
 export * from "./meeting-attendance.js";
 export * from "./meeting-recordings.js";
 export * from "./elearning.js";
+
+export type AnnouncementCategory = "general" | "training" | "event" | "urgent";
+
+export interface PortalAnnouncement {
+  id: string;
+  title: string;
+  category: AnnouncementCategory;
+  badge?: string;
+  summary: string;
+  content: string;
+  scope: string;
+  pinned: boolean;
+  authorId?: string | null;
+  authorName: string;
+  authorTitle?: string;
+  unitId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  canManage?: boolean;
+}
+
+export interface CreateAnnouncementInput {
+  title: string;
+  category: AnnouncementCategory;
+  badge?: string;
+  summary: string;
+  content: string;
+  scope?: string;
+  pinned?: boolean;
+}
+
+export interface UpdateAnnouncementInput {
+  title?: string;
+  category?: AnnouncementCategory;
+  badge?: string;
+  summary?: string;
+  content?: string;
+  scope?: string;
+  pinned?: boolean;
+}
+
+export interface AnnouncementPublisher {
+  userId: string;
+  email: string;
+  displayName: string;
+  grantedAt: string;
+  grantedBy?: string | null;
+}
+

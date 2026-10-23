@@ -1,12 +1,19 @@
-import { useEffect, useRef, useState } from "react";
-import type { HomeSummary, WorkspaceItem } from "@doan/shared";
+import { useEffect, useState } from "react";
+import type { CreateAnnouncementInput, HomeSummary, PortalAnnouncement } from "@doan/shared";
 import { governanceApi } from "../workspaces/api";
-import { getWorkspacesApi } from "../chat/api";
-import { Button, Chip, ListItem } from "../../shared/ui/Primitives";
+import { Button, Badge, FilterPills, KpiStatCard } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
 import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
-import { useMotionSafe } from "../../shared/motion/MotionProvider";
+import {
+  getAnnouncementsApi,
+  createAnnouncementApi,
+  updateAnnouncementApi,
+  deleteAnnouncementApi,
+} from "../announcements/api";
+import { AnnouncementDetailModal } from "../announcements/AnnouncementDetailModal";
+import { CreateAnnouncementModal } from "../announcements/CreateAnnouncementModal";
+import { PublisherManagementModal } from "../announcements/PublisherManagementModal";
 import "../workspaces/workspace-admin.css";
 import "./notifications.css";
 
@@ -23,44 +30,84 @@ export interface NotificationItem {
   workspaceId: string | null;
   authorName: string;
 }
+
 export interface NotificationPage {
   items: NotificationItem[];
   unreadCount: number;
   hasMore: boolean;
 }
 
-function formatNotificationTime(iso: string) {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return { time: "—", day: "" };
-  return {
-    time: date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
-    day: date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }),
-  };
-}
+const CATEGORY_PILLS = [
+  { key: "all", label: "Tất cả" },
+  { key: "general", label: "Thông báo chung" },
+  { key: "training", label: "Đào tạo" },
+  { key: "event", label: "Sự kiện" },
+  { key: "urgent", label: "Khẩn" },
+];
 
 export function NotificationsPage() {
-  const { accessToken, navigate } = useApp();
+  const { accessToken, navigate, notify } = useApp();
   const { socket } = useSocket();
+
+  // Tab view: "portal_announcements" (Quản lý đăng tải thông báo) | "personal_alerts" (Nhắc tên/thảo luận)
+  const [activeTab, setActiveTab] = useState<"portal_announcements" | "personal_alerts">("portal_announcements");
+
+  // Portal Announcements State
+  const [announcements, setAnnouncements] = useState<PortalAnnouncement[]>([]);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(true);
+  const [announcementsError, setAnnouncementsError] = useState("");
+  const [canPublish, setCanPublish] = useState(false);
+  const [userRole, setUserRole] = useState("student");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Modals
+  const [detailAnnouncement, setDetailAnnouncement] = useState<PortalAnnouncement | null>(null);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<PortalAnnouncement | null>(null);
+  const [publishersModalOpen, setPublishersModalOpen] = useState(false);
+  const [submittingAnnouncement, setSubmittingAnnouncement] = useState(false);
+
+  // Personal alerts state (legacy inbox)
   const [page, setPage] = useState<NotificationPage>({ items: [], unreadCount: 0, hasMore: false });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [unread, setUnread] = useState(false);
-  // The list sits under the header and group options; offer a jump when there is news.
-  const listHeadingRef = useRef<HTMLHeadingElement>(null);
-  const { reduced } = useMotionSafe();
-  const jumpToList = () => {
-    const heading = listHeadingRef.current;
-    if (!heading) return;
-    heading.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
-    heading.focus({ preventScroll: true });
-  };
-  const [groups, setGroups] = useState<WorkspaceItem[]>([]);
-  const [workspaceId, setWorkspaceId] = useState("");
-  const [muted, setMuted] = useState(false);
-  const [busy, setBusy] = useState(false);
-  // Plain messages create no notification rows; list them so the bell badge and this page agree.
   const [unreadChannels, setUnreadChannels] = useState<HomeSummary["unreadChannels"]>([]);
-  const [unreadMessages, setUnreadMessages] = useState(0);
+
+  // Fetch announcements
+  const fetchAnnouncements = async () => {
+    if (!accessToken) return;
+    try {
+      setAnnouncementsLoading(true);
+      const res = await getAnnouncementsApi(accessToken, selectedCategory);
+      setAnnouncements(res.items);
+      setCanPublish(res.canPublish);
+      setUserRole(res.role);
+      setAnnouncementsError("");
+    } catch (err: unknown) {
+      setAnnouncementsError(err instanceof Error ? err.message : "Không thể tải danh sách thông báo.");
+    } finally {
+      setAnnouncementsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchAnnouncements();
+  }, [accessToken, selectedCategory]);
+
+  // Realtime updates for announcements
+  useEffect(() => {
+    if (!socket) return;
+    const handleAnnouncementsChanged = () => {
+      void fetchAnnouncements();
+    };
+    socket.on("announcements_changed", handleAnnouncementsChanged);
+    return () => {
+      socket.off("announcements_changed", handleAnnouncementsChanged);
+    };
+  }, [socket, accessToken, selectedCategory]);
+
+  // Load personal alerts
   useEffect(() => {
     if (!accessToken) return;
     let active = true;
@@ -70,7 +117,6 @@ export function NotificationsPage() {
         .then((data) => {
           if (active) {
             setUnreadChannels(data.unreadChannels);
-            setUnreadMessages(data.unreadMessages);
           }
         })
         .catch(() => undefined);
@@ -86,15 +132,13 @@ export function NotificationsPage() {
       for (const event of ["new_message", "channel_read", "connect"]) socket?.off(event, refresh);
     };
   }, [accessToken, socket]);
+
   useEffect(() => {
     if (!accessToken) return;
     let active = true;
     const refresh = () => {
       setLoading(true);
-      void governanceApi<NotificationPage>(
-        accessToken,
-        `notifications${unread ? "?unread=true" : ""}`,
-      )
+      void governanceApi<NotificationPage>(accessToken, "notifications")
         .then((data) => {
           if (active) {
             setPage(data);
@@ -113,298 +157,576 @@ export function NotificationsPage() {
     socket?.on("notifications_changed", refresh);
     socket?.on("connect", refresh);
     socket?.on("access_revoked", refresh);
-    void getWorkspacesApi(accessToken)
-      .then((items) => {
-        if (active) {
-          setGroups(items);
-          setWorkspaceId((old) =>
-            items.some((item) => item.id === old) ? old : (items[0]?.id ?? ""),
-          );
-        }
-      })
-      .catch(reason => { if(active) setError(reason instanceof Error ? reason.message : "Không tải được nhóm."); });
     return () => {
       active = false;
       socket?.off("notifications_changed", refresh);
       socket?.off("connect", refresh);
       socket?.off("access_revoked", refresh);
     };
-  }, [accessToken, unread, socket]);
-  useEffect(() => {
-    if (!accessToken || !workspaceId) return;
-    let active = true;
-    void governanceApi<{ muted: boolean }>(accessToken, `workspaces/${workspaceId}/notifications`)
-      .then((data) => {
-        if (active) setMuted(data.muted);
-      })
-      .catch((reason) => {
-        if (active) setError(reason.message);
-      });
-    return () => {
-      active = false;
-    };
-  }, [accessToken, workspaceId]);
-  const mark = async (id?: string) => {
+  }, [accessToken, socket]);
+
+  // Handle Create / Edit announcement submit
+  const handleSaveAnnouncement = async (input: CreateAnnouncementInput) => {
     if (!accessToken) return;
-    setBusy(true);
     try {
-      await governanceApi(accessToken, "notifications/read", "POST", id ? { id } : {});
-      setPage((old) => ({
-        ...old,
-        items: old.items.map((item) =>
-          !id || item.id === id ? { ...item, readAt: new Date().toISOString() } : item,
-        ),
-        unreadCount: id ? Math.max(0, old.unreadCount - 1) : 0,
-      }));
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Không cập nhật được.");
+      setSubmittingAnnouncement(true);
+      if (editingAnnouncement) {
+        await updateAnnouncementApi(accessToken, editingAnnouncement.id, input);
+        notify("Thành công", "Đã cập nhật thông báo.", "success");
+      } else {
+        await createAnnouncementApi(accessToken, input);
+        notify("Thành công", "Đã đăng thông báo mới lên Bảng tin.", "success");
+      }
+      setEditingAnnouncement(null);
+      setCreateModalOpen(false);
+      await fetchAnnouncements();
     } finally {
-      setBusy(false);
+      setSubmittingAnnouncement(false);
     }
   };
+
+  // Handle Delete announcement
+  const handleDeleteAnnouncement = async (announcement: PortalAnnouncement) => {
+    if (!window.confirm(`Bạn có chắc muốn xóa thông báo: "${announcement.title}"?`)) return;
+    if (!accessToken) return;
+    try {
+      await deleteAnnouncementApi(accessToken, announcement.id);
+      notify("Đã xóa", "Thông báo đã được gỡ khỏi hệ thống.", "info");
+      await fetchAnnouncements();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Không thể xóa thông báo.");
+    }
+  };
+
+  // Handle Toggle Pin
+  const handleTogglePin = async (announcement: PortalAnnouncement) => {
+    if (!accessToken) return;
+    try {
+      await updateAnnouncementApi(accessToken, announcement.id, {
+        pinned: !announcement.pinned,
+      });
+      notify("Cập nhật ghim", announcement.pinned ? "Đã bỏ ghim thông báo." : "Đã ghim thông báo lên đầu.", "info");
+      await fetchAnnouncements();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Không thể cập nhật trạng thái ghim.");
+    }
+  };
+
+  // Filtered announcements by search
+  const filteredAnnouncements = announcements.filter((a) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      a.title.toLowerCase().includes(q) ||
+      a.summary.toLowerCase().includes(q) ||
+      a.authorName.toLowerCase().includes(q) ||
+      a.scope.toLowerCase().includes(q)
+    );
+  });
+
+  const urgentCount = announcements.filter((a) => a.category === "urgent" || a.pinned).length;
+
   return (
-    <section className="workspace-admin notifications-page" aria-label="Thông báo">
-      <header>
-        <div className="notifications-page__title-row">
-          <h1>Thông báo</h1>
-          <Chip icon="bell">
-            {page.unreadCount + unreadMessages > 0
-              ? `${page.unreadCount + unreadMessages} chưa đọc`
-              : "Đã xem hết"}
-          </Chip>
+    <div className="tdtu-home-container">
+      {/* Top Header */}
+      <header style={{ marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 500, color: "var(--text-muted, #64748B)", marginBottom: 2 }}>
+              Cổng nội bộ TDTU · Kênh Thông tin Toàn trường
+            </div>
+            <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "var(--text, #0F172A)" }}>
+              Quản lý Thông báo & Bảng tin
+            </h1>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {canPublish ? (
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setEditingAnnouncement(null);
+                  setCreateModalOpen(true);
+                }}
+              >
+                <Icon name="bell" size={15} />
+                <span>+ Đăng thông báo mới</span>
+              </Button>
+            ) : (
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "4px 10px",
+                  borderRadius: 9999,
+                  background: "var(--bg-subtle, #F1F5F9)",
+                  color: "var(--text-muted, #64748B)",
+                  fontSize: 12,
+                  fontWeight: 500,
+                  border: "1px solid var(--border-color, #E2E8F0)",
+                }}
+                title="Tài khoản sinh viên chỉ có quyền xem thông báo"
+              >
+                <Icon name="info" size={13} />
+                <span>Chế độ Sinh viên (Chỉ xem)</span>
+              </div>
+            )}
+
+            {(userRole === "system_admin" || userRole === "unit_admin" || canPublish) && (
+              <Button
+                variant="secondary"
+                onClick={() => setPublishersModalOpen(true)}
+                title="Quản lý danh sách người được cấp quyền đăng thông báo"
+              >
+                <Icon name="users" size={15} />
+                <span>Phân quyền đăng bài</span>
+              </Button>
+            )}
+          </div>
         </div>
-        <p>
-          Tin nhắn chưa đọc theo kênh, cùng các lượt nhắc tên và phản hồi trong chủ đề bạn tham gia.
-          Nội dung chỉ hiển thị khi bạn còn quyền đọc kênh.
-        </p>
-        <div className="admin-actions">
-          <Button
-            variant="primary"
-            icon="check"
-            disabled={busy || !page.unreadCount}
-            onClick={() => void mark()}
+
+        {/* Tab Switcher */}
+        <div style={{ display: "flex", gap: 6, marginTop: 12, borderBottom: "1px solid var(--border-color, #E2E8F0)", paddingBottom: 8 }}>
+          <button
+            type="button"
+            className={`filter-pill-btn ${activeTab === "portal_announcements" ? "is-active" : ""}`}
+            onClick={() => setActiveTab("portal_announcements")}
+            style={{
+              padding: "4px 12px",
+              borderRadius: "9999px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+              border: activeTab === "portal_announcements" ? "1px solid var(--brand-primary, #2563EB)" : "1px solid var(--border-color, #E2E8F0)",
+              background: activeTab === "portal_announcements" ? "var(--brand-primary, #2563EB)" : "var(--bg-surface, #FFFFFF)",
+              color: activeTab === "portal_announcements" ? "#FFFFFF" : "var(--text-secondary, #475569)",
+              transition: "all 0.15s ease",
+            }}
           >
-            Đánh dấu tất cả đã đọc
-          </Button>
-          <Button
-            variant="secondary"
-            icon="filter"
-            aria-pressed={unread}
-            onClick={() => setUnread((value) => !value)}
+            📢 Thông báo sinh viên & Bảng tin ({announcements.length})
+          </button>
+          <button
+            type="button"
+            className={`filter-pill-btn ${activeTab === "personal_alerts" ? "is-active" : ""}`}
+            onClick={() => setActiveTab("personal_alerts")}
+            style={{
+              padding: "4px 12px",
+              borderRadius: "9999px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+              border: activeTab === "personal_alerts" ? "1px solid var(--brand-primary, #2563EB)" : "1px solid var(--border-color, #E2E8F0)",
+              background: activeTab === "personal_alerts" ? "var(--brand-primary, #2563EB)" : "var(--bg-surface, #FFFFFF)",
+              color: activeTab === "personal_alerts" ? "#FFFFFF" : "var(--text-secondary, #475569)",
+              transition: "all 0.15s ease",
+            }}
           >
-            {unread ? "Xem tất cả" : "Chỉ chưa đọc"}
-          </Button>
-          {page.unreadCount > 0 && page.items.length > 0 && (
-            <Button
-              variant="text"
-              icon="chevron-down"
-              aria-controls="notification-list"
-              onClick={jumpToList}
-            >
-              Xem danh sách
-            </Button>
-          )}
+            🔔 Thông báo thảo luận & Nhắc tên ({page.unreadCount})
+          </button>
         </div>
       </header>
-      {error && (
-        <p className="inline-alert" role="alert">
-          {error}
-        </p>
-      )}
-      <section aria-label="Tin nhắn chưa đọc">
-        <div className="notifications-section-head">
-          <h2>Tin nhắn chưa đọc</h2>
-          {unreadChannels.length > 0 && (
-            <Chip icon="messages">
-              {unreadMessages} tin
-            </Chip>
-          )}
-        </div>
-        {unreadChannels.length ? (
-          <ul className="notifications-unread-channels">
-            {unreadChannels.map((channel) => (
-              <li key={channel.channelId}>
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate({
-                      view: "chat",
-                      workspaceId: channel.workspaceId,
-                      channelId: channel.channelId,
-                    })
-                  }
-                >
-                  <span>
-                    <strong>#{channel.channelName}</strong>
-                    <small>
-                      {channel.workspaceName} · {formatNotificationTime(channel.lastMessageAt).time}{" "}
-                      {formatNotificationTime(channel.lastMessageAt).day}
-                    </small>
-                  </span>
-                  <b aria-label={`${channel.unreadCount} tin chưa đọc`}>{channel.unreadCount}</b>
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="loading-note">Không có tin nhắn chưa đọc.</p>
-        )}
-      </section>
-      <section>
-        <div className="notifications-section-head">
-          <h2>Tùy chọn theo nhóm</h2>
-          {groups.length > 0 && (
-            <Chip icon="users">{groups.length} nhóm đang tham gia</Chip>
-          )}
-        </div>
-        <label>
-          Nhóm
-          <select value={workspaceId} onChange={(event) => setWorkspaceId(event.target.value)}>
-            {!groups.length && <option value="">Chưa có nhóm</option>}
-            {groups.map((group) => (
-              <option key={group.id} value={group.id}>
-                {group.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="admin-check">
-          <input
-            type="checkbox"
-            checked={muted}
-            disabled={!workspaceId || busy}
-            onChange={(event) => {
-              const value = event.target.checked;
-              setBusy(true);
-              void governanceApi(accessToken!, `workspaces/${workspaceId}/notifications`, "POST", {
-                muted: value,
-              })
-                .then(() => setMuted(value))
-                .catch((reason) => setError(reason.message))
-                .finally(() => setBusy(false));
-            }}
-          />
-          <span>Tắt thông báo mới của nhóm này</span>
-        </label>
-      </section>
-      <section id="notification-list" aria-label="Danh sách thông báo">
-        <div className="notifications-section-head">
-          <h2 ref={listHeadingRef} tabIndex={-1}>
-            {unread ? "Thông báo chưa đọc" : "Tất cả thông báo"}
-          </h2>
-          <Button
-            variant="text"
-            onClick={() => setUnread(false)}
-          >
-            Xem tất cả
-          </Button>
-        </div>
-        {loading && (
-          <p role="status" className="loading-note">
-            Đang tải thông báo…
-          </p>
-        )}
-        {!loading && !page.items.length && (
-          <div className="state-card state-card--compact notifications-empty-card">
-            <span className="state-card__icon">
-              <Icon name="bell" size={22} />
-            </span>
-            <h3>{unread ? "Không còn thông báo chưa đọc" : "Chưa có thông báo"}</h3>
-            <p>
-              Khi ai đó nhắc tên bạn hoặc phản hồi trong chủ đề bạn tham gia, thông báo sẽ ở đây.
-            </p>
-          </div>
-        )}
-        {page.items.length > 0 && (
-          <div className="nexo-list-group notification-list" role="list">
-            {page.items.map((item) => {
-              const { time, day } = formatNotificationTime(item.createdAt);
-              return (
-                <div
-                  key={item.id}
-                  role="listitem"
-                  className={`notification-row ${item.readAt ? "" : "is-unread"}`}
-                >
-                  <ListItem
-                    icon={item.kind === "mention" ? "at-sign" : "messages"}
-                    title={
-                      <>
-                        {item.authorName}{" "}
-                        <span className="notification-kind">
-                          {item.kind === "mention"
-                            ? "đã nhắc tên bạn"
-                            : item.kind === "direct"
-                              ? "đã nhắn tin cho bạn"
-                              : "đã phản hồi trong chủ đề"}
-                        </span>
-                        {!item.readAt && <span className="sr-only"> (chưa đọc)</span>}
-                      </>
-                    }
-                    subtitle={
-                      <>
-                        {item.kind !== "direct" && <><b>#{item.channelName}</b> · </>}
-                        {item.content}
-                      </>
-                    }
-                    metaPrimary={time}
-                    metaSecondary={day}
-                    onClick={() => {
-                      void mark(item.id);
-                      navigate({
-                        view: "chat",
-                        workspaceId: item.workspaceId ?? undefined,
-                        channelId: item.channelId,
-                        messageId: item.threadRootId ?? item.messageId,
-                        threadId: item.threadRootId ?? undefined,
-                      });
-                    }}
-                  />
-                  {!item.readAt && (
-                    <Button
-                      variant="text"
-                      icon="check"
-                      disabled={busy}
-                      onClick={() => void mark(item.id)}
-                    >
-                      Đã đọc
-                    </Button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-        {page.hasMore && (
-          <div className="notifications-more">
-            <Button
-              disabled={loading}
-              variant="secondary"
-              onClick={() => {
-                setLoading(true);
-                void governanceApi<NotificationPage>(
-                  accessToken!,
-                  `notifications?before=${page.items.at(-1)!.id}${unread ? "&unread=true" : ""}`,
-                )
-                  .then((next) =>
-                    setPage((old) => ({
-                      ...next,
-                      items: [
-                        ...old.items,
-                        ...next.items.filter(
-                          (item) => !old.items.some((other) => other.id === item.id),
-                        ),
-                      ],
-                    })),
-                  )
-                  .catch((reason) => setError(reason.message))
-                  .finally(() => setLoading(false));
+
+      {/* TAB 1: PORTAL ANNOUNCEMENTS (BẢNG TIN & ĐĂNG TẢI THÔNG BÁO) */}
+      {activeTab === "portal_announcements" && (
+        <div>
+          {/* KPI Cards Row */}
+          <section className="tdtu-home-kpi-grid" style={{ marginBottom: 20 }}>
+            <KpiStatCard
+              icon="bell"
+              tone="purple"
+              value={announcements.length}
+              label="Tổng số thông báo toàn trường"
+            />
+            <KpiStatCard
+              icon="shield"
+              tone={canPublish ? "green" : "blue"}
+              value={canPublish ? "Có quyền đăng bài" : "Tài khoản Sinh viên"}
+              label={canPublish ? "Bạn được phép đăng thông báo" : "Chế độ xem thông báo chính thức"}
+            />
+            <KpiStatCard
+              icon="message"
+              tone="red"
+              value={urgentCount}
+              label="Thông báo khẩn / Đang ghim"
+            />
+          </section>
+
+          {/* Permission Info Notice for Students */}
+          {!canPublish && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "8px 14px",
+                background: "#EFF6FF",
+                border: "1px solid #BFDBFE",
+                borderRadius: 8,
+                marginBottom: 14,
+                color: "#1E40AF",
+                fontSize: 12.5,
               }}
             >
-              Tải thông báo cũ
+              <Icon name="info" size={16} />
+              <div>
+                <strong>Thông tin phân quyền:</strong> Bạn đang đăng nhập với vai trò <strong>Sinh viên (quyền xem)</strong>. Khi các Đơn vị, Ban Giám hiệu, Phòng ban hoặc Khoa đăng thông báo mới, thông báo sẽ hiển thị trực tiếp tại Trang chủ của bạn. Chỉ cán bộ / giảng viên hoặc người được cấp quyền mới có thể đăng tải thông báo.
+              </div>
+            </div>
+          )}
+
+          {/* Filters & Search Toolbar */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              marginBottom: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <FilterPills
+              options={CATEGORY_PILLS}
+              activeKey={selectedCategory}
+              onChange={(key) => setSelectedCategory(key)}
+            />
+
+            <div style={{ position: "relative", minWidth: 240 }}>
+              <input
+                type="text"
+                placeholder="Tìm kiếm thông báo..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: "100%",
+                  height: 32,
+                  padding: "0 12px 0 32px",
+                  borderRadius: 9999,
+                  border: "1px solid var(--border-color, #E2E8F0)",
+                  background: "var(--bg-surface, #FFFFFF)",
+                  fontSize: 12.5,
+                  outline: "none",
+                }}
+              />
+              <span style={{ position: "absolute", left: 10, top: 8, color: "var(--text-muted, #64748B)" }}>
+                <Icon name="search" size={14} />
+              </span>
+            </div>
+          </div>
+
+          {/* Announcements Feed List */}
+          {announcementsLoading ? (
+            <p style={{ textAlign: "center", padding: 30, color: "var(--text-muted, #64748B)", fontSize: 13 }}>
+              Đang tải danh sách thông báo...
+            </p>
+          ) : announcementsError ? (
+            <div role="alert" style={{ padding: 14, background: "#FEF2F2", color: "#DC2626", borderRadius: 8, fontSize: 13 }}>
+              {announcementsError}
+            </div>
+          ) : filteredAnnouncements.length === 0 ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "40px 16px",
+                background: "var(--bg-surface, #FFFFFF)",
+                borderRadius: 10,
+                border: "1px solid var(--border-color, #E2E8F0)",
+              }}
+            >
+              <Icon name="bell" size={30} />
+              <h3 style={{ margin: "10px 0 4px", fontSize: 14.5, color: "var(--text, #0F172A)" }}>
+                Chưa có thông báo nào trong mục này
+              </h3>
+              <p style={{ margin: 0, fontSize: 12.5, color: "var(--text-muted, #64748B)" }}>
+                {canPublish
+                  ? 'Bấm nút "+ Đăng thông báo mới" ở góc trên để phát thông báo cho sinh viên.'
+                  : "Các thông báo mới từ Nhà trường sẽ xuất hiện ở đây."}
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {filteredAnnouncements.map((item) => (
+                <article
+                  key={item.id}
+                  style={{
+                    background: "var(--bg-surface, #FFFFFF)",
+                    border: item.pinned
+                      ? "1.5px solid var(--brand-primary, #2563EB)"
+                      : "1px solid var(--border-color, #E2E8F0)",
+                    borderRadius: 10,
+                    padding: "12px 16px",
+                    boxShadow: "var(--shadow-card, 0 1px 2px rgba(15, 23, 42, 0.04))",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <Badge tone={item.category === "urgent" ? "red" : item.category === "training" ? "amber" : "blue"}>
+                        {item.category === "general"
+                          ? "📢 Thông báo chung"
+                          : item.category === "training"
+                            ? "📚 Đào tạo"
+                            : item.category === "event"
+                              ? "🎉 Sự kiện"
+                              : "⚠️ Khẩn"}
+                      </Badge>
+                      {item.badge && (
+                        <Badge tone={item.category === "urgent" ? "red" : "amber"}>
+                          {item.badge}
+                        </Badge>
+                      )}
+                      {item.pinned && (
+                        <Badge tone="violet">
+                          ⭐ Đã ghim
+                        </Badge>
+                      )}
+                      <span style={{ fontSize: 11.5, color: "var(--text-muted, #64748B)" }}>
+                        {new Date(item.createdAt).toLocaleDateString("vi-VN", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setDetailAnnouncement(item)}
+                      >
+                        Xem chi tiết
+                      </Button>
+
+                      {canPublish && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleTogglePin(item)}
+                            title={item.pinned ? "Bỏ ghim" : "Ghim lên đầu Bảng tin"}
+                          >
+                            {item.pinned ? "Bỏ ghim" : "Ghim"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingAnnouncement(item);
+                              setCreateModalOpen(true);
+                            }}
+                          >
+                            Sửa
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            onClick={() => handleDeleteAnnouncement(item)}
+                          >
+                            Xóa
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <h3
+                    style={{
+                      margin: 0,
+                      fontSize: 14.5,
+                      fontWeight: 700,
+                      color: "var(--text, #0F172A)",
+                      lineHeight: 1.35,
+                      cursor: "pointer",
+                    }}
+                    onClick={() => setDetailAnnouncement(item)}
+                  >
+                    {item.title}
+                  </h3>
+
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 12.5,
+                      color: "var(--text-secondary, #475569)",
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    {item.summary}
+                  </p>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 11.5,
+                      color: "var(--text-muted, #64748B)",
+                      paddingTop: 6,
+                      borderTop: "1px dashed var(--border-color, #E2E8F0)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: "50%",
+                        background: "#0F172A",
+                        color: "#FFFFFF",
+                        display: "grid",
+                        placeItems: "center",
+                        fontSize: 10,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {item.authorName.charAt(0).toUpperCase()}
+                    </div>
+                    <span>{item.authorName}</span>
+                    <span>·</span>
+                    <span>{item.authorTitle || "Phòng Công tác Sinh viên"}</span>
+                    <span>·</span>
+                    <span>Phạm vi: {item.scope}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 2: PERSONAL ALERTS (NHẮC TÊN / THẢO LUẬN CŨ) */}
+      {activeTab === "personal_alerts" && (
+        <section className="notifications-personal-wrap" style={{ marginTop: 10 }}>
+          <div className="notifications-section-head">
+            <h2>Tin nhắn chưa đọc trong nhóm</h2>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={async () => {
+                await governanceApi(accessToken!, "notifications/read", "POST", {});
+                setPage((prev) => ({
+                  ...prev,
+                  unreadCount: 0,
+                  items: prev.items.map((i) => ({ ...i, readAt: i.readAt || new Date().toISOString() })),
+                }));
+              }}
+            >
+              Đánh dấu tất cả đã đọc
             </Button>
           </div>
-        )}
-      </section>
-    </section>
+
+          {unreadChannels.length > 0 ? (
+            <ul className="notifications-unread-channels" style={{ marginBottom: 24 }}>
+              {unreadChannels.map((c) => (
+                <li key={c.channelId}>
+                  <button
+                    type="button"
+                    onClick={() => navigate({ view: "chat", workspaceId: c.workspaceId, channelId: c.channelId })}
+                  >
+                    <span>#{c.channelName}</span>
+                    <small>{c.workspaceName}</small>
+                    <b>{c.unreadCount}</b>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p style={{ fontSize: 13.5, color: "var(--text-muted, #64748B)", marginBottom: 24 }}>
+              Bạn không có tin nhắn nhóm nào chưa đọc.
+            </p>
+          )}
+
+          <div className="notifications-section-head">
+            <h2>Lịch sử thông báo & Nhắc tên ({page.items.length})</h2>
+          </div>
+
+          {loading ? (
+            <p style={{ fontSize: 13.5, color: "var(--text-muted, #64748B)" }}>Đang tải...</p>
+          ) : error ? (
+            <p className="inline-alert" role="alert">{error}</p>
+          ) : page.items.length === 0 ? (
+            <div className="notifications-empty-card" style={{ padding: 32, textAlign: "center", background: "#FFFFFF", borderRadius: 14, border: "1px solid #E2E8F0" }}>
+              <Icon name="check" size={28} />
+              <h3>Bạn đã cập nhật hết thông báo</h3>
+              <p>Khi có ai đó nhắc tên bạn hoặc trả lời tin nhắn của bạn trong nhóm, thông báo sẽ hiển thị ở đây.</p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {page.items.map((item) => (
+                <div
+                  key={item.id}
+                  style={{
+                    padding: "12px 16px",
+                    background: item.readAt ? "#FFFFFF" : "#EEF2FF",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: 10,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: "#0F172A" }}>
+                      {item.authorName} trong #{item.channelName}
+                    </div>
+                    <div style={{ fontSize: 13, color: "#475569", marginTop: 2 }}>
+                      {item.content}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      if (item.workspaceId) {
+                        navigate({ view: "chat", workspaceId: item.workspaceId, channelId: item.channelId, messageId: item.messageId });
+                      }
+                    }}
+                  >
+                    Xem
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Detail Modal */}
+      {detailAnnouncement && (
+        <AnnouncementDetailModal
+          announcement={detailAnnouncement}
+          onClose={() => setDetailAnnouncement(null)}
+        />
+      )}
+
+      {/* Create / Edit Modal */}
+      {createModalOpen && (
+        <CreateAnnouncementModal
+          initialData={editingAnnouncement}
+          onClose={() => {
+            setCreateModalOpen(false);
+            setEditingAnnouncement(null);
+          }}
+          onSubmit={handleSaveAnnouncement}
+          loading={submittingAnnouncement}
+        />
+      )}
+
+      {/* Publishers Management Modal */}
+      {publishersModalOpen && accessToken && (
+        <PublisherManagementModal
+          accessToken={accessToken}
+          onClose={() => setPublishersModalOpen(false)}
+          onChanged={() => void fetchAnnouncements()}
+        />
+      )}
+    </div>
   );
 }

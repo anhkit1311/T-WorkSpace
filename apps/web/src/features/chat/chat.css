@@ -1,9 +1,9 @@
 /* ==========================================================================
    Chat (Tin nhắn) — TDTU portal design
    Three columns: conversation list · conversation · optional details panel.
-   Messages are Teams/Slack-style rows (no bubbles) so a screen holds more of
-   the conversation. Colours come only from the portal tokens in styles.css, so
-   the dark theme follows automatically.
+   Laid out like Messenger on the desktop: bubbles, a rounded "Aa" composer and
+   a details panel of collapsible sections. Colours come only from the portal
+   tokens in styles.css, so the dark theme follows automatically.
    ========================================================================== */
 
 .live-chat {
@@ -19,7 +19,7 @@
   position: relative;
   background: var(--surface);
   color: var(--text);
-  font-size: 13.5px;
+  font-size: 12px;
 }
 
 [data-theme="dark"] .live-chat {
@@ -35,8 +35,8 @@
 .chat-nav-compose-btn,
 .chat-info-close-btn,
 .chat-dock-icon-btn {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   flex: 0 0 auto;
   display: inline-grid;
   place-items: center;
@@ -78,33 +78,6 @@
   gap: 6px;
   padding: 0 2px;
   min-height: 32px;
-}
-
-.chat-workspace-select {
-  position: relative;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.chat-workspace-select span {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
-.chat-workspace-select select {
-  width: 100%;
-  height: 32px;
-  padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 600;
 }
 
 .chat-search-pill-box {
@@ -229,30 +202,6 @@
   cursor: progress;
 }
 
-.chat-convo-hash,
-.chat-header-hash,
-.chat-info-hash-large {
-  display: inline-grid;
-  place-items: center;
-  flex: 0 0 auto;
-  border-radius: var(--radius-md);
-  background: var(--chat-subtle);
-  color: var(--text-muted);
-  font-weight: 700;
-}
-
-.chat-convo-hash {
-  width: 28px;
-  height: 28px;
-  font-size: 13px;
-}
-
-.chat-conversation-card.is-active .chat-convo-hash,
-.chat-header-hash {
-  background: var(--primary-soft);
-  color: var(--primary-text);
-}
-
 .chat-convo-info {
   flex: 1 1 auto;
   min-width: 0;
@@ -261,7 +210,6 @@
   gap: 1px;
 }
 
-.chat-convo-top,
 .chat-convo-bottom {
   display: flex;
   align-items: center;
@@ -276,12 +224,6 @@
   white-space: nowrap;
   font-size: 13px;
   font-weight: 600;
-}
-
-.chat-convo-top time {
-  flex: 0 0 auto;
-  font-size: 11px;
-  color: var(--text-muted);
 }
 
 .chat-convo-preview {
@@ -352,12 +294,6 @@
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.chat-header-hash {
-  width: 32px;
-  height: 32px;
-  font-size: 15px;
 }
 
 .chat-header-title-box {
@@ -628,20 +564,6 @@
   width: var(--chat-gutter);
   height: var(--chat-gutter);
   font-size: 11px;
-}
-
-.message-row__hover-time {
-  visibility: hidden;
-  padding-top: 2px;
-  font-size: 10.5px;
-  line-height: 1.6;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.message-row:hover .message-row__hover-time,
-.message-row:focus-within .message-row__hover-time {
-  visibility: visible;
 }
 
 .message-row__main {
@@ -1150,27 +1072,9 @@
   color: var(--text-muted);
 }
 
-.chat-dock-actions-row {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px 6px 6px;
-}
-
 .chat-dock-icon-btn.is-recording {
   background: var(--red-50, #fef2f2);
   color: var(--accent-red, #dc2626);
-}
-
-.chat-dock-hint {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding-left: 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 11px;
-  color: var(--text-muted);
 }
 
 .chat-dock-send-btn {
@@ -1283,15 +1187,6 @@
   text-align: center;
 }
 
-.chat-info-hash-large {
-  width: 52px;
-  height: 52px;
-  margin-bottom: 4px;
-  font-size: 22px;
-  background: var(--primary-soft);
-  color: var(--primary-text);
-}
-
 .chat-info-title {
   margin: 0;
   font-size: 15px;
@@ -1335,34 +1230,6 @@
   color: var(--primary);
 }
 
-.chat-info-desc-box {
-  margin-bottom: 12px;
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  background: var(--chat-subtle);
-  font-size: 12.5px;
-}
-
-.chat-info-desc-content p {
-  margin: 4px 0 0;
-  color: var(--text-secondary);
-}
-
-.chat-info-menu-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.chat-info-section-label {
-  padding: 12px 8px 4px;
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
 .chat-info-menu-item {
   width: 100%;
   display: flex;
@@ -1382,8 +1249,7 @@
   background: var(--chat-subtle);
 }
 
-.menu-item-left,
-.menu-item-right {
+.menu-item-left {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1392,29 +1258,6 @@
 
 .menu-item-left span {
   color: var(--text);
-}
-
-.menu-item-badge {
-  min-width: 20px;
-  padding: 1px 6px;
-  border-radius: var(--radius-pill);
-  background: var(--chat-subtle);
-  font-size: 11px;
-  font-weight: 600;
-  text-align: center;
-}
-
-.chat-info-switch {
-  padding: 1px 8px;
-  border-radius: var(--radius-pill);
-  background: var(--chat-subtle);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.chat-info-switch.is-on {
-  background: var(--primary);
-  color: #ffffff;
 }
 
 .chat-info-members-list {
@@ -1448,25 +1291,6 @@
 .member-pill-text small {
   font-size: 11.5px;
   color: var(--text-muted);
-}
-
-.chat-profile-presence {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.chat-profile-presence i {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--border-strong, #cbd5e1);
-}
-
-.chat-profile-presence i.is-online {
-  background: var(--green-500, #10b981);
 }
 
 .chat-info-add-member-form {
@@ -1559,12 +1383,304 @@
 }
 
 .live-chat.is-inbox .message-row.is-mine .message-row__text {
-  background: var(--primary-soft);
+  background: var(--primary);
+  color: #fff;
+}
+
+.live-chat.is-inbox .message-row.is-mine .message-row__text a {
+  color: inherit;
+}
+
+.live-chat.is-inbox .message-row__text {
+  padding: 8px 12px;
+  border-radius: 18px;
+}
+
+.live-chat.is-inbox.is-group .message-row:not(.is-mine) .message-row__head strong {
+  display: inline;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* Messenger list: unread conversations stand out in bold. */
+.chat-conversation-card.is-unread .chat-convo-name,
+.chat-conversation-card.is-unread .chat-convo-preview {
+  color: var(--text);
+  font-weight: 700;
 }
 
 .live-chat.is-inbox .message-row__receipt {
   position: static;
   justify-self: end;
+}
+
+/* --------------------------------------------------------------------------
+   Messenger layout: compact list title, compact rows, round icon buttons, "Aa" composer
+   -------------------------------------------------------------------------- */
+.live-chat-nav {
+  flex-basis: clamp(220px, 22%, 260px);
+  width: clamp(220px, 22%, 260px);
+  gap: 6px;
+  padding: 8px 6px;
+}
+
+.live-chat-nav__header {
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.live-chat-nav__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.chat-icon-btn,
+.chat-nav-compose-btn,
+.chat-info-close-btn,
+.chat-dock-icon-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+}
+
+.chat-nav-compose-btn {
+  background: var(--chat-subtle);
+  color: var(--text);
+}
+
+.chat-icon-btn,
+.chat-dock-icon-btn {
+  color: var(--primary);
+}
+
+.chat-search-pill-box {
+  border-radius: var(--radius-pill);
+}
+
+/* Messenger tabs: compact size and no border; only the active one is filled. */
+.chat-nav-filter-tabs {
+  gap: 3px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.chat-filter-pill {
+  flex: none;
+  height: 22px;
+  padding: 0 7px;
+  border-color: transparent;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.chat-conversation-card {
+  gap: 7px;
+  padding: 4px 6px;
+  border-radius: var(--radius-md);
+}
+
+.chat-convo-info {
+  gap: 1px;
+}
+
+.chat-convo-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chat-convo-bottom {
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+.chat-convo-preview {
+  flex: 0 1 auto;
+  font-size: 11px;
+}
+
+.chat-convo-bottom time {
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.chat-convo-indicators {
+  margin-left: auto;
+}
+
+.chat-conversation-card.is-unread .chat-convo-bottom time {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.chat-main-header .avatar {
+  flex: 0 0 auto;
+}
+
+/* Bubbles: the avatar sits beside the last message of someone else's run. */
+.live-chat.is-inbox .message-row__gutter {
+  align-self: end;
+}
+
+.live-chat.is-inbox .message-row__head time {
+  display: none;
+}
+
+/* Composer: icons, then a rounded field, then send or like. */
+.live-chat-compose-container .chat-floating-dock-form {
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 4px;
+  padding: 3px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.live-chat-compose-container .chat-floating-dock-form:focus-within {
+  box-shadow: none;
+}
+
+.live-chat-compose-container .chat-dock-textarea {
+  flex: 1 1 auto;
+  min-height: 28px;
+  padding: 5px 10px;
+  border-radius: 14px;
+  background: var(--chat-subtle);
+  font-size: 11.5px;
+}
+
+.chat-dock-send-btn {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  justify-content: center;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--primary);
+}
+
+.chat-dock-send-btn:hover:not(:disabled) {
+  background: var(--chat-subtle);
+}
+
+.chat-dock-send-btn:disabled {
+  background: transparent;
+  opacity: 0.5;
+}
+
+/* Details panel: avatar, round actions, collapsible sections. */
+.live-chat-info-panel {
+  flex-basis: clamp(200px, 20%, 240px);
+  width: clamp(200px, 20%, 240px);
+}
+
+.chat-info-head {
+  justify-content: flex-end;
+  min-height: 34px;
+  border-bottom: 0;
+}
+
+.chat-info-scrollable {
+  padding-top: 0;
+}
+
+.chat-info-identity-card .avatar {
+  margin-bottom: 4px;
+  width: 44px;
+  height: 44px;
+}
+
+.chat-info-title {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.chat-info-identity-card small {
+  font-size: 11px;
+}
+
+.chat-info-action-row {
+  gap: 2px;
+  margin: 10px 0 8px;
+}
+
+.chat-info-circle-action {
+  width: 64px;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 10.5px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.chat-info-circle-action:hover {
+  color: var(--text);
+}
+
+.chat-info-circle-action .circle-action-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--chat-subtle);
+  color: var(--text);
+}
+
+.chat-info-circle-action:hover .circle-action-icon {
+  background: var(--primary-soft);
+}
+
+.chat-info-section__toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 6px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.chat-info-section__toggle:hover {
+  background: var(--chat-subtle);
+}
+
+.chat-info-section__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-bottom: 4px;
+}
+
+.chat-info-section__body .chat-info-menu-item {
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 5px 6px;
+}
+
+.chat-info-file-group__label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.chat-info-file-group .chat-info-menu-item,
+.chat-info-file-group .chat-info-empty {
+  padding-left: 36px;
 }
 
 /* --------------------------------------------------------------------------
@@ -1644,10 +1760,6 @@
     padding-left: 6px;
   }
 
-  .chat-dock-hint {
-    visibility: hidden;
-  }
-
   .live-chat-compose-container {
     padding: 0 8px 8px;
   }
@@ -1665,9 +1777,6 @@
     box-shadow: none;
   }
 
-  .message-row__hover-time {
-    visibility: visible;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1678,113 +1787,3 @@
   }
 }
 
-/* "Tin nhắn" gathers every group: one collapsible section per group, direct conversations last. */
-.chat-nav-group {
-  display: grid;
-  gap: 2px;
-  margin-bottom: 6px;
-}
-
-.chat-nav-group__head {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding-right: 2px;
-}
-
-.chat-nav-group__toggle {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 32px;
-  padding: 4px 8px;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--text-secondary);
-  font: inherit;
-  font-size: 12.5px;
-  font-weight: 700;
-  text-align: left;
-  cursor: pointer;
-}
-
-.chat-nav-group__toggle:hover {
-  background: var(--surface-soft);
-  color: var(--text);
-}
-
-.chat-nav-group__toggle:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
-}
-
-.chat-nav-group__name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.chat-nav-group__tag {
-  flex: 0 0 auto;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
-.chat-header-group {
-  margin-left: 8px;
-  padding: 1px 8px;
-  border-radius: var(--radius-pill);
-  background: var(--surface-soft);
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-  vertical-align: middle;
-}
-
-.chat-header-meet-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.chat-header-meet-btn:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-soft);
-}
-
-.chat-header-meet-btn:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
-
-@media (max-width: 480px) {
-  .chat-header-group {
-    display: none;
-  }
-
-  .chat-header-meet-btn span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-  }
-
-  .chat-header-meet-btn {
-    padding: 0 8px;
-  }
-}

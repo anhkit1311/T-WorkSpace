@@ -15,7 +15,6 @@
 .toast .toast-close { position:absolute; top:6px; right:6px; }
 .toast > div { padding-right:24px; }
 .toast-viewport.toast-viewport--raised { bottom:auto; top:calc(76px + env(safe-area-inset-top)); }
-.editorial-google-signin.is-disabled { opacity:.4; pointer-events:none; }
 .editorial-toggle-btn::after { content:""; position:absolute; inset:50% auto auto 50%; width:44px; height:44px; transform:translate(-50%,-50%); }
 .editorial-sublink, .editorial-nav-link, .chat-header-icon-btn, .icon-button { position:relative; }
 .editorial-sublink::after, .editorial-nav-link::after { content:""; position:absolute; inset:50% 0 auto; min-height:44px; transform:translateY(-50%); }

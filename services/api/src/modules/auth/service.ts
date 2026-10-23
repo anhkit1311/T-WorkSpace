@@ -1,10 +1,9 @@
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
-import type { AuthResponse, AuthUser, GoogleAuthInput } from "@doan/shared";
+import type { AuthResponse, AuthUser } from "@doan/shared";
 import { config } from "../../config/config.js";
 import { query, withTransaction } from "../../infrastructure/database/db.js";
 import { HttpError } from "../../shared/http/http-error.js";
-import { findOrCreateGoogleUser, verifyGoogleAuth } from "./google.js";
 import { resendOtp, verifyOtp } from "./otp.js";
 import { verifyPassword } from "./password.js";
 import {
@@ -132,11 +131,12 @@ export async function login(
     throw new HttpError(401, "INVALID_CREDENTIALS", "Email hoặc mật khẩu không đúng.");
   }
 
-  if (!user.password_hash && user.auth_provider === "google") {
+  // Accounts created by the removed Google sign-in have no password; the hotline sets one.
+  if (!user.password_hash) {
     throw new HttpError(
       400,
-      "USE_GOOGLE_LOGIN",
-      "Tài khoản này được đăng ký bằng Google. Vui lòng chọn Đăng nhập với Google.",
+      "PASSWORD_NOT_SET",
+      "Tài khoản chưa có mật khẩu. Vui lòng liên hệ hotline để được cấp mật khẩu.",
     );
   }
 
@@ -185,33 +185,6 @@ export async function resendVerificationOtp(input: {
 }): Promise<{ success: boolean; message: string; cooldownSeconds: number }> {
   const email = normalizeEmail(input.email);
   return resendOtp(email);
-}
-
-export async function authenticateWithGoogle(
-  input: GoogleAuthInput,
-  metadata: SessionMetadata,
-): Promise<AuthResult | { requireOtp: boolean; email: string; message: string }> {
-  const googleData = await verifyGoogleAuth(input);
-  const userRecord = await findOrCreateGoogleUser(googleData);
-
-  if (userRecord.requireOtp) {
-    return {
-      requireOtp: true,
-      email: userRecord.email,
-      message: "Mã xác thực OTP đã được gửi về email Google của bạn.",
-    };
-  }
-
-  const profile = await query<UserRow>(
-    `SELECT id, email, display_name, password_hash, auth_provider, email_verified, avatar_url, bio, cover_url, contact_text, status_text, pronouns, location, interests, favorite_music, profile_visibility, show_activity, show_contact, notifications_enabled FROM users WHERE id = $1`,
-    [userRecord.id],
-  );
-  const authUser = toAuthUser(profile.rows[0]);
-
-  const refreshToken = await withTransaction((client) =>
-    createSession(client, userRecord.id, metadata),
-  );
-  return createAuthResult(authUser, refreshToken);
 }
 
 export async function refreshSession(

@@ -121,6 +121,7 @@ function AccessPanel({ token, run, units, onUnitCreated }: { token: string; run:
                 <th>Quản trị hệ thống</th>
                 {units.map((unit) => <th key={unit.id} title={unit.name}>Giáo vụ {unit.code}</th>)}
                 <th>Hồ sơ</th>
+                <th>Mật khẩu</th>
               </tr>
             </thead>
             <tbody>
@@ -133,6 +134,7 @@ function AccessPanel({ token, run, units, onUnitCreated }: { token: string; run:
                     {row.staff && <Badge tone={row.staff.active ? "blue" : "neutral"}>Giảng viên {unitCode(row.staff.unitId)}{row.staff.active ? "" : " (ngừng)"}</Badge>}
                     {!row.staff && "—"}
                   </td>
+                  <td><PasswordCell token={token} run={run} row={row} /></td>
                 </tr>
               ))}
             </tbody>
@@ -145,7 +147,40 @@ function AccessPanel({ token, run, units, onUnitCreated }: { token: string; run:
   );
 }
 
-type CreatedAccount = { email: string; displayName: string; status: "created" | "exists"; password: string | null };
+/** Passwords are stored hashed, so the admin can only set a new one; it is shown once after saving. */
+function PasswordCell({ token, run, row }: { token: string; run: Run; row: AccessRow }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState("");
+  const [saved, setSaved] = useState<string | null>(null);
+  if (saved)
+    return (
+      <span className="admin-toolbar">
+        <code>{saved}</code>
+        <Button type="button" variant="secondary" onClick={() => void navigator.clipboard.writeText(saved)}>Sao chép</Button>
+        <Button type="button" variant="secondary" onClick={() => setSaved(null)}>Ẩn</Button>
+      </span>
+    );
+  if (!editing)
+    return <Button type="button" variant="secondary" onClick={() => setEditing(true)}>Đặt lại</Button>;
+  return (
+    <form className="admin-toolbar" onSubmit={async (event) => {
+      event.preventDefault();
+      const result = await run(`Đã đặt mật khẩu mới cho ${row.displayName}`, () =>
+        academicApi<{ password: string }>(token, `accounts/${row.id}/password`, "POST", { password: value }));
+      if (result) {
+        setSaved(result.password);
+        setEditing(false);
+        setValue("");
+      }
+    }}>
+      <input type="text" autoComplete="new-password" minLength={8} maxLength={128} value={value} onChange={(e) => setValue(e.target.value)} placeholder="Trống = tạo ngẫu nhiên" aria-label={`Mật khẩu mới: ${row.displayName}`} />
+      <Button type="submit">Lưu</Button>
+      <Button type="button" variant="secondary" onClick={() => { setEditing(false); setValue(""); }}>Huỷ</Button>
+    </form>
+  );
+}
+
+type CreatedAccount ={ email: string; displayName: string; status: "created" | "exists"; password: string | null };
 
 /** No self sign-up: the system administrator creates accounts here, one or a list pasted from Excel. */
 function AccountsCard({ token, run, onCreated }: { token: string; run: Run; onCreated: () => void }) {
@@ -172,7 +207,7 @@ function AccountsCard({ token, run, onCreated }: { token: string; run: Run; onCr
       </form>
       {created.length > 0 && (
         <>
-          <p className="admin-note" role="status">Mật khẩu chỉ hiện một lần. Hãy sao chép và gửi cho từng người; họ có thể đổi qua "Quên mật khẩu".</p>
+          <p className="admin-note" role="status">Mật khẩu chỉ hiện một lần. Hãy sao chép và gửi cho từng người; họ có thể đổi trong trang Hồ sơ.</p>
           <table className="admin-table">
             <thead><tr><th>Email</th><th>Họ tên</th><th>Mật khẩu</th></tr></thead>
             <tbody>

@@ -1,0 +1,100 @@
+.t-workspace-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--text, #0F172A);
+  vertical-align: middle;
+  white-space: nowrap;
+  line-height: 1;
+  text-decoration: none;
+  user-select: none;
+}
+
+.t-workspace-logo__mark {
+  display: block;
+  flex: 0 0 auto;
+  border-radius: 25%;
+  transition: transform 0.18s ease;
+}
+
+.t-workspace-logo:hover .t-workspace-logo__mark {
+  transform: scale(1.05);
+}
+
+.t-workspace-badge__bg {
+  fill: #FFFFFF;
+  stroke: #CBD5E1;
+  transition: fill 0.2s ease, stroke 0.2s ease;
+}
+
+[data-theme="dark"] .t-workspace-badge__bg {
+  fill: #111C2E;
+  stroke: rgba(255, 255, 255, 0.16);
+}
+
+.t-workspace-logo__text-wrap {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.t-workspace-logo__text {
+  font-family: var(--font-heading, 'Be Vietnam Pro', system-ui, -apple-system, sans-serif);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.t-workspace-logo__prefix {
+  color: var(--brand-primary, #2563EB);
+  font-weight: 850;
+}
+
+[data-theme="dark"] .t-workspace-logo__prefix {
+  color: #60A5FA;
+}
+
+.t-workspace-logo__name {
+  color: var(--text, #0F172A);
+}
+
+[data-theme="dark"] .t-workspace-logo__name {
+  color: #F8FAFC;
+}
+
+.t-workspace-logo__tagline {
+  font-family: var(--font-body, 'Be Vietnam Pro', system-ui, sans-serif);
+  font-size: 0.48em;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted, #64748B);
+  margin-top: 0.28em;
+}
+
+/* Sizing variants */
+.t-workspace-logo--sm .t-workspace-logo__text {
+  font-size: 17px;
+}
+.t-workspace-logo--md .t-workspace-logo__text {
+  font-size: 20px;
+}
+.t-workspace-logo--lg .t-workspace-logo__text {
+  font-size: 26px;
+}
+.t-workspace-logo--lg {
+  gap: 0.75rem;
+}
+
+/* Legacy lockup aliases to maintain layout consistency */
+.nexo-lockup,
+.tdtu-brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: inherit;
+  vertical-align: middle;
+  white-space: nowrap;
+  line-height: 1;
+}

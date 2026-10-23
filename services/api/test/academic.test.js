@@ -5,6 +5,7 @@ import { test } from "node:test";
 
 import { pool } from "../../../dist/api/infrastructure/database/db.js";
 import * as org from "../../../dist/api/modules/academic/organization.js";
+import { verifyPassword } from "../../../dist/api/modules/auth/password.js";
 
 const skip = process.env.RUN_DB_TESTS !== "1";
 const sql = (text, values = []) => pool.query(text, values);
@@ -68,6 +69,12 @@ test("Organisation: faculties, lecturers and role grants are system-admin contro
     await rejects(org.listAccess(id("office"), new URLSearchParams()), "FORBIDDEN");
     const access = await org.listAccess(id("root"), new URLSearchParams({ q: people.office.email }));
     assert.deepEqual(access.users.find((row) => row.id === id("office")).grants, [{ role: "unit_admin", unitId: unit.id }]);
+    await rejects(org.resetPassword(id("office"), id("lecturer"), {}), "FORBIDDEN");
+    await rejects(org.resetPassword(id("root"), id("lecturer"), { password: "short" }), "INVALID_PASSWORD");
+    assert.equal((await org.resetPassword(id("root"), id("lecturer"), { password: "MatKhauMoi123" })).password, "MatKhauMoi123");
+    const stored = await sql(`SELECT password_hash FROM users WHERE id=$1`, [id("lecturer")]);
+    assert.ok(await verifyPassword("MatKhauMoi123", stored.rows[0].password_hash));
+    assert.equal((await org.resetPassword(id("root"), id("lecturer"), {})).password.length, 12);
     await org.grantRole(id("root"), { role: "unit_admin", unitId: unit.id, email: people.office.email, revoke: true });
     await rejects(org.createDepartment(id("office"), unit.id, { code: "HTTT", name: "Hệ thống thông tin" }), "FORBIDDEN");
   } finally {

@@ -4,7 +4,7 @@
    ========================================================================== */
 
 .callcenter-page {
-  padding: 24px 24px 40px;
+  padding: 14px 20px 32px;
   max-width: 1480px;
   width: 100%;
   margin: 0 auto;
@@ -13,23 +13,23 @@
 
 /* Page Header */
 .callcenter-header {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 .callcenter-header__title {
-  margin: 0 0 4px;
-  font-size: 24px;
-  letter-spacing: -0.02em;
+  margin: 0 0 3px;
+  font-size: 18px;
+  letter-spacing: -0.015em;
   font-weight: 700;
   color: var(--text);
 }
 
 .callcenter-header__subtitle {
   margin: 0;
-  font-size: 13px;
+  font-size: 11.5px;
   color: var(--text-muted);
 }
 
@@ -37,19 +37,19 @@
 .callcenter-kpi-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .callcenter-kpi-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 16px 20px;
+  border-radius: 7px;
+  padding: 10px 14px;
   box-shadow: none;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 [data-theme="dark"] .callcenter-kpi-card {
@@ -58,9 +58,9 @@
 }
 
 .callcenter-kpi-card__icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -82,7 +82,7 @@
 }
 
 .callcenter-kpi-card__number {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--text);
   line-height: 1.1;
@@ -93,9 +93,9 @@
 }
 
 .callcenter-kpi-card__label {
-  font-size: 13px;
+  font-size: 11.5px;
   color: var(--text-muted);
-  margin-top: 3px;
+  margin-top: 2px;
 }
 
 /* Main 2-Column Layout (70% - 30%) */

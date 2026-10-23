@@ -8,9 +8,8 @@ import {
   useRef,
   useState,
 } from "react";
-import type { AuthResponse, AuthUser, GoogleAuthInput } from "@doan/shared";
+import type { AuthUser } from "@doan/shared";
 import {
-  googleAuthApi,
   loginApi,
   logoutApi,
   refreshSessionApi,
@@ -71,9 +70,6 @@ interface AppContextValue {
   resendOtp: (
     email: string,
   ) => Promise<{ success: boolean; message: string; cooldownSeconds: number }>;
-  loginWithGoogle: (
-    input: GoogleAuthInput,
-  ) => Promise<{ requireOtp?: boolean; email?: string } | void>;
   logout: (reason?: "password-changed") => Promise<void>;
   updateUser: (user: Partial<AuthUser>) => Promise<void>;
 }
@@ -82,7 +78,9 @@ const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [screen, setScreen] = useState<PublicScreen>(() => /^\/(login|register)\/?$/.test(window.location.pathname) ? "login" : "landing");
+  const [screen, setScreen] = useState<PublicScreen>(() =>
+    window.location.pathname.startsWith("/app/") ? "app" : "login"
+  );
   const [route, setRoute] = useState(() => readAppRoute(new URL(window.location.href)));
   const activeView = route.view;
   const navigate = useCallback((target: AppRoute, replace = false) => {
@@ -110,10 +108,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const onPop = () => {
       setRoute(readAppRoute(new URL(window.location.href)));
       const path = window.location.pathname;
-      // "/register" is an old link: there is no self sign-up any more, it opens the sign-in page.
-      if (/^\/(login|register)\/?$/.test(path)) setScreen("login");
-      else if (path === "/") setScreen("landing");
-      else if(path.startsWith("/app/")) setScreen(user ? "app" : "login");
+      if (path.startsWith("/app/")) setScreen(user ? "app" : "login");
+      else setScreen("login");
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -132,7 +128,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const path = window.location.pathname;
     // Retain an incoming protected deep link while authentication is required.
     if(screen === "login" && path.startsWith("/app/")) return;
-    const destination = screen === "landing" ? "/" : screen === "login" ? "/login" : appRouteUrl(route);
+    const destination = screen === "login" ? "/login" : appRouteUrl(route);
     if (`${path}${window.location.search}${window.location.hash}` !== destination)
       window.history[screen === "app" ? "replaceState" : "pushState"]({},"",destination);
   },[screen,isAuthChecking,route]);
@@ -179,7 +175,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const notify = (title: string, description?: string, tone: ToastMessage["tone"] = "success", action?: ToastMessage["action"], extras?: Pick<ToastMessage, "icon" | "onOpen">) => {
     // Preserve the owner's previous request to hide login welcome banners.
-    if (["Chào mừng trở lại", "Xác thực thành công", "Đăng nhập Google thành công"].includes(title)) return;
+    if (["Chào mừng trở lại", "Xác thực thành công"].includes(title)) return;
     const id = ++toastId.current;
     setToasts((items) => [...items, { id, title, description, tone, action, ...extras }].slice(-3));
   };
@@ -242,26 +238,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setAccessToken(result.accessToken);
     enterApp();
     // Preserve the destination after OTP verification.
-    notify("Xác thực thành công", `Chào mừng ${result.user.displayName} đến với nexo!`);
+    notify("Xác thực thành công", `Chào mừng ${result.user.displayName} đến với T-WorkSpace!`);
   };
 
   const handleResendOtp = async (email: string) => {
     const result = await resendOtpApi({ email });
     notify("Đã gửi lại mã", result.message, "info");
     return result;
-  };
-
-  const handleLoginWithGoogle = async (input: GoogleAuthInput) => {
-    const result = await googleAuthApi(input);
-    if ("requireOtp" in result && result.requireOtp) {
-      return { requireOtp: true, email: result.email };
-    }
-    const authRes = result as AuthResponse;
-    setUser(authRes.user);
-    setAccessToken(authRes.accessToken);
-    enterApp();
-    // Preserve the destination after Google authentication.
-    notify("Đăng nhập Google thành công", `Chào mừng ${authRes.user.displayName} đã trở lại!`);
   };
 
   const handleLogout = async (reason?: "password-changed") => {
@@ -275,10 +258,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setAccessToken(null);
       setChatNavigation(null);
-      setScreen("landing");
+      setScreen("login");
       setActiveView("overview");
       if(reason === "password-changed") notify("Đã đổi mật khẩu", "Vui lòng đăng nhập lại.", "info");
-      else notify("Đã đăng xuất", "Hẹn gặp lại bạn tại nexo.", "info");
+      else notify("Đã đăng xuất", "Hẹn gặp lại bạn tại T-WorkSpace.", "info");
     }
   };
 
@@ -329,7 +312,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       login: handleLogin,
       verifyOtp: handleVerifyOtp,
       resendOtp: handleResendOtp,
-      loginWithGoogle: handleLoginWithGoogle,
       logout: handleLogout,
       updateUser,
     }),

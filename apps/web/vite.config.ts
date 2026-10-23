@@ -46,7 +46,6 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: devPort,
-      // Google OAuth authorizes an exact origin, including the port.
       // Follow WEB_ORIGIN and fail clearly instead of silently changing ports.
       strictPort: true,
       // Native file events can miss newly created modules on Windows volumes.

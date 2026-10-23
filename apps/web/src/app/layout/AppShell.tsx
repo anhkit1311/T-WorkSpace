@@ -9,7 +9,7 @@ import { SidebarSlotContext } from "./SidebarSlot";
 import { GlobalCallBar } from "../../features/call-center/GlobalCallBar";
 import { STATE_LABEL, STATE_TONE } from "../../features/call-center/agent-state";
 import { Icon, type IconName } from "../../shared/ui/Icon";
-import { TdtuLogo } from "../../shared/ui/TdtuLogo";
+import { TWorkSpaceLogo } from "../../shared/ui/TWorkSpaceLogo";
 import { NotionSearchModal } from "../../features/search/NotionSearchModal";
 import { LogoutConfirmDialog } from "../../features/auth/LogoutConfirmDialog";
 import { PageErrorBoundary } from "../../shared/ui/PageErrorBoundary";
@@ -320,9 +320,10 @@ export function AppShell() {
               setActiveMenuId("home");
               setActiveView("overview");
             }}
-            title="Cổng nội bộ TDTU"
+            title="T-WorkSpace"
+            aria-label="T-WorkSpace"
           >
-            <TdtuLogo />
+            <TWorkSpaceLogo size="sm" />
           </button>
 
           <div
@@ -365,7 +366,7 @@ export function AppShell() {
             aria-label="Chế độ giao diện"
             onClick={toggleTheme}
           >
-            <Icon name={theme === "dark" ? "sun" : "moon"} size={16} />
+            <Icon name={theme === "dark" ? "sun" : "moon"} size={14} />
           </button>
 
           {/* Notifications Bell with Red Badge */}
@@ -379,7 +380,7 @@ export function AppShell() {
               setActiveView("notifications");
             }}
           >
-            <Icon name="bell" size={16} />
+            <Icon name="bell" size={14} />
             {unreadNotifications > 0 && (
               <span className="tdtu-badge-num">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>
             )}
@@ -512,7 +513,7 @@ export function AppShell() {
                   }}
                   title={item.label}
                 >
-                  <Icon name={item.icon} size={20} strokeWidth={isSelected ? 2 : 1.7} />
+                  <Icon name={item.icon} size={17} strokeWidth={isSelected ? 2 : 1.7} />
                   <span className={`tdtu-sidebar__label ${item.short ? "has-short" : ""}`}>{item.label}</span>
                   {item.short && <span className="tdtu-sidebar__short" aria-hidden="true">{item.short}</span>}
                   {live && <span className="tdtu-sidebar__live" role="img" aria-label="đang diễn ra" />}
@@ -534,7 +535,7 @@ export function AppShell() {
             aria-expanded={moreOpen}
             onClick={() => setMoreOpen(!moreOpen)}
           >
-            <Icon name={moreOpen ? "x" : "menu"} size={20} />
+            <Icon name={moreOpen ? "x" : "menu"} size={17} />
             <span className="tdtu-sidebar__label">{moreOpen ? "Đóng" : "Thêm"}</span>
           </button>
           <button
@@ -544,7 +545,7 @@ export function AppShell() {
             title={collapsed ? "Mở rộng menu" : "Thu gọn menu"}
             onClick={toggleCollapsed}
           >
-            <Icon name={collapsed ? "chevron-right" : "chevron-left"} size={20} />
+            <Icon name={collapsed ? "chevron-right" : "chevron-left"} size={16} />
             <span className="tdtu-sidebar__label">Thu gọn menu</span>
           </button>
         </nav>

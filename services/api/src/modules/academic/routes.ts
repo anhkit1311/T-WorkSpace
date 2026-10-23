@@ -34,6 +34,7 @@ const routes: Route[] = [
   r("POST", "/units/:id/staff", (u, m, b) => organization.upsertStaff(u, m[1], b)),
   r("POST", "/roles", (u, _m, b) => organization.grantRole(u, b)),
   r("POST", "/accounts", (u, _m, b) => organization.createAccounts(u, b), 201),
+  r("POST", "/accounts/:id/password", (u, m, b) => organization.resetPassword(u, m[1], b)),
   r("GET", "/access", (u, _m, _b, p) => organization.listAccess(u, p)),
 ];
 

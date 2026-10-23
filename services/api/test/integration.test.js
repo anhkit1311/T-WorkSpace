@@ -8,8 +8,7 @@ import { io } from "socket.io-client";
 import { pool } from "../../../dist/api/infrastructure/database/db.js";
 import { createApiServer } from "../../../dist/api/server.js";
 import { createAccessToken } from "../../../dist/api/modules/auth/tokens.js";
-import { hashPasswordResetOtp } from "../../../dist/api/modules/auth/password-reset.js";
-import { verifyPassword } from "../../../dist/api/modules/auth/password.js";
+import { hashPassword, verifyPassword } from "../../../dist/api/modules/auth/password.js";
 import { roomManager } from "../../../dist/api/modules/meetings/media/room-manager.js";
 import {
   addWorkspaceMember,
@@ -128,64 +127,28 @@ test(
       const base = `http://localhost:${server.address().port}`;
       process.env.TRUST_PROXY = "true";
       const passwordTestIp = `password-test-${randomUUID()}`;
-      const unknownReset = await fetch(`${base}/auth/password-reset/request`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Forwarded-For": passwordTestIp },
-        body: JSON.stringify({ email: "nobody@example.test" }),
-      });
-      assert.equal(unknownReset.status, 200);
-      assert.match((await unknownReset.json()).message, /Nếu email/);
-      const resetEmail = `test-${owner}@example.test`;
-      const resetOtp = "314159";
-      await pool.query(`UPDATE users SET email_verified=true WHERE id=$1`, [owner]);
-      const resetSessionId = randomUUID();
+      const passwordEmail = `test-${owner}@example.test`;
+      await pool.query(`UPDATE users SET email_verified=true, password_hash=$2 WHERE id=$1`, [
+        owner,
+        await hashPassword("NewPassword123!"),
+      ]);
+      const passwordSessionId = randomUUID();
       await pool.query(
         `INSERT INTO refresh_sessions(id,user_id,token_hash,expires_at) VALUES($1,$2,$3,now()+interval '1 day')`,
-        [resetSessionId, owner, "a".repeat(64)],
+        [passwordSessionId, owner, "a".repeat(64)],
       );
-      await pool.query(
-        `INSERT INTO password_resets(email,otp_hash,expires_at) VALUES($1,$2,now()+interval '10 minutes')`,
-        [resetEmail, hashPasswordResetOtp(resetEmail, resetOtp)],
-      );
-      const resetHeaders = {
+      const passwordHeaders = {
         "Content-Type": "application/json",
         "X-Forwarded-For": passwordTestIp,
       };
-      const wrongReset = await fetch(`${base}/auth/password-reset/confirm`, {
+      const passwordLogin = await fetch(`${base}/auth/login`, {
         method: "POST",
-        headers: resetHeaders,
-        body: JSON.stringify({ email: resetEmail, otp: "000000", password: "NewPassword123!" }),
+        headers: passwordHeaders,
+        body: JSON.stringify({ email: passwordEmail, password: "NewPassword123!" }),
       });
-      assert.equal(wrongReset.status, 400);
-      const attempts = await pool.query(
-        `SELECT attempt_count FROM password_resets WHERE email=$1`,
-        [resetEmail],
-      );
-      assert.equal(attempts.rows[0].attempt_count, 1);
-      const correctReset = await fetch(`${base}/auth/password-reset/confirm`, {
-        method: "POST",
-        headers: resetHeaders,
-        body: JSON.stringify({ email: resetEmail, otp: resetOtp, password: "NewPassword123!" }),
-      });
-      assert.equal(correctReset.status, 200);
-      const updated = await pool.query(`SELECT password_hash FROM users WHERE id=$1`, [owner]);
-      assert.equal(await verifyPassword("NewPassword123!", updated.rows[0].password_hash), true);
-      assert.equal(
-        (await pool.query(`SELECT 1 FROM password_resets WHERE email=$1`, [resetEmail])).rowCount,
-        0,
-      );
-      assert.ok(
-        (await pool.query(`SELECT revoked_at FROM refresh_sessions WHERE id=$1`, [resetSessionId]))
-          .rows[0].revoked_at,
-      );
-      const loginAfterReset = await fetch(`${base}/auth/login`, {
-        method: "POST",
-        headers: resetHeaders,
-        body: JSON.stringify({ email: resetEmail, password: "NewPassword123!" }),
-      });
-      assert.equal(loginAfterReset.status, 200);
-      const sessionToken = (await loginAfterReset.json()).accessToken;
-      const changeHeaders = { ...resetHeaders, Authorization: `Bearer ${sessionToken}` };
+      assert.equal(passwordLogin.status, 200);
+      const sessionToken = (await passwordLogin.json()).accessToken;
+      const changeHeaders = { ...passwordHeaders, Authorization: `Bearer ${sessionToken}` };
       assert.equal(
         (
           await fetch(`${base}/auth/password/change`, {
@@ -225,20 +188,6 @@ test(
           )
         ).rowCount,
         0,
-      );
-      assert.equal(
-        (
-          await fetch(`${base}/auth/password-reset/confirm`, {
-            method: "POST",
-            headers: resetHeaders,
-            body: JSON.stringify({
-              email: resetEmail,
-              otp: resetOtp,
-              password: "OtherPassword123!",
-            }),
-          })
-        ).status,
-        400,
       );
       process.env.TRUST_PROXY = "true";
       const limitHeaders = {

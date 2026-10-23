@@ -1,49 +1,55 @@
 import type { SVGProps } from "react";
 
-export function TdtuLogo(props: SVGProps<SVGSVGElement>) {
+export interface TdtuLogoProps extends SVGProps<SVGSVGElement> {
+  height?: number;
+  useOfficialColors?: boolean;
+}
+
+/**
+ * Authentic renewed TDTU brand mark (Đại học Tôn Đức Thắng).
+ * Traced with mathematical Bezier precision from official university vector assets:
+ * - T1 (left, blue)
+ * - D (center, crimson red)
+ * - T2 (right elevated, blue)
+ */
+export function TdtuLogo({
+  height = 30,
+  useOfficialColors = true,
+  className = "",
+  ...props
+}: TdtuLogoProps) {
+  // Ratio is 420:190 (approx 2.21 : 1)
+  const width = Math.round((height * 420) / 190);
+  const blueColor = useOfficialColors ? "#15479C" : "currentColor";
+  const redColor = "#ED242A";
+
   return (
     <svg
-      viewBox="0 0 120 40"
-      height="30"
+      viewBox="0 0 420 190"
+      width={width}
+      height={height}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      role="img"
       aria-label="TDTU"
-      className="tdtu-logo"
+      className={`tdtu-logo ${className}`.trim()}
       {...props}
     >
-      {/* TDTU stylized typography */}
-      <g fontStyle="italic" fontWeight="900" fontFamily="system-ui, -apple-system, sans-serif">
-        {/* Red accent ribbon / top swoosh of the first T */}
-        <path
-          d="M 6 12 Q 18 10, 32 10 L 29 15 Q 16 15, 9 16 Z"
-          fill="#DC2626"
-        />
-        {/* First T in deep blue */}
-        <path
-          d="M 12 10 L 32 10 L 30 15 L 23 15 L 18 32 L 12 32 L 17 15 L 12 15 Z"
-          fill="currentColor"
-        />
-        {/* Red accent dot / diamond on top */}
-        <path
-          d="M 28 6 L 36 6 L 33 10 L 25 10 Z"
-          fill="#DC2626"
-        />
-        {/* D letter */}
-        <path
-          d="M 33 10 L 44 10 Q 55 10, 52 21 Q 50 32, 38 32 L 27 32 L 33 10 Z M 35 27 L 40 27 Q 46 27, 47 21 Q 48 15, 42 15 L 38 15 Z"
-          fill="currentColor"
-        />
-        {/* Second T letter */}
-        <path
-          d="M 48 10 L 68 10 L 66 15 L 59 15 L 54 32 L 48 32 L 53 15 L 48 15 Z"
-          fill="currentColor"
-        />
-        {/* U letter */}
-        <path
-          d="M 67 10 L 73 10 L 70 23 Q 68 28, 73 28 Q 78 28, 80 23 L 83 10 L 89 10 L 85 23 Q 82 32, 72 32 Q 63 32, 65 23 Z"
-          fill="currentColor"
-        />
-      </g>
+      {/* T1 in Cobalt Blue */}
+      <path
+        d="M 20 92.5 L 123 92.5 L 105 132.5 L 88 132.5 L 65 184.5 L 20 184.5 L 43 132.5 L 2 132.5 Z"
+        fill={blueColor}
+      />
+      {/* D in Crimson Red */}
+      <path
+        d="M 143 54.5 L 252 54.5 C 262 54.5 265.5 63 265.5 73 C 265.5 81 261.5 89 256.5 100 L 222 173 C 215 186 204 189.5 190 189.5 L 84 189.5 L 101 150.5 L 186 150.5 C 195 150.5 201 147 205 137 L 213.5 117 C 216.5 109 214.5 93.5 195 93.5 L 169 93.5 L 151.5 132.5 L 110.5 132.5 L 127.5 93.5 Z"
+        fill={redColor}
+      />
+      {/* T2 in Cobalt Blue (Elevated) */}
+      <path
+        d="M 248 16.5 L 382.5 16.5 L 364 54.5 L 340 54.5 L 296 151.5 L 254 151.5 L 294 54.5 L 233 54.5 Z"
+        fill={blueColor}
+      />
     </svg>
   );
 }

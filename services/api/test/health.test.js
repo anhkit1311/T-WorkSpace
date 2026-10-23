@@ -88,11 +88,3 @@ test("POST /auth/resend-otp without valid email returns 400", async () => {
   assert.equal(response.status, 400);
 });
 
-test("POST /auth/google without credentials returns 400", async () => {
-  const response = await fetch(`${address}/auth/google`, {
-    method: "POST",
-    headers: limitHeaders,
-    body: JSON.stringify({}),
-  });
-  assert.equal(response.status, 400);
-});

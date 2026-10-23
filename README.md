@@ -43,9 +43,9 @@ Kiến trúc modular monolith: React/TypeScript + Node.js/Socket.IO + PostgreSQL
 
 Menu đi theo chức năng, không theo nhóm: "Tin nhắn", "Họp", "Công việc", "Tài liệu" gom dữ liệu của mọi nhóm bạn tham gia (nhóm chỉ là bộ lọc); "Nhóm của tôi" để tạo nhóm, nhập mã mời, xem thành viên, rời nhóm và vào trang quản lý. Link cũ `/app/workspace?...` tự chuyển sang trang tương ứng.
 
-Chat nhóm giữ làm kênh trao đổi nội bộ: ảnh/file/voice, reaction, thread/mention, ghim, tìm kiếm, gửi lại không trùng. Trang "Tin nhắn" liệt kê kênh theo từng nhóm (thu gọn được) cùng trò chuyện 1-1 (`026_direct_messages`); đầu kênh có nhãn nhóm và nút "Họp ngay". "Tài liệu" tìm tệp theo tên ở mọi nhóm và tải tệp lên một kênh.
+Chat nhóm giữ làm kênh trao đổi nội bộ: ảnh/file/voice, reaction, thread/mention, ghim, tìm kiếm, gửi lại không trùng. Trang "Tin nhắn" giống Messenger: mỗi nhóm là một đoạn chat, xếp chung với trò chuyện 1-1 (`026_direct_messages`) theo tin mới nhất, tin nhắn dạng bong bóng, đầu đoạn chat nhóm có nút "Họp ngay". "Tạo nhóm" chọn từ 2 người trở lên, tên nhóm không bắt buộc (mặc định ghép tên thành viên), người được chọn vào nhóm ngay. Nhóm mới chỉ có một kênh chat; kênh phụ của nhóm cũ được ẩn, dữ liệu vẫn giữ. "Tài liệu" tìm tệp theo tên ở mọi nhóm và tải tệp lên một kênh.
 
-Nền tảng chung: đăng nhập email OTP và Google, hồ sơ, presence, lưu file DB/S3, metrics, migration có khóa.
+Nền tảng chung: đăng nhập email + mật khẩu (OTP qua email), hồ sơ, presence, lưu file DB/S3, metrics, migration có khóa.
 
 "Công việc" là một bảng Kanban cho việc ở mọi nhóm (mặc định việc giao cho tôi; lọc theo nhóm, sắp hết hạn, trạng thái, ưu tiên); mỗi thẻ ghi tên nhóm và kênh, việc cần làm từ biên bản họp cũng vào đây. Phân hệ quản lý đồ án tốt nghiệp đã được gỡ; chỉ còn khoa, bộ môn, giảng viên và phân quyền (trang "Quản trị hệ thống"). Các bảng `thesis_*` (migration 022–024) vẫn giữ trong DB, không còn code dùng.
 
@@ -72,7 +72,7 @@ Cần chạy riêng thì dùng `npm run dev:api` hoặc `npm run dev:web`.
 
 Web localhost:5173; API localhost:3001. Vite dùng polling watcher trong development Windows. DB đã có dữ liệu nâng cấp bằng migrate, không xóa volume. Tổng 40 migration (`services/api/migrations`), bytea cũ vẫn tương thích.
 
-Google Sign-In cần đăng ký đúng origin của web trong Google Cloud; xem [xử lý lỗi origin_mismatch](docs/guides/google-oauth-local.md). Dev server dùng cổng của `WEB_ORIGIN` trong `.env` (mẫu mặc định 5173), báo lỗi nếu cổng bận.
+Dev server dùng cổng của `WEB_ORIGIN` trong `.env` (mẫu mặc định 5173), báo lỗi nếu cổng bận.
 
 ### Tổng đài (Asterisk 22, đang tạm dừng)
 

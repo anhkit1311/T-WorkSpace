@@ -33,6 +33,7 @@ export interface ServerToClientEvents {
   }) => void;
   task_changed: (data: { channelId: string; taskId: string; version: number }) => void;
   notifications_changed: () => void;
+  announcements_changed: () => void;
   academic_notification: (data: { unread: number }) => void;
   access_revoked: () => void;
   user_presence: (data: PresenceEvent) => void;

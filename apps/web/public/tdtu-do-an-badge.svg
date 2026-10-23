@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" fill="none" role="img" aria-label="Logo Đồ Án TDTU Badge Edition">
+  <defs>
+    <linearGradient id="badgeBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F8FAFC"/>
+    </linearGradient>
+    <linearGradient id="badgeBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E2E8F0"/>
+      <stop offset="100%" stop-color="#CBD5E1"/>
+    </linearGradient>
+    <linearGradient id="markBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#15479C"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="markRed" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#DC2626"/>
+      <stop offset="100%" stop-color="#EF4444"/>
+    </linearGradient>
+    <filter id="badgeShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#0F172A" flood-opacity="0.08"/>
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.04"/>
+    </filter>
+  </defs>
+
+  <!-- Squircle Base with premium border and drop shadow -->
+  <rect x="25" y="25" width="450" height="450" rx="100" fill="url(#badgeBg)" stroke="url(#badgeBorder)" stroke-width="2" filter="url(#badgeShadow)"/>
+
+  <!-- Centered TDT Renewed Mark -->
+  <g transform="translate(38, 115) scale(0.96)">
+    <!-- T1 -->
+    <path d="M 40 92.5 L 143 92.5 L 125 132.5 L 108 132.5 L 85 184.5 L 40 184.5 L 63 132.5 L 22 132.5 Z" fill="url(#markBlue)" />
+    <!-- D -->
+    <path d="M 163 54.5 L 272 54.5 C 282 54.5 285.5 63 285.5 73 C 285.5 81 281.5 89 276.5 100 L 242 173 C 235 186 224 189.5 210 189.5 L 104 189.5 L 121 150.5 L 206 150.5 C 215 150.5 221 147 225 137 L 233.5 117 C 236.5 109 234.5 93.5 215 93.5 L 189 93.5 L 171.5 132.5 L 130.5 132.5 L 147.5 93.5 Z" fill="url(#markRed)" />
+    <!-- T2 -->
+    <path d="M 268 16.5 L 402.5 16.5 L 384 54.5 L 360 54.5 L 316 151.5 L 274 151.5 L 314 54.5 L 253 54.5 Z" fill="url(#markBlue)" />
+  </g>
+
+  <!-- Badge Subtitle -->
+  <text x="250" y="380" font-family="'Be Vietnam Pro', system-ui, -apple-system, sans-serif" font-size="28" font-weight="900" text-anchor="middle" letter-spacing="-0.5">
+    <tspan fill="#2563EB">T-</tspan><tspan fill="#0F172A">WorkSpace</tspan>
+  </text>
+  <text x="250" y="408" font-family="'Be Vietnam Pro', system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#64748B" text-anchor="middle" letter-spacing="3">
+    ĐỒ ÁN TỐT NGHIỆP CNTT · TDTU
+  </text>
+</svg>

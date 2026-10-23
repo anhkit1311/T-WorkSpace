@@ -193,6 +193,7 @@ export async function getMemberProfileApi(
 export async function createWorkspaceApi(
   accessToken: string,
   name: string,
+  memberIds: string[] = [],
 ): Promise<WorkspaceItem> {
   const response = await fetch(`${API_BASE}/api/workspaces`, {
     method: "POST",
@@ -201,7 +202,7 @@ export async function createWorkspaceApi(
       Authorization: `Bearer ${accessToken}`,
     },
     credentials: "include",
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, memberIds }),
   });
   const data = await handleResponse<{ workspace: WorkspaceItem }>(response);
   return data.workspace;

@@ -8,7 +8,6 @@ import {
   verifyAccessToken,
 } from "../../../dist/api/modules/auth/tokens.js";
 import { generateNumericOtp, hashOtp } from "../../../dist/api/modules/auth/otp.js";
-import { hashPasswordResetOtp } from "../../../dist/api/modules/auth/password-reset.js";
 import { sendOtpEmail } from "../../../dist/api/infrastructure/email/service.js";
 import { config } from "../../../dist/api/config/config.js";
 
@@ -51,13 +50,6 @@ test("numeric OTPs are 6-digit strings and OTP hash is consistent", () => {
   assert.equal(hash1, hash2);
   assert.notEqual(hash1, hash3);
   assert.match(hash1, /^[a-f0-9]{64}$/);
-});
-
-test("password reset OTP is isolated from account verification OTP", () => {
-  const email = "user@example.com";
-  const otp = "123456";
-  assert.equal(hashPasswordResetOtp(email, otp), hashPasswordResetOtp(email, otp));
-  assert.notEqual(hashPasswordResetOtp(email, otp), hashOtp(email, otp));
 });
 
 test("OTP delivery fails closed when no email provider is configured", async () => {

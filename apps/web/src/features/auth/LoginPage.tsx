@@ -1,170 +1,32 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowLeft,
   Check,
   Eye,
   EyeOff,
-  KeyRound,
   Lock,
   Mail,
   RotateCw,
   ShieldCheck,
 } from "lucide-react";
-import { ApiError, requestPasswordResetApi, resetPasswordApi } from "./api";
+import { ApiError } from "./api";
 import { authErrorField } from "./auth-error-field";
 import { useApp } from "../../app/providers/AppContext";
-import { NexoLogo } from "../../shared/ui/NexoLogo";
+import { TWorkSpaceLogo } from "../../shared/ui/TWorkSpaceLogo";
 import "./editorial-auth.css";
 import { focusFirstInvalid, withPending } from "../../shared/lib/interaction";
 import { useMotionSafe } from "../../shared/motion/MotionProvider";
 
-declare global {
-  interface Window {
-    google?: {
-      accounts: {
-        id: {
-          initialize: (config: {
-            client_id: string;
-            callback: (response: { credential?: string }) => void;
-            auto_select?: boolean;
-            cancel_on_tap_outside?: boolean;
-          }) => void;
-          prompt: (
-            momentListener?: (notification: {
-              isNotDisplayed: () => boolean;
-              isSkippedMoment: () => boolean;
-            }) => void,
-          ) => void;
-          renderButton: (parent: HTMLElement, options: Record<string, unknown>) => void;
-          disableAutoSelect: () => void;
-        };
-      };
-    };
-  }
-}
-
-let googleSdkPromise: Promise<void> | null = null;
-
-function loadGoogleSdk(): Promise<void> {
-  if (window.google?.accounts?.id) return Promise.resolve();
-  googleSdkPromise ??= new Promise<void>((resolve, reject) => {
-    const script = document.createElement("script");
-    script.id = "google-identity-services";
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    script.onload = () => resolve();
-    script.onerror = () => {
-      googleSdkPromise = null;
-      script.remove();
-      reject(new Error("Không tải được dịch vụ đăng nhập Google."));
-    };
-    document.head.appendChild(script);
-  });
-  return googleSdkPromise;
-}
-
-function GoogleSignInButton({
-  onCredential,
-  disabled,
-}: {
-  onCredential: (credential: string) => void;
-  disabled: boolean;
-}) {
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
-  const buttonRef = useRef<HTMLDivElement>(null);
-  const callbackRef = useRef(onCredential);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [retry, setRetry] = useState(0);
-
-  useEffect(() => {
-    callbackRef.current = onCredential;
-  }, [onCredential]);
-
-  useEffect(() => {
-    if (!clientId) return;
-    let active = true;
-    setStatus("loading");
-    loadGoogleSdk()
-      .then(() => {
-        if (!active || !buttonRef.current || !window.google?.accounts?.id) return;
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: ({ credential }) => {
-            if (credential) callbackRef.current(credential);
-          },
-          auto_select: false,
-          cancel_on_tap_outside: true,
-        });
-        buttonRef.current.replaceChildren();
-        window.google.accounts.id.renderButton(buttonRef.current, {
-          type: "standard",
-          theme: "outline",
-          size: "large",
-          text: "continue_with",
-          shape: "pill",
-          logo_alignment: "left",
-          width: Math.min(360, Math.max(240, buttonRef.current.clientWidth || 300)),
-          locale: "vi",
-        });
-        setStatus("ready");
-      })
-      .catch(() => {
-        if (active) setStatus("error");
-      });
-    return () => {
-      active = false;
-    };
-  }, [clientId, retry]);
-
-  if (!clientId) {
-    return null;
-  }
-
-  return (
-    <div
-      
-      className={(`editorial-google-signin ${disabled ? "is-disabled" : ""}`) + " editorial-auth-style-1"}
-      inert={disabled}
-      aria-busy={status === "loading"}
-      aria-disabled={disabled}
-    >
-      <div ref={buttonRef} />
-      {status === "loading" && (
-        <p
-          className="editorial-auth-style-2"
-        >
-          Đang nạp Google Sign-In…
-        </p>
-      )}
-      {status === "error" && (
-        <button
-          type="button"
-          className="editorial-auth-style-3"
-          onClick={() => setRetry((value) => value + 1)}
-        >
-          Không tải được Google. Thử lại
-        </button>
-      )}
-    </div>
-  );
-}
-
 export function LoginPage() {
   const safe = useMotionSafe();
   const {
-    setScreen,
-    notify,
     login,
     verifyOtp,
     resendOtp,
-    loginWithGoogle,
   } = useApp();
 
-  const [authStep, setAuthStep] = useState<"form" | "otp" | "reset-request" | "reset-confirm">(
-    "form",
-  );
+  const [authStep, setAuthStep] = useState<"form" | "otp">("form");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -174,12 +36,6 @@ export function LoginPage() {
   const [otpEmail, setOtpEmail] = useState("");
   const [cooldown, setCooldown] = useState(0);
   const [resending, setResending] = useState(false);
-
-  // Password reset state
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetCode, setResetCode] = useState("");
-  const [resetPasswordValue, setResetPasswordValue] = useState("");
-  const [resetNotice, setResetNotice] = useState("");
 
   const [errors, setErrors] = useState<{
     email?: string;
@@ -197,33 +53,6 @@ export function LoginPage() {
     }, 1000);
     return () => window.clearInterval(timer);
   }, [cooldown]);
-
-  const handleGoogleCredential = useCallback(
-    async (credential: string) => {
-      if (loading) return;
-      setLoading(true);
-      setErrors({});
-      try {
-        const result = await loginWithGoogle({ credential });
-        if (result?.requireOtp) {
-          setOtpEmail(result.email ?? "");
-          setAuthStep("otp");
-          setCooldown(60);
-          setOtpCode("");
-          notify("Xác thực OTP", "Kiểm tra email để tiếp tục đăng nhập.", "info");
-        }
-      } catch (error: unknown) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Không thể đăng nhập bằng Google. Vui lòng thử lại.";
-        setErrors({ general: message });
-      } finally {
-        setLoading(false);
-      }
-    },
-    [loading, loginWithGoogle, notify],
-  );
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -299,62 +128,6 @@ export function LoginPage() {
     } }, setResending);
   };
 
-  const handleResetRequest = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!/^\S+@\S+\.\S+$/.test(resetEmail.trim())) {
-      setErrors({ email: "Vui lòng nhập email hợp lệ." });
-      focusFirstInvalid(event.currentTarget);
-      return;
-    }
-    setLoading(true);
-    setErrors({});
-    try {
-      const result = await requestPasswordResetApi(resetEmail.trim());
-      setResetNotice(result.message);
-      setResetCode("");
-      setAuthStep("reset-confirm");
-    } catch (error) {
-      setErrors({
-        general: error instanceof Error ? error.message : "Không thể gửi mã. Vui lòng thử lại.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResetConfirm = async (event: FormEvent) => {
-    event.preventDefault();
-    const next: typeof errors = {};
-    if (!/^\d{6}$/.test(resetCode)) next.otp = "Mã xác thực phải gồm 6 chữ số.";
-    if (resetPasswordValue.length < 8 || resetPasswordValue.length > 128)
-      next.password = "Mật khẩu phải có từ 8 đến 128 ký tự.";
-    setErrors(next);
-    if (Object.keys(next).length) { focusFirstInvalid(event.currentTarget); return; }
-    const form = event.currentTarget;
-    setLoading(true);
-    try {
-      const result = await resetPasswordApi({
-        email: resetEmail.trim(),
-        otp: resetCode,
-        password: resetPasswordValue,
-      });
-      setPassword("");
-      setResetPasswordValue("");
-      setResetCode("");
-      setEmail(resetEmail.trim());
-      setAuthStep("form");
-      setErrors({});
-      notify("Đã đổi mật khẩu", result.message, "info");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Không thể đặt lại mật khẩu.";
-      const field = authErrorField(error);
-      setErrors({ [field]: message });
-      if (field !== "general") focusFirstInvalid(form);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     // Bubble-phase onInput, not onInputCapture: a capture-phase state update re-renders the
     // controlled input with its old value before React's onChange runs, swallowing keystrokes.
@@ -368,21 +141,11 @@ export function LoginPage() {
         );
       }
     }}>
-      {/* Top Bar with Brand & Back */}
+      {/* Top Bar with Brand */}
       <header className="editorial-auth-nav">
-        <button type="button" onClick={() => setScreen("landing")} className="editorial-auth-brand">
-          <NexoLogo />
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setScreen("landing")}
-          className="editorial-auth-back-btn"
-          aria-label="Quay lại"
-        >
-          <ArrowLeft className="editorial-auth-style-4" />
-          <span>Về trang chủ</span>
-        </button>
+        <div className="editorial-auth-brand" aria-label="T-WorkSpace">
+          <TWorkSpaceLogo size="sm" />
+        </div>
       </header>
 
       {/* Central Editorial Card */}
@@ -395,129 +158,7 @@ export function LoginPage() {
             exit={{ opacity: safe.reduced ? 1 : 0, y: safe.reduced ? 0 : -8, transition: { duration: safe.duration(0.15) } }}
             transition={{ duration: safe.duration(0.22), ease: [0.16, 1, 0.3, 1] }}
           >
-            {/* Step: Password Reset */}
-            {authStep === "reset-request" || authStep === "reset-confirm" ? (
-              <div>
-                <button
-                  type="button"
-                  className="editorial-sublink editorial-auth-style-5"
-                  
-                  onClick={() => {
-                    setAuthStep("form");
-                    setErrors({});
-                  }}
-                >
-                  <ArrowLeft className="editorial-auth-style-4" />
-                  <span>Quay lại đăng nhập</span>
-                </button>
-
-                <h1 className="editorial-auth-title">
-                  {authStep === "reset-request" ? "Khôi phục truy cập" : "Thiết lập mật khẩu mới"}
-                </h1>
-
-                <p className="editorial-auth-desc">
-                  {authStep === "reset-request"
-                    ? "Nhập email tài khoản để nhận mã OTP khôi phục mật khẩu."
-                    : resetNotice || "Nhập mã 6 chữ số và mật khẩu mới của bạn."}
-                </p>
-
-                {errors.general && (
-                  <div className="editorial-error-banner" role="alert">
-                    {errors.general}
-                  </div>
-                )}
-
-                {authStep === "reset-request" ? (
-                  <form onSubmit={handleResetRequest} noValidate>
-                    <div className="editorial-field">
-                      <label className="editorial-field-label" htmlFor="reset-email">Email tài khoản</label>
-                      <div className="editorial-input-wrap">
-                        <Mail className="editorial-input-icon editorial-auth-style-6"  />
-                        <input
-                          type="email"
-                          autoComplete="email"
-                          value={resetEmail}
-                          id="reset-email" name="email" aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "reset-email-error" : undefined}
-                          onChange={(e) => setResetEmail(e.target.value)}
-                          placeholder="mssv@student.tdtu.edu.vn"
-                          className="editorial-input"
-                          autoFocus
-                        />
-                      </div>
-                      {errors.email && <div className="editorial-field-error" id="reset-email-error" role="alert">{errors.email}</div>}
-                    </div>
-
-                    <button type="submit" disabled={loading} aria-busy={loading || undefined} className="editorial-submit-btn">
-                      {loading ? "Đang gửi mã..." : "Gửi mã đặt lại mật khẩu"}
-                    </button>
-                  </form>
-                ) : (
-                  <form onSubmit={handleResetConfirm} noValidate>
-                    <div className="editorial-field">
-                      <label className="editorial-field-label" htmlFor="reset-code">Mã xác thực 6 chữ số</label>
-                      <div className="editorial-input-wrap">
-                        <KeyRound
-                          className="editorial-input-icon editorial-auth-style-6"
-                          
-                        />
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          autoComplete="one-time-code"
-                          maxLength={6}
-                          value={resetCode}
-                          id="reset-code" name="otp" aria-invalid={Boolean(errors.otp)} aria-describedby={errors.otp ? "reset-code-error" : undefined}
-                          onChange={(e) =>
-                            setResetCode(e.target.value.replace(/\D/g, "").slice(0, 6))
-                          }
-                          placeholder="••••••"
-                          className="editorial-input editorial-auth-style-7"
-                          
-                          autoFocus
-                        />
-                      </div>
-                      {errors.otp && <div className="editorial-field-error" id="reset-code-error" role="alert">{errors.otp}</div>}
-                    </div>
-
-                    <div className="editorial-field">
-                      <label className="editorial-field-label" htmlFor="reset-password">Mật khẩu mới (8–128 ký tự)</label>
-                      <div className="editorial-input-wrap">
-                        <Lock className="editorial-input-icon editorial-auth-style-6"  />
-                        <input
-                          type="password"
-                          autoComplete="new-password"
-                          value={resetPasswordValue}
-                          id="reset-password" name="password" aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? "reset-password-error" : undefined}
-                          onChange={(e) => setResetPasswordValue(e.target.value)}
-                          placeholder="Nhập mật khẩu mới..."
-                          className="editorial-input"
-                        />
-                      </div>
-                      {errors.password && (
-                        <div className="editorial-field-error" id="reset-password-error" role="alert">{errors.password}</div>
-                      )}
-                    </div>
-
-                    <button type="submit" disabled={loading} aria-busy={loading || undefined} className="editorial-submit-btn">
-                      {loading ? "Đang cập nhật..." : "Cập nhật mật khẩu"}
-                    </button>
-
-                    <div className="editorial-auth-style-8">
-                      <button
-                        type="button"
-                        className="editorial-sublink"
-                        onClick={() => {
-                          setAuthStep("reset-request");
-                          setErrors({});
-                        }}
-                      >
-                        Yêu cầu gửi mã mới
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            ) : authStep === "otp" ? (
+            {authStep === "otp" ? (
               /* Step: OTP Verification */
               <div>
                 <button
@@ -641,13 +282,13 @@ export function LoginPage() {
               /* Step: Main Form (Login) */
               <div>
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
-                  <NexoLogo />
+                  <TWorkSpaceLogo size="lg" />
                 </div>
 
-                <h1 className="editorial-auth-title">Cổng nội bộ TDTU</h1>
+                <h1 className="editorial-auth-title">T-WorkSpace</h1>
 
                 <p className="editorial-auth-desc">
-                  Đăng nhập bằng tài khoản trường cấp hoặc Google cùng email. Chưa có tài khoản? Liên hệ quản trị hệ thống.
+                  Đăng nhập bằng tài khoản trường cấp. Chưa có tài khoản? Liên hệ quản trị hệ thống.
                 </p>
 
                 {errors.general && (
@@ -705,33 +346,14 @@ export function LoginPage() {
                     )}
                   </div>
 
-                  <div className="editorial-auth-forgot">
-                    <button
-                      type="button"
-                      className="editorial-sublink"
-                      onClick={() => {
-                        setResetEmail(email.trim());
-                        setAuthStep("reset-request");
-                        setErrors({});
-                      }}
-                    >
-                      Quên mật khẩu?
-                    </button>
-                  </div>
+                  <p className="editorial-auth-forgot">
+                    Quên mật khẩu? Vui lòng liên hệ hotline để được hỗ trợ.
+                  </p>
 
                   <button type="submit" disabled={loading} aria-busy={loading || undefined} className="editorial-submit-btn">
                     {loading ? "Đang xử lý..." : "Đăng nhập"}
                   </button>
                 </form>
-
-                <div className="editorial-auth-divider">
-                  <span>hoặc tiếp tục với Google</span>
-                </div>
-
-                {/* Google Sign In Button */}
-                <div className="editorial-auth-style-13">
-                  <GoogleSignInButton onCredential={handleGoogleCredential} disabled={loading} />
-                </div>
 
                 <div
                   className="editorial-auth-style-14"

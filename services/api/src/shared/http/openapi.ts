@@ -50,10 +50,7 @@ for (const name of [
   "register",
   "verify-otp",
   "resend-otp",
-  "google",
   "login",
-  "password-reset/request",
-  "password-reset/confirm",
 ])
   add(`/auth/${name}`, ["post"], "Auth", name, object, true);
 for (const name of ["refresh", "logout"])

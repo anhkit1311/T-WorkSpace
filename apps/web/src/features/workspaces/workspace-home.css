@@ -1,11 +1,11 @@
 /* ==========================================================================
    TDTU Workspace Home Page Stylesheet
-   Clean, light, minimal matching 100% TDTU internal portal screenshot
+   Clean, light, balanced enterprise aesthetic matching TDTU portal
    ========================================================================== */
 
 .tdtu-home-container {
-  padding: 24px 32px 48px;
-  max-width: 1360px;
+  padding: 18px 24px 36px;
+  max-width: 1320px;
   width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
@@ -13,25 +13,25 @@
 
 /* Greeting Section */
 .tdtu-home-greeting {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .tdtu-home-greeting__date {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-muted);
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .tdtu-home-greeting__title {
-  margin: 0 0 4px;
-  font-size: 20px;
+  margin: 0 0 3px;
+  font-size: 19px;
   font-weight: 700;
   color: var(--text);
   display: flex;
   align-items: center;
   gap: 8px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
 
 .tdtu-home-greeting__subtitle {
@@ -45,19 +45,19 @@
 .tdtu-home-kpi-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 14px;
+  margin-bottom: 16px;
 }
 
 .tdtu-home-kpi-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 16px 20px;
+  padding: 12px 16px;
   box-shadow: none;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -71,8 +71,8 @@
 }
 
 .tdtu-home-kpi-card__icon {
-  width: 44px;
-  height: 44px;
+  width: 38px;
+  height: 38px;
   border-radius: 8px;
   display: grid;
   place-items: center;
@@ -100,7 +100,7 @@
 }
 
 .tdtu-home-kpi-card__number {
-  font-size: 20px;
+  font-size: 18.5px;
   font-weight: 700;
   color: var(--text);
   line-height: 1.1;
@@ -111,9 +111,9 @@
 }
 
 .tdtu-home-kpi-card__label {
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--text-muted);
-  margin-top: 3px;
+  margin-top: 2px;
 }
 
 /* Two-column Main Section (2.2fr : 1fr) */
@@ -124,13 +124,45 @@
   align-items: start;
 }
 
+/* Left Column: Bảng tin */
+.tdtu-home-feed {
+  display: flex;
+  flex-direction: column;
+}
+
+.tdtu-home-feed__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tdtu-home-feed__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+[data-theme="dark"] .tdtu-home-feed__title {
+  color: #F8FAFC;
+}
+
+.tdtu-home-feed__filters {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+}
+
 .tdtu-home-filter-pill {
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-secondary);
   font-size: 12.5px;
   font-weight: 500;
-  padding: 4px 10px;
+  padding: 3.5px 10px;
   border-radius: var(--radius-md);
   cursor: pointer;
   white-space: nowrap;
@@ -155,18 +187,242 @@
   font-weight: 600;
 }
 
+/* Featured Announcement Card */
+.tdtu-home-featured-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  min-height: 160px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  margin-bottom: 14px;
+}
+
+.tdtu-home-featured-card:hover {
+  transform: translateY(-1px);
+  border-color: #BFDBFE;
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.08);
+}
+
+[data-theme="dark"] .tdtu-home-featured-card {
+  background: #1E293B;
+  border-color: #334155;
+}
+
+.tdtu-home-featured-banner {
+  background: linear-gradient(135deg, #1E40AF 0%, #2563EB 50%, #3B82F6 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  min-height: 120px;
+}
+
+.tdtu-home-featured-banner__deco-circle-1 {
+  position: absolute;
+  top: -24px;
+  right: -24px;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+}
+
+.tdtu-home-featured-banner__deco-circle-2 {
+  position: absolute;
+  bottom: -24px;
+  left: -12px;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+.tdtu-home-featured-banner__icon {
+  position: relative;
+  z-index: 2;
+  color: #FFFFFF;
+}
+
+.tdtu-home-featured-content {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.tdtu-home-featured-content__tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+  flex-wrap: wrap;
+}
+
+.tdtu-home-featured-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--tint-blue-bg);
+  color: var(--tint-blue-fg);
+  border: 1px solid #DBEAFE;
+  padding: 2.5px 8px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.tdtu-home-featured-badge {
+  background: #EF4444;
+  color: #FFFFFF;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.tdtu-home-featured-badge--pinned {
+  background: #8B5CF6;
+  color: #FFFFFF;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.tdtu-home-featured-title {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+[data-theme="dark"] .tdtu-home-featured-title {
+  color: #F8FAFC;
+}
+
+.tdtu-home-featured-desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tdtu-home-featured-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.tdtu-home-featured-author-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--brand-primary, #2563EB);
+  color: #FFFFFF;
+  font-size: 10.5px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.tdtu-home-featured-author-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Secondary announcements list */
+.tdtu-home-announcements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 16px;
+}
+
+.tdtu-home-announcement-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tdtu-home-announcement-row:hover {
+  border-color: #BFDBFE;
+  background: var(--bg-subtle);
+}
+
+.tdtu-home-announcement-row__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tdtu-home-announcement-row__tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tdtu-home-announcement-row__title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tdtu-home-announcement-row__meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.tdtu-home-announcements-empty {
+  padding: 18px 14px;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  margin-bottom: 14px;
+}
+
 /* Right Column: Cuộc họp sắp tới & Lối tắt */
 .tdtu-home-side-cards {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
 }
 
 .tdtu-home-side-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 18px 20px;
+  padding: 14px 16px;
   box-shadow: none;
 }
 
@@ -179,12 +435,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .tdtu-home-side-card__title {
   margin: 0;
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 700;
   color: var(--text);
 }
@@ -206,12 +462,12 @@
 .tdtu-home-meeting-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .tdtu-home-calendar-tile {
-  width: 44px;
-  height: 48px;
+  width: 38px;
+  height: 44px;
   background: var(--tint-blue-bg);
   border-radius: 6px;
   display: flex;
@@ -222,13 +478,13 @@
 }
 
 .tdtu-home-calendar-tile__weekday {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   color: #2563EB;
 }
 
 .tdtu-home-calendar-tile__day {
-  font-size: 16px;
+  font-size: 14.5px;
   font-weight: 800;
   color: #1D4ED8;
   line-height: 1;
@@ -261,8 +517,8 @@
 .tdtu-home-detail-btn {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 5px 12px;
+  border-radius: 6px;
+  padding: 3.5px 10px;
   font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
@@ -280,18 +536,19 @@
 .tdtu-home-shortcuts-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
 }
 
 .tdtu-home-shortcut-btn {
   background: var(--bg-subtle);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 10px 14px;
+  border-radius: 7px;
+  padding: 8px 12px;
+  min-height: 36px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: 7px;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--text);
   cursor: pointer;
@@ -323,9 +580,12 @@
 
 @media (max-width: 768px) {
   .tdtu-home-container {
-    padding: 16px 16px 40px;
+    padding: 12px 16px 32px;
   }
   .tdtu-home-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  .tdtu-home-featured-card {
     grid-template-columns: 1fr;
   }
 }
@@ -333,31 +593,33 @@
 /* UI-4: role-based "today" cards (call center, courses, meetings). */
 .role-home {
   display: grid;
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 14px;
 }
 .role-home__card {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 10px 14px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-card, 14px);
+  border-radius: 8px;
   background: var(--bg-surface, var(--surface));
   color: var(--text);
 }
 .role-home__card > svg {
   color: var(--primary);
+  width: 16px;
+  height: 16px;
 }
 .role-home__card h3 {
   margin: 0 0 2px;
-  font-size: 15px;
+  font-size: 13.5px;
 }
 .role-home__card p {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 12px;
 }
 .role-home__warn {
   color: #b45309 !important;
@@ -365,7 +627,7 @@
 .role-home__empty {
   margin: 0;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 @media (max-width: 640px) {
   .role-home__card {

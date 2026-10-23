@@ -577,7 +577,12 @@ export async function removeWorkspaceMember(workspaceId: string, userId: string)
   membershipEvents.emit("removed", userId);
 }
 
-export async function createWorkspace(userId: string, name: string): Promise<WorkspaceItem> {
+/** A group is one chat (Messenger-style); `memberIds` join right away, no invitation step. */
+export async function createWorkspace(
+  userId: string,
+  name: string,
+  memberIds: string[] = [],
+): Promise<WorkspaceItem> {
   const trimmed = name.trim();
   if (!trimmed || trimmed.length > 80) {
     throw new HttpError(400, "INVALID_NAME", "Tên nhóm không được để trống và tối đa 80 ký tự.");
@@ -602,21 +607,24 @@ export async function createWorkspace(userId: string, name: string): Promise<Wor
       [workspaceId, userId],
     );
 
-    const defaultChannels = [
-      { name: "tong-quan", pos: 1 },
-      { name: "thong-bao", pos: 2 },
-      { name: "y-tuong", pos: 3 },
-      { name: "tai-lieu", pos: 4 },
-    ];
-    for (const ch of defaultChannels) {
-      await client.query(
-        `INSERT INTO channels (id, workspace_id, created_by, name, type, position)
-         VALUES ($1, $2, $3, $4, 'text', $5)`,
-        [randomUUID(), workspaceId, userId, ch.name, ch.pos],
+    const others = [...new Set(memberIds)].filter((id) => id !== userId);
+    if (others.length) {
+      for (const id of others) validateId(id);
+      const added = await client.query(
+        `INSERT INTO memberships (workspace_id, user_id, role)
+         SELECT $1, id, 'member' FROM users WHERE id = ANY($2::uuid[])`,
+        [workspaceId, others],
       );
+      if (added.rowCount !== others.length)
+        throw new HttpError(404, "USER_NOT_FOUND", "Có người được chọn không còn tài khoản.");
     }
+
     await client.query(
-      `INSERT INTO channels (id, workspace_id, created_by, name, type, position) VALUES ($1, $2, $3, 'phong-hop', 'video', 5)`,
+      `INSERT INTO channels (id, workspace_id, created_by, name, type, position) VALUES ($1, $2, $3, 'tong-quan', 'text', 1)`,
+      [randomUUID(), workspaceId, userId],
+    );
+    await client.query(
+      `INSERT INTO channels (id, workspace_id, created_by, name, type, position) VALUES ($1, $2, $3, 'phong-hop', 'video', 2)`,
       [randomUUID(), workspaceId, userId],
     );
 
@@ -625,7 +633,7 @@ export async function createWorkspace(userId: string, name: string): Promise<Wor
       name: trimmed,
       slug,
       role: "owner",
-      memberCount: 1,
+      memberCount: 1 + others.length,
       unreadCount: 0,
     };
   });

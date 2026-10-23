@@ -15,7 +15,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px 8px;
+  padding: 8px 6px;
   border-radius: 0;
   background: transparent;
   border: 0;
@@ -59,8 +59,8 @@
 
 .ws-file-item__icon,
 .ws-file-row__icon {
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   border-radius: 9999px;
   background: var(--nexo-bg-subtle, #EEECE7);
   color: var(--nexo-text-primary, #1C1B19);

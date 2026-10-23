@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 64" fill="none" role="img" aria-label="T-WorkSpace · TDTU">
+  <defs>
+    <linearGradient id="sqBgFull" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#F1F5F9" />
+    </linearGradient>
+    <linearGradient id="sqBlueFull" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#15479C" />
+      <stop offset="100%" stop-color="#2563EB" />
+    </linearGradient>
+    <linearGradient id="sqRedFull" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#DC2626" />
+      <stop offset="100%" stop-color="#EF4444" />
+    </linearGradient>
+  </defs>
+  <!-- Mark Badge -->
+  <g transform="translate(0, 4)">
+    <rect width="56" height="56" rx="14" fill="url(#sqBgFull)" />
+    <rect x="0.75" y="0.75" width="54.5" height="54.5" rx="13.25" stroke="#CBD5E1" stroke-width="1.2" />
+    <g transform="translate(7, 16.5) scale(0.11)">
+      <path d="M 20 92.5 L 123 92.5 L 105 132.5 L 88 132.5 L 65 184.5 L 20 184.5 L 43 132.5 L 2 132.5 Z" fill="url(#sqBlueFull)" />
+      <path d="M 143 54.5 L 252 54.5 C 262 54.5 265.5 63 265.5 73 C 265.5 81 261.5 89 256.5 100 L 222 173 C 215 186 204 189.5 190 189.5 L 84 189.5 L 101 150.5 L 186 150.5 C 195 150.5 201 147 205 137 L 213.5 117 C 216.5 109 214.5 93.5 195 93.5 L 169 93.5 L 151.5 132.5 L 110.5 132.5 L 127.5 93.5 Z" fill="url(#sqRedFull)" />
+      <path d="M 248 16.5 L 382.5 16.5 L 364 54.5 L 340 54.5 L 296 151.5 L 254 151.5 L 294 54.5 L 233 54.5 Z" fill="url(#sqBlueFull)" />
+    </g>
+  </g>
+  <!-- Text Lockup -->
+  <text x="68" y="37" font-family="'Be Vietnam Pro', system-ui, -apple-system, sans-serif" font-size="22" font-weight="900" letter-spacing="-0.5">
+    <tspan fill="#2563EB">T-</tspan><tspan fill="#0F172A">WorkSpace</tspan>
+  </text>
+  <text x="70" y="52" font-family="'Be Vietnam Pro', system-ui, -apple-system, sans-serif" font-size="9.5" font-weight="700" fill="#64748B" letter-spacing="2">
+    ĐỒ ÁN TỐT NGHIỆP · TDTU
+  </text>
+</svg>

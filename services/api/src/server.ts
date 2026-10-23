@@ -14,6 +14,7 @@ import { fileRoutes } from "./modules/files/routes.js";
 import { academicRoutes } from "./modules/academic/routes.js";
 import { callCenterMetrics, callcenterRoutes, pbxConnected, startCallCenter } from "./modules/callcenter/index.js";
 import { elearningRoutes, startElearning } from "./modules/elearning/index.js";
+import { announcementRoutes } from "./modules/announcements/routes.js";
 import { startJobWorker } from "./infrastructure/jobs/queue.js";
 import { randomUUID } from "node:crypto";
 import { readdirSync } from "node:fs";
@@ -257,6 +258,7 @@ async function handleRequest(
     academicRoutes,
     callcenterRoutes,
     elearningRoutes,
+    announcementRoutes,
   ]) {
     await route(context);
     if (response.writableEnded) return;

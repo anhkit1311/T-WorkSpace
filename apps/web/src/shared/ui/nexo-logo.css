@@ -1,8 +1,10 @@
+@import "./t-workspace-logo.css";
+
 .nexo-lockup,
 .tdtu-brand-lockup {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
   color: inherit;
   vertical-align: middle;
   white-space: nowrap;

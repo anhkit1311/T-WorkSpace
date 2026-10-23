@@ -7,16 +7,31 @@
   min-height: 100vh;
   width: 100%;
   position: relative;
-  overflow-x: hidden;
-  background-color: var(--bg-canvas, #F8FAFC);
+  overflow: hidden;
+  background-color: #0F172A;
   font-family: var(--font-sans, 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
   color: var(--text, #0F172A);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 80px 16px 32px;
+  padding: 60px 16px 32px;
   box-sizing: border-box;
+}
+
+/* Background image layer with gentle blur & rich tone */
+.editorial-auth-shell::before {
+  content: "";
+  position: absolute;
+  inset: -24px;
+  background-image: linear-gradient(135deg, rgba(15, 23, 42, 0.35) 0%, rgba(15, 23, 42, 0.52) 100%), url('/tdtu-campus.jpg');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  filter: blur(5px);
+  transform: scale(1.06);
+  z-index: 0;
+  pointer-events: none;
 }
 
 .editorial-auth-shell ::selection {
@@ -24,7 +39,7 @@
   color: #FFFFFF;
 }
 
-/* Top bar with brand & back button */
+/* Top bar with brand */
 .editorial-auth-nav {
   position: absolute;
   top: 20px;
@@ -32,7 +47,7 @@
   right: 24px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   z-index: 20;
 }
 
@@ -47,33 +62,13 @@
 .editorial-auth-brand {
   display: inline-flex;
   align-items: center;
-  text-decoration: none;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-}
-
-.editorial-auth-back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border-radius: var(--radius-button, 6px);
-  background: var(--bg-surface, #FFFFFF);
-  color: var(--text-secondary, #475569);
-  padding: 7px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  border: 1px solid var(--border-color, #E2E8F0);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  box-shadow: none;
-}
-
-.editorial-auth-back-btn:hover {
-  background: var(--bg-subtle, #F1F5F9);
-  color: var(--brand-primary, #2563EB);
-  border-color: var(--brand-primary, #2563EB);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 /* Main Card */
@@ -81,14 +76,24 @@
   position: relative;
   z-index: 10;
   width: 100%;
-  max-width: 440px;
-  background: var(--bg-surface, #FFFFFF);
-  border: 1px solid var(--border-color, #E2E8F0);
-  border-radius: var(--radius-card, 8px);
-  padding: 36px 32px;
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 12px;
+  padding: 32px 28px;
   margin: auto 0;
-  box-shadow: none;
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.05);
   box-sizing: border-box;
+}
+
+[data-theme="dark"] .editorial-auth-card {
+  background: rgba(17, 29, 48, 0.95);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.65);
 }
 
 @media (max-width: 480px) {
@@ -276,9 +281,10 @@
 
 /* Secondary Actions & Divider */
 .editorial-auth-forgot {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 6px;
+  margin: 6px 0 0;
+  text-align: right;
+  color: var(--text-muted, #64748B);
+  font-size: 13px;
 }
 
 .editorial-sublink {
@@ -296,26 +302,6 @@
 .editorial-sublink:hover {
   color: var(--brand-primary-hover, #1D4ED8);
   text-decoration: underline;
-}
-
-.editorial-auth-divider {
-  display: flex;
-  align-items: center;
-  margin: 20px 0;
-  color: var(--text-muted, #94A3B8);
-  font-size: 12px;
-}
-
-.editorial-auth-divider::before,
-.editorial-auth-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border-color, #E2E8F0);
-}
-
-.editorial-auth-divider span {
-  padding: 0 12px;
 }
 
 .editorial-error-banner {
@@ -367,17 +353,11 @@
 }
 
 /* Inline Scoped Styles */
-#main-content .editorial-auth-style-1 { display: flex; justify-content: center; width: 100%; }
-#main-content .editorial-auth-style-2 { color: var(--text-muted, #64748B); font-size: 12px; text-align: center; padding: 8px 0; }
-#main-content .editorial-auth-style-3 { color: var(--brand-primary, #2563EB); font-size: 12px; text-decoration: underline; padding: 8px 0; background: none; border: none; cursor: pointer; }
 #main-content .editorial-auth-style-4 { width: 14px; height: 14px; }
 #main-content .editorial-auth-style-5 { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 16px; }
 #main-content .editorial-auth-style-6 { width: 16px; height: 16px; }
-#main-content .editorial-auth-style-7 { text-align: center; letter-spacing: 6px; font-family: monospace; }
-#main-content .editorial-auth-style-8 { text-align: center; margin-top: 16px; }
 #main-content .editorial-auth-style-9 { text-align: center; }
 #main-content .editorial-auth-style-10 { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color, #E2E8F0); }
 #main-content .editorial-auth-style-11 { display: inline-flex; align-items: center; gap: 6px; }
 #main-content .editorial-auth-style-12 { width: 12px; height: 12px; }
-#main-content .editorial-auth-style-13 { margin-bottom: 16px; }
 #main-content .editorial-auth-style-14 { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color, #E2E8F0); display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: var(--text-muted, #64748B); }

@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useApp } from "../../app/providers/AppContext";
-import { NexoLogo } from "../../shared/ui/NexoLogo";
+import { TWorkSpaceLogo } from "../../shared/ui/TWorkSpaceLogo";
 import { GSAP_EASE_OUT } from "../../shared/motion/tokens";
 import "./editorial.css";
 
@@ -317,8 +317,9 @@ export function LandingPage() {
               type="button"
               onClick={() => smoothScrollTo(0)}
               className="editorial-brand"
+              aria-label="Về đầu trang T-WorkSpace"
             >
-              <NexoLogo />
+              <TWorkSpaceLogo size="md" />
             </button>
           </div>
 
@@ -443,7 +444,7 @@ export function LandingPage() {
             mọi tiếng ồn và sự xao nhãng.”
           </p>
           <span className="editorial-quote-author">
-            Triết lý thiết kế hệ thống nexo · Đồ án tốt nghiệp
+            Triết lý thiết kế hệ thống T-WorkSpace · Đồ án tốt nghiệp
           </span>
         </div>
 
@@ -473,10 +474,10 @@ export function LandingPage() {
           <div className="editorial-footer-top">
             <div className="editorial-footer-brand-block">
               <span className="editorial-brand editorial-footer-brand">
-                <NexoLogo />
+                <TWorkSpaceLogo size="md" />
               </span>
               <p className="editorial-footer-lead">
-                Tổng đài, họp trực tuyến WebRTC SFU và e-learning cho Đại học Tôn Đức Thắng.
+                Không gian làm việc số, tổng đài, họp trực tuyến WebRTC SFU và e-learning.
               </p>
             </div>
 
@@ -509,7 +510,7 @@ export function LandingPage() {
           </div>
 
           <div className="editorial-footer-bottom">
-            <span>© 2026 TDTU.</span>
+            <span>© 2026 T-WorkSpace.</span>
             <span>Hệ thống tổng đài, hội nghị và e-learning · Báo cáo tốt nghiệp CNTT</span>
           </div>
         </div>

@@ -10,9 +10,7 @@ import {
   sendAuthResponse,
   sendJson,
 } from "../../shared/http/utils.js";
-import type { GoogleAuthInput } from "@doan/shared";
 import {
-  authenticateWithGoogle,
   getCurrentUser,
   login,
   logout,
@@ -20,7 +18,7 @@ import {
   resendVerificationOtp,
   verifyOtpAndLogin,
 } from "./service.js";
-import { changePassword, requestPasswordReset, resetPassword } from "./password-reset.js";
+import { changePassword } from "./change-password.js";
 import { HttpError } from "../../shared/http/http-error.js";
 import { limitRequest } from "../../shared/http/rate-limit.js";
 export async function authRoutes({ request, response, pathname }: RouteContext): Promise<void> {
@@ -41,40 +39,12 @@ export async function authRoutes({ request, response, pathname }: RouteContext):
     return;
   }
 
-  if (request.method === "POST" && pathname === "/auth/google") {
-    await limitRequest(request, "google", 20, 600);
-    const body = await readJson(request);
-    const result = await authenticateWithGoogle(
-      body as unknown as GoogleAuthInput,
-      requestMetadata(request),
-    );
-    if ("refreshToken" in result) {
-      setRefreshCookie(response, result.refreshToken);
-      sendAuthResponse(response, 200, result);
-    } else {
-      sendJson(response, 200, result);
-    }
-    return;
-  }
-
   if (request.method === "POST" && pathname === "/auth/login") {
     await limitRequest(request, "login", 10, 600);
     const body = await readJson(request);
     const result = await login(body, requestMetadata(request));
     setRefreshCookie(response, result.refreshToken);
     sendAuthResponse(response, 200, result);
-    return;
-  }
-
-  if (request.method === "POST" && pathname === "/auth/password-reset/request") {
-    await limitRequest(request, "password-reset-request", 5, 3600);
-    sendJson(response, 200, await requestPasswordReset(await readJson(request)));
-    return;
-  }
-
-  if (request.method === "POST" && pathname === "/auth/password-reset/confirm") {
-    await limitRequest(request, "password-reset-confirm", 15, 600);
-    sendJson(response, 200, await resetPassword(await readJson(request)));
     return;
   }
 

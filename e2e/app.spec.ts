@@ -128,14 +128,14 @@ test("tài khoản chưa có nhóm thấy hướng dẫn tạo nhóm", async ({ 
   await expect(page.locator("main").getByRole("button", { name: "Tạo nhóm" }).first()).toBeVisible();
 });
 
-test("Tin nhắn liệt kê kênh của nhóm và gửi được tin", async ({ browser }) => {
+test("Tin nhắn liệt kê nhóm như một đoạn chat và gửi được tin", async ({ browser }) => {
   const { users, workspaceId } = fixtures();
   const page = await signedIn(browser, users.alice);
   await page.goto("/app/chat");
   const nav = page.getByRole("navigation", { name: "Hội thoại" });
-  await expect(nav.getByText(/^E2E \d+$/)).toBeVisible();
-  await expect(nav.getByRole("button", { name: /#tong-quan/ })).toBeVisible();
-  await nav.getByRole("button", { name: /#tong-quan/ }).click();
+  await expect(nav.getByRole("button", { name: /E2E \d+/ })).toBeVisible();
+  await expect(nav.getByText("#tong-quan")).toHaveCount(0);
+  await nav.getByRole("button", { name: /E2E \d+/ }).click();
   const text = `xin chào e2e ${Date.now()}`;
   await page.locator("#chat-message").fill(text);
   await page.locator("#chat-message").press("Enter");

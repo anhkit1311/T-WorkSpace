@@ -5,7 +5,6 @@ interface SendOtpEmailOptions {
   to: string;
   otp: string;
   displayName: string;
-  purpose?: "verification" | "password-reset";
 }
 
 let smtpTransporter: Transporter | null = null;
@@ -67,11 +66,9 @@ export async function sendOtpEmail({
   to,
   otp,
   displayName,
-  purpose = "verification",
 }: SendOtpEmailOptions): Promise<void> {
-  const resetting = purpose === "password-reset";
-  const subject = `[nexo] ${otp} là mã ${resetting ? "đặt lại mật khẩu" : "xác thực tài khoản"} của bạn`;
-  const textBody = `Xin chào ${displayName},\n\nMã ${resetting ? "đặt lại mật khẩu" : "xác thực OTP"} của bạn là: ${otp}\n\nMã này có hiệu lực trong ${config.otpExpirationMinutes} phút. Vui lòng không chia sẻ mã này cho bất kỳ ai. Nếu bạn không yêu cầu, hãy bỏ qua email này.\n\nTrân trọng,\nĐội ngũ nexo`;
+  const subject = `[nexo] ${otp} là mã xác thực tài khoản của bạn`;
+  const textBody = `Xin chào ${displayName},\n\nMã xác thực OTP của bạn là: ${otp}\n\nMã này có hiệu lực trong ${config.otpExpirationMinutes} phút. Vui lòng không chia sẻ mã này cho bất kỳ ai. Nếu bạn không yêu cầu, hãy bỏ qua email này.\n\nTrân trọng,\nĐội ngũ nexo`;
 
   const htmlBody = `
 <!DOCTYPE html>
@@ -94,9 +91,9 @@ export async function sendOtpEmail({
 <body>
   <div class="card">
     <div class="logo">nexo</div>
-    <h2>${resetting ? "Đặt lại mật khẩu" : "Xác thực tài khoản của bạn"}</h2>
+    <h2>Xác thực tài khoản của bạn</h2>
     <p>Xin chào <strong>${escapeHtml(displayName)}</strong>,</p>
-    <p>${resetting ? "Dùng mã dưới đây để đặt lại mật khẩu nexo của bạn:" : "Cảm ơn bạn đã đăng ký tài khoản trên nền tảng không gian làm việc cộng tác nexo. Vui lòng sử dụng mã xác thực OTP bên dưới để kích hoạt tài khoản:"}</p>
+    <p>Cảm ơn bạn đã đăng ký tài khoản trên nền tảng không gian làm việc cộng tác nexo. Vui lòng sử dụng mã xác thực OTP bên dưới để kích hoạt tài khoản:</p>
     <div class="otp-box">
       <div class="otp-code">${otp}</div>
       <div class="expiry">Mã có hiệu lực trong vòng ${config.otpExpirationMinutes} phút</div>

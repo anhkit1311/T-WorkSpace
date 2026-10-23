@@ -159,6 +159,33 @@ export async function createAccounts(userId: string, body: Record<string, unknow
   });
 }
 
+/**
+ * The system administrator sets a new password for an account: the one typed, or a random one when
+ * left blank. Passwords are only stored hashed, so the new one is returned once and never readable later.
+ * Every session of that account is signed out.
+ */
+export async function resetPassword(userId: string, targetId: string, body: Record<string, unknown>) {
+  id(targetId);
+  const typed = body.password;
+  if (typed !== undefined && typed !== "" && (typeof typed !== "string" || typed.length < 8 || typed.length > 128))
+    throw invalid("Mật khẩu phải có từ 8 đến 128 ký tự.", "INVALID_PASSWORD");
+  const password = typeof typed === "string" && typed ? typed : randomBytes(9).toString("base64url");
+  await withTransaction(async (client) => {
+    if (!(await loadActor(client, userId)).systemAdmin) throw forbidden("Chỉ quản trị hệ thống được đặt lại mật khẩu.");
+  });
+  const hash = await hashPassword(password);
+  return withTransaction(async (client) => {
+    const updated = await client.query(
+      `UPDATE users SET password_hash=$1,auth_provider='local',updated_at=now() WHERE id=$2`,
+      [hash, targetId],
+    );
+    if (!updated.rowCount) throw notFound("Không tìm thấy tài khoản.");
+    await client.query(`UPDATE refresh_sessions SET revoked_at=now() WHERE user_id=$1 AND revoked_at IS NULL`, [targetId]);
+    await audit(client, { actorId: userId, entity: "account", entityId: targetId, action: "account.password_reset" });
+    return { password };
+  });
+}
+
 /** "Phân quyền": accounts with their grants and lecturer record, for the system admin. */
 export async function listAccess(userId: string, params: URLSearchParams) {
   const search = (params.get("q") ?? "").trim().slice(0, 100);

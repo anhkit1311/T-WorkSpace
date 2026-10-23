@@ -14,7 +14,7 @@ import {
 import { motion, AnimatePresence, useIsPresent } from "motion/react";
 import { useApp } from "../../app/providers/AppContext";
 import { Icon, type IconName } from "./Icon";
-import { NexoLogo } from "./NexoLogo";
+import { TWorkSpaceLogo } from "./TWorkSpaceLogo";
 import { isSelectPickerEvent } from "../lib/select-picker";
 import { toastDuration } from "../lib/interaction";
 import "./interaction.css";
@@ -28,7 +28,7 @@ export function Brand({ className = "", onClick }: { className?: string; onClick
   return (
     <div
       className={`brand ${className} ${onClick ? "is-clickable" : ""}`}
-      aria-label="nexo"
+      aria-label="T-WorkSpace"
       onClick={onClick}
       onKeyDown={
         onClick
@@ -44,7 +44,7 @@ export function Brand({ className = "", onClick }: { className?: string; onClick
       tabIndex={onClick ? 0 : undefined}
     >
       <span className="brand-name">
-        <NexoLogo />
+        <TWorkSpaceLogo />
       </span>
     </div>
   );
@@ -632,12 +632,12 @@ export function KpiStatCard({
       style={{
         background: "var(--bg-surface, #FFFFFF)",
         border: "1px solid var(--border-color, #E2E8F0)",
-        borderRadius: "var(--radius-card, 14px)",
-        padding: "16px 20px",
+        borderRadius: "var(--radius-card, 7px)",
+        padding: "9px 13px",
         boxShadow: "var(--shadow-card, 0 1px 2px rgba(15, 23, 42, 0.04))",
         display: "flex",
         alignItems: "center",
-        gap: "16px",
+        gap: "10px",
         cursor: onClick ? "pointer" : "default",
         transition: "all 0.15s ease",
       }}
@@ -645,9 +645,9 @@ export function KpiStatCard({
       <div
         className="kpi-stat-card__icon"
         style={{
-          width: "42px",
-          height: "42px",
-          borderRadius: "8px",
+          width: "32px",
+          height: "32px",
+          borderRadius: "6px",
           background: toneBg,
           color: toneText,
           display: "grid",
@@ -655,13 +655,13 @@ export function KpiStatCard({
           flexShrink: 0,
         }}
       >
-        <Icon name={icon} size={22} strokeWidth={1.8} />
+        <Icon name={icon} size={17} strokeWidth={1.8} />
       </div>
       <div className="kpi-stat-card__body" style={{ display: "flex", flexDirection: "column" }}>
         <span
           className="kpi-stat-card__number"
           style={{
-            fontSize: "20px",
+            fontSize: "16.5px",
             fontWeight: 700,
             color: "var(--text, #0F172A)",
             lineHeight: 1.15,
@@ -672,9 +672,9 @@ export function KpiStatCard({
         <span
           className="kpi-stat-card__label"
           style={{
-            fontSize: "13px",
+            fontSize: "11.5px",
             color: "var(--text-muted, #64748B)",
-            marginTop: "3px",
+            marginTop: "1px",
           }}
         >
           {label}

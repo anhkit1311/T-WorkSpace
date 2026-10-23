@@ -157,7 +157,10 @@ export async function workspaceRoutes({
     const userId = await getAuthUserId(request);
     const body = await readJson(request);
     const name = typeof body.name === "string" ? body.name : "Nhóm mới";
-    const workspace = await createWorkspace(userId, name);
+    const memberIds = Array.isArray(body.memberIds)
+      ? body.memberIds.filter((id): id is string => typeof id === "string").slice(0, 100)
+      : [];
+    const workspace = await createWorkspace(userId, name, memberIds);
     response.setHeader("Cache-Control", "no-store");
     sendJson(response, 201, { workspace });
     return;

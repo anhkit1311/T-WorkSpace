@@ -211,7 +211,7 @@ export function ProfilePage() {
             {avatarUrl ? (
               <img src={avatarUrl} alt="Ảnh đại diện xem trước" />
             ) : (
-              <img src="/avatar-fallback.svg" alt="Ảnh đại diện mặc định nexo" />
+              <img src="/avatar-fallback.svg" alt="Ảnh đại diện mặc định T-WorkSpace" />
             )}
           </div>
           <label className="profile-avatar-upload">
@@ -435,69 +435,67 @@ export function ProfilePage() {
       </section>
 
       {/* Account data returned by the authenticated session */}
-      {user?.authProvider !== "google" && (
-        <section className="profile-card">
-          <h3 className="profile-section-title">
-            <Icon name="lock" size={16} /> Đổi mật khẩu
-          </h3>
-          <p className="profile-password-hint">
-            Sau khi đổi mật khẩu, các phiên đăng nhập sẽ bị thu hồi và bạn cần đăng nhập lại.
-          </p>
-          <form onSubmit={handleChangePassword} className="profile-form profile-password-form" onInput={() => setPasswordError("")}>
-            <Field label="Mật khẩu hiện tại">
-              <input
-                className="profile-field-input"
-                type="password"
-                autoComplete="current-password"
-                value={currentPassword}
-                name="currentPassword" aria-invalid={Boolean(passwordError && passwordErrorField === "currentPassword")} aria-describedby={passwordError ? "profile-password-error" : undefined}
-                onChange={(event) => setCurrentPassword(event.target.value)}
-                required
-              />
-            </Field>
-            <Field label="Mật khẩu mới">
-              <input
-                className="profile-field-input"
-                type="password"
-                autoComplete="new-password"
-                value={newPassword}
-                name="newPassword" aria-invalid={Boolean(passwordError && passwordErrorField === "newPassword")} aria-describedby={passwordError ? "profile-password-error" : undefined}
-                onChange={(event) => setNewPassword(event.target.value)}
-                minLength={8}
-                maxLength={128}
-                required
-              />
-            </Field>
-            <Field label="Nhập lại mật khẩu mới">
-              <input
-                className="profile-field-input"
-                type="password"
-                autoComplete="new-password"
-                value={confirmPassword}
-                name="confirmPassword" aria-invalid={Boolean(passwordError && passwordErrorField === "confirmPassword")} aria-describedby={passwordError ? "profile-password-error" : undefined}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                required
-              />
-            </Field>
-            {passwordError && (
-              <p className="profile-password-error" id="profile-password-error" role="alert">
-                {passwordError}
-              </p>
-            )}
-            <div>
-              <Button
-                type="submit"
-                variant="primary"
-                icon="lock"
-                loading={changingPassword}
-                disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
-              >
-                Đổi mật khẩu
-              </Button>
-            </div>
-          </form>
-        </section>
-      )}
+      <section className="profile-card">
+        <h3 className="profile-section-title">
+          <Icon name="lock" size={16} /> Đổi mật khẩu
+        </h3>
+        <p className="profile-password-hint">
+          Sau khi đổi mật khẩu, các phiên đăng nhập sẽ bị thu hồi và bạn cần đăng nhập lại.
+        </p>
+        <form onSubmit={handleChangePassword} className="profile-form profile-password-form" onInput={() => setPasswordError("")}>
+          <Field label="Mật khẩu hiện tại">
+            <input
+              className="profile-field-input"
+              type="password"
+              autoComplete="current-password"
+              value={currentPassword}
+              name="currentPassword" aria-invalid={Boolean(passwordError && passwordErrorField === "currentPassword")} aria-describedby={passwordError ? "profile-password-error" : undefined}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+              required
+            />
+          </Field>
+          <Field label="Mật khẩu mới">
+            <input
+              className="profile-field-input"
+              type="password"
+              autoComplete="new-password"
+              value={newPassword}
+              name="newPassword" aria-invalid={Boolean(passwordError && passwordErrorField === "newPassword")} aria-describedby={passwordError ? "profile-password-error" : undefined}
+              onChange={(event) => setNewPassword(event.target.value)}
+              minLength={8}
+              maxLength={128}
+              required
+            />
+          </Field>
+          <Field label="Nhập lại mật khẩu mới">
+            <input
+              className="profile-field-input"
+              type="password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              name="confirmPassword" aria-invalid={Boolean(passwordError && passwordErrorField === "confirmPassword")} aria-describedby={passwordError ? "profile-password-error" : undefined}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              required
+            />
+          </Field>
+          {passwordError && (
+            <p className="profile-password-error" id="profile-password-error" role="alert">
+              {passwordError}
+            </p>
+          )}
+          <div>
+            <Button
+              type="submit"
+              variant="primary"
+              icon="lock"
+              loading={changingPassword}
+              disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
+            >
+              Đổi mật khẩu
+            </Button>
+          </div>
+        </form>
+      </section>
 
       {/* Account data returned by the authenticated session */}
       <section className="profile-card">
@@ -511,7 +509,7 @@ export function ProfilePage() {
             title="Mã tài khoản"
             subtitle="Định danh phiên đăng nhập hiện tại"
             metaPrimary={user?.id || "—"}
-            metaSecondary="Tài khoản Nexo"
+            metaSecondary="Tài khoản T-WorkSpace"
           />
           <ListItem
             role="listitem"

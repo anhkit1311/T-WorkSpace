@@ -1,8 +1,6 @@
 import type {
   ApiErrorResponse,
   AuthResponse,
-  GoogleAuthInput,
-  RegisterResponse,
   ResendOtpInput,
   ResendOtpResponse,
   VerifyOtpInput,
@@ -51,28 +49,6 @@ export async function loginApi(input: { email: string; password: string }): Prom
   return handleResponse<AuthResponse>(response);
 }
 
-export async function requestPasswordResetApi(email: string): Promise<{ message: string }> {
-  const response = await fetch(`${API_BASE}/auth/password-reset/request`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  });
-  return handleResponse<{ message: string }>(response);
-}
-
-export async function resetPasswordApi(input: {
-  email: string;
-  otp: string;
-  password: string;
-}): Promise<{ message: string }> {
-  const response = await fetch(`${API_BASE}/auth/password-reset/confirm`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  return handleResponse<{ message: string }>(response);
-}
-
 export async function changePasswordApi(
   accessToken: string,
   input: { currentPassword: string; newPassword: string },
@@ -104,18 +80,6 @@ export async function resendOtpApi(input: ResendOtpInput): Promise<ResendOtpResp
     body: JSON.stringify(input),
   });
   return handleResponse<ResendOtpResponse>(response);
-}
-
-export async function googleAuthApi(
-  input: GoogleAuthInput,
-): Promise<AuthResponse | RegisterResponse> {
-  const response = await fetch(`${API_BASE}/auth/google`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(input),
-  });
-  return handleResponse<AuthResponse | RegisterResponse>(response);
 }
 
 let refreshPending: Promise<AuthResponse> | null = null;

@@ -7,9 +7,10 @@ import {
   useState,
   type FormEvent,
   type KeyboardEvent,
+  type ReactNode,
   type SetStateAction,
 } from "react";
-import { NoGroups } from "../workspaces/GroupDialogs";
+import { CreateGroupDialog, NoGroups } from "../workspaces/GroupDialogs";
 import { useDraft } from "../../shared/hooks/useDraft";
 import { AnimatePresence, motion } from "motion/react";
 import { useMotionSafe } from "../../shared/motion/MotionProvider";
@@ -27,6 +28,7 @@ import type {
   DirectFileItem,
   DirectUserItem,
   GroupMemberItem,
+  WorkspaceFileItem,
   WorkspaceItem,
 } from "@doan/shared";
 import {
@@ -58,6 +60,7 @@ const stickers = [
   { id: "laugh", emoji: "🤣", label: "Buồn cười" },
   { id: "focus", emoji: "💪", label: "Cố lên" },
   { id: "thanks", emoji: "🙏", label: "Cảm ơn" },
+  { id: "like", emoji: "👍", label: "Thích" },
 ] as const;
 
 const linkPattern = /https?:\/\/[^\s<>()]+/gi;
@@ -107,6 +110,39 @@ function MessageText({ content }: { content: string }) {
   }
   if (start < content.length) parts.push(content.slice(start));
   return <>{parts}</>;
+}
+
+/** Messenger's list time: the clock today, the weekday this week, the date before that. */
+function shortTime(iso: string) {
+  const date = new Date(iso);
+  const days = (Date.now() - date.getTime()) / 86_400_000;
+  if (date.toDateString() === new Date().toDateString())
+    return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+  if (days < 7) return date.toLocaleDateString("vi-VN", { weekday: "short" });
+  return date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+}
+
+/** A Messenger-style collapsible group in the details panel. */
+function InfoSection({
+  title,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <section className="chat-info-section">
+      <button type="button" className="chat-info-section__toggle" aria-expanded={open} onClick={onToggle}>
+        <span>{title}</span>
+        <Icon name={open ? "chevron-up" : "chevron-down"} size={16} />
+      </button>
+      {open && <div className="chat-info-section__body">{children}</div>}
+    </section>
+  );
 }
 
 type OutgoingMessage = {
@@ -162,12 +198,12 @@ export function ChatPage() {
     setTyping,
   } = useSocket();
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
-  // Text channels of every group the user is in, then their direct conversations (kind 'direct').
+  // One chat per group (its first text channel), then the direct conversations (kind 'direct').
   const [channels, setChannels] = useState<(ChannelItem | DirectConversationItem)[]>([]);
   const [peopleResults, setPeopleResults] = useState<DirectUserItem[]>([]);
   /** Each group's meeting room (first video room), for "Họp ngay". */
   const [rooms, setRooms] = useState<Record<string, string>>({});
-  const [collapsedGroups, setCollapsedGroups] = useState<string[]>([]);
+  const [creatingGroup, setCreatingGroup] = useState(false);
   const [channelId, setChannelId] = useState("");
   const [channelSearch, setChannelSearch] = useState("");
   const [messageSearch, setMessageSearch] = useState("");
@@ -192,7 +228,10 @@ export function ChatPage() {
   const [deleteTarget, setDeleteTarget] = useState<ChatMessageItem | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [reactionPickerId, setReactionPickerId] = useState("");
-  const [filterTab, setFilterTab] = useState<"all" | "favorites">("all");
+  const [filterTab, setFilterTab] = useState<"all" | "unread" | "groups" | "favorites">("all");
+  const [openSections, setOpenSections] = useState<string[]>(["about", "files"]);
+  const toggleSection = (id: string) =>
+    setOpenSections((old) => (old.includes(id) ? old.filter((item) => item !== id) : [...old, id]));
   const [showInChannelSearch, setShowInChannelSearch] = useState(false);
   const [recording, setRecording] = useState(false);
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
@@ -237,7 +276,6 @@ export function ChatPage() {
   const [busy, setBusy] = useState(false);
   const [sending, setSending] = useState(false);
   const sendRef = useSendFeedback(sending);
-  const [showMembers, setShowMembers] = useState(false);
   const [revision, setRevision] = useState(0);
   const end = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -335,33 +373,44 @@ export function ChatPage() {
   useEffect(() => {
     if (!socket) return;
     const onNew = (message: ChatMessageItem) => {
-      if (!knownChannelIdsRef.current.has(message.channelId)) void loadDirects().catch(() => {});
+      if (knownChannelIdsRef.current.has(message.channelId)) return;
+      // A new 1-1 refreshes the direct list; otherwise someone just added us to a group.
+      void loadDirects()
+        .then((direct) => {
+          if (!direct?.some((c) => c.id === message.channelId)) setRevision((value) => value + 1);
+        })
+        .catch(() => {});
     };
     socket.on("new_message", onNew);
     return () => {
       socket.off("new_message", onNew);
     };
   }, [socket, loadDirects]);
-  const [directFiles, setDirectFiles] = useState<DirectFileItem[]>([]);
+  const [chatFiles, setChatFiles] = useState<(Omit<DirectFileItem, "messageId"> & { messageId: string | null })[]>([]);
   const loadedFileCount = messages.filter((m) => m.attachment).length;
   useEffect(() => {
-    setDirectFiles([]);
-    if (!accessToken || !isDirect || !showInfoPanel) return;
+    setChatFiles([]);
+    if (!accessToken || !channelId || !showInfoPanel || (!isDirect && !workspaceId)) return;
     let active = true;
-    governanceApi<{ files: DirectFileItem[] }>(accessToken, `direct-conversations/${channelId}/files?limit=8`)
+    // A group's file list spans the group; keep the files sent in this chat.
+    const path = isDirect
+      ? `direct-conversations/${channelId}/files?limit=20`
+      : `files?workspace=${workspaceId}&limit=40`;
+    governanceApi<{ files: (DirectFileItem | WorkspaceFileItem)[] }>(accessToken, path)
       .then((data) => {
-        if (active) setDirectFiles(data.files);
+        if (active)
+          setChatFiles(data.files.filter((file) => !("channelId" in file) || file.channelId === channelId));
       })
       .catch(() => {});
     return () => {
       active = false;
     };
-  }, [accessToken, channelId, isDirect, showInfoPanel, loadedFileCount]);
+  }, [accessToken, channelId, workspaceId, isDirect, showInfoPanel, loadedFileCount]);
   // The peer's switchboard extension; only call-center members can read the directory (others get 403, no button).
   const [peerExtension, setPeerExtension] = useState("");
   useEffect(() => {
     setPeerExtension("");
-    if (!accessToken || !directPeer || !showInfoPanel) return;
+    if (!accessToken || !directPeer) return;
     let active = true;
     callCenterApi<CcTransferDirectory>(accessToken, "transfer-directory")
       .then((data) => {
@@ -372,7 +421,7 @@ export function ChatPage() {
     return () => {
       active = false;
     };
-  }, [accessToken, directPeer?.userId, showInfoPanel]);
+  }, [accessToken, directPeer?.userId]);
   const readOnly = Boolean(workspace?.archivedAt || channel?.archivedAt);
   const isAdmin = workspace?.role === "owner" || workspace?.role === "admin";
 
@@ -502,7 +551,14 @@ export function ChatPage() {
       .then(([lists, direct]) => {
         if (!active || routeRef.current.view !== "chat") return;
         const all = lists.flat();
-        const text = [...all.filter((c) => c.type === "text"), ...direct.conversations];
+        // Messenger-style: a group is one conversation. Extra channels of older groups stay hidden.
+        const groupChats = lists.flatMap((list) => {
+          const chat = list
+            .filter((c) => c.type === "text")
+            .sort((a, b) => Number(Boolean(a.archivedAt)) - Number(Boolean(b.archivedAt)) || a.position - b.position)[0];
+          return chat ? [chat] : [];
+        });
+        const text = [...groupChats, ...direct.conversations];
         setChannels(text);
         setRooms(
           Object.fromEntries(
@@ -1361,32 +1417,24 @@ export function ChatPage() {
   }
 
 
-  const filteredChannels = useMemo(() => {
-    const term = channelSearch.trim().toLowerCase();
-    return channels
-      .filter(
-        (c) =>
-          c.name.toLowerCase().includes(term) && (filterTab !== "favorites" || Boolean(c.pinned)),
-      )
-      .sort(
-        (a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || a.position - b.position,
-      );
-  }, [channels, channelSearch, filterTab]);
-  const groupChannels = filteredChannels.filter((c) => c.kind !== "direct");
-  // Channels grouped by group, archived groups last; a group with no match is left out.
-  const navGroups = [...workspaces]
-    .sort((a, b) => Number(Boolean(a.archivedAt)) - Number(Boolean(b.archivedAt)))
-    .map((item) => ({
-      id: item.id,
-      name: item.name,
-      archived: Boolean(item.archivedAt),
-      manages: item.role !== "member",
-      channels: groupChannels.filter((c) => c.workspaceId === item.id),
-    }))
-    .filter((group) => group.channels.length > 0);
-  const directConversations = filteredChannels.filter(
-    (c): c is DirectConversationItem => c.kind === "direct",
-  );
+  const titleOf = (c: ChannelItem | DirectConversationItem) =>
+    c.kind === "direct" ? c.name : (workspaces.find((w) => w.id === c.workspaceId)?.name ?? c.name);
+  const lastActivity = (c: ChannelItem | DirectConversationItem) =>
+    new Date(channelPreviews[c.id]?.createdAt ?? 0).getTime();
+  // One list like Messenger: newest activity first, pinned ones on top.
+  const conversations = channels
+    .filter(
+      (c) =>
+        titleOf(c).toLowerCase().includes(channelSearch.trim().toLowerCase()) &&
+        (filterTab === "all" ||
+          (filterTab === "unread" && Boolean(c.unreadCount)) ||
+          (filterTab === "groups" && c.kind !== "direct") ||
+          (filterTab === "favorites" && Boolean(c.pinned))),
+    )
+    .sort(
+      (a, b) =>
+        Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || lastActivity(b) - lastActivity(a),
+    );
   // People who already have a conversation are not offered again, even when it is filtered out.
   const newPeople = peopleResults.filter(
     (person) =>
@@ -1398,7 +1446,7 @@ export function ChatPage() {
   useEffect(() => {
     const term = channelSearch.trim();
     setPeopleResults([]);
-    if (!accessToken || term.length < 2 || filterTab === "favorites") return;
+    if (!accessToken || term.length < 2 || filterTab !== "all") return;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       void governanceApi<{ users: DirectUserItem[] }>(
@@ -1454,7 +1502,7 @@ export function ChatPage() {
       : setActiveView("meetings");
 
   return (
-    <section className={`live-chat ${isDirect ? "is-inbox" : ""}`} aria-label="Tin nhắn">
+    <section className={`live-chat is-inbox ${channel && !isDirect ? "is-group" : ""}`} aria-label="Tin nhắn">
       {/* 1. Panel: Conversation List matching mockup */}
       {mobileChannelDrawerOpen && (
         <button
@@ -1472,7 +1520,16 @@ export function ChatPage() {
         aria-modal={mobileChannelDrawerOpen || undefined}
       >
         <div className="live-chat-nav__header">
-          <span className="chat-nav-section">Hội thoại</span>
+          <h2 className="live-chat-nav__title">Đoạn chat</h2>
+          <button
+            type="button"
+            className="chat-nav-compose-btn"
+            title="Tạo nhóm"
+            aria-label="Tạo nhóm"
+            onClick={() => setCreatingGroup(true)}
+          >
+            <Icon name="edit" size={18} />
+          </button>
         </div>
 
         <div className="chat-search-pill-box">
@@ -1480,8 +1537,8 @@ export function ChatPage() {
           <input
             type="search"
             className="chat-search-pill-input"
-            aria-label="Tìm kênh hoặc người để nhắn tin"
-            placeholder="Tìm kênh, tên hoặc email…"
+            aria-label="Tìm cuộc trò chuyện hoặc người để nhắn tin"
+            placeholder="Tìm trên Tin nhắn…"
             value={channelSearch}
             onChange={(e) => setChannelSearch(e.target.value)}
           />
@@ -1491,6 +1548,8 @@ export function ChatPage() {
           {(
             [
               ["all", "Tất cả"],
+              ["unread", "Chưa đọc"],
+              ["groups", "Nhóm"],
               ["favorites", "Đã ghim"],
             ] as const
           ).map(([key, label]) => (
@@ -1508,182 +1567,75 @@ export function ChatPage() {
         </div>
 
         <nav className="chat-channels-scroll" aria-label="Hội thoại">
-          {navGroups.map((group) => {
-            const open = !collapsedGroups.includes(group.id) || channelSearch.trim() !== "";
-            const unread = group.channels.reduce((sum, c) => sum + (c.unreadCount ?? 0), 0);
+          {conversations.length === 0 && newPeople.length === 0 && (
+            <p className="live-chat-nav__empty">
+              {channelSearch.trim()
+                ? "Không tìm thấy cuộc trò chuyện hoặc người phù hợp"
+                : filterTab === "favorites"
+                  ? "Chưa ghim đoạn chat nào"
+                  : filterTab === "unread"
+                    ? "Bạn đã đọc hết tin nhắn"
+                    : filterTab === "groups"
+                      ? "Bạn chưa ở trong nhóm chat nào"
+                      : "Tìm tên hoặc email ở ô trên để bắt đầu trò chuyện"}
+            </p>
+          )}
+          {conversations.map((c) => {
+            const latest = channelPreviews[c.id];
+            const title = titleOf(c);
+            const peer = c.kind === "direct" ? (c as DirectConversationItem).peer : undefined;
+            const author =
+              latest && latest.authorId === user?.id
+                ? "Bạn: "
+                : latest && !peer
+                  ? `${latest.authorName.trim().split(/\s+/).pop()}: `
+                  : "";
             return (
-              <div key={group.id} className="chat-nav-group">
-                <div className="chat-nav-group__head">
-                  <button
-                    type="button"
-                    className="chat-nav-group__toggle"
-                    aria-expanded={open}
-                    onClick={() =>
-                      setCollapsedGroups((previous) =>
-                        previous.includes(group.id)
-                          ? previous.filter((id) => id !== group.id)
-                          : [...previous, group.id],
-                      )
-                    }
-                  >
-                    <Icon name={open ? "chevron-down" : "chevron-right"} size={14} />
-                    <span className="chat-nav-group__name">{group.name}</span>
-                    {group.archived && <span className="chat-nav-group__tag">Đã lưu trữ</span>}
-                    {!open && unread > 0 && (
-                      <span className="chat-unread-badge-circle" aria-label={`${unread} tin chưa đọc`}>
-                        {unread}
+              <div key={c.id} className="chat-conversation-item-wrap">
+                <button
+                  type="button"
+                  className={`chat-conversation-card ${c.id === channelId ? "is-active" : ""} ${c.unreadCount ? "is-unread" : ""}`}
+                  aria-current={c.id === channelId ? "page" : undefined}
+                  onClick={() => {
+                    openConversation(c.id);
+                    setMobileChannelDrawerOpen(false);
+                  }}
+                >
+                  <Avatar
+                    name={title}
+                    size="lg"
+                    image={peer ? avatarOf(peer.userId) : undefined}
+                    status={peer && onlineUserIds.includes(peer.userId) ? "online" : undefined}
+                  />
+                  <div className="chat-convo-info">
+                    <strong className="chat-convo-name">{title}</strong>
+                    <div className="chat-convo-bottom">
+                      <span className="chat-convo-preview">
+                        {latest
+                          ? `${author}${latest.content || (latest.attachment ? "Đã gửi tệp đính kèm" : "")}`
+                          : "Chưa có tin nhắn"}
                       </span>
-                    )}
-                  </button>
-                  {group.manages && !group.archived && (
-                    <button
-                      type="button"
-                      className="chat-nav-compose-btn"
-                      title={`Thêm hoặc sửa kênh của ${group.name}`}
-                      aria-label={`Thêm hoặc sửa kênh của ${group.name}`}
-                      onClick={() => navigate({ view: "admin", workspaceId: group.id })}
-                    >
-                      <Icon name="plus" size={16} />
-                    </button>
-                  )}
-                </div>
-                {open &&
-                  group.channels.map((c) => {
-                    const latest = channelPreviews[c.id];
-                    const formattedTime = latest
-                      ? new Date(latest.createdAt).toLocaleTimeString("vi-VN", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : "";
-
-                    return (
-                      <div key={c.id} className="chat-conversation-item-wrap">
-                        <button
-                          type="button"
-                          className={`chat-conversation-card ${c.id === channelId ? "is-active" : ""}`}
-                          aria-current={c.id === channelId ? "page" : undefined}
-                          onClick={() => {
-                            openConversation(c.id);
-                            setMobileChannelDrawerOpen(false);
-                          }}
-                        >
-                          <div className="chat-convo-hash" aria-hidden="true">
-                            #
-                          </div>
-                          <div className="chat-convo-info">
-                            <div className="chat-convo-top">
-                              <strong className="chat-convo-name">#{c.name}</strong>
-                              {formattedTime && (
-                                <time dateTime={latest?.createdAt}>{formattedTime}</time>
-                              )}
-                            </div>
-                            <div className="chat-convo-bottom">
-                              <span className="chat-convo-preview">
-                                {latest ? (
-                                  <>
-                                    {latest.authorId === user?.id ? "Bạn: " : ""}
-                                    {latest.content ||
-                                      (latest.attachment ? "Đã gửi tệp đính kèm" : "")}
-                                  </>
-                                ) : (
-                                  c.description?.trim() || "Chưa có tin nhắn mới"
-                                )}
-                              </span>
-                              <span className="chat-convo-indicators">
-                                {c.muted && (
-                                  <Icon
-                                    name="bell-off"
-                                    size={12}
-                                    className="chat-muted-icon"
-                                    aria-label="Đã tắt thông báo"
-                                  />
-                                )}
-                                {c.unreadCount ? (
-                                  <span
-                                    className="chat-unread-badge-circle"
-                                    aria-label={`${c.unreadCount} tin chưa đọc`}
-                                  >
-                                    {c.unreadCount}
-                                  </span>
-                                ) : c.pinned ? (
-                                  <Icon name="star" size={13} className="chat-pinned-star-icon" />
-                                ) : null}
-                              </span>
-                            </div>
-                          </div>
-                        </button>
-                      </div>
-                    );
-                  })}
+                      {latest && (
+                        <time dateTime={latest.createdAt}>· {shortTime(latest.createdAt)}</time>
+                      )}
+                      <span className="chat-convo-indicators">
+                        {c.muted && (
+                          <Icon name="bell-off" size={12} className="chat-muted-icon" aria-label="Đã tắt thông báo" />
+                        )}
+                        {c.unreadCount ? (
+                          <span className="chat-unread-badge-circle" aria-label={`${c.unreadCount} tin chưa đọc`}>
+                            {c.unreadCount}
+                          </span>
+                        ) : c.pinned ? (
+                          <Icon name="star" size={13} className="chat-pinned-star-icon" />
+                        ) : null}
+                      </span>
+                    </div>
+                  </div>
+                </button>
               </div>
             );
           })}
-
-          {(
-            <>
-              {(directConversations.length > 0 || newPeople.length === 0) && (
-                <h3 className="chat-nav-section">Trò chuyện riêng</h3>
-              )}
-              {directConversations.length === 0 && newPeople.length === 0 && (
-                <p className="live-chat-nav__empty">
-                  {channelSearch.trim()
-                    ? "Không tìm thấy người phù hợp"
-                    : filterTab === "favorites"
-                      ? "Chưa ghim cuộc trò chuyện nào"
-                      : "Tìm tên hoặc email ở ô trên để bắt đầu trò chuyện"}
-                </p>
-              )}
-              {directConversations.map((c) => {
-                const latest = channelPreviews[c.id];
-                return (
-                  <div key={c.id} className="chat-conversation-item-wrap">
-                    <button
-                      type="button"
-                      className={`chat-conversation-card ${c.id === channelId ? "is-active" : ""}`}
-                      aria-current={c.id === channelId ? "page" : undefined}
-                      onClick={() => {
-                        openConversation(c.id);
-                        setMobileChannelDrawerOpen(false);
-                      }}
-                    >
-                      <Avatar
-                        name={c.name}
-                        size="sm"
-                        status={onlineUserIds.includes(c.peer.userId) ? "online" : undefined}
-                      />
-                      <div className="chat-convo-info">
-                        <div className="chat-convo-top">
-                          <strong className="chat-convo-name">{c.name}</strong>
-                          {latest && (
-                            <time dateTime={latest.createdAt}>
-                              {new Date(latest.createdAt).toLocaleTimeString("vi-VN", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </time>
-                          )}
-                        </div>
-                        <div className="chat-convo-bottom">
-                          <span className="chat-convo-preview">
-                            {latest
-                              ? `${latest.authorId === user?.id ? "Bạn: " : ""}${latest.content || (latest.attachment ? "Đã gửi tệp đính kèm" : "")}`
-                              : "Chưa có tin nhắn"}
-                          </span>
-                          {c.unreadCount ? (
-                            <span
-                              className="chat-unread-badge-circle"
-                              aria-label={`${c.unreadCount} tin chưa đọc`}
-                            >
-                              {c.unreadCount}
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                );
-              })}
               {newPeople.length > 0 && (
                 <>
                   <h3 className="chat-nav-section">Bắt đầu trò chuyện mới</h3>
@@ -1707,8 +1659,6 @@ export function ChatPage() {
                   ))}
                 </>
               )}
-            </>
-          )}
         </nav>
       </aside>
 
@@ -1740,34 +1690,26 @@ export function ChatPage() {
             <Icon name="chevron-left" size={18} />
           </button>
           <div className="chat-header-identity">
-            {directPeer ? (
+            {channel && (
               <Avatar
-                name={directPeer.displayName}
-                size="sm"
-                status={onlineUserIds.includes(directPeer.userId) ? "online" : undefined}
+                name={titleOf(channel)}
+                size="md"
+                image={directPeer ? avatarOf(directPeer.userId) : undefined}
+                status={directPeer && onlineUserIds.includes(directPeer.userId) ? "online" : undefined}
               />
-            ) : (
-              <div className="chat-header-hash" aria-hidden="true">
-                #
-              </div>
             )}
             <div className="chat-header-title-box">
               <h2 className="chat-header-room-name">
-                {channel ? channel.name : "Chọn cuộc trò chuyện"}
-                {workspace && !isDirect && <span className="chat-header-group">{workspace.name}</span>}
+                {channel ? titleOf(channel) : "Chọn cuộc trò chuyện"}
               </h2>
               <span className="chat-header-room-subtitle">
                 {directPeer ? (
-                  <>
-                    {directPeer.email} •{" "}
-                    {onlineUserIds.includes(directPeer.userId) ? "Đang trực tuyến" : "Ngoại tuyến"}
-                  </>
+                  onlineUserIds.includes(directPeer.userId) ? "Đang hoạt động" : "Không hoạt động"
                 ) : channel ? (
                   <>
-                    {channel.description?.trim() ? `${channel.description} • ` : ""}
                     {mentionMembers.length || members.length} thành viên •{" "}
                     {isConnected
-                      ? `${members.filter((m) => onlineUserIds.includes(m.userId)).length} đang trực tuyến`
+                      ? `${members.filter((m) => onlineUserIds.includes(m.userId)).length} đang hoạt động`
                       : connectionStatus === "disconnected"
                         ? "Mất kết nối"
                         : "Đang kết nối lại…"}
@@ -1779,57 +1721,37 @@ export function ChatPage() {
 
           {channel && (
             <div className="chat-header-action-group">
-              <button
-                type="button"
-                className={`chat-icon-btn ${showInChannelSearch || messageSearch ? "is-active" : ""}`}
-                title="Tìm trong cuộc trò chuyện"
-                aria-label="Tìm trong cuộc trò chuyện"
-                aria-pressed={showInChannelSearch || Boolean(messageSearch)}
-                onClick={() => {
-                  if (showInChannelSearch || messageSearch) {
-                    setShowInChannelSearch(false);
-                    setMessageSearch("");
-                  } else {
-                    setShowInChannelSearch(true);
-                    requestAnimationFrame(() => document.getElementById("message-search")?.focus());
-                  }
-                }}
-              >
-                <Icon name="search" size={17} />
-              </button>
-              <button
-                type="button"
-                className={`chat-icon-btn ${savedMode === "pins" ? "is-active" : ""}`}
-                title="Tin nhắn đã ghim"
-                aria-label="Tin nhắn đã ghim"
-                aria-pressed={savedMode === "pins"}
-                onClick={() => {
-                  setMessageSearch("");
-                  setSavedMode(savedMode === "pins" ? null : "pins");
-                }}
-              >
-                <Icon name="pin" size={17} />
-              </button>
+              {peerExtension && (
+                <button
+                  type="button"
+                  className="chat-icon-btn"
+                  title={`Gọi máy lẻ ${peerExtension}`}
+                  aria-label={`Gọi máy lẻ ${peerExtension}`}
+                  onClick={() => navigate({ view: "call-center", query: peerExtension })}
+                >
+                  <Icon name="phone" size={19} />
+                </button>
+              )}
               {workspace && !isDirect && !readOnly && (
                 <button
                   type="button"
-                  className="chat-header-meet-btn"
+                  className="chat-icon-btn"
                   title={`Họp ngay trong phòng của ${workspace.name}`}
+                  aria-label="Họp ngay"
                   onClick={openMeetingRoom}
                 >
-                  <Icon name="video" size={16} />
-                  <span>Họp ngay</span>
+                  <Icon name="video" size={20} />
                 </button>
               )}
               <button
                 type="button"
                 className={`chat-icon-btn ${showInfoPanel ? "is-active" : ""}`}
-                title="Thông tin cuộc trò chuyện"
-                aria-label="Thông tin cuộc trò chuyện"
+                title="Thông tin về đoạn chat"
+                aria-label="Thông tin về đoạn chat"
                 aria-expanded={showInfoPanel}
                 onClick={() => setShowInfoPanel(!showInfoPanel)}
               >
-                <Icon name="info" size={17} />
+                <Icon name="info" size={19} />
               </button>
             </div>
           )}
@@ -1866,8 +1788,8 @@ export function ChatPage() {
               type="search"
               value={messageSearch}
               onChange={(event) => setMessageSearch(event.target.value)}
-              placeholder="Tìm nội dung trong kênh…"
-              aria-label="Tìm tin nhắn trong kênh"
+              placeholder="Tìm trong cuộc trò chuyện…"
+              aria-label="Tìm tin nhắn trong cuộc trò chuyện"
             />
             {searchResults && (
               <span>
@@ -1932,7 +1854,7 @@ export function ChatPage() {
               Đang tải cuộc trò chuyện…
             </p>
           ) : !workspaces.length && !channels.length ? (
-            <NoGroups text="Kênh của các nhóm bạn tham gia sẽ hiện ở đây. Bạn cũng có thể tìm tên hoặc email ở ô bên trái để nhắn riêng." />
+            <NoGroups text="Nhóm chat của bạn sẽ hiện ở đây. Bạn cũng có thể tìm tên hoặc email ở ô bên trái để nhắn riêng." />
           ) : !channel ? (
             <div className="chat-empty-state">
               <div className="chat-empty-icon">
@@ -1940,7 +1862,7 @@ export function ChatPage() {
               </div>
               <h3>Chưa chọn cuộc trò chuyện</h3>
               <p>
-                Chọn một kênh hoặc một người ở bên trái, hoặc tìm tên/email để bắt đầu trò chuyện.
+                Chọn một đoạn chat ở bên trái, hoặc tìm tên/email để bắt đầu trò chuyện.
               </p>
             </div>
           ) : !visibleMessages.length ? (
@@ -1953,9 +1875,7 @@ export function ChatPage() {
                   ? "Không tìm thấy tin nhắn"
                   : isDirect
                     ? `Bắt đầu trò chuyện với ${channel.name}`
-                    : channel
-                      ? `Chào mừng đến với #${channel.name}`
-                      : "Chưa có kênh văn bản"}
+                    : `Chào mừng đến với ${titleOf(channel)}`}
               </h3>
               <p>
                 {messageSearch
@@ -1998,11 +1918,7 @@ export function ChatPage() {
                     tabIndex={0}
                   >
                     <div className="message-row__gutter">
-                      {grouped ? (
-                        <time className="message-row__hover-time" dateTime={m.createdAt}>
-                          {formattedTime}
-                        </time>
-                      ) : (
+                      {!isMine && endsRun && (
                         <Avatar name={m.authorName} image={avatarOf(m.authorId)} size="sm" />
                       )}
                     </div>
@@ -2050,7 +1966,10 @@ export function ChatPage() {
                       ) : (
                         <>
                           {m.content && (
-                            <div className="message-row__text">
+                            <div
+                              className="message-row__text"
+                              title={`${m.authorName} · ${new Date(m.createdAt).toLocaleString("vi-VN")}`}
+                            >
                               <MessageText content={m.content.trim()} />
                               {m.editedAt && <span className="message-row__edited"> (đã sửa)</span>}
                             </div>
@@ -2374,6 +2293,64 @@ export function ChatPage() {
             ))}
 
           <form className="chat-floating-dock-form" onSubmit={submit}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="sr-only"
+              accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,application/zip,.docx,.pptx,.xlsx"
+              onChange={(event) => {
+                chooseAttachment(event.target.files?.[0]);
+                event.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              className={`chat-dock-icon-btn ${recording ? "is-recording" : ""}`}
+              title="Tin nhắn thoại"
+              aria-label={recording ? "Dừng ghi âm" : "Tin nhắn thoại"}
+              disabled={!channel || (sending && !recording)}
+              onClick={() => (recording ? stopRecording() : void startRecording())}
+            >
+              <Icon name="mic" size={20} />
+            </button>
+            <button
+              type="button"
+              className="chat-dock-icon-btn"
+              title="Đính kèm ảnh hoặc tệp"
+              aria-label="Đính kèm tệp"
+              disabled={!channel || sending}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Icon name="image" size={20} />
+            </button>
+            <div className="chat-sticker-control">
+              <button
+                type="button"
+                className="chat-dock-icon-btn"
+                title="Nhãn dán"
+                aria-label="Chọn sticker"
+                aria-expanded={showStickers}
+                disabled={!channel || sending}
+                onClick={() => setShowStickers((value) => !value)}
+              >
+                <Icon name="smile" size={20} />
+              </button>
+              {showStickers && (
+                <div className="chat-sticker-picker" role="group" aria-label="Chọn sticker">
+                  {stickers.map((sticker) => (
+                    <button
+                      key={sticker.id}
+                      type="button"
+                      title={sticker.label}
+                      onClick={() => void sendSticker(sticker.id)}
+                    >
+                      <span>{sticker.emoji}</span>
+                      <small>{sticker.label}</small>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <textarea
               id="chat-message"
               ref={composerRef}
@@ -2381,13 +2358,8 @@ export function ChatPage() {
               maxLength={4000}
               rows={1}
               disabled={!channel || busy || readOnly || !draftReady}
-              placeholder={
-                !isConnected
-                  ? "Mất kết nối. Đang thử lại…"
-                  : channel
-                    ? `Nhắn tin tới ${isDirect ? channel.name : `#${channel.name}`}`
-                    : "Chọn một cuộc trò chuyện để nhắn tin"
-              }
+              placeholder={!isConnected ? "Mất kết nối. Đang thử lại…" : channel ? "Aa" : "Chọn một đoạn chat để nhắn tin"}
+              aria-label={channel ? `Nhắn tin tới ${titleOf(channel)}` : "Nhắn tin"}
               value={content}
               onKeyDown={handleKeyDown}
               onInput={(event) => {
@@ -2401,87 +2373,29 @@ export function ChatPage() {
                 typingTimer.current = setTimeout(() => setTyping(channelId, false), 1500);
               }}
             />
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="sr-only"
-              accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,application/zip,.docx,.pptx,.xlsx"
-              onChange={(event) => {
-                chooseAttachment(event.target.files?.[0]);
-                event.target.value = "";
-              }}
-            />
-
-            <div className="chat-dock-actions-row">
-              <div className="chat-sticker-control">
-                <button
-                  type="button"
-                  className="chat-dock-icon-btn"
-                  title="Biểu cảm"
-                  aria-label="Chọn sticker"
-                  aria-expanded={showStickers}
-                  disabled={!channel || sending}
-                  onClick={() => setShowStickers((value) => !value)}
-                >
-                  <Icon name="smile" size={18} />
-                </button>
-                {showStickers && (
-                  <div className="chat-sticker-picker" role="group" aria-label="Chọn sticker">
-                    {stickers.map((sticker) => (
-                      <button
-                        key={sticker.id}
-                        type="button"
-                        title={sticker.label}
-                        onClick={() => void sendSticker(sticker.id)}
-                      >
-                        <span>{sticker.emoji}</span>
-                        <small>{sticker.label}</small>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <button
-                type="button"
-                className="chat-dock-icon-btn"
-                title="Đính kèm tệp"
-                aria-label="Đính kèm tệp"
-                disabled={!channel || sending}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Icon name="paperclip" size={18} />
-              </button>
-              <button
-                type="button"
-                className={`chat-dock-icon-btn ${recording ? "is-recording" : ""}`}
-                title="Tin nhắn thoại"
-                aria-label={recording ? "Dừng ghi âm" : "Tin nhắn thoại"}
-                disabled={!channel || (sending && !recording)}
-                onClick={() => (recording ? stopRecording() : void startRecording())}
-              >
-                <Icon name="mic" size={18} />
-              </button>
-              <span className="chat-dock-hint" aria-hidden="true">
-                Enter để gửi · Shift + Enter xuống dòng
-              </span>
+            {content.trim() || attachmentFile ? (
               <button
                 type="submit"
                 className="chat-dock-send-btn"
                 ref={sendRef}
                 title="Gửi tin nhắn"
-                disabled={
-                  !isConnected ||
-                  !channel ||
-                  (!content.trim() && !attachmentFile) ||
-                  busy ||
-                  sending
-                }
+                aria-label="Gửi tin nhắn"
+                disabled={!isConnected || !channel || busy || sending}
               >
-                <Icon name="send" size={15} />
-                <span>Gửi</span>
+                <Icon name="send" size={20} />
               </button>
-            </div>
+            ) : (
+              <button
+                type="button"
+                className="chat-dock-send-btn"
+                title="Gửi lượt thích"
+                aria-label="Gửi lượt thích"
+                disabled={!isConnected || !channel || busy || sending}
+                onClick={() => void sendSticker("like")}
+              >
+                <Icon name="thumbs-up" size={20} />
+              </button>
+            )}
           </form>
         </fieldset>
       </div>
@@ -2496,14 +2410,13 @@ export function ChatPage() {
         />
       )}
       {showInfoPanel && (workspace || isDirect) && (
-        <motion.aside {...safe.panel} ref={infoPanelRef} role={wideInfoLayout ? undefined : "dialog"} aria-modal={wideInfoLayout ? undefined : true} tabIndex={-1} className="live-chat-info-panel" aria-label="Thông tin kênh và nhóm">
+        <motion.aside {...safe.panel} ref={infoPanelRef} role={wideInfoLayout ? undefined : "dialog"} aria-modal={wideInfoLayout ? undefined : true} tabIndex={-1} className="live-chat-info-panel" aria-label="Thông tin về đoạn chat">
           <div className="chat-info-head">
-            <h3>{isDirect ? "Thông tin liên hệ" : channel ? "Thông tin kênh" : "Thông tin nhóm"}</h3>
             <button
               type="button"
               className="chat-info-close-btn"
               title="Đóng bảng thông tin"
-              aria-label="Đóng thông tin kênh"
+              aria-label="Đóng thông tin đoạn chat"
               onClick={() => setShowInfoPanel(false)}
             >
               <Icon name="x" size={18} />
@@ -2512,36 +2425,55 @@ export function ChatPage() {
 
           <div className="chat-info-scrollable">
             <div className="chat-info-identity-card">
-              {directPeer ? (
-                <>
-                  <Avatar name={directPeer.displayName} image={avatarOf(directPeer.userId)} size="lg" />
-                  <h2 className="chat-info-title">{directPeer.displayName}</h2>
-                  <span className="chat-info-member-subtitle">
-                    {directPeer.email} •{" "}
-                    {onlineUserIds.includes(directPeer.userId) ? "Đang trực tuyến" : "Ngoại tuyến"}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <div className="chat-info-hash-large" aria-hidden="true">
-                    #
-                  </div>
-                  <h2 className="chat-info-title">
-                    {channel ? `#${channel.name}` : workspace?.name}
-                  </h2>
-                  <span className="chat-info-member-subtitle">
-                    Thuộc nhóm <strong>{workspace?.name}</strong> •{" "}
-                    {mentionMembers.length || members.length} thành viên
-                  </span>
-                </>
-              )}
+              <Avatar
+                name={channel ? titleOf(channel) : (workspace?.name ?? "")}
+                image={directPeer ? avatarOf(directPeer.userId) : undefined}
+                status={directPeer && onlineUserIds.includes(directPeer.userId) ? "online" : undefined}
+                size="lg"
+              />
+              <h2 className="chat-info-title">{channel ? titleOf(channel) : workspace?.name}</h2>
+              <span className="chat-info-member-subtitle">
+                {directPeer
+                  ? onlineUserIds.includes(directPeer.userId)
+                    ? "Đang hoạt động"
+                    : "Không hoạt động"
+                  : `${mentionMembers.length || members.length} thành viên`}
+              </span>
             </div>
 
             <div className="chat-info-action-row">
+              {directPeer && (
+                <a className="chat-info-circle-action" href={`mailto:${directPeer.email}`} title={directPeer.email}>
+                  <div className="circle-action-icon">
+                    <Icon name="mail" size={18} />
+                  </div>
+                  <span>Email</span>
+                </a>
+              )}
+              {workspace && !isDirect && !readOnly && (
+                <button type="button" className="chat-info-circle-action" onClick={openMeetingRoom}>
+                  <div className="circle-action-icon">
+                    <Icon name="video" size={18} />
+                  </div>
+                  <span>Họp nhóm</span>
+                </button>
+              )}
+              {channel && (
+                <button
+                  type="button"
+                  className="chat-info-circle-action"
+                  aria-pressed={Boolean(channel.muted)}
+                  onClick={() => void toggleChannelFlag("muted")}
+                >
+                  <div className="circle-action-icon">
+                    <Icon name={channel.muted ? "bell-off" : "bell"} size={18} />
+                  </div>
+                  <span>{channel.muted ? "Bật thông báo" : "Tắt thông báo"}</span>
+                </button>
+              )}
               <button
                 type="button"
                 className="chat-info-circle-action"
-                title="Tìm kiếm trong kênh"
                 onClick={() => {
                   setShowInChannelSearch(true);
                   requestAnimationFrame(() => document.getElementById("message-search")?.focus());
@@ -2552,144 +2484,9 @@ export function ChatPage() {
                 </div>
                 <span>Tìm kiếm</span>
               </button>
-
-              {directPeer && (
-                <a
-                  className="chat-info-circle-action"
-                  href={`mailto:${directPeer.email}`}
-                  title={`Gửi email tới ${directPeer.email}`}
-                >
-                  <div className="circle-action-icon">
-                    <Icon name="mail" size={18} />
-                  </div>
-                  <span>Email</span>
-                </a>
-              )}
-
-              {peerExtension && (
-                <button
-                  type="button"
-                  className="chat-info-circle-action"
-                  title={`Gọi máy lẻ ${peerExtension} qua tổng đài`}
-                  onClick={() => navigate({ view: "call-center", query: peerExtension })}
-                >
-                  <div className="circle-action-icon">
-                    <Icon name="phone" size={18} />
-                  </div>
-                  <span>Gọi</span>
-                </button>
-              )}
-
-              {workspace && !isDirect && (
-              <button
-                type="button"
-                className="chat-info-circle-action"
-                title="Bảng công việc của kênh"
-                onClick={() =>
-                  navigate({
-                    view: "tasks",
-                    workspaceId: workspace.id,
-                    channelId: channel?.id,
-                  })
-                }
-              >
-                <div className="circle-action-icon">
-                  <Icon name="check-square" size={18} />
-                </div>
-                <span>Công việc</span>
-              </button>
-              )}
-
-              {workspace && !isDirect && (
-              <button
-                type="button"
-                className="chat-info-circle-action"
-                title="Cuộc họp video"
-                onClick={openMeetingRoom}
-              >
-                <div className="circle-action-icon">
-                  <Icon name="video" size={18} />
-                </div>
-                <span>Họp nhóm</span>
-              </button>
-              )}
             </div>
 
-            {channel?.description?.trim() && (
-              <div className="chat-info-desc-box">
-                <div className="chat-info-desc-content">
-                  <strong>Mô tả kênh #{channel.name}</strong>
-                  <p>{channel.description}</p>
-                </div>
-              </div>
-            )}
-
-            {isDirect && (
-              <div className="chat-info-menu-list">
-                <div className="chat-info-section-label">Tệp đã chia sẻ</div>
-                {directFiles.length === 0 ? (
-                  <p className="chat-info-empty">Chưa có tệp nào trong cuộc trò chuyện.</p>
-                ) : (
-                  directFiles.map((file) => (
-                    <button
-                      key={file.id}
-                      type="button"
-                      className="chat-info-menu-item"
-                      title={`${file.uploaderName} · ${new Date(file.createdAt).toLocaleString("vi-VN")}`}
-                      onClick={() => navigate({ ...route, messageId: file.messageId })}
-                    >
-                      <div className="menu-item-left chat-info-file">
-                        <Icon name="file" size={16} />
-                        <span>{file.fileName}</span>
-                      </div>
-                      <small className="chat-info-file-size">{formatFileSize(file.fileSize)}</small>
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
-
-            <div className="chat-info-menu-list">
-              {channel && (
-                <>
-                  <div className="chat-info-section-label">
-                    {isDirect ? "Tùy chọn cuộc trò chuyện" : `Tùy chọn kênh #${channel.name}`}
-                  </div>
-                  <button
-                    type="button"
-                    className="chat-info-menu-item"
-                    aria-pressed={Boolean(channel.pinned)}
-                    onClick={() => void toggleChannelFlag("pinned")}
-                  >
-                    <div className="menu-item-left">
-                      <Icon name="star" size={18} fill={channel.pinned ? "currentColor" : "none"} />
-                      <span>{isDirect ? "Ghim cuộc trò chuyện" : "Ghim kênh này"}</span>
-                    </div>
-                    <div className="menu-item-right">
-                      <span className={`chat-info-switch ${channel.pinned ? "is-on" : ""}`}>
-                        {channel.pinned ? "Bật" : "Tắt"}
-                      </span>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    className="chat-info-menu-item"
-                    aria-pressed={Boolean(channel.muted)}
-                    onClick={() => void toggleChannelFlag("muted")}
-                  >
-                    <div className="menu-item-left">
-                      <Icon name={channel.muted ? "bell-off" : "bell"} size={18} />
-                      <span>Tắt thông báo</span>
-                    </div>
-                    <div className="menu-item-right">
-                      <span className={`chat-info-switch ${channel.muted ? "is-on" : ""}`}>
-                        {channel.muted ? "Bật" : "Tắt"}
-                      </span>
-                    </div>
-                  </button>
-                </>
-              )}
-
+            <InfoSection title="Thông tin về đoạn chat" open={openSections.includes("about")} onToggle={() => toggleSection("about")}>
               <button
                 type="button"
                 className="chat-info-menu-item"
@@ -2700,13 +2497,9 @@ export function ChatPage() {
               >
                 <div className="menu-item-left">
                   <Icon name="pin" size={18} />
-                  <span>Tin nhắn đã ghim</span>
-                </div>
-                <div className="menu-item-right">
-                  <Icon name="chevron-right" size={14} />
+                  <span>Xem tin nhắn đã ghim</span>
                 </div>
               </button>
-
               <button
                 type="button"
                 className="chat-info-menu-item"
@@ -2719,55 +2512,77 @@ export function ChatPage() {
                   <Icon name="bookmark" size={18} />
                   <span>Tin đã đánh dấu của bạn</span>
                 </div>
-                <div className="menu-item-right">
-                  <Icon name="chevron-right" size={14} />
-                </div>
               </button>
-
               {workspace && !isDirect && (
-                <>
-              <div className="chat-info-section-label">Thông tin chung của nhóm {workspace.name}</div>
-              <button
-                type="button"
-                className="chat-info-menu-item"
-                onClick={() => setShowMembers(!showMembers)}
-              >
-                <div className="menu-item-left">
-                  <Icon name="users" size={18} />
-                  <span>Thành viên nhóm</span>
-                </div>
-                <div className="menu-item-right">
-                  <span className="menu-item-badge">{members.length}</span>
-                  <Icon name="chevron-right" size={14} />
-                </div>
-              </button>
+                <button
+                  type="button"
+                  className="chat-info-menu-item"
+                  onClick={() => navigate({ view: "tasks", workspaceId: workspace.id, channelId: channel?.id })}
+                >
+                  <div className="menu-item-left">
+                    <Icon name="check-square" size={18} />
+                    <span>Công việc của nhóm</span>
+                  </div>
+                </button>
+              )}
+            </InfoSection>
 
-              {showMembers && (
+            {channel && (
+              <InfoSection title="Tùy chỉnh đoạn chat" open={openSections.includes("custom")} onToggle={() => toggleSection("custom")}>
+                <button
+                  type="button"
+                  className="chat-info-menu-item"
+                  aria-pressed={Boolean(channel.pinned)}
+                  onClick={() => void toggleChannelFlag("pinned")}
+                >
+                  <div className="menu-item-left">
+                    <Icon name="star" size={18} fill={channel.pinned ? "currentColor" : "none"} />
+                    <span>{channel.pinned ? "Bỏ ghim đoạn chat" : "Ghim đoạn chat"}</span>
+                  </div>
+                </button>
+                {workspace && !isDirect && isAdmin && (
+                  <button
+                    type="button"
+                    className="chat-info-menu-item"
+                    onClick={() => navigate({ view: "admin", workspaceId: workspace.id })}
+                  >
+                    <div className="menu-item-left">
+                      <Icon name="settings" size={18} />
+                      <span>Cài đặt và quản trị nhóm</span>
+                    </div>
+                  </button>
+                )}
+              </InfoSection>
+            )}
+
+            {workspace && !isDirect && (
+              <InfoSection
+                title={`Thành viên trong đoạn chat (${members.length})`}
+                open={openSections.includes("members")}
+                onToggle={() => toggleSection("members")}
+              >
                 <div className="chat-info-members-list">
                   {members.map((m) => (
                     <div key={m.userId} className="chat-info-member-pill">
-                      <Avatar name={m.displayName} image={avatarOf(m.userId)} size="sm" />
+                      <Avatar
+                        name={m.displayName}
+                        image={avatarOf(m.userId)}
+                        size="sm"
+                        status={onlineUserIds.includes(m.userId) ? "online" : undefined}
+                      />
                       <div className="member-pill-text">
                         <strong>{m.displayName}</strong>
                         <small>
-                          {m.role === "owner"
-                            ? "Chủ nhóm"
-                            : m.role === "admin"
-                              ? "Quản trị viên"
-                              : "Thành viên"}
+                          {m.role === "owner" ? "Chủ nhóm" : m.role === "admin" ? "Quản trị viên" : "Thành viên"}
                         </small>
                       </div>
-                      <span className="chat-profile-presence member-pill-presence">
-                        <i className={onlineUserIds.includes(m.userId) ? "is-online" : ""} />
-                        {onlineUserIds.includes(m.userId) ? "Trực tuyến" : "Ngoại tuyến"}
-                      </span>
                     </div>
                   ))}
                   {isAdmin && (
                     <form className="chat-info-add-member-form" onSubmit={addMember}>
                       <input
                         type="email"
-                        placeholder="Nhập email thành viên…"
+                        placeholder="Thêm người bằng email…"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
@@ -2778,24 +2593,57 @@ export function ChatPage() {
                     </form>
                   )}
                 </div>
-              )}
+              </InfoSection>
+            )}
 
-              <button
-                type="button"
-                className="chat-info-menu-item"
-                onClick={() => workspace && navigate({ view: "admin", workspaceId: workspace.id })}
-              >
-                <div className="menu-item-left">
-                  <Icon name="settings" size={18} />
-                  <span>Cài đặt & Quản trị nhóm</span>
+            <InfoSection title="File phương tiện và file" open={openSections.includes("files")} onToggle={() => toggleSection("files")}>
+              {([
+                ["image", "File phương tiện", chatFiles.filter((file) => file.mimeType.startsWith("image/"))],
+                ["file", "File", chatFiles.filter((file) => !file.mimeType.startsWith("image/"))],
+              ] as const).map(([icon, label, files]) => (
+                <div key={label} className="chat-info-file-group">
+                  <div className="chat-info-file-group__label">
+                    <Icon name={icon} size={18} />
+                    <span>{label}</span>
+                  </div>
+                  {files.length === 0 ? (
+                    <p className="chat-info-empty">Chưa có {label.toLowerCase()} nào.</p>
+                  ) : (
+                    files.map((file) => (
+                      <button
+                        key={file.id}
+                        type="button"
+                        className="chat-info-menu-item"
+                        title={`${file.uploaderName} · ${new Date(file.createdAt).toLocaleString("vi-VN")}`}
+                        disabled={!file.messageId}
+                        onClick={() => file.messageId && navigate({ ...route, messageId: file.messageId })}
+                      >
+                        <div className="menu-item-left chat-info-file">
+                          <span>{file.fileName}</span>
+                        </div>
+                        <small className="chat-info-file-size">{formatFileSize(file.fileSize)}</small>
+                      </button>
+                    ))
+                  )}
                 </div>
-                <div className="menu-item-right">
-                  <Icon name="chevron-right" size={14} />
-                </div>
-              </button>
-                </>
-              )}
-            </div>
+              ))}
+            </InfoSection>
+
+            {channel && (
+              <InfoSection title="Quyền riêng tư và hỗ trợ" open={openSections.includes("privacy")} onToggle={() => toggleSection("privacy")}>
+                <button
+                  type="button"
+                  className="chat-info-menu-item"
+                  aria-pressed={Boolean(channel.muted)}
+                  onClick={() => void toggleChannelFlag("muted")}
+                >
+                  <div className="menu-item-left">
+                    <Icon name={channel.muted ? "bell-off" : "bell"} size={18} />
+                    <span>{channel.muted ? "Bật thông báo" : "Tắt thông báo"}</span>
+                  </div>
+                </button>
+              </InfoSection>
+            )}
           </div>
         </motion.aside>
       )}
@@ -2832,6 +2680,18 @@ export function ChatPage() {
           )}
         </Modal>
       )}</AnimatePresence>
+      <AnimatePresence>
+        {creatingGroup && (
+          <CreateGroupDialog
+            onClose={() => setCreatingGroup(false)}
+            onCreated={(group) => {
+              setCreatingGroup(false);
+              navigate({ view: "chat", workspaceId: group.id });
+              setRevision((value) => value + 1);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </section>
   );
 }

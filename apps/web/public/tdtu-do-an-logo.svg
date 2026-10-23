@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 280" fill="none" role="img" aria-label="Logo Đồ Án Tốt Nghiệp T-WorkSpace · TDTU">
+  <!-- TDTU Authentic Renewed Mark -->
+  <g transform="translate(45, 10)">
+    <!-- T1 in TDTU Cobalt Blue -->
+    <path d="M 40 92.5 L 143 92.5 L 125 132.5 L 108 132.5 L 85 184.5 L 40 184.5 L 63 132.5 L 22 132.5 Z" fill="#15479C" />
+    <!-- D in TDTU Crimson Red -->
+    <path d="M 163 54.5 L 272 54.5 C 282 54.5 285.5 63 285.5 73 C 285.5 81 281.5 89 276.5 100 L 242 173 C 235 186 224 189.5 210 189.5 L 104 189.5 L 121 150.5 L 206 150.5 C 215 150.5 221 147 225 137 L 233.5 117 C 236.5 109 234.5 93.5 215 93.5 L 189 93.5 L 171.5 132.5 L 130.5 132.5 L 147.5 93.5 Z" fill="#ED242A" />
+    <!-- T2 in TDTU Cobalt Blue (Elevated) -->
+    <path d="M 268 16.5 L 402.5 16.5 L 384 54.5 L 360 54.5 L 316 151.5 L 274 151.5 L 314 54.5 L 253 54.5 Z" fill="#15479C" />
+  </g>
+  <!-- Typography for Graduation Project -->
+  <text x="260" y="228" font-family="'Be Vietnam Pro', system-ui, -apple-system, sans-serif" font-size="24" font-weight="800" fill="#15479C" text-anchor="middle" letter-spacing="1">
+    T-WORKSPACE · ĐỒ ÁN TỐT NGHIỆP
+  </text>
+  <text x="260" y="254" font-family="'Be Vietnam Pro', system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#64748B" text-anchor="middle" letter-spacing="2">
+    TRƯỜNG ĐẠI HỌC TÔN ĐỨC THẮNG · KHOA CNTT
+  </text>
+</svg>
