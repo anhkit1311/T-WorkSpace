@@ -66,7 +66,7 @@ test("a schedule with a running session is live and carries that session", () =>
   assert.deepEqual(only.people, ["An"]);
 });
 
-test("schedules end up upcoming or past by the clock and by finished sessions", () => {
+test("schedules are past once their slot ends; a session that ended early keeps the slot joinable", () => {
   const data = {
     schedules: [
       schedule("later", "2026-10-21T05:00:00Z", "2026-10-21T06:00:00Z"),
@@ -78,7 +78,7 @@ test("schedules end up upcoming or past by the clock and by finished sessions", 
   const byKey = Object.fromEntries(calendarEvents(data, new Date("2026-10-21T03:30:00Z")).map((item) => [item.scheduleId, item]));
   assert.equal(byKey.later.status, "upcoming");
   assert.equal(byKey.done.status, "past");
-  assert.equal(byKey.early.status, "past");
+  assert.equal(byKey.early.status, "upcoming");
   assert.equal(byKey.early.sessionId, "m2");
 });
 

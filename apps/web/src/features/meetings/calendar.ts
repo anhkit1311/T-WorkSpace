@@ -61,7 +61,8 @@ export function calendarEvents(data: MeetingCalendar, now: Date): CalendarEvent[
     if (owner && !owner.sessionId) {
       owner.sessionId = item.id;
       owner.people = item.people;
-      owner.status = live ? "live" : "past";
+      // A session that ended before the slot did leaves it joinable; the clock decides "past" below.
+      if (live) owner.status = "live";
       continue;
     }
     const start = new Date(item.startedAt);

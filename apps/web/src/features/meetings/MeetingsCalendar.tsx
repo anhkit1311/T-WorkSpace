@@ -249,7 +249,7 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
               <Icon name="clock" size={14} /> {dayMonth(selected.start)} · {clock(selected.start)}–{clock(selected.end)}
             </p>
             {schedule(selected)?.description && <p className="meeting-detail__note">{schedule(selected)?.description}</p>}
-            {selected.status !== "past" ? (
+            {selected.status !== "past" && (
               <>
                 {selected.status === "live" && (
                   <p className="meeting-detail__people">
@@ -278,16 +278,17 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
                   )}
                 </div>
               </>
-            ) : selected.sessionId ? (
+            )}
+            {selected.status !== "live" && selected.sessionId ? (
               <div className="meeting-detail__past">
                 {selected.people.length > 0 && <p>Đã tham gia: {selected.people.join(", ")}</p>}
                 <MeetingRecordingPanel sessionId={selected.sessionId} live={false} />
                 <MeetingOutcomesPanel sessionId={selected.sessionId} live={false} />
                 <MeetingAttendancePanel sessionId={selected.sessionId} />
               </div>
-            ) : (
+            ) : selected.status === "past" ? (
               <p>Cuộc họp này đã qua giờ mà chưa ai vào phòng.</p>
-            )}
+            ) : null}
           </aside>
         )}
       </div>

@@ -285,6 +285,13 @@ export function MeetingPage() {
   const [outputDeviceId, setOutputDeviceId] = useState("");
   // Devices chosen before joining, reused when the waiting room lets the user in.
   const joinChoice = useRef<PreJoinChoice | null>(null);
+  // Leaving or being removed returns to the calendar; a dropped call (interrupted) stays to rejoin.
+  const wasInCall = useRef(false);
+  useEffect(() => {
+    if (wasInCall.current && !meeting.inCall && !meeting.interruptedRoomId && route.view === "meetings")
+      navigate({ view: "meetings", workspaceId: route.workspaceId }, true);
+    wasInCall.current = meeting.inCall;
+  }, [meeting.inCall, meeting.interruptedRoomId]);
   const [layout, setLayout] = useState<"grid" | "spotlight" | "auto">("grid");
   const [layerPolicy, setLayerPolicy] = useState<LayerPolicy>(() => {
     try {

@@ -193,8 +193,21 @@ test("Họp: lên lịch rồi thấy trên lịch tuần, vào được phòng"
   // Created an hour from now: on this week's grid, or next week's once that hour is past Sunday.
   await page.getByRole("button", { name: new RegExp(title) }).click();
   await page.getByRole("button", { name: "Vào", exact: true }).click();
-  await page.getByRole("button", { name: "Vào phòng" }).click();
-  await expect.poll(() => playingVideos(page), { timeout: 30_000 }).toBeGreaterThanOrEqual(1);
+  const enter = async () => {
+    await page.getByRole("button", { name: "Vào phòng" }).click();
+    await expect.poll(() => playingVideos(page), { timeout: 30_000 }).toBeGreaterThanOrEqual(1);
+  };
+  await enter();
+  // Leaving goes back to the calendar, not to the room's device check.
+  await page.getByRole("button", { name: "Rời khỏi phòng họp" }).click();
+  const confirm = page.getByRole("dialog").getByRole("button", { name: "Rời phòng" });
+  if (await confirm.waitFor({ timeout: 3_000 }).then(() => true, () => false)) await confirm.click();
+  await expect(page.getByRole("button", { name: "Hôm nay" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Vào phòng" })).toHaveCount(0);
+  // In a call, the "Họp" item shows the room, not the calendar.
+  await page.getByRole("button", { name: new RegExp(title) }).click();
+  await page.getByRole("button", { name: "Vào", exact: true }).click();
+  await enter();
   // In a call the item reads "Họp đang diễn ra".
   await page.locator(".tdtu-sidebar").getByRole("button", { name: /^Họp( |$)/ }).click();
   await expect.poll(() => playingVideos(page), { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
