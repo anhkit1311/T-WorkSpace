@@ -72,15 +72,19 @@ export async function getMeetingAttendance(userId: string, sessionId: unknown): 
   };
 }
 
+/** TDTU student accounts are <MSSV>@student.tdtu.edu.vn; other accounts have no student number. */
+export const studentIdFromEmail = (email: string) => /^([0-9a-z]+)@student\.tdtu\.edu\.vn$/i.exec(email)?.[1].toUpperCase() ?? "";
+
 /** The register as CSV for Excel (the route adds the UTF-8 BOM). */
 export async function exportMeetingAttendance(userId: string, sessionId: unknown) {
   const attendance = await getMeetingAttendance(userId, sessionId);
   const time = (iso: string | null) => (iso ? new Date(iso).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour12: false }) : "");
   const cell = (value: string) => (/[",\n;]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value);
   const lines = [
-    ["Họ tên", "Email", "Vào lúc", "Rời lúc", "Có mặt (phút)", "Tỉ lệ (%)"],
+    ["Họ tên", "MSSV", "Email", "Vào lúc", "Rời lúc", "Có mặt (phút)", "Tỉ lệ (%)"],
     ...attendance.rows.map((row) => [
       row.displayName,
+      studentIdFromEmail(row.email),
       row.email,
       time(row.firstJoinedAt),
       row.lastLeftAt ? time(row.lastLeftAt) : "Đang trong phòng",

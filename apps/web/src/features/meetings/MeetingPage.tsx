@@ -7,6 +7,7 @@ import {
   saveMeetingScheduleApi,
   cancelMeetingScheduleApi,
   getDialInApi,
+  downloadMeetingAttendanceApi,
   type MeetingHistoryItem,
 } from "./api";
 import { useApp } from "../../app/providers/AppContext";
@@ -327,6 +328,7 @@ export function MeetingPage() {
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [participantCount, setParticipantCount] = useState(1);
+  const [exportingAttendance, setExportingAttendance] = useState(false);
   const [error, setError] = useState("");
   const [history, setHistory] = useState<MeetingHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
@@ -702,34 +704,20 @@ export function MeetingPage() {
   const displayRooms = filteredRooms.length ? filteredRooms : visibleRooms;
   const selected = displayRooms.find((room) => room.id === selectedId) ?? displayRooms[0] ?? visibleRooms.find((room) => room.id === selectedId) ?? rooms.find((room) => room.id === selectedId);
 
-  const handleExportAttendanceCsv = () => {
-    const now = new Date();
-    const dateFormatted = now.toLocaleDateString("vi-VN");
-    const attendees = [
-      { name: user?.displayName || "Bạn", userId: user?.id },
-      ...meeting.remotePeers.map((peer) => ({ name: peer.displayName, userId: peer.userId })),
-    ].map((person) => ({
-      name: person.name,
-      mssv: studentIdOf(person.name),
-      role: roleLabel(person.userId),
-      joinedAt: now.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
-      status: "Hiện diện",
-    }));
-    const headers = "STT,Họ và tên,MSSV,Vai trò,Thời gian tham gia,Ngày,Trạng thái\n";
-    const rows = attendees
-      .map(
-        (a, i) =>
-          `${i + 1},"${a.name}","${a.mssv}","${a.role}","${a.joinedAt}","${dateFormatted}","${a.status}"`,
-      )
-      .join("\n");
-    const blob = new Blob(["\uFEFF" + headers + rows], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `diem-danh-phong-${(meeting.roomId || "tdtu").slice(0, 8)}-${now.toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    notify("Xuất điểm danh thành công", `Đã xuất file điểm danh gồm ${attendees.length} người tham gia.`, "success");
+  // The register comes from the server (join/leave of every connection); only the host and co-hosts keep it.
+  const myMeetingRole = meetingState?.participants.find((person) => person.userId === user?.id)?.role;
+  const keepsRegister = myMeetingRole === "host" || myMeetingRole === "cohost";
+  const handleExportAttendanceCsv = async () => {
+    if (!accessToken || !meetingState) return;
+    setExportingAttendance(true);
+    try {
+      await downloadMeetingAttendanceApi(accessToken, meetingState.id, `diem-danh-${meetingState.startedAt.slice(0, 10)}.csv`);
+      notify("Đã xuất điểm danh", "Giờ vào, giờ rời và thời gian có mặt của từng người trong phiên họp.", "success");
+    } catch (failure) {
+      notify("Không xuất được điểm danh", failure instanceof Error ? failure.message : "Hãy thử lại.", "warning");
+    } finally {
+      setExportingAttendance(false);
+    }
   };
 
   useEffect(() => {
@@ -1728,15 +1716,18 @@ export function MeetingPage() {
                   <>
                     <div className="meeting-attendance-bar">
                       <span>{participantCount} người tham gia</span>
-                      <button
-                        type="button"
-                        className="meeting-attendance-btn"
-                        onClick={handleExportAttendanceCsv}
-                        title="Xuất danh sách người tham gia (CSV)"
-                      >
-                        <Icon name="download" size={14} />
-                        <span>Xuất điểm danh (CSV)</span>
-                      </button>
+                      {keepsRegister && (
+                        <button
+                          type="button"
+                          className="meeting-attendance-btn"
+                          disabled={exportingAttendance}
+                          onClick={() => void handleExportAttendanceCsv()}
+                          title="Giờ vào, giờ rời và thời gian có mặt của từng người (mở được bằng Excel)"
+                        >
+                          <Icon name="download" size={14} />
+                          <span>{exportingAttendance ? "Đang xuất…" : "Xuất điểm danh (CSV)"}</span>
+                        </button>
+                      )}
                     </div>
                     <div className="meeting-people-list">
                       <div className="meeting-person-row">

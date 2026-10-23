@@ -4,21 +4,47 @@
 
 Đồ án: **Xây dựng các dịch vụ call center, video conferencing, e-learning cho doanh nghiệp**. Doanh nghiệp áp dụng là Đại học Tôn Đức Thắng (TDTU), dùng nội bộ.
 
-Kiến trúc modular monolith: React/TypeScript + Node.js/Socket.IO + PostgreSQL; mediasoup (SFU) cho họp và lớp live; Asterisk 22 điều khiển qua ARI cho tổng đài. Cập nhật **17/10/2026**.
+Kiến trúc modular monolith: React/TypeScript + Node.js/Socket.IO + PostgreSQL; mediasoup (SFU) cho họp và lớp live; Asterisk 22 điều khiển qua ARI cho tổng đài. Cập nhật **23/10/2026**.
 
 ## Ba dịch vụ
 
 | Dịch vụ | Trạng thái |
 | --- | --- |
-| Call center (VoIP) | Đang spike: Asterisk 22 trong Docker, PJSIP UDP/WS, ARI (`infra/asterisk`, `scripts/callcenter`); schema `025_call_center` |
-| Họp trực tuyến | Chạy được: lịch họp, phòng chờ, host/co-host, khóa phòng, giơ tay, chia sẻ màn hình, agenda, biên bản. Còn thiếu ghi hình, danh sách tham dự, phòng hội đồng |
-| E-learning | Mới có giao diện mẫu; chưa có backend |
+| Họp trực tuyến | Chạy được đủ luồng (chi tiết bên dưới); đang tập trung hoàn thiện |
+| E-learning | Chạy được đủ luồng có backend (chi tiết bên dưới); đang tập trung hoàn thiện |
+| Call center (VoIP) | Đã có ACD, IVR, softphone trình duyệt, ghi âm, phiếu, giám sát, chấm chất lượng (`infra/asterisk`, schema `025`, `037`–`039`). **Tạm dừng** cho tới khi có số điện thoại để thử VoIP thật |
 
-Chat nhóm giữ làm kênh trao đổi nội bộ: ảnh/file/voice, reaction, thread/mention, ghim, tìm kiếm, gửi lại không trùng. Schema chat 1-1 (`026_direct_messages`) đã có; giao diện và API chat 1-1 chưa làm.
+### Họp trực tuyến
+
+- Lịch họp theo phòng của nhóm: tạo, sửa, hủy, tải tệp `.ics`; lịch sử các cuộc họp đã tham gia.
+- Trước khi vào: xem trước camera, đo mức micro, chọn micro/camera/loa và chất lượng video (360p–720p).
+- SFU mediasoup: simulcast, chọn lớp video theo ô đang hiển thị hoặc người đang nói, bố cục lưới / tiêu điểm / người nói, ghim, phân trang lưới, chia sẻ màn hình, chat trong phòng.
+- Điều hành: phòng chờ, cho vào, mời ra, khóa phòng, tắt micro người khác, giơ tay, đồng chủ trì, chuyển chủ trì, kết thúc phiên.
+- Ổn định: tự vào lại phòng khi mất mạng (rớt socket hoặc lỗi ICE), khởi động lại ICE, tạm dừng nhận video khi tab bị ẩn.
+- Chất lượng mạng (QoS): RTT, băng thông, mất gói, jitter, tự hạ chất lượng khi mạng yếu; xuất CSV/JSON.
+- Biên bản: chương trình họp, ghi chú chung (phát hiện sửa trùng), việc cần làm đưa sang Kanban, gửi tóm tắt vào kênh nhóm.
+- Điểm danh từ máy chủ: giờ vào, giờ rời, thời gian có mặt (gộp nhiều tab/kết nối lại), xuất CSV có MSSV; chỉ chủ trì và đồng chủ trì xem.
+- Ghi hình phía máy chủ (FFmpeg, không giải mã khi đang họp), xem lại và chia sẻ bản ghi. Cần container FFmpeg: `docker compose -f infra/docker-compose.yml --profile recording up -d ffmpeg` và `FFMPEG_COMMAND="docker exec -i -w /work nexo-ffmpeg ffmpeg"`.
+- Chép lời bản ghi (Whisper hoặc faster-whisper qua `TRANSCRIBE_URL`); chưa đặt biến này thì nút chép lời không chạy.
+- Chưa có: làm mờ/thay nền; chưa kiểm RTP qua nhiều mạng với TURN thật. Gọi vào phòng họp từ máy lẻ (dial-in) đi qua Asterisk nên tạm dừng cùng tổng đài.
+
+### E-learning
+
+- Khóa học thuộc khoa/phòng ban, có giảng viên phụ trách, bản nháp/xuất bản, chương và bài học sắp xếp được.
+- Bốn loại bài: video (tải lên tới 2 GB, FFmpeg chuyển sang HLS, phát bằng hls.js), tài liệu (nội dung hoặc PDF), bài kiểm tra, buổi live.
+- Kiểm tra: ngân hàng câu hỏi (một lựa chọn, nhiều lựa chọn, đúng/sai), bốc ngẫu nhiên số câu, trộn phương án, giới hạn thời gian tính trên máy chủ, lưu bài làm dở, chấm tự động theo điểm đạt.
+- Buổi live là một lịch họp của khóa: điểm danh tự động (có mặt từ 70% thời lượng), đóng buổi, xem lại bản ghi.
+- Người học: tự ghi danh hoặc được giao khóa, theo dõi tiến độ, chứng nhận khi hoàn thành với mã xác minh công khai (`/verify/<mã>`).
+- Giảng viên: danh sách người học, tiến độ từng người, xuất CSV tiến độ.
+- Thảo luận khóa học qua một nhóm làm việc riêng (chat, tệp, phòng họp); gửi yêu cầu hỗ trợ ngay từ bài học.
+- Chép lời video bài học (cùng dịch vụ Whisper như bản ghi họp).
+- Chưa có: theo dõi thời gian xem video (bài video/tài liệu do người học tự bấm hoàn thành); bài tự luận/nộp bài chấm tay; tệp bài học đang lưu trên đĩa của máy chủ API (một máy chủ).
+
+Chat nhóm giữ làm kênh trao đổi nội bộ: ảnh/file/voice, reaction, thread/mention, ghim, tìm kiếm, gửi lại không trùng. Trang "Tin nhắn" gồm cả kênh nhóm và trò chuyện 1-1 (`026_direct_messages`).
 
 Nền tảng chung: đăng nhập email OTP và Google, hồ sơ, presence, lưu file DB/S3, metrics, migration có khóa.
 
-Ngoài phạm vi đề tài, vẫn giữ code nhưng đã ẩn khỏi menu chính: Kanban (`/app/tasks`). Phân hệ quản lý đồ án tốt nghiệp đã được gỡ; chỉ còn khoa, bộ môn, giảng viên và phân quyền (trang "Quản trị hệ thống"). Các bảng `thesis_*` (migration 022–024) vẫn giữ trong DB, không còn code dùng.
+Kanban vẫn dùng trong nhóm làm việc (việc cần làm từ biên bản họp đi vào đây). Phân hệ quản lý đồ án tốt nghiệp đã được gỡ; chỉ còn khoa, bộ môn, giảng viên và phân quyền (trang "Quản trị hệ thống"). Các bảng `thesis_*` (migration 022–024) vẫn giữ trong DB, không còn code dùng.
 
 ## Chạy local
 
@@ -41,11 +67,11 @@ npm run dev
 
 Cần chạy riêng thì dùng `npm run dev:api` hoặc `npm run dev:web`.
 
-Web localhost:5173; API localhost:3001. Vite dùng polling watcher trong development Windows. DB đã có dữ liệu nâng cấp bằng migrate, không xóa volume. Tổng 21 migration, bytea cũ vẫn tương thích.
+Web localhost:5173; API localhost:3001. Vite dùng polling watcher trong development Windows. DB đã có dữ liệu nâng cấp bằng migrate, không xóa volume. Tổng 39 migration (`services/api/migrations`), bytea cũ vẫn tương thích.
 
 Google Sign-In cần đăng ký đúng origin của web trong Google Cloud; xem [xử lý lỗi origin_mismatch](docs/guides/google-oauth-local.md). Dev server dùng cổng của `WEB_ORIGIN` trong `.env` (mẫu mặc định 5173), báo lỗi nếu cổng bận.
 
-### Tổng đài (spike Asterisk 22)
+### Tổng đài (Asterisk 22, đang tạm dừng)
 
 Điền `ASTERISK_ARI_PASSWORD` và `ASTERISK_SPIKE_SIP_PASSWORD` (≥ 12 ký tự) trong `.env`, rồi:
 
@@ -72,9 +98,9 @@ npm run test:e2e
 npm run build
 ```
 
-`test:e2e` (Playwright, dùng Chrome đã cài) chạy trên `npm run dev` và DB local: đăng nhập, trang Quản trị hệ thống, hai người họp video với camera giả và tự vào lại phòng sau khi mất mạng. Tài khoản test tạo trong `e2e/global-setup.mjs` và bị xoá khi chạy xong.
+`test:e2e` (Playwright, dùng Chrome đã cài) chạy trên `npm run dev` và DB local: đăng nhập, trang Quản trị hệ thống, hai người họp video với camera giả và tự vào lại phòng sau khi mất mạng, mở trang Khóa học và Tổng đài. Tài khoản test tạo trong `e2e/global-setup.mjs` và bị xoá khi chạy xong.
 
-npm test có5 frontend unit và15 API unit qua;8 DB/SFU suite skip theo mặc định. test:sfu chạy riêng9 test có PostgreSQL và mediasoup,0 skip. Kiểm signaling/worker không chứng minh RTP đa mạng.
+`npm test` chạy unit test của web và API; các test cần PostgreSQL chỉ chạy khi đặt `RUN_DB_TESTS=1` (gồm luồng e-learning đầy đủ, phiên họp, biên bản, ghi hình, QoS). `test:sfu` chạy riêng các test có PostgreSQL và mediasoup. Kiểm signaling/worker không chứng minh RTP đa mạng.
 
 ```powershell
 npm run benchmark:chat
@@ -89,7 +115,7 @@ Benchmark local50/100/200 socket,2 API process,4tin/giây,30s ×2/mức:732tin,0
 ## API và vận hành
 
 - GET /health: liveness.
-- GET /ready: PostgreSQL và schema đã migrate tới 026.
+- GET /ready: PostgreSQL và schema đã migrate tới migration mới nhất.
 - GET /api/openapi.json: danh mục REST; socket types trong packages/shared/src/socket.ts.
 - GET /api/operations/metrics: cần OPERATIONS_TOKEN riêng.
 - SOCKET_ADAPTER=postgres: đồng bộ chat/task/notification giữa node, lease45s/heartbeat15s. WebSocket hoặc sticky-session nếu polling.

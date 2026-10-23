@@ -27,12 +27,18 @@ import {
   updateAgendaItem,
 } from "../../../dist/api/modules/meetings/outcomes.js";
 import { withTransaction } from "../../../dist/api/infrastructure/database/db.js";
-import { getMeetingAttendance, presentMs } from "../../../dist/api/modules/meetings/attendance.js";
+import { getMeetingAttendance, presentMs, studentIdFromEmail } from "../../../dist/api/modules/meetings/attendance.js";
 
 test("Meeting attendance: overlapping connections count once", () => {
   assert.equal(presentMs([]), 0);
   assert.equal(presentMs([{ from: 0, to: 10 }, { from: 5, to: 15 }, { from: 20, to: 30 }]), 25);
   assert.equal(presentMs([{ from: 20, to: 30 }, { from: 0, to: 40 }, { from: 1, to: 2 }]), 40);
+});
+
+test("Meeting attendance: MSSV comes from the student email only", () => {
+  assert.equal(studentIdFromEmail("523h0148@student.tdtu.edu.vn"), "523H0148");
+  assert.equal(studentIdFromEmail("gv.ha@tdtu.edu.vn"), "");
+  assert.equal(studentIdFromEmail("52100001@student.tdtu.edu.vn.evil.com"), "");
 });
 
 test(
