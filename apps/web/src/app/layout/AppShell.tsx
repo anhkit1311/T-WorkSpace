@@ -1,9 +1,13 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { Fragment, lazy, Suspense, useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { useApp } from "../providers/AppContext";
 import { useSocket } from "../providers/SocketContext";
 import { useMenuAccess, type MenuAccess } from "./useMenuAccess";
 import { useMeetingStatus } from "../providers/MeetingContext";
+import { useGlobalSoftphone } from "../providers/SoftphoneContext";
+import { SidebarSlotContext } from "./SidebarSlot";
+import { GlobalCallBar } from "../../features/call-center/GlobalCallBar";
+import { STATE_LABEL, STATE_TONE } from "../../features/call-center/agent-state";
 import { Icon, type IconName } from "../../shared/ui/Icon";
 import { TdtuLogo } from "../../shared/ui/TdtuLogo";
 import { NotionSearchModal } from "../../features/search/NotionSearchModal";
@@ -77,13 +81,15 @@ interface SidebarMenuItem {
   icon: IconName;
   targetView: ViewId;
   badgeKey?: "notifications" | "messages" | "groups";
+  /** Label in the phone bottom bar, where the full one does not fit. */
+  short?: string;
 }
 
 const SIDEBAR_MENU_ITEMS: SidebarMenuItem[] = [
   { id: "home", label: "Trang chủ", icon: "home", targetView: "overview" },
-  { id: "switchboard", label: "Tổng đài", icon: "grid", targetView: "call-center" },
+  { id: "switchboard", label: "Tổng đài", icon: "headset", targetView: "call-center" },
   { id: "call-list", label: "Danh sách cuộc gọi", icon: "phone-call", targetView: "call-directory" },
-  { id: "meetings", label: "Họp trực tuyến", icon: "video", targetView: "meetings" },
+  { id: "meetings", label: "Họp trực tuyến", short: "Họp", icon: "video", targetView: "meetings" },
   { id: "elearning", label: "Khóa học", icon: "graduation-cap", targetView: "elearning" },
   { id: "messages", label: "Tin nhắn", icon: "message", targetView: "chat", badgeKey: "messages" },
   { id: "staff", label: "Nhóm làm việc", icon: "users", targetView: "workspace", badgeKey: "groups" },
@@ -95,8 +101,15 @@ const SIDEBAR_MENU_ITEMS: SidebarMenuItem[] = [
   { id: "settings", label: "Cài đặt", icon: "settings", targetView: "profile" },
 ];
 
-/** Entries that only duplicated another page ("departments" = admin, "settings" = profile). */
-const HIDDEN_MENU_ITEMS = new Set(["departments", "settings"]);
+/**
+ * Entries that only duplicated another page ("departments" = admin, "settings" = profile,
+ * "call-list" = the switchboard's "Lịch sử cuộc gọi" tab).
+ */
+const HIDDEN_MENU_ITEMS = new Set(["departments", "settings", "call-list"]);
+/** The phone bottom bar shows these; the rest open from "Thêm". */
+const BOTTOM_BAR_ITEMS = new Set(["home", "switchboard", "meetings", "elearning"]);
+/** Account and administration entries sit under a divider, after the services. */
+const FIRST_MANAGE_ITEM = "notifications";
 /**
  * Entries shown only to users with that role (see useMenuAccess). The switchboard and call list
  * are the core of the system and always stay visible; the page itself explains missing access.
@@ -120,6 +133,7 @@ export function AppShell() {
   } = useApp();
   const { connectionStatus, reconnect, unreadCount, groupUnreadCount, socket } = useSocket();
   const meeting = useMeetingStatus();
+  const phone = useGlobalSoftphone();
   const menuAccess = useMenuAccess(accessToken);
 
   const [activeMenuId, setActiveMenuId] = useState<string>("home");
@@ -128,7 +142,7 @@ export function AppShell() {
     if (!meeting.inCall) setMeetingWorkspaceId("");
     else if (activeView === "meetings" && route.workspaceId) setMeetingWorkspaceId(route.workspaceId);
   }, [meeting.inCall, activeView, route.workspaceId]);
-  const showMeetingChip = meeting.inCall && activeView !== "meetings";
+  const showMeetingStrip = meeting.inCall && activeView !== "meetings";
 
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   useEffect(() => {
@@ -154,7 +168,7 @@ export function AppShell() {
   useEffect(() => {
     if (activeView === "overview") setActiveMenuId("home");
     else if (activeView === "call-center") setActiveMenuId("switchboard");
-    else if (activeView === "call-directory") setActiveMenuId("call-list");
+    else if (activeView === "call-directory") setActiveMenuId("switchboard");
     else if (activeView === "chat") setActiveMenuId("messages");
     else if (activeView === "meetings") setActiveMenuId("meetings");
     else if (activeView === "notifications") setActiveMenuId("notifications");
@@ -178,7 +192,7 @@ export function AppShell() {
   // The theme belongs to the signed-in shell; the public pages (landing, login) stay light.
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#0F172A" : "#e8eef6");
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#0A1322" : "#F4F6F9");
     return () => {
       document.documentElement.removeAttribute("data-theme");
       document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#e8eef6");
@@ -194,6 +208,24 @@ export function AppShell() {
       // not persisted; the choice still applies to this visit
     }
   };
+
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("sidebar") === "collapsed";
+    } catch {
+      return false;
+    }
+  });
+  const toggleCollapsed = () => {
+    setCollapsed(!collapsed);
+    try {
+      localStorage.setItem("sidebar", collapsed ? "expanded" : "collapsed");
+    } catch {
+      // not persisted; the choice still applies to this visit
+    }
+  };
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [subnavSlot, setSubnavSlot] = useState<HTMLDivElement | null>(null);
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -294,18 +326,6 @@ export function AppShell() {
             <TdtuLogo />
           </button>
 
-          <button
-            type="button"
-            className="tdtu-header__home-btn"
-            title="Trang chủ"
-            onClick={() => {
-              setActiveMenuId("home");
-              setActiveView("overview");
-            }}
-          >
-            <Icon name="home" size={17} />
-          </button>
-
           <div
             className="tdtu-header__search"
             onClick={() => setSearchOpen(true)}
@@ -315,28 +335,25 @@ export function AppShell() {
             <input
               type="text"
               readOnly
-              placeholder="Tìm kiếm"
+              placeholder="Tìm tin nhắn, trang, nhóm…"
+              aria-label="Tìm kiếm (Ctrl+K)"
               className="tdtu-header__search-input"
               onClick={() => setSearchOpen(true)}
             />
+            <kbd className="tdtu-header__search-kbd" aria-hidden="true">Ctrl K</kbd>
           </div>
         </div>
 
         <div className="tdtu-header__right">
-          {showMeetingChip && (
+          {phone.agentState && (
             <button
               type="button"
-              className="button button--sm button--primary"
-              style={{ gap: 6 }}
-              title="Quay lại cuộc họp"
-              onClick={() =>
-                meetingWorkspaceId
-                  ? openChannel(meetingWorkspaceId, meeting.roomId, true)
-                  : setActiveView("meetings")
-              }
+              className={`tdtu-agent-pill tone-${STATE_TONE[phone.agentState]}`}
+              title="Trạng thái nhận cuộc gọi · mở bàn làm việc"
+              onClick={() => setActiveView("call-center")}
             >
-              <Icon name="video" size={14} />
-              <span>Đang họp</span>
+              <span className="tdtu-agent-pill__dot" aria-hidden="true" />
+              <span className="tdtu-agent-pill__label">{STATE_LABEL[phone.agentState]}</span>
             </button>
           )}
 
@@ -414,6 +431,7 @@ export function AppShell() {
                 title={presence === "online" ? "Đang trực tuyến" : presence === "connecting" ? "Đang kết nối lại" : "Ngoại tuyến"}
               />
             </button>
+            <span className="tdtu-avatar-name" aria-hidden="true">{displayName}</span>
 
             <AnimatePresence>
               {profileOpen && (
@@ -468,10 +486,36 @@ export function AppShell() {
         </div>
       </header>
 
+      {/* Calls and meetings in progress, on every page but their own. An empty strip collapses in CSS. */}
+      <div className="live-strip">
+        <GlobalCallBar />
+        {showMeetingStrip && (
+          <div className="live-strip__item" role="status">
+            <span className="live-strip__dot" aria-hidden="true" />
+            <strong>Đang họp</strong>
+            <span className="live-strip__who">Bạn vẫn đang trong phòng họp</span>
+            <button
+              type="button"
+              className="live-strip__btn is-quiet"
+              onClick={() =>
+                meetingWorkspaceId
+                  ? openChannel(meetingWorkspaceId, meeting.roomId, true)
+                  : setActiveView("meetings")
+              }
+            >
+              Quay lại phòng
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Main Workspace Body: Left 240px Sidebar + Stage Viewport */}
       <div className="editorial-workspace-body tdtu-body">
-        {/* Left Sidebar (240px) with exactly 14 items */}
-        <aside className="editorial-dock tdtu-sidebar" aria-label="Menu chức năng chính">
+        {/* Labelled sidebar (collapsible to icons); on phones a bottom bar with "Thêm" for the rest. */}
+        <nav
+          className={`editorial-dock tdtu-sidebar ${collapsed ? "is-collapsed" : ""} ${moreOpen ? "is-more-open" : ""}`}
+          aria-label="Menu chức năng chính"
+        >
           {SIDEBAR_MENU_ITEMS.filter(
             (item) => !HIDDEN_MENU_ITEMS.has(item.id) && (!RESTRICTED_MENU_ITEMS[item.id] || menuAccess?.[RESTRICTED_MENU_ITEMS[item.id]]),
           ).map((item) => {
@@ -484,30 +528,58 @@ export function AppShell() {
                   : item.badgeKey === "groups"
                     ? groupUnreadCount
                     : undefined;
+            const live = (item.id === "switchboard" && phone.phase !== "none") || (item.id === "meetings" && meeting.inCall);
 
             return (
-              <button
-                key={item.id}
-                type="button"
-                className={`tdtu-sidebar__item ${isSelected ? "is-active" : ""}`}
-                aria-current={isSelected ? "page" : undefined}
-                onClick={() => {
-                  setActiveMenuId(item.id);
-                  setActiveView(item.targetView);
-                }}
-                title={item.label}
-              >
-                <Icon name={item.icon} size={18} strokeWidth={isSelected ? 2 : 1.7} />
-                <span>{item.label}</span>
-                {badgeCount !== undefined && badgeCount > 0 && (
-                  <span className="tdtu-sidebar__item-badge">
-                    {badgeCount > 99 ? "99+" : badgeCount}
-                  </span>
+              <Fragment key={item.id}>
+                {item.id === FIRST_MANAGE_ITEM && <hr className="tdtu-sidebar__divider" />}
+                <button
+                  type="button"
+                  className={`tdtu-sidebar__item ${isSelected ? "is-active" : ""} ${BOTTOM_BAR_ITEMS.has(item.id) ? "" : "is-secondary"}`}
+                  aria-current={isSelected ? "page" : undefined}
+                  onClick={() => {
+                    setActiveMenuId(item.id);
+                    setActiveView(item.targetView);
+                    setMoreOpen(false);
+                  }}
+                  title={item.label}
+                >
+                  <Icon name={item.icon} size={20} strokeWidth={isSelected ? 2 : 1.7} />
+                  <span className={`tdtu-sidebar__label ${item.short ? "has-short" : ""}`}>{item.label}</span>
+                  {item.short && <span className="tdtu-sidebar__short" aria-hidden="true">{item.short}</span>}
+                  {live && <span className="tdtu-sidebar__live" role="img" aria-label="đang diễn ra" />}
+                  {badgeCount !== undefined && badgeCount > 0 && (
+                    <span className="tdtu-sidebar__item-badge">
+                      {badgeCount > 99 ? "99+" : badgeCount}
+                    </span>
+                  )}
+                </button>
+                {item.id === "switchboard" && isSelected && !collapsed && (
+                  <div ref={setSubnavSlot} className="tdtu-sidebar__sub" />
                 )}
-              </button>
+              </Fragment>
             );
           })}
-        </aside>
+          <button
+            type="button"
+            className="tdtu-sidebar__item tdtu-sidebar__more"
+            aria-expanded={moreOpen}
+            onClick={() => setMoreOpen(!moreOpen)}
+          >
+            <Icon name={moreOpen ? "x" : "menu"} size={20} />
+            <span className="tdtu-sidebar__label">{moreOpen ? "Đóng" : "Thêm"}</span>
+          </button>
+          <button
+            type="button"
+            className="tdtu-sidebar__item tdtu-sidebar__collapse"
+            aria-label={collapsed ? "Mở rộng menu" : "Thu gọn menu"}
+            title={collapsed ? "Mở rộng menu" : "Thu gọn menu"}
+            onClick={toggleCollapsed}
+          >
+            <Icon name={collapsed ? "chevron-right" : "chevron-left"} size={20} />
+            <span className="tdtu-sidebar__label">Thu gọn menu</span>
+          </button>
+        </nav>
 
         {/* Content Viewport */}
         <div className="editorial-stage-viewport tdtu-stage">
@@ -539,7 +611,7 @@ export function AppShell() {
             className={`editorial-main-content view-${activeView} ${isWorkspaceScope ? "is-workspace-scope" : ""}`}
           >
             <div className="view-transition-wrapper">
-              {renderPage()}
+              <SidebarSlotContext.Provider value={subnavSlot}>{renderPage()}</SidebarSlotContext.Provider>
             </div>
           </main>
         </div>

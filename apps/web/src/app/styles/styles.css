@@ -63,21 +63,25 @@
   --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
   --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
 
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-ui: var(--font-sans);
   --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
 
   /* ==========================================================================
      PHẦN 2: HỆ THỐNG DESIGN TOKENS TOÀN CỤC (TDTU Clean Enterprise Portal)
      ========================================================================== */
-  --bg-canvas: #FFFFFF;
+  --bg-canvas: #F4F6F9;
   --bg-surface: #FFFFFF;
-  --bg-subtle: #F1F5F9;
+  --bg-subtle: #EDF1F6;
 
-  --brand-primary: #2563EB;
-  --brand-primary-hover: #1D4ED8;
-  --brand-active-bg: #EEF2FF;
-  --brand-active-text: #1D4ED8;
+  /* TDTU navy and red: navy for actions and selection, red only for live calls and meetings. */
+  --brand-primary: #002D62;
+  --brand-primary-hover: #0A3F80;
+  --brand-active-bg: #E3EBF5;
+  --brand-active-text: #002D62;
+  --live: #C8102E;
+  --live-soft: #FBE7EA;
+  --live-text: #A50D26;
   --brand-gradient: var(--brand-primary);
   --accent-red: #DC2626;
 
@@ -86,7 +90,7 @@
   --badge-green-bg: #DCFCE7;
   --badge-green-text: #16A34A;
 
-  --border-color: #E2E8F0;
+  --border-color: #D9E0EA;
   --radius-card: 8px;
   --radius-button: 6px;
   --radius-pill: 9999px;
@@ -97,9 +101,9 @@
   --surface: var(--bg-surface);
   --surface-raised: var(--bg-surface);
   --surface-soft: var(--bg-canvas);
-  --text: #0F172A;
-  --text-secondary: #475569;
-  --text-muted: #64748B;
+  --text: #0E1A2B;
+  --text-secondary: #3D4B5E;
+  --text-muted: #4F5D70;
   --border: var(--border-color);
   --border-strong: #CBD5E1;
 
@@ -109,8 +113,9 @@
   --primary-text: var(--brand-active-text);
   --focus: var(--brand-primary);
 
-  --sidebar-width: 216px;
-  --header-height: 48px;
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 68px;
+  --header-height: 56px;
 
   --card-bg: var(--bg-surface);
   --card-border: var(--border-color);
@@ -181,13 +186,17 @@
 
 [data-theme="dark"] {
   /* Base layer too: the aliases above (--nexo-*, --card-*, --border, ...) resolve through it. */
-  --bg-canvas: #0F172A;
-  --bg-surface: #1E293B;
-  --border-color: #334155;
-  --brand-primary: #3B82F6;
-  --brand-primary-hover: #60A5FA;
-  --brand-active-bg: rgba(59, 130, 246, 0.16);
-  --brand-active-text: #93C5FD;
+  --bg-canvas: #0A1322;
+  --bg-surface: #111D30;
+  --border-color: #26385A;
+  /* Lighter navy: white button text keeps 6:1 contrast on it. */
+  --brand-primary: #2F5F9E;
+  --brand-primary-hover: #3B6FB2;
+  --brand-active-bg: #1B2E4C;
+  --brand-active-text: #AFC8EE;
+  --live: #E8455D;
+  --live-soft: #3A1620;
+  --live-text: #FF9AA8;
   --badge-purple-bg: rgba(139, 92, 246, 0.18);
   --badge-purple-text: #C4B5FD;
   --badge-green-bg: rgba(16, 185, 129, 0.16);
@@ -206,28 +215,28 @@
   --inverse-bg: #E2E8F0;
   --inverse-fg: #0F172A;
 
-  --bg: #0F172A;
-  --bg-subtle: #1E293B;
-  --surface: #1E293B;
-  --surface-raised: #334155;
-  --surface-soft: #1E293B;
-  --text: #F8FAFC;
-  --text-secondary: #CBD5E1;
-  --text-muted: #94A3B8;
-  --border: #334155;
-  --border-strong: #475569;
+  --bg: #0A1322;
+  --bg-subtle: #192841;
+  --surface: #111D30;
+  --surface-raised: #1B2E4C;
+  --surface-soft: #111D30;
+  --text: #E7EDF5;
+  --text-secondary: #C4CFDD;
+  --text-muted: #A3B1C4;
+  --border: #26385A;
+  --border-strong: #3A5079;
 
-  --primary: #3B82F6;
-  --primary-hover: #60A5FA;
-  --primary-soft: rgba(59, 130, 246, 0.16);
-  --primary-text: #93C5FD;
-  --focus: #60A5FA;
+  --primary: #2F5F9E;
+  --primary-hover: #3B6FB2;
+  --primary-soft: #1B2E4C;
+  --primary-text: #AFC8EE;
+  --focus: #AFC8EE;
 
-  --card-bg: #1E293B;
-  --card-border: #334155;
+  --card-bg: #111D30;
+  --card-border: #26385A;
   --card-shadow: none;
-  --input-bg: #1E293B;
-  --input-border: #334155;
+  --input-bg: #111D30;
+  --input-border: #26385A;
   --backdrop: rgba(0, 0, 0, 0.7);
 
   color-scheme: dark;
@@ -364,7 +373,7 @@ img, svg {
 .tdtu-header__left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 20px;
 }
 
 .tdtu-header__brand-btn {
@@ -374,23 +383,6 @@ img, svg {
   display: flex;
   align-items: center;
   cursor: pointer;
-}
-
-.tdtu-header__home-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  display: grid;
-  place-items: center;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.tdtu-header__home-btn:hover {
-  background: var(--bg-subtle);
-  color: var(--primary);
 }
 
 .tdtu-header__search {
@@ -405,10 +397,10 @@ img, svg {
   pointer-events: none;
 }
 .tdtu-header__search-input {
-  width: 220px;
-  height: 30px;
-  border-radius: var(--radius-md);
-  background: #F1F5F9;
+  width: 360px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--bg-subtle);
   border: 1px solid transparent;
   padding: 0 14px 0 34px;
   font-size: 13px;
@@ -416,17 +408,12 @@ img, svg {
   outline: none;
   transition: all 0.2s ease;
 }
-[data-theme="dark"] .tdtu-header__search-input {
-  background: #334155;
-}
 .tdtu-header__search-input::placeholder {
   color: var(--text-muted);
 }
 .tdtu-header__search-input:focus {
-  width: 260px;
   background: var(--surface);
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .tdtu-header__right {
@@ -470,20 +457,17 @@ img, svg {
 
 /* Topbar Icon Button */
 .tdtu-icon-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: var(--surface);
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
   display: grid;
   place-items: center;
   color: var(--text-secondary);
   position: relative;
   cursor: pointer;
   transition: all 0.15s ease;
-}
-[data-theme="dark"] .tdtu-icon-btn {
-  background: var(--surface);
 }
 .tdtu-icon-btn:hover {
   background: var(--bg-subtle);
@@ -497,14 +481,14 @@ img, svg {
   min-width: 17px;
   height: 17px;
   border-radius: 9999px;
-  background: #EF4444;
+  background: var(--live);
   color: #FFFFFF;
   font-size: 10px;
   font-weight: 700;
   display: grid;
   place-items: center;
   padding: 0 4px;
-  border: 2px solid #FFFFFF;
+  border: 2px solid var(--surface);
 }
 [data-theme="dark"] .tdtu-badge-num {
   border-color: var(--surface);
@@ -525,13 +509,13 @@ img, svg {
   display: block;
 }
 .tdtu-avatar-img {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid var(--border);
-  background: #0F172A;
-  color: #FFFFFF;
+  border: 0;
+  background: var(--primary-soft);
+  color: var(--primary-text);
   display: grid;
   place-items: center;
   font-size: 12px;
@@ -627,117 +611,410 @@ img, svg {
   position: relative;
 }
 
-/* 240px Left Sidebar */
+/* Labelled sidebar; collapses to icons (.is-collapsed) and becomes a bottom bar on phones. */
 .editorial-dock,
 .tdtu-sidebar {
   width: var(--sidebar-width);
   min-width: var(--sidebar-width);
   max-width: var(--sidebar-width);
   height: 100%;
-  background: var(--slate-50);
+  background: var(--surface);
   border-right: 1px solid var(--border);
   overflow-y: auto;
-  padding: 8px;
+  padding: 12px 10px;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
   flex-shrink: 0;
 }
-[data-theme="dark"] .editorial-dock,
-[data-theme="dark"] .tdtu-sidebar {
-  background: var(--surface);
+.tdtu-sidebar.is-collapsed {
+  width: var(--sidebar-collapsed-width);
+  min-width: var(--sidebar-collapsed-width);
+  max-width: var(--sidebar-collapsed-width);
 }
 
 .tdtu-sidebar__item {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  padding: 6px 10px;
-  border-radius: var(--radius-md);
-  font-size: 13px;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 14px;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   background: transparent;
   border: none;
   text-align: left;
   cursor: pointer;
-  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.tdtu-sidebar__item svg {
+  flex-shrink: 0;
+}
+.tdtu-sidebar__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .tdtu-sidebar__item:hover:not(.is-active) {
   background: var(--bg-subtle);
   color: var(--text);
 }
 .tdtu-sidebar__item.is-active {
-  background: rgba(15, 23, 42, 0.06);
-  color: var(--text);
+  background: var(--primary-soft);
+  color: var(--primary-text);
   font-weight: 600;
 }
-[data-theme="dark"] .tdtu-sidebar__item.is-active {
-  background: rgba(255, 255, 255, 0.08);
-}
-.tdtu-sidebar__item.is-active svg {
-  color: var(--primary);
-}
 .tdtu-sidebar__item-badge {
-  margin-left: auto;
-  min-width: 16px;
-  height: 16px;
-  border-radius: var(--radius-sm);
-  background: #EF4444;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: var(--live);
   color: #FFFFFF;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   display: grid;
   place-items: center;
+  padding: 0 6px;
+}
+.tdtu-sidebar__live {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--live);
+  flex-shrink: 0;
+}
+.tdtu-sidebar__divider {
+  width: calc(100% - 8px);
+  margin: 10px 4px;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+/* The switchboard renders its tabs here (see SidebarSlot). */
+.tdtu-sidebar__sub {
+  display: grid;
+  gap: 2px;
+  margin: 2px 0 6px;
+}
+.tdtu-sidebar__sub:empty {
+  display: none;
+}
+.tdtu-subnav__item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 12px 0 44px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.tdtu-subnav__item:hover {
+  background: var(--bg-subtle);
+  color: var(--text);
+}
+.tdtu-subnav__item.is-active {
+  background: var(--primary-soft);
+  color: var(--primary-text);
+  font-weight: 600;
+}
+.tdtu-sidebar__more,
+.tdtu-sidebar__short {
+  display: none;
+}
+.tdtu-sidebar__collapse {
+  margin-top: auto;
+}
+
+/* Icon-only: labels stay for screen readers and the title tooltip. */
+.tdtu-sidebar.is-collapsed .tdtu-sidebar__item {
+  justify-content: center;
+  padding: 0;
+}
+.tdtu-sidebar.is-collapsed .tdtu-sidebar__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.tdtu-sidebar.is-collapsed .tdtu-sidebar__item-badge,
+.tdtu-sidebar.is-collapsed .tdtu-sidebar__live {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+}
+.tdtu-sidebar.is-collapsed .tdtu-sidebar__item-badge {
+  min-width: 16px;
+  height: 16px;
+  font-size: 10px;
   padding: 0 4px;
 }
 
-/* Phones: the menu keeps only its icons (labels stay for screen readers and the title tooltip). */
+/* Calls and meetings in progress: a red strip under the header. */
+.live-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  align-items: center;
+  padding: 8px 20px;
+  background: var(--live-soft);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.live-strip:empty {
+  display: none;
+}
+.live-strip__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  min-width: 0;
+}
+.live-strip__item strong,
+.live-strip__time {
+  color: var(--live-text);
+  font-weight: 700;
+}
+.live-strip__time {
+  font-variant-numeric: tabular-nums;
+}
+.live-strip__who {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.live-strip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--live);
+  flex-shrink: 0;
+}
+.live-strip__item.is-incoming .live-strip__dot {
+  animation: live-strip-ring 1.2s ease-in-out infinite;
+}
+@keyframes live-strip-ring {
+  50% { box-shadow: 0 0 0 6px var(--live-soft), 0 0 0 7px var(--live); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-strip__item.is-incoming .live-strip__dot { animation: none; }
+}
+.live-strip__chip {
+  padding: 2px 9px;
+  border-radius: 9999px;
+  background: var(--tint-amber-bg);
+  color: var(--tint-amber-fg);
+  font-size: 12px;
+  font-weight: 600;
+}
+.live-strip__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.live-strip__btn.is-answer {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #FFFFFF;
+}
+.live-strip__btn.is-end {
+  background: var(--live);
+  border-color: var(--live);
+  color: #FFFFFF;
+}
+.live-strip__btn.is-quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--primary-text);
+}
+
+/* Header: the agent's queue state, coloured like the badges. */
+.tdtu-agent-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+}
+.tdtu-agent-pill__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: currentColor;
+}
+.tdtu-agent-pill.tone-green { background: var(--tint-green-bg); color: var(--tint-green-fg); }
+.tdtu-agent-pill.tone-amber { background: var(--tint-amber-bg); color: var(--tint-amber-fg); }
+.tdtu-agent-pill.tone-blue { background: var(--primary-soft); color: var(--primary-text); }
+.tdtu-agent-pill.tone-red { background: var(--live-soft); color: var(--live-text); }
+.tdtu-avatar-name {
+  margin-left: 10px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+}
+.tdtu-header__search-kbd {
+  position: absolute;
+  right: 10px;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  pointer-events: none;
+}
+@media (max-width: 1024px) {
+  .tdtu-avatar-name,
+  .tdtu-header__search-kbd {
+    display: none;
+  }
+}
+
+/* Phones: a bottom bar with the four services and "Thêm"; "Thêm" lifts the other entries
+   into rows above it (grid order -1), so the bar itself stays at the bottom. */
 @media (max-width: 768px) {
+  .tdtu-body {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
   .editorial-dock,
-  .tdtu-sidebar {
-    width: 52px;
-    min-width: 52px;
-    max-width: 52px;
-    padding: 8px 6px;
+  .tdtu-sidebar,
+  .tdtu-sidebar.is-collapsed {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    height: auto;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0;
+    padding: 0 0 env(safe-area-inset-bottom, 0px);
+    border-right: 0;
+    border-top: 1px solid var(--border);
+    overflow: visible;
   }
-  .tdtu-sidebar__item {
-    position: relative;
+  .tdtu-sidebar.is-more-open {
+    box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.18);
+  }
+  .tdtu-sidebar__item,
+  .tdtu-sidebar.is-collapsed .tdtu-sidebar__item {
+    flex-direction: column;
     justify-content: center;
-    padding: 8px 0;
+    gap: 2px;
+    min-height: 64px;
+    padding: 6px 2px;
+    border-radius: 0;
+    font-size: 11px;
+    text-align: center;
   }
-  .tdtu-sidebar__item > span:not(.tdtu-sidebar__item-badge) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
+  .tdtu-sidebar__label,
+  .tdtu-sidebar.is-collapsed .tdtu-sidebar__label {
+    position: static;
+    width: auto;
+    height: auto;
+    clip: auto;
+    flex: none;
+    max-width: 100%;
   }
-  .tdtu-sidebar__item-badge {
+  .tdtu-sidebar__item.is-active {
+    background: transparent;
+  }
+  .tdtu-sidebar__item.is-secondary {
+    display: none;
+  }
+  /* "Thêm" opens the other entries as a full-width list above the bar. */
+  .tdtu-sidebar.is-more-open .tdtu-sidebar__item.is-secondary {
+    display: flex;
+    order: -1;
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 14px;
+    min-height: 48px;
+    padding: 0 20px;
+    font-size: 14px;
+    text-align: left;
+  }
+  .tdtu-sidebar.is-more-open .tdtu-sidebar__item.is-secondary .tdtu-sidebar__item-badge {
+    position: static;
+    margin-left: auto;
+  }
+  .tdtu-sidebar__item-badge,
+  .tdtu-sidebar__live,
+  .tdtu-sidebar.is-collapsed .tdtu-sidebar__item-badge,
+  .tdtu-sidebar.is-collapsed .tdtu-sidebar__live {
     position: absolute;
-    top: 2px;
-    right: 2px;
-    margin: 0;
+    top: 6px;
+    right: calc(50% - 20px);
+  }
+  .tdtu-sidebar.is-more-open .tdtu-sidebar__item:not(.is-secondary) {
+    border-top: 1px solid var(--border);
+  }
+  .tdtu-sidebar__more {
+    display: flex;
+  }
+  .tdtu-sidebar__label.has-short {
+    display: none;
+  }
+  .tdtu-sidebar__short {
+    display: block;
+  }
+  .tdtu-sidebar__collapse,
+  .tdtu-sidebar__divider,
+  .tdtu-sidebar__sub {
+    display: none;
   }
   .tdtu-header__search-input,
   .tdtu-header__search-input:focus {
-    width: 120px;
+    width: 140px;
   }
   .tdtu-lang-switcher {
     display: none;
   }
+  .live-strip {
+    padding: 8px 12px;
+  }
 }
 
-/* Phones: the sidebar already has "Trang chủ"; the search box takes whatever width is left. */
+/* Phones: the search box takes whatever width is left. */
 @media (max-width: 480px) {
   .tdtu-header {
     gap: 8px;
     padding-inline: 10px;
-  }
-  .tdtu-header__home-btn {
-    display: none;
   }
   .tdtu-header__left {
     flex: 1;
@@ -754,6 +1031,20 @@ img, svg {
   }
   .tdtu-header__right {
     gap: 6px;
+  }
+  /* Only the coloured dot: the desk shows the state in words. */
+  .tdtu-agent-pill {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+  .tdtu-agent-pill__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 }
 
@@ -1224,33 +1515,28 @@ button.nexo-list-item:hover:not(:disabled) {
   cursor: pointer;
 }
 
-/* Phones: KPI cards as three compact tiles instead of a full screen of stacked rows.
+/* Phones: home KPI cards as three compact tiles instead of a full screen of stacked rows.
    KpiStatCard sets its layout inline, hence !important. */
 @media (max-width: 480px) {
-  .tdtu-home-kpi-grid,
-  .meeting-kpi-grid {
+  .tdtu-home-kpi-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     gap: 8px !important;
   }
-  .tdtu-home-kpi-grid .kpi-stat-card,
-  .meeting-kpi-grid .meeting-kpi-card {
+  .tdtu-home-kpi-grid .kpi-stat-card {
     flex-direction: column !important;
     align-items: flex-start !important;
     gap: 6px !important;
     padding: 10px !important;
   }
-  .tdtu-home-kpi-grid .kpi-stat-card__icon,
-  .meeting-kpi-grid .meeting-kpi-card__icon {
+  .tdtu-home-kpi-grid .kpi-stat-card__icon {
     width: 28px !important;
     height: 28px !important;
   }
-  .tdtu-home-kpi-grid .kpi-stat-card *,
-  .meeting-kpi-grid .meeting-kpi-card * {
+  .tdtu-home-kpi-grid .kpi-stat-card * {
     font-size: 12px;
     line-height: 1.3;
   }
-  .tdtu-home-kpi-grid .kpi-stat-card__number,
-  .meeting-kpi-grid .meeting-kpi-card__number {
+  .tdtu-home-kpi-grid .kpi-stat-card__number {
     font-size: 20px !important;
   }
 }

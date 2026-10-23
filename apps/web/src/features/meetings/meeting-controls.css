@@ -2,9 +2,9 @@
 .meeting-controls {
   margin: 12px 0;
   padding: 16px 18px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.78);
+  background: var(--surface);
   box-shadow: none;
   color: var(--text);
 }
@@ -41,7 +41,7 @@
 
 .meeting-controls li {
   padding: 10px 0;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  border-bottom: 1px solid var(--border);
   overflow-wrap: anywhere;
   font-size: 13.5px;
 }

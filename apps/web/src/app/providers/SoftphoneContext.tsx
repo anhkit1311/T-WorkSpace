@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import type { CcSipAccount } from "@doan/shared";
+import type { AgentState, CcAgentProfile, CcSipAccount } from "@doan/shared";
 import { useApp } from "./AppContext";
 import { useSocket } from "./SocketContext";
 import { callCenterApi } from "../../features/call-center/api";
@@ -9,6 +9,8 @@ type Softphone = ReturnType<typeof useSoftphone> & {
   /** Re-reads the user's extension (after an admin assigns or changes it). */
   refresh: () => void;
   hasExtension: boolean;
+  /** The user's queue state for the header pill; null for users who are not agents. */
+  agentState: AgentState | null;
 };
 
 const SoftphoneContext = createContext<Softphone | null>(null);
@@ -35,6 +37,14 @@ export function SoftphoneProvider({ children }: { children: ReactNode }) {
   // Only on sign-in/out: the token itself refreshes without changing the extension.
   useEffect(refresh, [refresh, signedIn]);
   const phone = useSoftphone(account, (message) => notifyRef.current("Tổng đài", message, "warning"));
+  const [agentState, setAgentState] = useState<AgentState | null>(null);
+  useEffect(() => {
+    if (!account || !token.current) return setAgentState(null);
+    callCenterApi<CcAgentProfile>(token.current, "me").then(
+      (me) => setAgentState(me.departments.some((department) => department.role === "agent") ? me.state : null),
+      () => setAgentState(null),
+    );
+  }, [account]);
 
   // NV-CC5 / NV-CC3: a new voicemail or a change on one of the user's tickets, wherever they are.
   const { socket } = useSocket();
@@ -49,11 +59,14 @@ export function SoftphoneProvider({ children }: { children: ReactNode }) {
         onClick: () => navigateRef.current({ view: "call-center" }),
       });
     const onTicket = (data: { message: string }) => notifyRef.current("Phiếu hỗ trợ", data.message, "info");
+    const onAgent = (data: { state: AgentState }) => setAgentState((current) => current && data.state);
     socket.on("callcenter_voicemail", onVoicemail);
     socket.on("callcenter_ticket", onTicket);
+    socket.on("callcenter_agent", onAgent);
     return () => {
       socket.off("callcenter_voicemail", onVoicemail);
       socket.off("callcenter_ticket", onTicket);
+      socket.off("callcenter_agent", onAgent);
     };
   }, [socket]);
 
@@ -73,7 +86,7 @@ export function SoftphoneProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [phase, answer, hangup, toggleMute]);
 
-  return <SoftphoneContext.Provider value={{ ...phone, refresh, hasExtension: Boolean(account) }}>{children}</SoftphoneContext.Provider>;
+  return <SoftphoneContext.Provider value={{ ...phone, refresh, hasExtension: Boolean(account), agentState }}>{children}</SoftphoneContext.Provider>;
 }
 
 export function useGlobalSoftphone() {

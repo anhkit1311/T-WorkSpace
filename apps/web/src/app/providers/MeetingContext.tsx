@@ -130,6 +130,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
   const lastMeasuredRoomIdRef = useRef("");
   // Network drops rejoin on their own; a kick, logout or refresh does not.
   const rejoinRef = useRef<{ roomId: string; devices: JoinMediaOptions; attempts: number } | null>(null);
+  const lastMediaRejoinRef = useRef(0);
   const deviceStateRef = useRef({ mic, camera });
   deviceStateRef.current = { mic, camera };
   useEffect(() => {
@@ -541,9 +542,19 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
       },
       (message) => {
         if (epoch !== joinEpochRef.current) return;
+        const { mic: micEnabled, camera: cameraEnabled } = deviceStateRef.current;
+        // At most one automatic rejoin per minute for media failures, so a broken path cannot loop.
+        const autoRejoin = Date.now() - lastMediaRejoinRef.current > 60_000;
         void leaveCall().then(() => {
           setInterruptedRoomId(targetRoomId);
-          notify("Media bị gián đoạn", message, "warning");
+          if (!autoRejoin) return notify("Media bị gián đoạn", message, "warning");
+          // Rejoin as for a dropped socket: now when online, when the network is back otherwise
+          // (offline, ICE often fails before the socket notices).
+          lastMediaRejoinRef.current = Date.now();
+          rejoinRef.current = { roomId: targetRoomId, devices: { ...devicesRef.current, micEnabled, cameraEnabled }, attempts: 0 };
+          if (!navigator.onLine) return notify("Mất kết nối cuộc họp", "Đang tự kết nối lại khi mạng ổn định…", "warning");
+          notify("Media bị gián đoạn", "Đang tự vào lại phòng…", "warning");
+          scheduleRejoinRef.current(1500);
         });
       },
     );

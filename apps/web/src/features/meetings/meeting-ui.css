@@ -33,22 +33,6 @@
 /* --------------------------------------------------------------------------
    Room Selection & Cards Grid (Divided Columns inside Unified Frame)
    -------------------------------------------------------------------------- */
-.meeting-lobby-wrap {
-  display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  gap: 0;
-  align-items: stretch;
-  margin-top: 0;
-  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA);
-}
-
-@media (max-width: 768px) {
-  .meeting-lobby-wrap {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-  }
-}
-
 .meeting-rooms-section {
   display: flex;
   flex-direction: column;
@@ -205,13 +189,6 @@
   gap: 24px;
 }
 
-@media (max-width: 768px) {
-  .meeting-lobby-preview-box {
-    border-left: 0 !important;
-    border-top: 1px solid var(--nexo-border-beige, #E6E2DA) !important;
-    padding: 20px !important;
-  }
-}
 
 .meeting-preview-screen {
   position: relative;
@@ -810,4 +787,229 @@
   padding: 0 12px;
   border-color: var(--border, var(--border));
   white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Lobby: schedule, rooms and history on the left; the device check stays in view on the right.
+   -------------------------------------------------------------------------- */
+.meeting-lobby__head .meeting-page-title {
+  font-size: 24px;
+  letter-spacing: -0.02em;
+}
+.meeting-lobby-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  gap: 20px;
+  align-items: start;
+}
+.meeting-lobby-main {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.meeting-lobby-main > .meeting-rooms-section,
+.meeting-lobby-main > .meeting-schedules,
+.meeting-lobby-main > .meeting-history,
+.meeting-lobby-preview-box {
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.meeting-rooms-section {
+  gap: 4px;
+}
+.meeting-rooms-section .meeting-section-header h2,
+.meeting-lobby-main .meeting-schedules-head h2,
+.meeting-lobby-main .meeting-history h2 {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 16px;
+}
+.meeting-rooms-section .meeting-filter-row {
+  margin-bottom: 8px;
+}
+.meeting-rooms-section .meeting-room-card {
+  padding: 12px;
+  border: 0;
+  border-radius: 12px;
+}
+.meeting-rooms-section .meeting-room-card.is-selected {
+  background: var(--primary-soft);
+  box-shadow: inset 3px 0 0 var(--primary-text);
+}
+.meeting-lobby-main .meeting-history {
+  border-top: 1px solid var(--border);
+}
+.meeting-lobby-preview-box {
+  position: sticky;
+  top: 16px;
+  gap: 16px;
+}
+@media (max-width: 1024px) {
+  .meeting-lobby-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Device check first on small screens: it is what the user came to do. */
+  .meeting-lobby-preview-box {
+    position: static;
+    order: -1;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   In the room: a dark stage in both themes. The tokens are re-scoped so every panel inside
+   (chat, notes, attendance) follows without its own dark rules.
+   -------------------------------------------------------------------------- */
+.meeting-room-active {
+  --bg: #070E1B;
+  --bg-subtle: #16233A;
+  --surface: #0D182A;
+  --surface-raised: #16233A;
+  --surface-soft: #0D182A;
+  --card-bg: #0D182A;
+  --input-bg: #111D30;
+  --text: #E7EDF5;
+  --text-secondary: #C4CFDD;
+  --text-muted: #A3B1C4;
+  --border: #1B2A44;
+  --border-color: #1B2A44;
+  --input-border: #26385A;
+  --primary: #2F5F9E;
+  --primary-hover: #3B6FB2;
+  --primary-soft: #1B2E4C;
+  --primary-text: #AFC8EE;
+  color-scheme: dark;
+  gap: 14px;
+  padding: 14px 16px 16px;
+  border-radius: 16px;
+  background: var(--bg);
+  color: var(--text);
+}
+.meeting-room-active .meeting-active-header {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px 16px;
+  padding: 2px 4px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+.meeting-room-active .meeting-active-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+}
+.meeting-active-header__clock,
+.meeting-active-header__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.meeting-network {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.meeting-network.is-good svg { color: #6BCB98; }
+.meeting-network.is-weak svg { color: #E9B862; }
+.meeting-network.is-bad { color: #FF9AA8; }
+.meeting-room-active .meeting-stage-toolbar,
+.meeting-room-active .meeting-qos-card {
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: none;
+}
+.meeting-room-active .video-tile {
+  border: 0;
+  border-radius: 14px;
+  background: #13213A;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.meeting-room-active .video-tile.is-speaking {
+  border: 0;
+  box-shadow: inset 0 0 0 3px #6FB2FF;
+}
+.meeting-room-active .meeting-side-panel {
+  max-height: none;
+  border-color: var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.meeting-room-active .meeting-controls-dock {
+  gap: 10px;
+  padding: 10px 16px;
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+}
+.meeting-room-active .meeting-dock-btn {
+  width: 52px;
+  height: 52px;
+  border: 0;
+  background: #22324A;
+  color: var(--text);
+}
+.meeting-room-active .meeting-dock-btn:hover {
+  transform: none;
+  filter: brightness(1.2);
+}
+.meeting-room-active .meeting-dock-btn.is-active {
+  background: #86ACE2;
+  color: #0A1322;
+}
+.meeting-room-active .meeting-dock-btn.is-muted {
+  background: #E8455D;
+  color: #FFFFFF;
+}
+.meeting-room-active .meeting-dock-btn.is-leave {
+  width: auto;
+  margin-left: 10px;
+  padding: 0 22px;
+  background: #E8455D;
+  color: #FFFFFF;
+  font-weight: 700;
+}
+.meeting-room-active .meeting-qos-card {
+  display: block;
+  margin-top: 0;
+  padding: 10px 16px;
+}
+.meeting-qos-card > summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.meeting-qos-card[open] > summary {
+  margin-bottom: 10px;
+}
+.meeting-qos-card[open] {
+  display: grid;
+  gap: 10px;
+}
+@media (max-width: 768px) {
+  .meeting-room-active {
+    padding: 10px;
+    border-radius: 12px;
+  }
+  .meeting-room-active .meeting-dock-btn {
+    width: 44px;
+    height: 44px;
+  }
+  .meeting-room-active .meeting-dock-btn.is-leave {
+    margin-left: 0;
+    padding: 0 14px;
+  }
+  .meeting-room-active .meeting-controls-dock {
+    flex-wrap: wrap;
+    width: auto;
+    border-radius: 18px;
+  }
 }

@@ -25,8 +25,12 @@ async function signedIn(browser: Browser, user: User) {
   const context = await browser.newContext({ storageState: sessions.get(user.id) });
   open.push({ userId: user.id, context });
   const page = await context.newPage();
-  if (sessions.has(user.id)) await page.goto("/app/overview");
-  else await signIn(page, user);
+  if (sessions.has(user.id)) {
+    await page.goto("/app/overview");
+    // A refresh that rotated the token after the state was saved (e.g. a call rejoining as the test ended) ends the session.
+    await page.locator('.app-shell, input[type="password"]:visible').first().waitFor();
+    if (!(await page.locator(".app-shell").count())) await signIn(page, user);
+  } else await signIn(page, user);
   return page;
 }
 test.afterEach(async () => {

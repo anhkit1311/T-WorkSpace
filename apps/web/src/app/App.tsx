@@ -5,7 +5,6 @@ import { DURATION, EASE_OUT } from "../shared/motion/tokens";
 import { useMotionSafe, motionDebugEnabled } from "../shared/motion/MotionProvider";
 import { ToastViewport } from "../shared/ui/Primitives";
 import { MeetingInviteListener } from "../features/meetings/MeetingInviteListener";
-import { GlobalCallBar } from "../features/call-center/GlobalCallBar";
 
 const LandingPage = lazy(() =>
   import("../features/landing/LandingPage").then((m) => ({ default: m.LandingPage })),
@@ -67,7 +66,6 @@ export function App() {
       </div>
       <ToastViewport />
       {screen === "app" && <MeetingInviteListener />}
-      {screen === "app" && <GlobalCallBar />}
       {MotionDebug && <Suspense fallback={null}><MotionDebug /></Suspense>}
     </>
   );

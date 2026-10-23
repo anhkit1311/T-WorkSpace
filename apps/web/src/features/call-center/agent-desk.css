@@ -209,10 +209,6 @@
   user-select: all;
 }
 
-.desk-grid {
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
-}
-
 .desk-live-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -221,15 +217,8 @@
   min-width: 160px;
 }
 
-.softphone-card form.softphone-input-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 6px;
-}
-
 @media (max-width: 900px) {
   .callcenter-main-grid,
-  .desk-grid,
   .desk-live-grid {
     grid-template-columns: 1fr;
   }
@@ -520,10 +509,6 @@
   .desk-recent li {
     flex-wrap: wrap;
   }
-  /* The phone controls come first on a phone screen: state and answering matter most. */
-  .desk-grid .softphone-card {
-    order: -1;
-  }
 }
 
 .cdr-toolbar {
@@ -715,3 +700,237 @@
 
 .desk-actions:has(> .desk-muted) { flex-wrap: wrap; }
 .desk-actions > .desk-muted { flex: 1 0 100%; margin: 0; text-align: right; }
+
+/* Agent desk: own day | the call | the caller. Columns wrap to one on narrow screens. */
+.desk-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) minmax(260px, 340px);
+  gap: 16px;
+  align-items: start;
+}
+.desk-col {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.desk-call {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+  padding: 20px 24px;
+}
+.desk-call__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.desk-call__bar .desk-states {
+  display: flex;
+  padding: 4px;
+  gap: 4px;
+  border-radius: 12px;
+  background: var(--bg-subtle);
+}
+.desk-call__bar .desk-state {
+  min-height: 34px;
+  padding: 0 14px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-muted);
+}
+.desk-call__bar .desk-state.is-active {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+.desk-call__live,
+.desk-call__wrap {
+  display: grid;
+  gap: 18px;
+}
+.desk-call__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.desk-call__timer {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.desk-call__queue {
+  margin-left: auto;
+}
+.desk-call__who {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.desk-call__avatar {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  background: var(--live-soft);
+  color: var(--live-text);
+  font-size: 24px;
+  font-weight: 700;
+}
+.desk-call__avatar.is-ringing {
+  animation: desk-ring 1.4s ease-out infinite;
+}
+@keyframes desk-ring {
+  50% { box-shadow: 0 0 0 12px var(--live-soft); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .desk-call__avatar.is-ringing { animation: none; }
+}
+.desk-call__name {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.desk-call__heading {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.3;
+}
+.desk-call__actions,
+.desk-call__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.desk-call__answer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 28px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--primary);
+  color: #FFFFFF;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.desk-call__answer:hover {
+  background: var(--primary-hover);
+}
+.desk-ctl {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 92px;
+  min-height: 68px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.desk-ctl:hover:not(:disabled) {
+  background: var(--bg-subtle);
+}
+.desk-ctl.is-alert {
+  border-color: transparent;
+  background: var(--live-soft);
+  color: var(--live-text);
+}
+.desk-ctl.is-warn {
+  border-color: transparent;
+  background: var(--tint-amber-bg);
+  color: var(--tint-amber-fg);
+}
+.desk-ctl.is-on {
+  border-color: transparent;
+  background: var(--primary-soft);
+  color: var(--primary-text);
+}
+.desk-ctl.is-end {
+  margin-left: auto;
+  border-color: var(--live);
+  background: var(--live);
+  color: #FFFFFF;
+}
+.desk-ctl.is-end:hover {
+  background: var(--live);
+  filter: brightness(1.08);
+}
+.desk-call__idle {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 32px 12px;
+  text-align: center;
+}
+.desk-call__idle p {
+  max-width: 46ch;
+  margin: 0;
+}
+.desk-call__idle-icon {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  background: var(--primary-soft);
+  color: var(--primary-text);
+}
+.desk-call__idle-icon.tone-green { background: var(--tint-green-bg); color: var(--tint-green-fg); }
+.desk-call__idle-icon.tone-amber { background: var(--tint-amber-bg); color: var(--tint-amber-fg); }
+.desk-call__idle-icon.tone-neutral { background: var(--bg-subtle); color: var(--text-muted); }
+.desk-dial {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  width: min(100%, 380px);
+  margin-top: 8px;
+}
+.desk-call__idle .softphone-keypad-grid {
+  width: min(100%, 300px);
+}
+.desk-call .desk-shortcuts {
+  margin: 0;
+}
+/* The tabs moved to the sidebar on wide screens. */
+@media (min-width: 769px) {
+  .desk-tabs.has-sidebar-tabs {
+    display: none;
+  }
+}
+@media (max-width: 1200px) {
+  .desk-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  }
+  .desk-col--mine {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+}
+@media (max-width: 900px) {
+  .desk-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .desk-call {
+    padding: 16px;
+  }
+  .desk-ctl {
+    flex: 1 1 calc(50% - 5px);
+    min-width: 0;
+  }
+  .desk-ctl.is-end {
+    margin-left: 0;
+  }
+}

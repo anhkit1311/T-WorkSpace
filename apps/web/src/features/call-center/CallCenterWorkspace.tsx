@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type {
   MonitorMode,
   AgentState,
@@ -11,6 +12,7 @@ import type {
 } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import { appRouteUrl } from "../../app/navigation";
+import { useSidebarSlot } from "../../app/layout/SidebarSlot";
 import { useSocket } from "../../app/providers/SocketContext";
 import { Badge, Button, Field, FilterPills, KpiStatCard } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
@@ -25,27 +27,12 @@ import { ContactCenter } from "./ContactCenter";
 import { CallerProfile } from "./CallerProfile";
 import { type PhoneStatus } from "./useSoftphone";
 import { useGlobalSoftphone } from "../../app/providers/SoftphoneContext";
+import { STATE_LABEL, STATE_TONE } from "./agent-state";
 import "./call-center.css";
 import "./agent-desk.css";
 
 const CallCenterAdmin = lazy(() => import("./CallCenterAdmin").then((m) => ({ default: m.CallCenterAdmin })));
 
-const STATE_LABEL: Record<AgentState, string> = {
-  offline: "Ngoại tuyến",
-  ready: "Sẵn sàng",
-  not_ready: "Tạm nghỉ",
-  ringing: "Đang đổ chuông",
-  on_call: "Đang đàm thoại",
-  wrap_up: "Hoàn tất cuộc gọi",
-};
-const STATE_TONE: Record<AgentState, "neutral" | "green" | "amber" | "blue" | "violet" | "red"> = {
-  offline: "neutral",
-  ready: "green",
-  not_ready: "amber",
-  ringing: "blue",
-  on_call: "violet",
-  wrap_up: "blue",
-};
 /** NV-CC2: why an agent pauses (same list as the API). */
 const PAUSE_REASONS = ["Ăn trưa", "Họp", "Khác"] as const;
 
@@ -123,6 +110,7 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
     { key: "contact", label: "Hỗ trợ của tôi" },
   ];
   const activeTab = tabs.some((item) => item.key === tab) ? tab : (tabs[0].key as Tab);
+  const sidebarSlot = useSidebarSlot();
 
   if (loadError)
     return (
@@ -166,9 +154,24 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
             {me.departments.map((department) => department.name).filter((name, index, all) => all.indexOf(name) === index).join(" · ") || "Quản trị hệ thống"}
           </p>
         </div>
-        {isAgent && <Badge tone={STATE_TONE[me.state]} dot>{STATE_LABEL[me.state]}</Badge>}
       </div>
-      <FilterPills options={tabs} activeKey={activeTab} onChange={(key) => setTab(key as Tab)} className="desk-tabs" />
+      {/* On wide screens the tabs live in the sidebar (the pills stay for phones and a collapsed menu). */}
+      <FilterPills options={tabs} activeKey={activeTab} onChange={(key) => setTab(key as Tab)} className={`desk-tabs ${sidebarSlot ? "has-sidebar-tabs" : ""}`} />
+      {sidebarSlot &&
+        createPortal(
+          tabs.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              className={`tdtu-subnav__item ${activeTab === item.key ? "is-active" : ""}`}
+              aria-current={activeTab === item.key ? "page" : undefined}
+              onClick={() => setTab(item.key as Tab)}
+            >
+              {item.label}
+            </button>
+          )),
+          sidebarSlot,
+        )}
       {/* Always mounted: the softphone registration and an unfinished wrap-up survive tab switches. */}
       {hasDesk && (
         <div hidden={activeTab !== "desk"}>
@@ -295,6 +298,12 @@ function AgentDesk({
   }, []);
 
   const [pausing, setPausing] = useState(false);
+  const [keypadOpen, setKeypadOpen] = useState(false);
+  const [callSince, setCallSince] = useState<number | null>(null);
+  useEffect(() => {
+    setCallSince(phone.phase === "active" ? Date.now() : null);
+    if (phone.phase === "none") setKeypadOpen(false);
+  }, [phone.phase]);
   const choose = (state: AgentState, reason?: string) => {
     setBusy(true);
     setPausing(false);
@@ -357,80 +366,51 @@ function AgentDesk({
   const press = (key: string) => (phone.phase === "active" ? phone.sendDigit(key) : setDial((value) => (value + key).slice(0, 15)));
   const phoneLabel = { off: "Chưa kết nối", registering: "Đang đăng ký…", registered: "Đã đăng ký", failed: "Đăng ký thất bại" }[phone.status];
 
+  const callerName = offer?.caller.displayName ?? (phone.peer || offer?.caller.number || "Số chưa xác định");
+  const initials = callerName.split(/\s+/).filter(Boolean).slice(-2).map((word) => word[0]).join("").toUpperCase();
+  const idleTitle = !isAgent
+    ? "Máy lẻ dùng để giám sát và gọi nội bộ"
+    : me.state === "ready"
+      ? "Bạn đang sẵn sàng nhận cuộc gọi"
+      : me.state === "not_ready"
+        ? "Bạn đang tạm nghỉ"
+        : "Bạn đang ngoại tuyến";
+  const idleText = !isAgent
+    ? "Cuộc gọi giám sát bạn chọn ở tab Giám sát sẽ đổ chuông tại đây."
+    : me.state === "ready"
+      ? "Cuộc gọi tiếp theo trong hàng đợi sẽ đổ chuông ngay tại đây, kèm hồ sơ người gọi ở cột bên phải."
+      : me.state === "not_ready"
+        ? "Hàng đợi chuyển cuộc gọi cho người khác trong phòng ban cho tới khi bạn sẵn sàng lại."
+        : "Chọn “Sẵn sàng” để nhận cuộc gọi từ hàng đợi.";
+  const keypad = (
+    <div className="softphone-keypad-grid" role="group" aria-label={phone.phase === "active" ? "Bàn phím DTMF" : "Bàn phím số"}>
+      {KEYPAD.map(([key, sub]) => (
+        <button key={key} type="button" className="softphone-key-btn" onClick={() => press(key)} aria-label={key}>
+          <span className="softphone-key-num">{key}</span>
+          {sub && <span className="softphone-key-sub">{sub}</span>}
+        </button>
+      ))}
+      {phone.phase === "none" && dial && (
+        <button type="button" className="softphone-key-btn softphone-key-btn--wide" onClick={() => setDial((value) => value.slice(0, -1))} aria-label="Xóa một số">
+          <Icon name="chevron-left" size={16} />
+        </button>
+      )}
+    </div>
+  );
+
   return (
-    <div className="callcenter-main-grid desk-grid">
-      <div className="callcenter-left-column">
-        <div className="callcenter-panel">
-          <div className="callcenter-panel__head">
-            <h2 className="callcenter-panel__title"><Icon name="phone-call" size={18} /><span>Cuộc gọi hiện tại</span></h2>
-          </div>
-          {offer ? (
-            <div className="desk-caller">
-              <div className="desk-caller__name">{offer.caller.displayName ?? "Số chưa xác định"}</div>
-              <div className="desk-caller__meta">
-                <span>{numberLabel(offer.caller.number)}</span>
-                {offer.caller.email && <span>{offer.caller.email}</span>}
-                <Badge tone="blue">{offer.departmentName}</Badge>
-              </div>
-              <div className="desk-caller__facts">
-                <span>Đã chờ {offer.waitedSeconds}s</span>
-                <span>{offer.caller.recentCalls} cuộc gọi trong 30 ngày</span>
-                {!offer.caller.userId && <span>Chưa liên kết tài khoản</span>}
-              </div>
-              {offer.context && <p className="desk-context"><Icon name="book" size={14} /> {offer.context}</p>}
-              {offer.held && <Badge tone="amber" dot>Đang giữ máy · người gọi nghe nhạc chờ</Badge>}
-              <CallerProfile api={api} callId={offer.callId} outcomeLabel={OUTCOME_LABEL} />
-              {me.state === "on_call" && <TransferPanel offer={offer} api={api} fail={fail} onChange={onChange} />}
-              {me.state === "on_call" && offer.caller.userId && <VideoInviteButton callId={offer.callId} api={api} fail={fail} />}
-            </div>
-          ) : (
-            <p className="desk-muted">
-              {!isAgent
-                ? "Máy lẻ này dùng để giám sát cuộc gọi và gọi nội bộ."
-                : me.state === "ready"
-                  ? "Đang chờ cuộc gọi từ hàng đợi…"
-                  : "Chọn “Sẵn sàng” để nhận cuộc gọi từ hàng đợi."}
-            </p>
-          )}
-        </div>
-
-        {wrapUp && !inCall && (
-          <div className="callcenter-panel">
-            <div className="callcenter-panel__head">
-              <h2 className="callcenter-panel__title"><Icon name="clipboard" size={18} /><span>Ghi nhận cuộc gọi · {wrapUp.caller.displayName ?? wrapUp.caller.number}</span></h2>
-            </div>
-            <div className="desk-form">
-              <Field label="Kết quả cuộc gọi">
-                <select aria-label="Kết quả cuộc gọi" value={dispositionId} onChange={(event) => setDispositionId(event.target.value)}>
-                  <option value="">— Chọn kết quả —</option>
-                  {dispositions
-                    .filter((item) => !item.departmentId || item.departmentId === wrapUp.departmentId)
-                    .map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-                </select>
-              </Field>
-              <Field label="Ghi chú">
-                <textarea aria-label="Ghi chú" rows={3} maxLength={4000} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Nội dung người gọi trình bày, việc cần làm tiếp…" />
-              </Field>
-              <div className="desk-actions">
-                {wrapUp.caller.userId && <VideoInviteButton callId={wrapUp.callId} api={api} fail={fail} />}
-                {/* BR-07: a hotline call is always filed with a result code. */}
-                {!dispositionId && <span className="desk-muted">Chọn kết quả cuộc gọi để lưu.</span>}
-                <Button variant="secondary" disabled={!dispositionId} onClick={() => void saveWrapUp(true)} icon="clipboard">Lưu và tạo phiếu</Button>
-                <Button disabled={!dispositionId} onClick={() => void saveWrapUp(false)} icon="check">Lưu ghi nhận</Button>
-              </div>
-            </div>
-          </div>
-        )}
-
+    <div className="desk-layout">
+      {/* Left: the agent's own day, recent calls and voicemail. */}
+      <div className="desk-col desk-col--mine">
         {isAgent && (
-          <div className="callcenter-panel">
+          <section className="callcenter-panel">
             <div className="callcenter-panel__head">
               <h2 className="callcenter-panel__title"><Icon name="calendar" size={18} /><span>Hôm nay của tôi</span></h2>
             </div>
             <div className="desk-today">
               <div><strong>{talked.length}</strong><span>cuộc đã nghe</span></div>
               <div><strong>{clock(talkSeconds)}</strong><span>tổng đàm thoại</span></div>
-              <div><strong>{talked.length ? clock(Math.round(talkSeconds / talked.length)) : "—"}</strong><span>trung bình mỗi cuộc</span></div>
+              <div><strong>{talked.length ? clock(Math.round(talkSeconds / talked.length)) : "—"}</strong><span>trung bình</span></div>
             </div>
             {mine === null ? (
               <p className="desk-muted">Đang tải cuộc gọi gần đây…</p>
@@ -444,42 +424,41 @@ function AgentDesk({
                       <strong>{call.callerName ?? call.callerNumber}</strong>
                       <span>{new Date(call.startedAt).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })} · {call.departmentName ?? "—"}{call.answeredAt ? ` · ${clock(seconds(call.answeredAt, call.endedAt))}` : ""}</span>
                     </div>
-                    {call.outcome ? <Badge tone={call.outcome === "answered" ? "green" : "amber"}>{OUTCOME_LABEL[call.outcome]}</Badge> : <Badge tone="violet">Đang diễn ra</Badge>}
+                    {call.outcome ? <Badge tone={call.outcome === "answered" ? "green" : "amber"}>{OUTCOME_LABEL[call.outcome]}</Badge> : <Badge tone="red">Đang diễn ra</Badge>}
                     <Button size="sm" variant="ghost" icon="phone" disabled={!canDial || !dialable(call.callerNumber)} title={!dialable(call.callerNumber) ? "Người gọi từ trình duyệt, không có số để gọi lại" : canDial ? `Gọi lại ${call.callerNumber}` : "Máy lẻ chưa sẵn sàng để gọi"} onClick={() => phone.call(call.callerNumber)}>
-                      Gọi lại
+                      <span className="sr-only">Gọi lại</span>
                     </Button>
                   </li>
                 ))}
               </ul>
             )}
-          </div>
+          </section>
         )}
-
         {me.extension && <VoicemailInbox api={api} token={token} fail={fail} onCall={canDial ? (number) => phone.call(number) : null} />}
       </div>
 
-      <div className="softphone-card">
-        <div className="softphone-status-wrap">
+      {/* Centre: one card that follows the call — idle, ringing, talking, filing. */}
+      <section className="callcenter-panel desk-call" aria-label="Cuộc gọi hiện tại">
+        <div className="desk-call__bar">
           <span className="desk-muted">Máy lẻ {me.extension?.number ?? "—"} · {phoneLabel}</span>
+          {isAgent && (
+            <div className="desk-states" role="group" aria-label="Trạng thái trực">
+              {(["ready", "not_ready", "offline"] as const).map((state) => (
+                <button
+                  key={state}
+                  type="button"
+                  className={`desk-state ${me.state === state ? "is-active" : ""}`}
+                  aria-pressed={me.state === state}
+                  disabled={busy || inCall || !me.extension || (state === "ready" && me.training.length > 0)}
+                  aria-expanded={state === "not_ready" ? pausing : undefined}
+                  onClick={() => (state === "not_ready" ? setPausing((open) => !open) : choose(state))}
+                >
+                  {STATE_LABEL[state]}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-        {!me.extension && <p className="desk-warning">Bạn chưa được cấp máy lẻ, chưa thể nhận cuộc gọi.</p>}
-        {isAgent && me.training.length > 0 && <TrainingRequired training={me.training} />}
-        {isAgent && (
-          <div className="desk-states" role="group" aria-label="Trạng thái trực">
-            {(["ready", "not_ready", "offline"] as const).map((state) => (
-              <button
-                key={state}
-                type="button"
-                className={`desk-state ${me.state === state ? "is-active" : ""}`}
-                disabled={busy || inCall || !me.extension || (state === "ready" && me.training.length > 0)}
-                aria-expanded={state === "not_ready" ? pausing : undefined}
-                onClick={() => (state === "not_ready" ? setPausing((open) => !open) : choose(state))}
-              >
-                {STATE_LABEL[state]}
-              </button>
-            ))}
-          </div>
-        )}
         {pausing && (
           <div className="desk-pause" role="group" aria-label="Lý do tạm nghỉ">
             <span className="desk-muted">Lý do:</span>
@@ -490,73 +469,136 @@ function AgentDesk({
             ))}
           </div>
         )}
-        {me.stateReason && <p className="desk-muted">{me.stateReason}</p>}
+        {!me.extension && <p className="desk-warning">Bạn chưa được cấp máy lẻ, chưa thể nhận cuộc gọi.</p>}
+        {isAgent && me.training.length > 0 && <TrainingRequired training={me.training} />}
+
+        {phone.phase !== "none" ? (
+          <div className={`desk-call__live is-${phone.phase}`}>
+            <div className="desk-call__status">
+              <Badge tone="red" dot>{phone.phase === "incoming" ? "Cuộc gọi đến" : phone.phase === "outgoing" ? "Đang gọi" : "Đang đàm thoại"}</Badge>
+              {callSince !== null && <strong className="desk-call__timer">{clock(Math.floor((Date.now() - callSince) / 1000))}</strong>}
+              {held && <Badge tone="amber">Đang giữ máy · người gọi nghe nhạc chờ</Badge>}
+              {offer && <span className="desk-muted desk-call__queue">{offer.departmentName} · đã chờ {offer.waitedSeconds}s</span>}
+            </div>
+            <div className="desk-call__who">
+              <span className={`desk-call__avatar ${phone.phase === "incoming" ? "is-ringing" : ""}`} aria-hidden="true">{initials || "?"}</span>
+              <div>
+                <h2 className="desk-call__name">{callerName}</h2>
+                <span className="desk-muted">{offer ? numberLabel(offer.caller.number) : phone.peer}</span>
+              </div>
+            </div>
+            {phone.phase === "incoming" ? (
+              <div className="desk-call__actions">
+                <button type="button" className="desk-call__answer" onClick={phone.answer} title="Alt+A">
+                  <Icon name="phone" size={18} /> Trả lời
+                </button>
+                <Button variant="secondary" onClick={phone.hangup}>Từ chối</Button>
+              </div>
+            ) : (
+              <div className="desk-call__controls">
+                <button type="button" className={`desk-ctl ${phone.muted ? "is-alert" : ""}`} aria-pressed={phone.muted} onClick={phone.toggleMute} title="Alt+M">
+                  <Icon name={phone.muted ? "mic-off" : "mic"} size={20} />{phone.muted ? "Bật micro" : "Tắt micro"}
+                </button>
+                {phone.phase === "active" && (
+                  <button type="button" className={`desk-ctl ${held ? "is-warn" : ""}`} aria-pressed={held} disabled={holding || Boolean(offer?.transfer)} onClick={toggleHold}>
+                    <Icon name={held ? "play" : "pause"} size={20} />{held ? "Tiếp tục" : "Giữ máy"}
+                  </button>
+                )}
+                {phone.phase === "active" && (
+                  <button type="button" className={`desk-ctl ${keypadOpen ? "is-on" : ""}`} aria-pressed={keypadOpen} onClick={() => setKeypadOpen((open) => !open)}>
+                    <Icon name="grid" size={20} />Bàn phím
+                  </button>
+                )}
+                <button type="button" className="desk-ctl is-end" onClick={phone.hangup} title="Alt+H">
+                  <Icon name="phone" size={20} />Gác máy
+                </button>
+              </div>
+            )}
+            {keypadOpen && phone.phase === "active" && keypad}
+            {offer && me.state === "on_call" && <TransferPanel offer={offer} api={api} fail={fail} onChange={onChange} />}
+          </div>
+        ) : wrapUp && !inCall ? (
+          <div className="desk-call__wrap">
+            <Badge tone="blue">Hoàn tất cuộc gọi · {wrapUp.caller.displayName ?? wrapUp.caller.number}</Badge>
+            <h2 className="desk-call__heading">Lưu kết quả trước khi nhận cuộc gọi mới</h2>
+            <div className="desk-form">
+              <Field label="Kết quả cuộc gọi">
+                <select aria-label="Kết quả cuộc gọi" value={dispositionId} onChange={(event) => setDispositionId(event.target.value)}>
+                  <option value="">— Chọn kết quả —</option>
+                  {dispositions
+                    .filter((item) => !item.departmentId || item.departmentId === wrapUp.departmentId)
+                    .map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Ghi chú">
+                <textarea aria-label="Ghi chú" rows={4} maxLength={4000} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Nội dung người gọi trình bày, việc cần làm tiếp…" />
+              </Field>
+              <div className="desk-actions">
+                {wrapUp.caller.userId && <VideoInviteButton callId={wrapUp.callId} api={api} fail={fail} />}
+                {/* BR-07: a hotline call is always filed with a result code. */}
+                {!dispositionId && <span className="desk-muted">Chọn kết quả cuộc gọi để lưu.</span>}
+                <Button variant="secondary" disabled={!dispositionId} onClick={() => void saveWrapUp(true)} icon="clipboard">Lưu và tạo phiếu</Button>
+                <Button disabled={!dispositionId} onClick={() => void saveWrapUp(false)} icon="check">Lưu ghi nhận</Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="desk-call__idle">
+            <span className={`desk-call__idle-icon tone-${isAgent ? STATE_TONE[me.state] : "blue"}`} aria-hidden="true">
+              <Icon name={isAgent && me.state === "not_ready" ? "pause" : "headset"} size={28} />
+            </span>
+            <h2 className="desk-call__heading">{idleTitle}</h2>
+            <p className="desk-muted">{idleText}</p>
+            {me.stateReason && <p className="desk-muted">{me.stateReason}</p>}
+            {phone.status === "registered" && !inCall && (
+              <form
+                className="softphone-input-row desk-dial"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (/^[0-9*#]{3,15}$/.test(dial)) phone.call(dial);
+                }}
+              >
+                <input className="softphone-dial-input" aria-label="Số cần gọi" value={dial} onChange={(event) => setDial(event.target.value.replace(/[^0-9*#]/g, "").slice(0, 15))} placeholder="Gọi số máy lẻ" inputMode="tel" />
+                <Button size="sm" type="button" variant="ghost" icon="grid" aria-pressed={keypadOpen} onClick={() => setKeypadOpen((open) => !open)}>
+                  <span className="sr-only">Bàn phím số</span>
+                </Button>
+                <Button size="sm" type="submit" icon="phone" disabled={!dial}>Gọi</Button>
+              </form>
+            )}
+            {keypadOpen && phone.status === "registered" && !inCall && keypad}
+          </div>
+        )}
         <p className="desk-shortcuts">
           Phím tắt: <kbd>Alt</kbd>+<kbd>A</kbd> trả lời · <kbd>Alt</kbd>+<kbd>H</kbd> kết thúc · <kbd>Alt</kbd>+<kbd>M</kbd> micro
           {isAgent && <> · <kbd>Alt</kbd>+<kbd>R</kbd> sẵn sàng · <kbd>Alt</kbd>+<kbd>P</kbd> tạm nghỉ</>}
         </p>
-        <div className="softphone-timer-box">
-          <div className="softphone-timer-digits">{me.stateSince ? clock(seconds(me.stateSince, null)) : "00:00"}</div>
-          <div className="softphone-timer-status">
-            {phone.phase === "incoming" ? `Cuộc gọi đến: ${phone.peer}` : phone.phase === "active" ? `Đang đàm thoại: ${phone.peer}` : STATE_LABEL[me.state]}
-          </div>
+      </section>
+
+      {/* Right: who is calling — profile, history, help for the call. */}
+      <aside className="callcenter-panel desk-col desk-col--caller" aria-label="Người gọi">
+        <div className="callcenter-panel__head">
+          <h2 className="callcenter-panel__title"><Icon name="profile" size={18} /><span>Người gọi</span></h2>
         </div>
-        <div className="softphone-actions-row">
-          {phone.phase === "incoming" && (
-            <button type="button" className="softphone-call-btn btn-start" onClick={phone.answer}>
-              <Icon name="phone" size={17} /><span>Trả lời</span>
-            </button>
-          )}
-          {phone.phase !== "none" && (
-            <>
-              <button type="button" className="softphone-call-btn btn-hangup" onClick={phone.hangup}>
-                <Icon name="phone" size={17} /><span>Kết thúc</span>
-              </button>
-              <button type="button" className="softphone-feature-btn" onClick={phone.toggleMute}>
-                <Icon name={phone.muted ? "mic-off" : "mic"} size={16} /><span>{phone.muted ? "Bật micro" : "Tắt micro"}</span>
-              </button>
-              {phone.phase === "active" && (
-                <button
-                  type="button"
-                  className="softphone-feature-btn"
-                  aria-pressed={held}
-                  disabled={holding || Boolean(offer?.transfer)}
-                  onClick={toggleHold}
-                >
-                  <Icon name={held ? "play" : "pause"} size={16} /><span>{held ? "Tiếp tục" : "Giữ máy"}</span>
-                </button>
-              )}
-            </>
-          )}
-          {phone.phase === "none" && (
-            <form
-              className="softphone-input-row"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (/^[0-9*#]{3,15}$/.test(dial)) phone.call(dial);
-              }}
-            >
-              <input className="softphone-dial-input" aria-label="Số cần gọi" value={dial} onChange={(event) => setDial(event.target.value.replace(/[^0-9*#]/g, "").slice(0, 15))} placeholder="Số máy lẻ hoặc số điện thoại" inputMode="tel" disabled={phone.status !== "registered" || inCall} />
-              <Button size="sm" type="submit" icon="phone" disabled={phone.status !== "registered" || inCall || !dial}>Gọi</Button>
-            </form>
-          )}
-        </div>
-        {(phone.phase === "active" || (phone.phase === "none" && phone.status === "registered" && !inCall)) && (
-          <div className="softphone-keypad-grid" role="group" aria-label={phone.phase === "active" ? "Bàn phím DTMF" : "Bàn phím số"}>
-            {KEYPAD.map(([key, sub]) => (
-              <button key={key} type="button" className="softphone-key-btn" onClick={() => press(key)} aria-label={key}>
-                <span className="softphone-key-num">{key}</span>
-                {sub && <span className="softphone-key-sub">{sub}</span>}
-              </button>
-            ))}
-            {phone.phase === "none" && dial && (
-              <button type="button" className="softphone-key-btn softphone-key-btn--wide" onClick={() => setDial((value) => value.slice(0, -1))} aria-label="Xóa một số">
-                <Icon name="chevron-left" size={16} />
-              </button>
-            )}
+        {offer ? (
+          <div className="desk-caller">
+            <div className="desk-caller__name">{offer.caller.displayName ?? "Số chưa xác định"}</div>
+            <div className="desk-caller__meta">
+              <span>{numberLabel(offer.caller.number)}</span>
+              {offer.caller.email && <span>{offer.caller.email}</span>}
+              <Badge tone="blue">{offer.departmentName}</Badge>
+            </div>
+            <div className="desk-caller__facts">
+              <span>{offer.caller.recentCalls} cuộc gọi trong 30 ngày</span>
+              {!offer.caller.userId && <span>Chưa liên kết tài khoản</span>}
+            </div>
+            {offer.context && <p className="desk-context"><Icon name="book" size={14} /> {offer.context}</p>}
+            <CallerProfile api={api} callId={offer.callId} outcomeLabel={OUTCOME_LABEL} />
+            {me.state === "on_call" && offer.caller.userId && <VideoInviteButton callId={offer.callId} api={api} fail={fail} />}
           </div>
+        ) : (
+          <p className="desk-muted">Hồ sơ người gọi, các lần liên hệ trước và phiếu liên quan hiện ở đây khi có cuộc gọi từ hàng đợi.</p>
         )}
-      </div>
+      </aside>
     </div>
   );
 }

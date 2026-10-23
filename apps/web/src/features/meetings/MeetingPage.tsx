@@ -24,7 +24,7 @@ import { MeetingOutcomesPanel } from "./MeetingOutcomesPanel";
 import { mapMediaError, micConstraints } from "./webrtc/local-media";
 import { MicLevelMeter } from "./MicLevelMeter";
 import { useSocket } from "../../app/providers/SocketContext";
-import { Badge, Button, Chip, IconButton, ListItem, ConfirmDialog } from "../../shared/ui/Primitives";
+import { Button, Chip, IconButton, ListItem, ConfirmDialog } from "../../shared/ui/Primitives";
 import { AnimatePresence } from "motion/react";
 import { meetingShortcut } from "../../shared/lib/interaction";
 import { Icon } from "../../shared/ui/Icon";
@@ -87,6 +87,31 @@ function downloadCalendarEvent(item: MeetingScheduleItem) {
 }
 
 // Video elements never play sound: remote audio plays once, from the stable <Audio> list in the room.
+/** A student number (8 digits starting with 5) when the display name carries one. */
+const studentIdOf = (name: string) => name.match(/\b(5\d{7})\b/)?.[1] ?? "";
+
+/** Header network state from the latest QoS sample. */
+function networkTone(rtt: number | null | undefined, loss: number | null | undefined, connected: boolean) {
+  if (!connected) return "bad";
+  return (rtt ?? 0) > 300 || (loss ?? 0) > 5 ? "weak" : "good";
+}
+
+function MeetingClock({ since }: { since: string }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => tick((value) => value + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const total = Math.max(0, Math.floor((Date.now() - Date.parse(since)) / 1000));
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return (
+    <time className="meeting-active-header__clock">
+      {total >= 3600 ? `${Math.floor(total / 3600)}:` : ""}
+      {pad(Math.floor(total / 60) % 60)}:{pad(total % 60)}
+    </time>
+  );
+}
+
 function Video({ stream }: { stream: MediaStream | null }) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
@@ -213,11 +238,9 @@ function DialInBadge({ accessToken, roomId }: { accessToken: string; roomId: str
   if (!dialIn) return null;
   const code = `${dialIn.code.slice(0, 3)} ${dialIn.code.slice(3)}`;
   return (
-    <Badge tone="neutral">
-      <span title={`Từ máy lẻ: gọi ${dialIn.number}, nhập mã ${dialIn.code} rồi nhấn #`}>
-        <Icon name="phone" size={12} /> Gọi {dialIn.number} · mã {code}
-      </span>
-    </Badge>
+    <span className="meeting-active-header__meta" title={`Từ máy lẻ: gọi ${dialIn.number}, nhập mã ${dialIn.code} rồi nhấn #`}>
+      <Icon name="phone" size={14} /> Gọi {dialIn.number} · mã {code}
+    </span>
   );
 }
 
@@ -668,6 +691,10 @@ export function MeetingPage() {
       : pill === "Nhóm tôi quản lý"
         ? room.role === "owner" || room.role === "admin"
         : true;
+  const roleLabel = (userId?: string) => {
+    const role = meetingState?.participants.find((person) => person.userId === userId)?.role;
+    return role === "host" ? "Chủ trì" : role === "cohost" ? "Đồng chủ trì" : "Thành viên";
+  };
   const pillCount = (pill: string) => visibleRooms.filter((room) => pillMatches(pill, room)).length;
   const filteredRooms = visibleRooms.filter((room) => {
     return pillMatches(meetingPill, room);
@@ -679,24 +706,15 @@ export function MeetingPage() {
     const now = new Date();
     const dateFormatted = now.toLocaleDateString("vi-VN");
     const attendees = [
-      {
-        name: user?.displayName || "Bạn",
-        mssv: "52100845",
-        role: "Chủ trì cuộc họp",
-        joinedAt: now.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
-        status: "Hiện diện",
-      },
-      ...meeting.remotePeers.map((peer, idx) => {
-        const mssvMatch = peer.displayName.match(/\b(5\d{7})\b/);
-        return {
-          name: peer.displayName,
-          mssv: mssvMatch ? mssvMatch[1] : `52200${100 + idx}`,
-          role: "Thành viên",
-          joinedAt: now.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
-          status: "Hiện diện",
-        };
-      }),
-    ];
+      { name: user?.displayName || "Bạn", userId: user?.id },
+      ...meeting.remotePeers.map((peer) => ({ name: peer.displayName, userId: peer.userId })),
+    ].map((person) => ({
+      name: person.name,
+      mssv: studentIdOf(person.name),
+      role: roleLabel(person.userId),
+      joinedAt: now.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
+      status: "Hiện diện",
+    }));
     const headers = "STT,Họ và tên,MSSV,Vai trò,Thời gian tham gia,Ngày,Trạng thái\n";
     const rows = attendees
       .map(
@@ -711,11 +729,7 @@ export function MeetingPage() {
     link.download = `diem-danh-phong-${(meeting.roomId || "tdtu").slice(0, 8)}-${now.toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    notify(
-      "Xuất điểm danh thành công",
-      `Đã xuất file điểm danh gồm ${attendees.length} người tham gia theo chuẩn MSSV TDTU.`,
-      "success",
-    );
+    notify("Xuất điểm danh thành công", `Đã xuất file điểm danh gồm ${attendees.length} người tham gia.`, "success");
   };
 
   useEffect(() => {
@@ -1034,99 +1048,53 @@ export function MeetingPage() {
               Kết nối cuộc họp đã bị ngắt. Hệ thống đang tự vào lại khi mạng ổn định; nếu không được, chọn “Tham gia”.
             </div>
           )}
-          {loading ? (
-            <>
-              <header className="page-hero">
-                <h1 className="meeting-page-title">Cuộc họp video</h1>
-                <p className="meeting-page-description">
-                  Chọn phòng trong nhóm của bạn và kiểm tra thiết bị trước khi tham gia.
-                </p>
-              </header>
-              <p role="status" className="loading-note">
-                Đang tải danh sách phòng họp…
-              </p>
-            </>
-          ) : visibleRooms.length === 0 ? (
-            <>
-              <header className="page-hero">
-                <h1 className="meeting-page-title">Cuộc họp video</h1>
-                <p className="meeting-page-description">
-                  Chọn phòng trong nhóm của bạn và kiểm tra thiết bị trước khi tham gia.
-                </p>
-              </header>
-              <div className="state-card state-card--compact">
-                <span className="state-card__icon">
-                  <Icon name="video" size={26} />
-                </span>
-                <h3>Chưa có phòng họp nào</h3>
-                <p>
-                  Nhóm này hiện chưa có phòng họp khả dụng hoặc đã lưu trữ. Hãy kiểm tra cài đặt
-                  kênh của nhóm.
-                </p>
-                <Button variant="secondary" size="sm" onClick={() => setActiveView("overview")}>
-                  Xem nhóm làm việc
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* 3 Thẻ KPI Quản lý Hội nghị TDTU */}
-          <div className="meeting-kpi-grid">
-            <div className="meeting-kpi-card">
-              <div className="meeting-kpi-card__icon meeting-kpi-card__icon--rooms">
-                <Icon name="video" size={22} strokeWidth={1.8} />
-              </div>
-              <div>
-                <div className="meeting-kpi-card__number">{visibleRooms.length}</div>
-                <div className="meeting-kpi-card__label">Phòng đang mở</div>
-              </div>
-            </div>
-
-            <div className="meeting-kpi-card">
-              <div className="meeting-kpi-card__icon meeting-kpi-card__icon--schedules">
-                <Icon name="calendar" size={22} strokeWidth={1.8} />
-              </div>
-              <div>
-                <div className="meeting-kpi-card__number">
-                  {visibleSchedules.filter((item) => new Date(item.startsAt).toDateString() === new Date().toDateString()).length}
-                </div>
-                <div className="meeting-kpi-card__label">Cuộc họp hôm nay</div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Dãy pill lọc phân loại hội nghị */}
-          <div className="meeting-filter-row" role="tablist" aria-label="Bộ lọc phân loại hội nghị">
-            {MEETING_BRANCH_PILLS.filter((pill) => pill === "Tất cả" || pill === meetingPill || pillCount(pill) > 0).map((pill) => (
-              <button
-                key={pill}
-                type="button"
-                className={`meeting-filter-pill ${meetingPill === pill ? "is-active" : ""}`}
-                onClick={() => setMeetingPill(pill)}
-              >
-                {pill} ({pillCount(pill)})
-              </button>
-            ))}
-          </div>
-
-          <div className="meeting-lobby-wrap">
-              {/* Left Column: Header + Room Cards */}
-              <div className="meeting-rooms-section">
-                <header className="page-hero">
-                  <h1 className="meeting-page-title">Cuộc họp video</h1>
-                  <p className="meeting-page-description">
-                    Chọn phòng trong nhóm của bạn và kiểm tra thiết bị trước khi tham gia.
+          <header className="page-hero meeting-lobby__head">
+            <h1 className="meeting-page-title">Họp trực tuyến</h1>
+            <p className="meeting-page-description">
+              Chọn cuộc họp hoặc phòng của nhóm, kiểm tra camera và micro rồi vào phòng.
+            </p>
+          </header>
+          <div className="meeting-lobby-grid">
+            <div className="meeting-lobby-main">
+              {loading ? (
+                <>
+                  <p role="status" className="loading-note">
+                    Đang tải danh sách phòng họp…
                   </p>
-                </header>
-
+                </>
+              ) : visibleRooms.length === 0 ? (
+                <>
+                  <div className="state-card state-card--compact">
+                    <span className="state-card__icon">
+                      <Icon name="video" size={26} />
+                    </span>
+                    <h3>Chưa có phòng họp nào</h3>
+                    <p>
+                      Nhóm này hiện chưa có phòng họp khả dụng hoặc đã lưu trữ. Hãy kiểm tra cài đặt
+                      kênh của nhóm.
+                    </p>
+                    <Button variant="secondary" size="sm" onClick={() => setActiveView("overview")}>
+                      Xem nhóm làm việc
+                    </Button>
+                  </div>
+                </>
+              ) : (
+              <section className="meeting-rooms-section" aria-label="Phòng của các nhóm">
                 <div className="meeting-section-header">
-                  <h3>
-                    Danh sách phòng ({displayRooms.length}) · {meetingPill}
-                  </h3>
-                  <Chip icon="video">Phòng của nhóm</Chip>
+                  <h2>Phòng của các nhóm</h2>
                 </div>
-
+                <div className="meeting-filter-row" role="tablist" aria-label="Bộ lọc phân loại hội nghị">
+                  {MEETING_BRANCH_PILLS.filter((pill) => pill === "Tất cả" || pill === meetingPill || pillCount(pill) > 0).map((pill) => (
+                    <button
+                      key={pill}
+                      type="button"
+                      className={`meeting-filter-pill ${meetingPill === pill ? "is-active" : ""}`}
+                      onClick={() => setMeetingPill(pill)}
+                    >
+                      {pill} ({pillCount(pill)})
+                    </button>
+                  ))}
+                </div>
                 {displayRooms.map((room) => (
                   <button
                     type="button"
@@ -1152,10 +1120,240 @@ export function MeetingPage() {
                     </div>
                   </button>
                 ))}
-              </div>
-
-              {/* Right Column: Lobby Device Check & Join Preview */}
-              <div className="meeting-lobby-preview-box">
+              </section>
+              )}
+              <section className="meeting-schedules" aria-label="Lịch họp sắp tới">
+                <div className="meeting-schedules-head">
+                  <div>
+                    <h2>Lịch họp sắp tới</h2>
+                    <p>Lên kế hoạch trong phòng của nhóm và tham gia trực tiếp khi đến giờ.</p>
+                  </div>
+                  {visibleRooms.length > 0 && (
+                    <Button
+                      size="sm"
+                      icon="plus"
+                      onClick={() =>
+                        scheduleFormOpen ? setScheduleFormOpen(false) : openScheduleForm()
+                      }
+                    >
+                      {scheduleFormOpen ? "Đóng biểu mẫu" : "Lên lịch họp"}
+                    </Button>
+                  )}
+                </div>
+                {scheduleFormOpen && (
+                  <form className="meeting-schedule-form" onSubmit={submitSchedule}>
+                    <div className="meeting-schedule-form-grid">
+                      <label className="meeting-schedule-wide">
+                        Tên cuộc họp
+                        <input
+                          required
+                          minLength={3}
+                          maxLength={120}
+                          value={scheduleTitle}
+                          onChange={(event) => setScheduleTitle(event.target.value)}
+                          placeholder="Ví dụ: Họp tiến độ đồ án"
+                        />
+                      </label>
+                      <label>
+                        Phòng họp
+                        <select
+                          required
+                          value={scheduleRoomId}
+                          onChange={(event) => setScheduleRoomId(event.target.value)}
+                        >
+                          {visibleRooms
+                            .filter(
+                              (room) =>
+                                !editingScheduleId ||
+                                room.workspaceId ===
+                                  schedules.find((item) => item.id === editingScheduleId)?.workspaceId,
+                            )
+                            .map((room) => (
+                              <option key={room.id} value={room.id}>
+                                {room.workspace} · {room.name}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+                      <label>
+                        Bắt đầu
+                        <input
+                          required
+                          type="datetime-local"
+                          value={scheduleStart}
+                          onChange={(event) => setScheduleStart(event.target.value)}
+                        />
+                      </label>
+                      <label>
+                        Kết thúc
+                        <input
+                          required
+                          type="datetime-local"
+                          value={scheduleEnd}
+                          onChange={(event) => setScheduleEnd(event.target.value)}
+                        />
+                      </label>
+                      <label className="meeting-schedule-wide">
+                        Nội dung chuẩn bị
+                        <textarea
+                          rows={2}
+                          maxLength={1000}
+                          value={scheduleDescription}
+                          onChange={(event) => setScheduleDescription(event.target.value)}
+                          placeholder="Nội dung, tài liệu cần chuẩn bị…"
+                        />
+                      </label>
+                      <label className="meeting-schedule-wide">
+                        Agenda (mỗi dòng một mục)
+                        <textarea
+                          rows={3}
+                          value={scheduleAgenda}
+                          onChange={(event) => setScheduleAgenda(event.target.value)}
+                          placeholder={"Báo cáo tiến độ\nPhân công tuần tới"}
+                        />
+                      </label>
+                    </div>
+                    <div className="meeting-schedule-form-actions">
+                      <span>Thời gian theo múi giờ của thiết bị bạn.</span>
+                      <Button
+                        type="submit"
+                        size="sm"
+                        loading={savingSchedule}
+                        disabled={savingSchedule}
+                      >
+                        {editingScheduleId ? "Lưu thay đổi" : "Tạo lịch họp"}
+                      </Button>
+                    </div>
+                  </form>
+                )}
+                {schedulesError && (
+                  <p className="meeting-schedule-error" role="alert">
+                    {schedulesError}
+                  </p>
+                )}
+                {schedulesLoading ? (
+                  <p className="meeting-schedule-empty" role="status">
+                    Đang tải lịch họp…
+                  </p>
+                ) : visibleSchedules.length === 0 ? (
+                  <p className="meeting-schedule-empty">Chưa có lịch họp sắp tới trong nhóm này.</p>
+                ) : (
+                  <div className="meeting-schedule-list">
+                    {visibleSchedules.map((item) => {
+                      const start = new Date(item.startsAt);
+                      const end = new Date(item.endsAt);
+                      return (
+                        <article className="meeting-schedule-item" key={item.id}>
+                          <div className="meeting-schedule-date">
+                            <strong>
+                              {start.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })}
+                            </strong>
+                            <span>
+                              {start.toLocaleTimeString("vi-VN", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          </div>
+                          <div className="meeting-schedule-content">
+                            <h3>{item.title}</h3>
+                            <p>
+                              {item.workspaceName} · {item.roomName} · đến{" "}
+                              {end.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                            {item.description && (
+                              <p className="meeting-schedule-description">{item.description}</p>
+                            )}
+                            <span>Tạo bởi {item.organizerName}</span>
+                          </div>
+                          <div className="meeting-schedule-actions">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              icon="video"
+                              disabled={!isConnected || joining}
+                              loading={joining}
+                              onClick={() => void enterRoom(item.roomId, item.id)}
+                            >
+                              Tham gia
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="text"
+                              icon="calendar"
+                              onClick={() => downloadCalendarEvent(item)}
+                            >
+                              Thêm vào lịch
+                            </Button>
+                            {item.canManage && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="text"
+                                  icon="edit"
+                                  onClick={() => openScheduleForm(item)}
+                                >
+                                  Sửa
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="text"
+                                  onClick={() => setCancelScheduleId(item.id)}
+                                >
+                                  Huỷ lịch
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+              <section className="meeting-history" aria-label="Lịch sử cuộc họp">
+                <h2>Cuộc họp gần đây</h2>
+                {historyLoading ? (
+                  <p role="status">Đang tải lịch sử cuộc họp…</p>
+                ) : historyError ? (
+                  <p role="alert">{historyError}</p>
+                ) : history.length === 0 ? (
+                  <p>Bạn chưa tham gia cuộc họp nào.</p>
+                ) : (
+                  <div className="meeting-history-list" role="list">
+                    {history.map((item) => {
+                      const joinedDate = new Date(item.joinedAt);
+                      const timeStr = Number.isNaN(joinedDate.getTime())
+                        ? ""
+                        : joinedDate.toLocaleTimeString("vi-VN", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          });
+                      const dateStr = Number.isNaN(joinedDate.getTime())
+                        ? ""
+                        : joinedDate.toLocaleDateString("vi-VN", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          });
+                      return (
+                        <ListItem
+                          key={item.id}
+                          role="listitem"
+                          icon="video"
+                          title={item.name}
+                          subtitle={item.leftAt ? "Đã kết thúc phiên họp" : "Chưa ghi nhận rời phòng"}
+                          metaPrimary={timeStr || (item.leftAt ? "Đã kết thúc" : "Đang mở")}
+                          metaSecondary={dateStr}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            </div>
+            {!loading && visibleRooms.length > 0 && (
+              <aside className="meeting-lobby-preview-box" aria-label="Kiểm tra thiết bị">
                 <div>
                   <h3
                     style={{
@@ -1345,239 +1543,9 @@ export function MeetingPage() {
                     </Button>
                   )}
                 </div>
-              </div>
-            </div>
-          </>
-        )}
-          <section className="meeting-schedules" aria-label="Lịch họp sắp tới">
-            <div className="meeting-schedules-head">
-              <div>
-                <h2>Lịch họp sắp tới</h2>
-                <p>Lên kế hoạch trong phòng của nhóm và tham gia trực tiếp khi đến giờ.</p>
-              </div>
-              {visibleRooms.length > 0 && (
-                <Button
-                  size="sm"
-                  icon="plus"
-                  onClick={() =>
-                    scheduleFormOpen ? setScheduleFormOpen(false) : openScheduleForm()
-                  }
-                >
-                  {scheduleFormOpen ? "Đóng biểu mẫu" : "Lên lịch họp"}
-                </Button>
-              )}
-            </div>
-            {scheduleFormOpen && (
-              <form className="meeting-schedule-form" onSubmit={submitSchedule}>
-                <div className="meeting-schedule-form-grid">
-                  <label className="meeting-schedule-wide">
-                    Tên cuộc họp
-                    <input
-                      required
-                      minLength={3}
-                      maxLength={120}
-                      value={scheduleTitle}
-                      onChange={(event) => setScheduleTitle(event.target.value)}
-                      placeholder="Ví dụ: Họp tiến độ đồ án"
-                    />
-                  </label>
-                  <label>
-                    Phòng họp
-                    <select
-                      required
-                      value={scheduleRoomId}
-                      onChange={(event) => setScheduleRoomId(event.target.value)}
-                    >
-                      {visibleRooms
-                        .filter(
-                          (room) =>
-                            !editingScheduleId ||
-                            room.workspaceId ===
-                              schedules.find((item) => item.id === editingScheduleId)?.workspaceId,
-                        )
-                        .map((room) => (
-                          <option key={room.id} value={room.id}>
-                            {room.workspace} · {room.name}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                  <label>
-                    Bắt đầu
-                    <input
-                      required
-                      type="datetime-local"
-                      value={scheduleStart}
-                      onChange={(event) => setScheduleStart(event.target.value)}
-                    />
-                  </label>
-                  <label>
-                    Kết thúc
-                    <input
-                      required
-                      type="datetime-local"
-                      value={scheduleEnd}
-                      onChange={(event) => setScheduleEnd(event.target.value)}
-                    />
-                  </label>
-                  <label className="meeting-schedule-wide">
-                    Nội dung chuẩn bị
-                    <textarea
-                      rows={2}
-                      maxLength={1000}
-                      value={scheduleDescription}
-                      onChange={(event) => setScheduleDescription(event.target.value)}
-                      placeholder="Nội dung, tài liệu cần chuẩn bị…"
-                    />
-                  </label>
-                  <label className="meeting-schedule-wide">
-                    Agenda (mỗi dòng một mục)
-                    <textarea
-                      rows={3}
-                      value={scheduleAgenda}
-                      onChange={(event) => setScheduleAgenda(event.target.value)}
-                      placeholder={"Báo cáo tiến độ\nPhân công tuần tới"}
-                    />
-                  </label>
-                </div>
-                <div className="meeting-schedule-form-actions">
-                  <span>Thời gian theo múi giờ của thiết bị bạn.</span>
-                  <Button
-                    type="submit"
-                    size="sm"
-                    loading={savingSchedule}
-                    disabled={savingSchedule}
-                  >
-                    {editingScheduleId ? "Lưu thay đổi" : "Tạo lịch họp"}
-                  </Button>
-                </div>
-              </form>
+              </aside>
             )}
-            {schedulesError && (
-              <p className="meeting-schedule-error" role="alert">
-                {schedulesError}
-              </p>
-            )}
-            {schedulesLoading ? (
-              <p className="meeting-schedule-empty" role="status">
-                Đang tải lịch họp…
-              </p>
-            ) : visibleSchedules.length === 0 ? (
-              <p className="meeting-schedule-empty">Chưa có lịch họp sắp tới trong nhóm này.</p>
-            ) : (
-              <div className="meeting-schedule-list">
-                {visibleSchedules.map((item) => {
-                  const start = new Date(item.startsAt);
-                  const end = new Date(item.endsAt);
-                  return (
-                    <article className="meeting-schedule-item" key={item.id}>
-                      <div className="meeting-schedule-date">
-                        <strong>
-                          {start.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })}
-                        </strong>
-                        <span>
-                          {start.toLocaleTimeString("vi-VN", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                      <div className="meeting-schedule-content">
-                        <h3>{item.title}</h3>
-                        <p>
-                          {item.workspaceName} · {item.roomName} · đến{" "}
-                          {end.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                        {item.description && (
-                          <p className="meeting-schedule-description">{item.description}</p>
-                        )}
-                        <span>Tạo bởi {item.organizerName}</span>
-                      </div>
-                      <div className="meeting-schedule-actions">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          icon="video"
-                          disabled={!isConnected || joining}
-                          loading={joining}
-                          onClick={() => void enterRoom(item.roomId, item.id)}
-                        >
-                          Tham gia
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="text"
-                          icon="calendar"
-                          onClick={() => downloadCalendarEvent(item)}
-                        >
-                          Thêm vào lịch
-                        </Button>
-                        {item.canManage && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="text"
-                              icon="edit"
-                              onClick={() => openScheduleForm(item)}
-                            >
-                              Sửa
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="text"
-                              onClick={() => setCancelScheduleId(item.id)}
-                            >
-                              Huỷ lịch
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-          <section className="meeting-history" aria-label="Lịch sử cuộc họp">
-            <h2>Cuộc họp gần đây</h2>
-            {historyLoading ? (
-              <p role="status">Đang tải lịch sử cuộc họp…</p>
-            ) : historyError ? (
-              <p role="alert">{historyError}</p>
-            ) : history.length === 0 ? (
-              <p>Bạn chưa tham gia cuộc họp nào.</p>
-            ) : (
-              <div className="meeting-history-list" role="list">
-                {history.map((item) => {
-                  const joinedDate = new Date(item.joinedAt);
-                  const timeStr = Number.isNaN(joinedDate.getTime())
-                    ? ""
-                    : joinedDate.toLocaleTimeString("vi-VN", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      });
-                  const dateStr = Number.isNaN(joinedDate.getTime())
-                    ? ""
-                    : joinedDate.toLocaleDateString("vi-VN", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                      });
-                  return (
-                    <ListItem
-                      key={item.id}
-                      role="listitem"
-                      icon="video"
-                      title={item.name}
-                      subtitle={item.leftAt ? "Đã kết thúc phiên họp" : "Chưa ghi nhận rời phòng"}
-                      metaPrimary={timeStr || (item.leftAt ? "Đã kết thúc" : "Đang mở")}
-                      metaSecondary={dateStr}
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </section>
+          </div>
         </div>
       ) : (
         /* In-Call Active Video Room */
@@ -1590,17 +1558,20 @@ export function MeetingPage() {
           )}
 
           <header className="meeting-active-header">
-            <h2>
-              <Icon name="video" size={18} style={{ color: "#bcd2dd" }} />
-              {rooms.find((room) => room.id === meeting.roomId)?.name ?? "Phòng họp trực tuyến"}
-            </h2>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <Badge tone={isConnected ? "green" : "amber"}>
-                <Icon name="users" size={12} /> {participantCount} người tham gia
-              </Badge>
-              {accessToken && <DialInBadge accessToken={accessToken} roomId={meeting.roomId} />}
-              <Badge tone="blue">WebRTC SFU</Badge>
-            </div>
+            <h2>{rooms.find((room) => room.id === meeting.roomId)?.name ?? "Phòng họp trực tuyến"}</h2>
+            {meetingState?.startedAt && <MeetingClock since={meetingState.startedAt} />}
+            <span className="meeting-active-header__meta">
+              <Icon name="users" size={14} /> {participantCount} người
+            </span>
+            {accessToken && <DialInBadge accessToken={accessToken} roomId={meeting.roomId} />}
+            <span className={`meeting-network is-${networkTone(meeting.qos?.rtt, meeting.qos?.packetLoss, isConnected)}`}>
+              <Icon name="activity" size={14} />
+              {!isConnected
+                ? "Mất kết nối"
+                : meeting.qos?.rtt != null
+                  ? `${networkTone(meeting.qos.rtt, meeting.qos.packetLoss, true) === "good" ? "Mạng tốt" : "Mạng yếu"} · ${meeting.qos.rtt} ms`
+                  : "Đang đo mạng…"}
+            </span>
           </header>
 
           {/* Shared Screen View */}
@@ -1761,7 +1732,7 @@ export function MeetingPage() {
                         type="button"
                         className="meeting-attendance-btn"
                         onClick={handleExportAttendanceCsv}
-                        title="Tự động trích xuất MSSV và xuất file điểm danh CSV"
+                        title="Xuất danh sách người tham gia (CSV)"
                       >
                         <Icon name="download" size={14} />
                         <span>Xuất điểm danh (CSV)</span>
@@ -1770,8 +1741,8 @@ export function MeetingPage() {
                     <div className="meeting-people-list">
                       <div className="meeting-person-row">
                         <div className="meeting-person-info">
-                          <span className="meeting-person-name">{user?.displayName || "Bạn"} (Chủ trì)</span>
-                          <span className="meeting-person-mssv">MSSV: 52100845</span>
+                          <span className="meeting-person-name">{user?.displayName || "Bạn"} (bạn)</span>
+                          <span className="meeting-person-mssv">{roleLabel(user?.id)}</span>
                         </div>
                         <Button
                           size="sm"
@@ -1785,12 +1756,13 @@ export function MeetingPage() {
                           Ghim
                         </Button>
                       </div>
-                      {meeting.remotePeers.map((peer, idx) => (
+                      {meeting.remotePeers.map((peer) => (
                         <div key={peer.socketId} className="meeting-person-row">
                           <div className="meeting-person-info">
                             <span className="meeting-person-name">{peer.displayName}</span>
                             <span className="meeting-person-mssv">
-                              MSSV: {peer.displayName.match(/\b(5\d{7})\b/)?.[1] || `52200${100 + idx}`}
+                              {roleLabel(peer.userId)}
+                              {studentIdOf(peer.displayName) && ` · MSSV ${studentIdOf(peer.displayName)}`}
                             </span>
                           </div>
                           <Button
@@ -1930,10 +1902,10 @@ export function MeetingPage() {
             </button>
           </div>
 
-          {/* QoS Statistics Panel */}
-          <div className="meeting-qos-card">
+          {/* QoS measurements, folded: the header already shows the network state. */}
+          <details className="meeting-qos-card">
+            <summary>Chi tiết chất lượng mạng (QoS)</summary>
             <div className="meeting-qos-info">
-              <strong>Đo kiểm chất lượng mạng thời gian thực (QoS Metrics)</strong>
               <p>
                 Độ trễ RTT: <strong>{meeting.qos?.rtt ?? "—"} ms</strong> · Băng thông:{" "}
                 <strong>{meeting.qos?.bitrate ?? "—"} kbps</strong> · Tỷ lệ mất gói:{" "}
@@ -1978,7 +1950,7 @@ export function MeetingPage() {
                 Xuất JSON
               </Button>
             </div>
-          </div>
+          </details>
         </div>
       )}
       <AnimatePresence>{leaveConfirm && <ConfirmDialog title="Rời phòng" description={meeting.sharing ? "Bạn đang chia sẻ màn hình. Rời phòng sẽ dừng chia sẻ và ngắt thiết bị của bạn." : "Bạn đang là host. Rời phòng sẽ chuyển quyền host cho người phù hợp; nếu không còn người tham gia, phiên sẽ kết thúc."} confirmLabel="Rời phòng" loading={leaving} onClose={() => setLeaveConfirm(false)} onConfirm={() => {setLeaving(true); void meeting.leaveCall().finally(() => {setLeaving(false);setLeaveConfirm(false);});}} />}</AnimatePresence>
