@@ -58,6 +58,24 @@ export type MeetingScheduleItem = {
   agenda?: string[];
 };
 
+/** A meeting that ran or is running (ended_at null), for the "Họp" week view. */
+export type MeetingCalendarSession = {
+  id: string;
+  roomId: string;
+  roomName: string;
+  workspaceId: string;
+  workspaceName: string;
+  scheduleId: string | null;
+  /** The schedule's title when the session was started from one. */
+  title: string | null;
+  startedAt: string;
+  endedAt: string | null;
+  /** Connected now for a running session; everyone let in for a finished one. */
+  people: string[];
+};
+
+export type MeetingCalendar = { schedules: MeetingScheduleItem[]; sessions: MeetingCalendarSession[] };
+
 export type AuthResponse = {
   user: AuthUser;
   accessToken: string;

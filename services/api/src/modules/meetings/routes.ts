@@ -1,4 +1,5 @@
 import type { RouteContext } from "../../shared/http/context.js";
+import { listMeetingCalendar } from "./calendar.js";
 import { getAuthUserId, readJson, sendJson } from "../../shared/http/utils.js";
 import { query } from "../../infrastructure/database/db.js";
 import { requireChannelAccess } from "../workspaces/service.js";
@@ -36,6 +37,7 @@ export async function meetingRoutes({
   request,
   response,
   pathname,
+  params,
   io,
 }: RouteContext): Promise<void> {
   const attendance = pathname.match(/^\/api\/meetings\/sessions\/([^/]+)\/attendance(\.csv)?$/);
@@ -201,6 +203,14 @@ export async function meetingRoutes({
       [userId],
     );
     sendJson(response, 200, { meetings: result.rows });
+    return;
+  }
+
+  if (request.method === "GET" && pathname === "/api/meetings/calendar") {
+    const userId = await getAuthUserId(request);
+    const [from, to] = ["from", "to"].map((key) => new Date(params.get(key) ?? ""));
+    response.setHeader("Cache-Control", "no-store");
+    sendJson(response, 200, await listMeetingCalendar(userId, from, to));
     return;
   }
 
