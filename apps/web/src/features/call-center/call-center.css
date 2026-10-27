@@ -52,11 +52,6 @@
   gap: 12px;
 }
 
-[data-theme="dark"] .callcenter-kpi-card {
-  background: #1E293B;
-  border-color: #334155;
-}
-
 .callcenter-kpi-card__icon {
   width: 32px;
   height: 32px;
@@ -86,10 +81,6 @@
   font-weight: 700;
   color: var(--text);
   line-height: 1.1;
-}
-
-[data-theme="dark"] .callcenter-kpi-card__number {
-  color: #F8FAFC;
 }
 
 .callcenter-kpi-card__label {
@@ -134,12 +125,6 @@
   transition: all 0.15s ease;
 }
 
-[data-theme="dark"] .callcenter-pill {
-  background: #1E293B;
-  border-color: #334155;
-  color: #94A3B8;
-}
-
 .callcenter-pill:hover:not(.is-active) {
   background: var(--bg-subtle);
   color: var(--text);
@@ -161,11 +146,6 @@
   box-shadow: none;
 }
 
-[data-theme="dark"] .callcenter-panel {
-  background: #1E293B;
-  border-color: #334155;
-}
-
 .callcenter-panel__head {
   display: flex;
   align-items: center;
@@ -181,10 +161,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-[data-theme="dark"] .callcenter-panel__title {
-  color: #F8FAFC;
 }
 
 .callcenter-badge-count {
@@ -213,11 +189,6 @@
   transition: all 0.15s ease;
 }
 
-[data-theme="dark"] .call-item-card {
-  background: #0F172A;
-  border-color: #334155;
-}
-
 .call-item-card:hover {
   background: var(--surface);
   border-color: var(--border-strong);
@@ -238,10 +209,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-[data-theme="dark"] .call-item-caller {
-  color: #F8FAFC;
 }
 
 .call-item-mssv {
@@ -339,12 +306,6 @@
   outline: none;
 }
 
-[data-theme="dark"] .softphone-dial-input {
-  background: #0F172A;
-  border-color: #334155;
-  color: #F8FAFC;
-}
-
 .softphone-keypad-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -364,11 +325,6 @@
   transition: all 0.12s ease;
 }
 
-[data-theme="dark"] .softphone-key-btn {
-  background: #0F172A;
-  border-color: #334155;
-}
-
 .softphone-key-btn:hover {
   background: var(--tint-blue-bg);
   border-color: #BFDBFE;
@@ -383,10 +339,6 @@
   font-weight: 700;
   color: var(--text);
   line-height: 1;
-}
-
-[data-theme="dark"] .softphone-key-num {
-  color: #F8FAFC;
 }
 
 .softphone-key-sub {
@@ -437,11 +389,6 @@
   box-shadow: none;
 }
 
-[data-theme="dark"] .cdr-table-card {
-  background: #1E293B;
-  border-color: #334155;
-}
-
 .cdr-table-wrapper {
   overflow-x: auto;
 }
@@ -462,11 +409,6 @@
   white-space: nowrap;
 }
 
-[data-theme="dark"] .cdr-table th {
-  background: #0F172A;
-  border-color: #334155;
-}
-
 .cdr-table td {
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
@@ -474,17 +416,8 @@
   vertical-align: middle;
 }
 
-[data-theme="dark"] .cdr-table td {
-  border-color: #334155;
-  color: #F8FAFC;
-}
-
 .cdr-table tr:hover td {
   background: var(--bg-subtle);
-}
-
-[data-theme="dark"] .cdr-table tr:hover td {
-  background: #162032;
 }
 
 /* Audio Player Pill */
@@ -557,10 +490,6 @@
   overflow-y: auto;
 }
 
-[data-theme="dark"] .qa-drawer {
-  background: #1E293B;
-}
-
 .qa-drawer__head {
   display: flex;
   align-items: center;
@@ -586,11 +515,6 @@
   gap: 10px;
 }
 
-[data-theme="dark"] .qa-drawer__footer {
-  background: #0F172A;
-  border-color: #334155;
-}
-
 /* Audio Player in Drawer */
 .qa-audio-box {
   background: var(--bg-subtle);
@@ -600,11 +524,6 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-[data-theme="dark"] .qa-audio-box {
-  background: #0F172A;
-  border-color: #334155;
 }
 
 .qa-audio-controls {
@@ -661,10 +580,6 @@
   background: var(--bg-subtle);
   font-weight: 700;
   font-size: 14px;
-}
-
-[data-theme="dark"] .qa-total-row {
-  background: #0F172A;
 }
 
 /* Lock Warning Box */

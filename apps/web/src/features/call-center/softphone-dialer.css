@@ -1,0 +1,492 @@
+/* Softphone Dialer Page styling - Matching screenshot */
+.softphone-page-container {
+  padding: 24px 32px;
+  max-width: 1380px;
+  margin: 0 auto;
+}
+
+.softphone-page-header {
+  margin-bottom: 24px;
+}
+
+.softphone-page-title {
+  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text, #0f172a);
+}
+
+.softphone-page-desc {
+  margin: 0;
+  font-size: 14px;
+  color: var(--nexo-text-muted, #64748b);
+}
+
+.softphone-main-layout {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .softphone-main-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Left Card: Bàn phím */
+.softphone-card {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--nexo-border-beige, #e2e8f0);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.softphone-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.softphone-card__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text, #0f172a);
+}
+
+.softphone-audio-icon-btn {
+  background: none;
+  border: none;
+  color: var(--nexo-text-muted, #64748b);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.softphone-audio-icon-btn:hover {
+  background: var(--surface-subtle, #f1f5f9);
+  color: var(--text, #0f172a);
+}
+
+/* Display / Input Area */
+.softphone-dial-box {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.softphone-dial-box__label {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text, #1e293b);
+  margin-bottom: 6px;
+}
+
+.softphone-dial-display-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  margin-bottom: 6px;
+}
+
+.softphone-dial-display-input {
+  width: 100%;
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 2px;
+  border: none;
+  background: transparent;
+  color: var(--text, #0f172a);
+  outline: none;
+  padding: 0 36px 0 0;
+}
+
+.softphone-dial-clear-btn {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.softphone-dial-clear-btn:hover {
+  background: #f1f5f9;
+  color: #ef4444;
+}
+
+.softphone-dial-box__hint {
+  font-size: 12px;
+  color: var(--nexo-text-muted, #94a3b8);
+  margin: 0;
+}
+
+/* Keypad Grid 3x4 */
+.softphone-keys-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  max-width: 280px;
+  margin: 0 auto 24px;
+}
+
+.softphone-num-btn {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto;
+  border-radius: 50%;
+  border: 1px solid var(--nexo-border-beige, #f1f5f9);
+  background: var(--surface-subtle, #f8fafc);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.14s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.14s ease,
+              border-color 0.14s ease,
+              box-shadow 0.16s ease;
+  user-select: none;
+}
+
+.softphone-num-btn:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  transform: scale(1.06) translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.softphone-num-btn:active {
+  background: #cbd5e1;
+  transform: scale(0.92) translateY(1px);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.12);
+}
+
+.softphone-num-main {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text, #1e293b);
+  transition: transform 0.1s ease;
+}
+
+.softphone-num-btn:active .softphone-num-main {
+  transform: scale(0.96);
+}
+
+.softphone-num-sub {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+
+/* Call Button Area */
+.softphone-call-action-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.softphone-call-btn {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: none;
+  background: #22c55e;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.2s ease,
+              box-shadow 0.2s ease;
+}
+
+.softphone-call-btn:hover:not(:disabled) {
+  background: #16a34a;
+  transform: scale(1.08) translateY(-1.5px);
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.55);
+}
+
+.softphone-call-btn:active:not(:disabled) {
+  transform: scale(0.93) translateY(1px);
+  box-shadow: 0 2px 6px rgba(34, 197, 94, 0.4);
+}
+
+.softphone-call-btn:disabled {
+  background: #cbd5e1;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.softphone-call-btn.is-active-call {
+  background: #ef4444;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+}
+
+.softphone-call-btn.is-active-call:hover {
+  background: #dc2626;
+  transform: scale(1.08) translateY(-1.5px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.55);
+}
+
+.softphone-call-btn.is-active-call:active {
+  transform: scale(0.93) translateY(1px);
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+}
+
+.softphone-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #16a34a;
+}
+
+.softphone-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+}
+
+/* Right Card: Danh bạ */
+.softphone-right-card {
+  min-height: 520px;
+}
+
+.softphone-right-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.softphone-search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 220px;
+}
+
+.softphone-search-input {
+  width: 100%;
+  padding: 7px 12px 7px 32px;
+  border: 1px solid var(--nexo-border-beige, #e2e8f0);
+  border-radius: 8px;
+  font-size: 13px;
+  background: var(--surface, #ffffff);
+  color: var(--text, #0f172a);
+  outline: none;
+}
+
+.softphone-search-input:focus {
+  border-color: #2563eb;
+}
+
+.softphone-search-icon {
+  position: absolute;
+  left: 10px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+/* Contact List */
+.softphone-contacts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.softphone-contact-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: 10px;
+  transition: background-color 0.16s ease, transform 0.14s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s ease;
+  cursor: pointer;
+}
+
+.softphone-contact-row:hover {
+  background-color: var(--surface-subtle, #f8fafc);
+  transform: translateX(2px);
+}
+
+.softphone-contact-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.softphone-contact-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #581c87;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.softphone-contact-info__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text, #1e293b);
+  margin-bottom: 2px;
+}
+
+.softphone-contact-info__meta {
+  font-size: 12px;
+  color: var(--nexo-text-muted, #64748b);
+}
+
+.softphone-quick-call-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.15s ease,
+              color 0.15s ease,
+              box-shadow 0.18s ease;
+}
+
+.softphone-quick-call-btn:hover {
+  background: #22c55e;
+  color: #ffffff;
+  transform: scale(1.12) translateY(-1px);
+  box-shadow: 0 4px 10px rgba(34, 197, 94, 0.4);
+}
+
+.softphone-quick-call-btn:active {
+  transform: scale(0.92) translateY(0.5px);
+  box-shadow: none;
+}
+
+/* In-call state and controls */
+.softphone-in-call {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.softphone-in-call__chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 12px;
+}
+
+.softphone-call-buttons {
+  display: flex;
+  gap: 24px;
+}
+
+.softphone-call-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.softphone-call-controls button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid var(--nexo-border-beige, #e2e8f0);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.softphone-call-controls button[aria-pressed="true"] {
+  background: #fef3c7;
+}
+
+.softphone-call-controls button:disabled,
+.softphone-quick-call-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.softphone-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.softphone-tabs button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--nexo-text-muted, #64748b);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.softphone-tabs button[aria-selected="true"] {
+  background: rgba(127, 127, 127, 0.16); /* readable on the light and the dark theme */
+  color: inherit;
+}
+
+.softphone-contact-row.is-missed .softphone-contact-info__name {
+  color: #dc2626;
+}
+
+/* Busy lamp of a máy lẻ in the directory */
+.softphone-lamp::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin: 0 4px 1px 2px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.softphone-lamp.is-free { color: #16a34a; }
+.softphone-lamp.is-ringing { color: #d97706; }
+.softphone-lamp.is-busy { color: #dc2626; }
+.softphone-lamp.is-offline { color: #94a3b8; }

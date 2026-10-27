@@ -62,6 +62,11 @@ test(
       await assert.rejects(openDirectConversation(alice, randomUUID()), { statusCode: 404 });
       assert.ok((await searchDirectUsers(alice, "DM Bob")).some((u) => u.userId === bob));
       assert.ok(!(await searchDirectUsers(alice, "DM Alice")).some((u) => u.userId === alice));
+      // Searchable by student/staff code too.
+      const bobCode = `T${bob.replace(/-/g, "").slice(0, 12).toUpperCase()}`;
+      await pool.query(`UPDATE users SET user_code=$2 WHERE id=$1`, [bob, bobCode]);
+      const byCode = await searchDirectUsers(alice, bobCode.toLowerCase());
+      assert.equal(byCode.find((u) => u.userId === bob)?.userCode, bobCode);
 
       // Delivery through the group-chat pipeline.
       const first = await saveMessage(alice, channelId, "Chào Bob", {

@@ -15,18 +15,21 @@
   flex-wrap: wrap;
 }
 .courses-head h1 {
-  margin: 0 0 2px;
-  font-size: 16px;
+  margin: 0 0 4px;
+  font-size: var(--fs-page-title, 22px);
+  font-weight: 700;
   color: var(--text);
+  line-height: 1.3;
 }
 .courses-head p {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--fs-subtext, 13px);
   color: var(--text-secondary);
+  line-height: 1.5;
 }
 .courses-filters {
   display: flex;
-  gap: 5px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 .courses-filters button {
@@ -34,15 +37,18 @@
   background: var(--surface);
   color: var(--text-secondary);
   border-radius: var(--radius-pill);
-  padding: 2.5px 8px;
+  padding: 4px 12px;
   font: inherit;
-  font-size: 10.5px;
+  font-size: var(--fs-subtext, 12.5px);
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 .courses-filters button.is-active {
   background: var(--primary-soft);
   color: var(--primary-text);
   border-color: var(--primary);
+  font-weight: 600;
 }
 .courses-error {
   color: #b42318;
@@ -54,45 +60,49 @@
   justify-items: center;
   gap: 8px;
   padding: 24px;
+  font-size: var(--fs-body, 13.5px);
 }
 .courses-grid {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
 }
 .course-card {
   width: 100%;
   height: 100%;
   text-align: left;
   display: grid;
-  gap: 4px;
+  gap: 6px;
   align-content: start;
-  padding: 12px;
+  padding: 14px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--surface);
   color: var(--text);
   font: inherit;
   cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .course-card:hover,
 .course-card:focus-visible {
   border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
 }
 .course-card strong {
-  font-size: 12.5px;
-  line-height: 1.35;
+  font-size: var(--fs-card-title, 14.5px);
+  font-weight: 600;
+  line-height: 1.4;
 }
 .course-card__code {
-  font-size: 10px;
+  font-size: var(--fs-badge, 11.5px);
   font-weight: 600;
   color: var(--primary-text);
 }
 .course-card__meta {
-  font-size: 10.5px;
+  font-size: var(--fs-subtext, 12.5px);
   color: var(--text-muted);
 }
 .course-card__badges {
@@ -139,7 +149,8 @@
   background: var(--surface);
 }
 .course-outline h3 {
-  font-size: 14px;
+  font-size: var(--fs-card-title, 15px);
+  font-weight: 600;
   margin: 0 0 6px;
   color: var(--text);
 }
@@ -249,7 +260,8 @@
 }
 .lesson-head h2 {
   margin: 4px 0 0;
-  font-size: 20px;
+  font-size: var(--fs-section, 18px);
+  font-weight: 700;
   color: var(--text);
 }
 .lesson-body {

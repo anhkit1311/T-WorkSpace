@@ -404,20 +404,10 @@ export function MeetingOutcomesPanel({ sessionId, live }: { sessionId: string; l
           <ul className="meeting-task-list">
             {outcomes.tasks.map((task) => (
               <li key={task.id}>
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate({
-                      view: "tasks",
-                      workspaceId: outcomes.workspaceId,
-                      channelId: task.channelId,
-                      taskId: task.id,
-                    })
-                  }
-                >
+                <div className="meeting-task-item-label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <Icon name="check-square" size={14} />
                   <span>{task.title}</span>
-                </button>
+                </div>
                 <small>
                   {statusLabel[task.status]}
                   {task.assigneeName ? ` · ${task.assigneeName}` : ""}

@@ -69,12 +69,6 @@ const pages: { id: ViewId; title: string; desc: string; icon: IconName }[] = [
     icon: "message",
   },
   {
-    id: "tasks",
-    title: "Công việc",
-    desc: "Bảng Kanban gom việc của bạn ở mọi nhóm",
-    icon: "tasks",
-  },
-  {
     id: "meetings",
     title: "Họp",
     desc: "Lịch họp theo tuần của mọi nhóm, họp ngay, bản ghi & biên bản",

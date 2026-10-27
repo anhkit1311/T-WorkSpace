@@ -341,7 +341,7 @@ export function NotificationsPage() {
             <KpiStatCard
               icon="shield"
               tone={canPublish ? "green" : "blue"}
-              value={canPublish ? "Có quyền đăng bài" : "Tài khoản Sinh viên"}
+              value={canPublish ? "Có quyền đăng bài" : "Chỉ xem"}
               label={canPublish ? "Bạn được phép đăng thông báo" : "Chế độ xem thông báo chính thức"}
             />
             <KpiStatCard
@@ -352,7 +352,7 @@ export function NotificationsPage() {
             />
           </section>
 
-          {/* Permission Info Notice for Students */}
+          {/* Permission notice for accounts that cannot publish */}
           {!canPublish && (
             <div
               style={{
@@ -370,7 +370,7 @@ export function NotificationsPage() {
             >
               <Icon name="info" size={16} />
               <div>
-                <strong>Thông tin phân quyền:</strong> Bạn đang đăng nhập với vai trò <strong>Sinh viên (quyền xem)</strong>. Khi các Đơn vị, Ban Giám hiệu, Phòng ban hoặc Khoa đăng thông báo mới, thông báo sẽ hiển thị trực tiếp tại Trang chủ của bạn. Chỉ cán bộ / giảng viên hoặc người được cấp quyền mới có thể đăng tải thông báo.
+                <strong>Thông tin phân quyền:</strong> Tài khoản của bạn chỉ có quyền xem thông báo. Khi các Đơn vị, Ban Giám hiệu, Phòng ban hoặc Khoa đăng thông báo mới, thông báo sẽ hiển thị trực tiếp tại Trang chủ của bạn. Chỉ cán bộ / giảng viên hoặc người được cấp quyền mới có thể đăng tải thông báo.
               </div>
             </div>
           )}

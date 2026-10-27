@@ -14,6 +14,7 @@ import { CallCenterReportService } from "./service/report-service.js";
 import { CallCenterTicketService } from "./service/ticket-service.js";
 import { MeetingDialInService } from "./service/meeting-dialin-service.js";
 import { PersonalVoicemailService } from "./service/voicemail-service.js";
+import { InternalCallLog } from "./service/internal-call-service.js";
 import { CallTranscriptService } from "./service/call-transcript-service.js";
 import { CallCenterVoipService, type UserNotice } from "./service/voip-service.js";
 import { VoipRepository } from "./repository/voip-repository.js";
@@ -66,6 +67,13 @@ const qa = new CallCenterQaService(repo, new QaRepository());
 
 /** E2 port for the e-learning module: a call recording a supervisor turns into a lesson. */
 export const trainingRecording = (userId: string, callId: string) => agents.trainingRecording(userId, callId);
+
+/** Port for the academic module: new accounts of a unit get a máy lẻ; staff also its switchboard membership. */
+export const provisionStaffPhones = (grantedBy: string, unitId: string, userIds: string[], asAgents = true) =>
+  admin.provisionStaff(grantedBy, unitId, userIds, asAgents);
+
+/** Port for the academic module: a deleted account's máy lẻ go back to their unit's range. */
+export const releasePhones = (extensionIds: string[]) => admin.releaseExtensions(extensionIds);
 
 /** Q5: ACD gauges; null on instances that are not the ACD leader. */
 export const callCenterMetrics = () => acd?.metrics() ?? null;
@@ -190,9 +198,11 @@ Nghe trong mục Tổng đài → Bàn làm việc → Hộp thư thoại.`,
       );
     }, log);
     const transcripts = new CallTranscriptService(repo, (name) => pbx.recording(name), log);
+    const internalCalls = new InternalCallLog(voipRepo, undefined, log);
     let chain: Promise<unknown> = Promise.resolve();
     pbx.listen((event: PbxEvent) => {
       void transcripts.handle(event);
+      void internalCalls.handle(event); // watches only; the chain below still sees every event
       // Asterisk keeps extensions in memory only: refill them before the ACD reloads the roster.
       chain = chain
         .then(() => (event.type === "connected" ? admin.sync(null) : undefined))

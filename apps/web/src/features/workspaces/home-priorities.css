@@ -9,7 +9,7 @@
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif);
+  font-family: var(--font-sans);
   padding: clamp(28px, 3vw, 34px) clamp(28px, 3.2vw, 44px);
   border: 0;
   border-radius: 0;
@@ -31,14 +31,14 @@
 }
 
 .home-priorities h2 {
-  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif);
+  font-family: var(--font-sans);
   font-style: normal;
-  font-size: var(--nexo-fs-section, clamp(28px, 2.8vw, 32px));
+  font-size: var(--fs-page-title, 22px);
   font-weight: 700;
   letter-spacing: -0.02em;
   margin: 0;
   color: var(--nexo-text-primary, #1C1B19);
-  line-height: 1.15;
+  line-height: 1.25;
 }
 
 .home-priorities__view-all {
@@ -108,9 +108,9 @@
 }
 
 .home-priority-card h3 {
-  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif);
+  font-family: var(--font-sans);
   font-style: normal;
-  font-size: var(--nexo-fs-col-title, 17.5px);
+  font-size: var(--fs-card-title, 15px);
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--nexo-text-primary, #1C1B19);
@@ -121,8 +121,8 @@
 }
 
 .home-priority-empty {
-  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif);
-  font-size: var(--nexo-fs-desc, 15px);
+  font-family: var(--font-sans);
+  font-size: var(--fs-subtext, 12.5px);
   font-weight: 400;
   line-height: 1.4;
   color: var(--nexo-text-muted, #8A8780);
@@ -173,7 +173,7 @@
 }
 
 .home-notification-count {
-  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif);
+  font-family: var(--font-sans);
   font-style: normal;
   font-size: var(--nexo-fs-big-num, 48px);
   font-weight: 700;
@@ -185,8 +185,8 @@
 }
 
 .home-priority-notif-body p {
-  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif);
-  font-size: var(--nexo-fs-desc, 15px);
+  font-family: var(--font-sans);
+  font-size: var(--fs-subtext, 12.5px);
   font-weight: 400;
   line-height: 1.4;
   color: var(--nexo-text-muted, #8A8780);
@@ -213,7 +213,7 @@
   background: transparent;
   color: var(--nexo-text-primary, #1C1B19);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--fs-control, 13.5px);
   text-align: left;
   cursor: pointer;
 }
@@ -231,7 +231,7 @@
 }
 
 .home-unread-channels small {
-  font-size: 12px;
+  font-size: var(--fs-subtext, 12.5px);
   font-weight: 400;
   color: var(--nexo-text-muted, #8A8780);
   overflow: hidden;
@@ -248,7 +248,7 @@
   border-radius: 9999px;
   background: var(--inverse-bg);
   color: var(--inverse-fg);
-  font-size: 12px;
+  font-size: var(--fs-badge, 11.5px);
   font-variant-numeric: tabular-nums;
 }
 

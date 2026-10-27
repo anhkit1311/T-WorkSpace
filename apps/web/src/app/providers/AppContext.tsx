@@ -87,8 +87,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const url = appRouteUrl(target);
     if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== url)
       window.history[replace ? "replaceState" : "pushState"]({}, "", url);
-    setRoute(target);
-    setMobileNavOpen(false);
+    const update = () => {
+      setRoute(target);
+      setMobileNavOpen(false);
+    };
+    if (
+      typeof document !== "undefined" &&
+      "startViewTransition" in document &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      document.startViewTransition(update);
+    } else {
+      update();
+    }
   }, []);
   const setActiveView = useCallback(
     (view: ViewId) => {
@@ -134,9 +145,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   },[screen,isAuthChecking,route]);
 
   useEffect(() => {
-    // Theme key of an older version; the shell now stores "theme" (light/dark, see AppShell).
     try {
       localStorage.removeItem("collabspace-theme");
+      localStorage.removeItem("theme");
     } catch {
       // storage blocked
     }

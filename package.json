@@ -26,6 +26,7 @@
     "callcenter:ari-spike": "node scripts/callcenter/ari-spike.mjs",
     "callcenter:seed": "npm run build --workspace @doan/api && node scripts/callcenter/seed-demo.mjs",
     "elearning:seed": "npm run build --workspace @doan/api && node scripts/database/seed-elearning.mjs",
+    "seed:courses": "npm run build --workspace @doan/api && node scripts/database/seed-test-courses.mjs",
     "demo:seed": "npm run build --workspace @doan/shared && npm run build --workspace @doan/api && npm run db:migrate && node scripts/database/seed-academic.mjs && node scripts/callcenter/seed-demo.mjs giaovu@demo.nexo.test gv.ha@demo.nexo.test gv.lan@demo.nexo.test && node scripts/database/seed-elearning.mjs",
     "db:migrate": "npm --workspace @doan/api run db:migrate",
     "build": "npm run build --workspace @doan/shared && npm run build --workspace @doan/api && npm run build --workspace @doan/web",

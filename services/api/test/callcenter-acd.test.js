@@ -4,7 +4,7 @@ import { canAgentChoose, canTransition } from "../../../dist/api/modules/callcen
 import { isOpen } from "../../../dist/api/modules/callcenter/domain/business-hours.js";
 import { strategies } from "../../../dist/api/modules/callcenter/domain/distribution.js";
 import { CallCenterAccess } from "../../../dist/api/modules/callcenter/domain/access.js";
-import { inRange, nextExtensionNumber, normalizePhone } from "../../../dist/api/modules/callcenter/domain/extension.js";
+import { groupNumber, inRange, nextExtensionNumber, normalizePhone } from "../../../dist/api/modules/callcenter/domain/extension.js";
 import { kpiSummary, periodBounds } from "../../../dist/api/modules/callcenter/domain/kpi.js";
 import { AcdService } from "../../../dist/api/modules/callcenter/service/acd-service.js";
 
@@ -24,6 +24,8 @@ test("Call center domain rules", () => {
 
   assert.equal(nextExtensionNumber({ from: 2100, to: 2102 }, ["2100", "2101"]), "2102");
   assert.equal(nextExtensionNumber({ from: 2100, to: 2101 }, ["2100", "2101"]), null);
+  assert.equal(groupNumber(10101), "10100", "unit group number 1PP00");
+  assert.equal(groupNumber(1200), null, "older ranges have no group number");
   assert.equal(inRange("2100", { from: 2100, to: 2199 }), true);
   assert.equal(inRange("21a0", { from: 2100, to: 2199 }), false);
   assert.equal(normalizePhone("+84 912 345 678"), "0912345678");

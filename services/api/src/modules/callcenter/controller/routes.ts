@@ -48,6 +48,7 @@ export function callCenterRoutes(
     r("POST", "/me/transfer/cancel", (u) => agents.finishTransfer(u, false)),
     r("POST", "/me/hold", (u, _m, b) => agents.hold(u, b)),
     r("GET", "/me/voicemails", (u) => voip.voicemails(u)),
+    r("GET", "/me/recent-calls", (u) => voip.recentCalls(u)),
     r("DELETE", "/me/voicemails/:id", (u, m) => voip.deleteVoicemail(u, m[1])),
 
     // Every signed-in user: call or write to a department, follow their own tickets.

@@ -27,7 +27,7 @@ export const mediasoupConfig = {
         mimeType: "video/VP8",
         clockRate: 90000,
         parameters: {
-          "x-google-start-bitrate": 1000,
+          "x-google-start-bitrate": 1500,
         },
         preferredPayloadType: 96,
       },
@@ -41,7 +41,8 @@ export const mediasoupConfig = {
         announcedIp: process.env.MEDIASOUP_ANNOUNCED_IP ?? "127.0.0.1",
       },
     ],
-    initialAvailableOutgoingBitrate: 1_000_000,
+    // Start receivers near HD so video is sharp within seconds; congestion control still backs off.
+    initialAvailableOutgoingBitrate: 2_500_000,
     maxSctpMessageSize: 262_144,
   },
 };

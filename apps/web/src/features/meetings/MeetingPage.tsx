@@ -78,17 +78,18 @@ function Video({ stream }: { stream: MediaStream | null }) {
   return <video ref={ref} autoPlay playsInline muted className="rtc-video-element" />;
 }
 
-function Audio({ stream, outputDeviceId }: { stream: MediaStream; outputDeviceId?: string }) {
+function Audio({ track, outputDeviceId }: { track: MediaStreamTrack | null; outputDeviceId?: string }) {
   const {notify} = useApp();
   const notice = useRef(notify);
   notice.current = notify;
   const ref = useRef<HTMLAudioElement>(null);
+  // Audio-only stream: camera tracks coming and going must not reload the player mid-sentence.
   useEffect(() => {
-    if (ref.current) ref.current.srcObject = stream;
+    if (ref.current) ref.current.srcObject = track ? new MediaStream([track]) : null;
     return () => {
       if (ref.current) ref.current.srcObject = null;
     };
-  }, [stream]);
+  }, [track]);
   useEffect(() => {
     if (!outputDeviceId || !ref.current) return;
     const element = ref.current as HTMLAudioElement & { setSinkId?: (id: string) => Promise<void> };
@@ -210,12 +211,14 @@ function PopoverMenu({
   items,
   buttonClass,
   placement = "up",
+  iconSize = 18,
 }: {
   label: string;
   icon: IconName;
   items: MenuItem[];
   buttonClass: string;
   placement?: "up" | "down";
+  iconSize?: number;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -245,7 +248,7 @@ function PopoverMenu({
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
-        <Icon name={icon} size={18} />
+        <Icon name={icon} size={iconSize} />
       </button>
       {open && (
         <div className={`meeting-menu__list is-${placement}`} role="menu" aria-label={label}>
@@ -289,6 +292,7 @@ function ParticipantTile({
   speaking,
   dominant = false,
   onPin,
+  isMainSpotlight = false,
 }: {
   isLocal: boolean;
   displayName: string;
@@ -301,19 +305,38 @@ function ParticipantTile({
   speaking?: boolean;
   dominant?: boolean;
   onPin?: () => void;
+  isMainSpotlight?: boolean;
 }) {
   const analysed = useAudioActivity(stream, hasAudio && speaking === undefined);
   const isSpeaking = speaking ?? analysed;
 
+  const initials = displayName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(-2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase() || displayName.slice(0, 2).toUpperCase();
+
   return (
     <article
-      className={`video-tile ${isSpeaking ? "is-speaking" : ""} ${dominant ? "is-dominant" : ""} ${pinned ? "is-pinned" : ""}`}
+      className={`video-tile ${isSpeaking ? "is-speaking" : ""} ${dominant ? "is-dominant" : ""} ${pinned ? "is-pinned" : ""} ${isMainSpotlight ? "is-main-spotlight" : ""}`}
     >
+      {!isMainSpotlight && (
+        <button type="button" className="tile-three-dots" title="Tùy chọn" aria-label="Tùy chọn">
+          <Icon name="more" size={13} />
+        </button>
+      )}
       {hasVideo && stream ? (
         <Video stream={stream} />
       ) : (
         <div className="participant-visual">
-          <Avatar name={displayName} size="lg" />
+          <div className="jitsi-avatar-ring">
+            <div className="jitsi-avatar-circle" title={displayName}>
+              <span>{initials}</span>
+            </div>
+          </div>
         </div>
       )}
       {onPin && (
@@ -369,7 +392,45 @@ export function MeetingPage() {
       navigate({ view: "meetings", workspaceId: route.workspaceId }, true);
     wasInCall.current = meeting.inCall;
   }, [meeting.inCall, meeting.interruptedRoomId]);
-  const [layout, setLayout] = useState<"grid" | "spotlight" | "auto">("grid");
+  const [layout, setLayout] = useState<"grid" | "spotlight" | "auto">("spotlight");
+  const [adminToastDismissed, setAdminToastDismissed] = useState(false);
+  const [audioDevices, setAudioDevices] = useState<{ id: string; label: string }[]>([]);
+  const [videoDevices, setVideoDevices] = useState<{ id: string; label: string }[]>([]);
+
+  useEffect(() => {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    navigator.mediaDevices
+      .enumerateDevices()
+      .then((devices) => {
+        const mics = devices
+          .filter((d) => d.kind === "audioinput")
+          .map((d, i) => ({ id: d.deviceId, label: d.label || `Microphone ${i + 1}` }));
+        const cams = devices
+          .filter((d) => d.kind === "videoinput")
+          .map((d, i) => ({ id: d.deviceId, label: d.label || `Camera ${i + 1}` }));
+        setAudioDevices(mics);
+        setVideoDevices(cams);
+      })
+      .catch(() => {});
+  }, [meeting.inCall]);
+
+  const handleCopyInviteLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      notify("Đã sao chép liên kết", "Đã chép đường dẫn cuộc họp vào bộ nhớ tạm.", "success");
+    } catch {
+      notify("Liên kết cuộc họp", window.location.href, "info");
+    }
+  };
+
+  const toggleFullScreen = () => {
+    if (!document.fullscreenElement) {
+      void document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      void document.exitFullscreen().catch(() => {});
+    }
+  };
+
   const [layerPolicy, setLayerPolicy] = useState<LayerPolicy>(() => {
     try {
       const saved = localStorage.getItem("nexo:layerPolicy");
@@ -638,7 +699,11 @@ export function MeetingPage() {
           : remoteFallback
         : "";
   const spotlightTile = allTiles.find((tile) => tile.id === spotlightId) ?? null;
-  const stripTiles = staged ? allTiles.filter((tile) => tile.id !== spotlightId) : allTiles;
+  const stripTiles = staged
+    ? allTiles.length === 1
+      ? allTiles
+      : allTiles.filter((tile) => tile.id !== spotlightId)
+    : allTiles;
   const pagedTiles = paginate(
     stripTiles,
     staged ? FILMSTRIP_PAGE_SIZE : pageSizeFor(gridSize.width || window.innerWidth),
@@ -780,6 +845,32 @@ export function MeetingPage() {
         ] as MenuItem[])
       : []),
   ];
+  const audioMenuItems: MenuItem[] = [
+    { heading: "Microphone" },
+    ...(audioDevices.length > 0
+      ? audioDevices.map((d) => ({
+          label: d.label,
+          checked: true,
+          onSelect: () => notify("Microphone", `Đang sử dụng: ${d.label}`, "info"),
+        }))
+      : [{ label: "Microphone mặc định", checked: true, onSelect: () => {} }]),
+    { heading: "Cài đặt âm thanh" },
+    { label: "Kiểm tra loa & mic", icon: "activity", onSelect: () => setSidePanel("network") },
+  ];
+
+  const videoMenuItems: MenuItem[] = [
+    { heading: "Camera" },
+    ...(videoDevices.length > 0
+      ? videoDevices.map((d) => ({
+          label: d.label,
+          checked: true,
+          onSelect: () => notify("Camera", `Đang sử dụng: ${d.label}`, "info"),
+        }))
+      : [{ label: "Camera mặc định", checked: true, onSelect: () => {} }]),
+    { heading: "Cài đặt hình ảnh" },
+    { label: "Chất lượng đường truyền", icon: "activity", onSelect: () => setSidePanel("network") },
+  ];
+
   const renderTile = (tile: GridTile, main = false) =>
     tile.peer ? (
       <ParticipantTile
@@ -794,10 +885,11 @@ export function MeetingPage() {
         speaking={meeting.speakingIds.includes(tile.id)}
         dominant={meeting.activeSpeakerId === tile.id && meeting.remotePeers.length > 1}
         onPin={() => togglePin(tile.id)}
+        isMainSpotlight={main}
       />
     ) : (
       <ParticipantTile
-        key="local"
+        key={main ? "local-main" : "local-filmstrip"}
         isLocal={true}
         displayName={user?.displayName || "Bạn"}
         stream={meeting.localStream}
@@ -807,6 +899,7 @@ export function MeetingPage() {
         raisedHand={Boolean(user && raisedHands.has(user.id))}
         dominant={meeting.activeSpeakerId === "local" && meeting.remotePeers.length > 1}
         onPin={() => togglePin("local")}
+        isMainSpotlight={main}
       />
     );
 
@@ -873,37 +966,90 @@ export function MeetingPage() {
           )}
 
           <header className="meeting-topbar">
-            <h2>{roomName}</h2>
-            {meetingState?.startedAt && <MeetingClock since={meetingState.startedAt} />}
-            <span className="meeting-topbar__meta">
-              <Icon name="users" size={14} /> {participantCount}
-            </span>
-            {meetingState?.locked && (
-              <span className="meeting-topbar__meta" title="Phòng đã khóa">
-                <Icon name="lock" size={14} /> Đã khóa
+            <div className="jitsi-topbar-left">
+              <h2 className="jitsi-topbar-title">{roomName}</h2>
+              <span className="jitsi-topbar-subtitle">
+                {participantCount} người trong phòng
               </span>
-            )}
-            {accessToken && <DialInBadge accessToken={accessToken} roomId={meeting.roomId} />}
-            <span className="meeting-topbar__spacer" />
-            <button
-              type="button"
-              className={`meeting-network is-${tone}`}
-              aria-pressed={sidePanel === "network"}
-              onClick={() => setSidePanel(sidePanel === "network" ? "none" : "network")}
-              title={networkLabel}
-              aria-label={`Chất lượng mạng: ${networkLabel}`}
-            >
-              <Icon name={isConnected ? "wifi" : "warning"} size={16} />
-            </button>
-            <button
-              type="button"
-              className="meeting-topbar__btn"
-              title="Thu nhỏ: làm việc khác, cuộc họp vẫn tiếp tục"
-              aria-label="Thu nhỏ cuộc họp"
-              onClick={() => navigate({ view: "overview" })}
-            >
-              <Icon name="minus" size={16} />
-            </button>
+              <div className="jitsi-topbar-brand">
+                <span className="jitsi-logo-text">jitsi</span>
+              </div>
+            </div>
+
+            <div className="jitsi-topbar-center">
+              <div className="jitsi-topbar-chip">
+                <span className="jitsi-chip-name">{roomName}</span>
+                {meetingState?.startedAt ? (
+                  <MeetingClock since={meetingState.startedAt} />
+                ) : (
+                  <span className="meeting-topbar__clock">00:08</span>
+                )}
+                <button
+                  type="button"
+                  className="jitsi-chip-shield"
+                  title={meetingState?.locked ? "Phòng đã khóa" : "Bảo mật phòng"}
+                  onClick={() => {
+                    if (control.canManage && meetingState) {
+                      void control.action("lock", undefined, !meetingState.locked);
+                    } else {
+                      notify("Bảo mật phòng", meetingState?.locked ? "Phòng đang được khóa." : "Phòng đang hoạt động an toàn.", "info");
+                    }
+                  }}
+                  aria-label="Bảo mật phòng"
+                >
+                  <Icon name={meetingState?.locked ? "lock" : "shield"} size={13} />
+                </button>
+              </div>
+            </div>
+
+            <div className="jitsi-topbar-right">
+              {accessToken && <DialInBadge accessToken={accessToken} roomId={meeting.roomId} />}
+              <button
+                type="button"
+                className="jitsi-topbar-btn"
+                title="Thêm người tham gia / Sao chép liên kết"
+                onClick={handleCopyInviteLink}
+                aria-label="Thêm người tham gia"
+              >
+                <Icon name="user-plus" size={17} />
+              </button>
+              <button
+                type="button"
+                className={`jitsi-topbar-btn ${layout === "grid" ? "is-active" : ""}`}
+                title="Bật/tắt chế độ xem lưới"
+                onClick={() => setLayout(layout === "grid" ? "spotlight" : "grid")}
+                aria-label="Chế độ xem lưới"
+              >
+                <Icon name="grid-2x2" size={17} />
+              </button>
+              <button
+                type="button"
+                className="jitsi-topbar-btn"
+                title="Toàn màn hình"
+                onClick={toggleFullScreen}
+                aria-label="Toàn màn hình"
+              >
+                <Icon name="maximize" size={17} />
+              </button>
+              <button
+                type="button"
+                className={`jitsi-topbar-btn is-network is-${tone}`}
+                title={networkLabel}
+                onClick={() => setSidePanel(sidePanel === "network" ? "none" : "network")}
+                aria-label={`Chất lượng mạng: ${networkLabel}`}
+              >
+                <Icon name={isConnected ? "wifi" : "warning"} size={16} />
+              </button>
+              <button
+                type="button"
+                className="jitsi-topbar-btn"
+                title="Thu nhỏ: làm việc khác, cuộc họp vẫn tiếp tục"
+                aria-label="Thu nhỏ cuộc họp"
+                onClick={() => navigate({ view: "overview" })}
+              >
+                <Icon name="minus" size={16} />
+              </button>
+            </div>
           </header>
 
           {control.error && (
@@ -972,7 +1118,7 @@ export function MeetingPage() {
             {/* One audio element per peer, outside the tiles: layout, paging and speaker
                 changes never remount it, so speech is not cut or played twice. */}
             {meeting.remotePeers.map((peer) => (
-                <Audio key={peer.socketId} stream={peer.mediaStream} outputDeviceId={outputDeviceId} />
+                <Audio key={peer.socketId} track={peer.audioTrack} outputDeviceId={outputDeviceId} />
               ))}
 
             {sidePanel !== "none" && (
@@ -1146,45 +1292,102 @@ export function MeetingPage() {
             )}
           </div>
 
-          {/* Control bar: devices in the middle, panels and leave on the right. */}
-          <div className="meeting-controls-dock" role="toolbar" aria-label="Điều khiển cuộc họp">
-            <div className="meeting-dock-group meeting-dock-group--left">
-              <span className="meeting-dock-room">{roomName}</span>
-            </div>
-            <div className="meeting-dock-group">
+          {/* Floating Admin Toast (Bottom-Left) */}
+          {!adminToastDismissed && control.canManage && (
+            <div className="jitsi-toast-notification" role="status">
+              <div className="jitsi-toast-icon">
+                <Icon name="info" size={16} />
+              </div>
+              <span className="jitsi-toast-message">Quyền quản trị viên đã được cấp!</span>
               <button
                 type="button"
-                className={`meeting-dock-btn ${!meeting.mic ? "is-muted" : ""}`}
+                className="jitsi-toast-close"
+                onClick={() => setAdminToastDismissed(true)}
+                aria-label="Đóng thông báo"
+              >
+                <Icon name="x" size={14} />
+              </button>
+            </div>
+          )}
+
+          {/* Jitsi Meet Control bar: Centered Floating Rounded Dock */}
+          <div className="jitsi-bottom-dock" role="toolbar" aria-label="Điều khiển cuộc họp">
+            {/* 1. Mic button with chevron */}
+            <div className={`jitsi-dock-split ${!meeting.mic ? "is-muted" : ""}`}>
+              <button
+                type="button"
+                className="jitsi-dock-btn"
                 aria-label={meeting.mic ? "Tắt micro" : "Bật micro"}
                 aria-pressed={meeting.mic}
                 onClick={() => void meeting.toggleMic()}
                 title={meeting.mic ? "Tắt micro (M)" : "Bật micro (M)"}
               >
-                <Icon name={meeting.mic ? "mic" : "mic-off"} size={20} />
+                <Icon name={meeting.mic ? "mic" : "mic-off"} size={18} />
               </button>
+              <div className="jitsi-dock-divider" />
+              <PopoverMenu
+                label="Chọn micro"
+                icon="chevron-up"
+                iconSize={13}
+                buttonClass="jitsi-dock-chevron"
+                placement="up"
+                items={audioMenuItems}
+              />
+            </div>
+
+            {/* 2. Camera button with chevron */}
+            <div className={`jitsi-dock-split ${!meeting.camera ? "is-muted" : ""}`}>
               <button
                 type="button"
-                className={`meeting-dock-btn ${!meeting.camera ? "is-muted" : ""}`}
+                className="jitsi-dock-btn"
                 aria-label={meeting.camera ? "Tắt camera" : "Bật camera"}
                 aria-pressed={meeting.camera}
                 onClick={() => void meeting.toggleCamera()}
                 title={meeting.camera ? "Tắt camera (V)" : "Bật camera (V)"}
               >
-                <Icon name={meeting.camera ? "camera" : "camera-off"} size={20} />
+                <Icon name={meeting.camera ? "camera" : "camera-off"} size={18} />
               </button>
+              <div className="jitsi-dock-divider" />
+              <PopoverMenu
+                label="Chọn camera"
+                icon="chevron-up"
+                iconSize={13}
+                buttonClass="jitsi-dock-chevron"
+                placement="up"
+                items={videoMenuItems}
+              />
+            </div>
+
+            {/* 3. Screen share */}
+            <button
+              type="button"
+              className={`jitsi-dock-btn ${meeting.sharing ? "is-active" : ""}`}
+              aria-label={meeting.sharing ? "Dừng chia sẻ màn hình" : "Chia sẻ màn hình"}
+              aria-pressed={meeting.sharing}
+              onClick={() => void meeting.toggleScreenShare()}
+              title={meeting.sharing ? "Dừng chia sẻ màn hình (S)" : "Chia sẻ màn hình (S)"}
+            >
+              <Icon name="monitor" size={18} />
+            </button>
+
+            {/* 4. Chat */}
+            <button
+              type="button"
+              className={`jitsi-dock-btn ${sidePanel === "chat" ? "is-active" : ""}`}
+              aria-label="Chat cuộc họp"
+              aria-pressed={sidePanel === "chat"}
+              title="Chat cuộc họp (C)"
+              onClick={() => setSidePanel(sidePanel === "chat" ? "none" : "chat")}
+            >
+              <Icon name="message" size={18} />
+              {callUnread > 0 && <span className="jitsi-dock-badge">{callUnread}</span>}
+            </button>
+
+            {/* 5. Raise Hand with reactions chevron */}
+            <div className={`jitsi-dock-split ${control.me?.raisedHand ? "is-hand-raised" : ""}`}>
               <button
                 type="button"
-                className={`meeting-dock-btn ${meeting.sharing ? "is-active" : ""}`}
-                aria-label={meeting.sharing ? "Dừng chia sẻ màn hình" : "Chia sẻ màn hình"}
-                aria-pressed={meeting.sharing}
-                onClick={() => void meeting.toggleScreenShare()}
-                title={meeting.sharing ? "Dừng chia sẻ màn hình (S)" : "Chia sẻ màn hình (S)"}
-              >
-                <Icon name="monitor" size={20} />
-              </button>
-              <button
-                type="button"
-                className={`meeting-dock-btn ${control.me?.raisedHand ? "is-active" : ""}`}
+                className="jitsi-dock-btn"
                 aria-label={control.me?.raisedHand ? "Hạ tay" : "Giơ tay"}
                 aria-pressed={Boolean(control.me?.raisedHand)}
                 aria-keyshortcuts="H"
@@ -1192,55 +1395,79 @@ export function MeetingPage() {
                 onClick={() => control.me && void control.action("hand", undefined, !control.me.raisedHand)}
                 title={control.me?.raisedHand ? "Hạ tay (H)" : "Giơ tay (H)"}
               >
-                <Icon name="hand" size={20} />
+                <Icon name="hand" size={18} />
               </button>
-              <PopoverMenu label="Tùy chọn khác" icon="more" buttonClass="meeting-dock-btn" items={moreMenu} />
-              <button
-                type="button"
-                className="meeting-dock-btn is-leave"
-                aria-label="Rời khỏi phòng họp"
-                onClick={requestLeave}
-                title="Rời khỏi phòng họp"
-              >
-                <Icon name="phone" size={20} />
-              </button>
+              <div className="jitsi-dock-divider" />
+              <PopoverMenu
+                label="Biểu cảm"
+                icon="chevron-up"
+                iconSize={13}
+                buttonClass="jitsi-dock-chevron"
+                placement="up"
+                items={[
+                  { label: "Vỗ tay 👏", onSelect: () => notify("Phản hồi", "Bạn đã vỗ tay 👏", "info") },
+                  { label: "Thích 👍", onSelect: () => notify("Phản hồi", "Bạn đã thả like 👍", "info") },
+                  { label: "Tim ❤️", onSelect: () => notify("Phản hồi", "Bạn đã thả tim ❤️", "info") },
+                  { label: "Cười 😂", onSelect: () => notify("Phản hồi", "Bạn đã cười 😂", "info") },
+                ]}
+              />
             </div>
-            <div className="meeting-dock-group meeting-dock-group--right">
-              <button
-                type="button"
-                className={`meeting-dock-btn is-plain ${sidePanel === "people" ? "is-active" : ""}`}
-                aria-label="Mọi người"
-                aria-pressed={sidePanel === "people"}
-                title="Mọi người"
-                onClick={() => setSidePanel(sidePanel === "people" ? "none" : "people")}
-              >
-                <Icon name="users" size={20} />
-                {control.canManage && waitingPeople.length > 0 && (
-                  <span className="badge" aria-label={`${waitingPeople.length} người đang chờ`}>{waitingPeople.length}</span>
-                )}
-              </button>
-              <button
-                type="button"
-                className={`meeting-dock-btn is-plain ${sidePanel === "chat" ? "is-active" : ""}`}
-                aria-label="Chat cuộc họp"
-                aria-pressed={sidePanel === "chat"}
-                title="Chat cuộc họp (C)"
-                onClick={() => setSidePanel(sidePanel === "chat" ? "none" : "chat")}
-              >
-                <Icon name="message" size={20} />
-                {callUnread > 0 && <span className="badge" aria-label={`${callUnread} tin nhắn mới`}>{callUnread}</span>}
-              </button>
-              <button
-                type="button"
-                className={`meeting-dock-btn is-plain ${sidePanel === "notes" ? "is-active" : ""}`}
-                aria-label="Biên bản cuộc họp"
-                aria-pressed={sidePanel === "notes"}
-                title="Biên bản: chương trình, ghi chú, việc cần làm, ghi hình"
-                onClick={() => setSidePanel(sidePanel === "notes" ? "none" : "notes")}
-              >
-                <Icon name="file" size={20} />
-              </button>
-            </div>
+
+            {/* 6. Participants */}
+            <button
+              type="button"
+              className={`jitsi-dock-btn ${sidePanel === "people" ? "is-active" : ""}`}
+              aria-label="Mọi người"
+              aria-pressed={sidePanel === "people"}
+              title="Mọi người trong phòng"
+              onClick={() => setSidePanel(sidePanel === "people" ? "none" : "people")}
+            >
+              <Icon name="users" size={18} />
+              <span className="jitsi-dock-badge">{participantCount}</span>
+            </button>
+
+            {/* 7. Tile view / Grid toggle */}
+            <button
+              type="button"
+              className={`jitsi-dock-btn ${layout === "grid" ? "is-active" : ""}`}
+              aria-label="Bố cục dạng lưới"
+              aria-pressed={layout === "grid"}
+              title={layout === "grid" ? "Chuyển sang tiêu điểm" : "Chuyển sang dạng lưới"}
+              onClick={() => setLayout(layout === "grid" ? "spotlight" : "grid")}
+            >
+              <Icon name="grid-2x2" size={18} />
+            </button>
+
+            {/* 8. Invite / Add user */}
+            <button
+              type="button"
+              className="jitsi-dock-btn"
+              aria-label="Mời người khác vào phòng"
+              title="Mời người khác / Sao chép liên kết"
+              onClick={handleCopyInviteLink}
+            >
+              <Icon name="user-plus" size={18} />
+            </button>
+
+            {/* 9. More actions */}
+            <PopoverMenu
+              label="Tùy chọn khác"
+              icon="more-horizontal"
+              buttonClass="jitsi-dock-btn"
+              placement="up"
+              items={moreMenu}
+            />
+
+            {/* 10. End / Leave call button */}
+            <button
+              type="button"
+              className="jitsi-dock-btn is-leave"
+              aria-label="Rời khỏi phòng họp"
+              onClick={requestLeave}
+              title="Rời khỏi phòng họp"
+            >
+              <Icon name="phone-off" size={19} />
+            </button>
           </div>
           {control.confirmDialog}
         </div>

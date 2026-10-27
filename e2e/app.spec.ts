@@ -10,7 +10,7 @@ async function signIn(page: Page, user: User) {
   await page.goto("/login");
   // The login screen first tries to restore a session; filling before it settles loses the input.
   await page.waitForLoadState("networkidle");
-  await page.getByLabel("Email tài khoản").fill(user.email);
+  await page.getByLabel("Email hoặc mã số SV / GV").fill(user.email);
   await page.locator('input[type="password"]:visible').fill(fixtures().password);
   await page.locator('form:visible button[type="submit"]').first().click();
   await page.waitForURL(/\/app\//);
@@ -49,7 +49,7 @@ const playingVideos = (page: Page) =>
 test("đăng nhập sai mật khẩu báo lỗi, đúng mật khẩu vào trang chủ", async ({ page }) => {
   const { users } = fixtures();
   await page.goto("/login");
-  await page.getByLabel("Email tài khoản").fill(users.alice.email);
+  await page.getByLabel("Email hoặc mã số SV / GV").fill(users.alice.email);
   await page.locator('input[type="password"]:visible').fill("sai-mat-khau-123");
   await page.locator('form:visible button[type="submit"]').first().click();
   await expect(page.getByRole("alert").first()).toBeVisible();

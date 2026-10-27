@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
-import type { CcContactDepartment, CcPersonalVoicemail, CcTicket } from "@doan/shared";
+import type { CcContactDepartment, CcPersonalVoicemail, CcRecentCall, CcTicket } from "@doan/shared";
 import { query } from "../../../infrastructure/database/db.js";
+import type { InternalCallRecord } from "../service/internal-call-service.js";
 
 /**
  * PostgreSQL access for the parts of the call center every user touches: their own voicemail
@@ -67,6 +68,46 @@ export class VoipRepository {
       durationSeconds: row.duration_seconds,
       receivedAt: row.received_at.toISOString(),
       listened: row.listened_at !== null,
+    }));
+  }
+
+  // ---- internal calls ----------------------------------------------------------------------
+
+  /** Extension owners are looked up here so the log needs no roster; department stays NULL (not hotline KPI). */
+  async saveInternalCall(call: InternalCallRecord): Promise<void> {
+    await query(
+      `INSERT INTO cc_calls(id,linkedid,direction,caller_number,callee_number,caller_user_id,agent_user_id,extension_id,
+         transferred_from,started_at,answered_at,ended_at,outcome)
+       SELECT $1,$2,'internal',$3::varchar,$4::varchar,(SELECT user_id FROM cc_extensions WHERE number=$3::varchar),callee.user_id,callee.id,
+         (SELECT id FROM cc_calls WHERE id=$5::uuid),$6,$7,$8,$9
+       FROM (SELECT 1) one LEFT JOIN cc_extensions callee ON callee.number=$4::varchar
+       ON CONFLICT (linkedid) DO NOTHING`,
+      [call.id, call.linkedId, call.callerNumber.slice(0, 32), call.calleeNumber, call.transferredFrom, call.startedAt, call.answeredAt, call.endedAt, call.outcome],
+    );
+  }
+
+  /** The user's own extension-to-extension calls, newest first. */
+  async recentCalls(userId: string, limit = 30): Promise<CcRecentCall[]> {
+    const result = await query<{ id: string; way: "in" | "out"; number: string; name: string | null; started_at: Date; seconds: number; outcome: CcRecentCall["outcome"] }>(
+      `SELECT c.id,CASE WHEN c.caller_user_id=$1 THEN 'out' ELSE 'in' END AS way,
+         CASE WHEN c.caller_user_id=$1 THEN c.callee_number ELSE c.caller_number END AS number,
+         u.display_name AS name,c.started_at,
+         COALESCE(EXTRACT(EPOCH FROM c.ended_at-c.answered_at),0)::int AS seconds,c.outcome
+       FROM cc_calls c
+       LEFT JOIN users u ON u.id=CASE WHEN c.caller_user_id=$1 THEN c.agent_user_id ELSE c.caller_user_id END
+       WHERE c.direction='internal' AND c.department_id IS NULL AND c.ended_at IS NOT NULL
+         AND (c.caller_user_id=$1 OR c.agent_user_id=$1)
+       ORDER BY c.started_at DESC LIMIT $2`,
+      [userId, limit],
+    );
+    return result.rows.map((row) => ({
+      id: row.id,
+      way: row.way,
+      number: row.number,
+      name: row.name,
+      startedAt: row.started_at.toISOString(),
+      durationSeconds: row.seconds,
+      outcome: row.outcome,
     }));
   }
 

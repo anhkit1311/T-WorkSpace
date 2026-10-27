@@ -727,7 +727,8 @@ export class CallCenterRepository implements AcdStore {
        LEFT JOIN academic_units du ON du.id=c.department_id
        LEFT JOIN users cu ON cu.id=c.caller_user_id
        LEFT JOIN users au ON au.id=c.agent_user_id
-       WHERE $1::uuid[] IS NULL OR c.department_id=ANY($1::uuid[]) OR c.agent_user_id=$2::uuid
+       WHERE ($1::uuid[] IS NULL OR c.department_id=ANY($1::uuid[]) OR c.agent_user_id=$2::uuid)
+         AND (c.direction<>'internal' OR c.department_id IS NOT NULL) -- extension-to-extension calls are not hotline work
        ORDER BY c.started_at DESC LIMIT $3`,
       [filter.departmentIds, filter.agentUserId, filter.limit],
     );

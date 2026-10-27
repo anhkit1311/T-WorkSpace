@@ -74,8 +74,9 @@ export async function searchDirectUsers(userId: string, value: string) {
   if (term.length < 2 || term.length > 100)
     throw new HttpError(400, "INVALID_SEARCH", "Từ khóa cần 2–100 ký tự.");
   const result = await query<DirectUserItem>(
-    `SELECT id AS "userId", display_name AS "displayName", email FROM users
-     WHERE id <> $1 AND (display_name ILIKE '%'||$2||'%' ESCAPE '\\' OR email ILIKE '%'||$2||'%' ESCAPE '\\')
+    `SELECT id AS "userId", display_name AS "displayName", email, user_code AS "userCode" FROM users
+     WHERE id <> $1 AND (display_name ILIKE '%'||$2||'%' ESCAPE '\\' OR email ILIKE '%'||$2||'%' ESCAPE '\\'
+       OR user_code ILIKE '%'||$2||'%' ESCAPE '\\')
      ORDER BY display_name, id LIMIT 10`,
     [userId, term.replace(/[\\%_]/g, "\\$&")],
   );

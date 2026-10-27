@@ -87,6 +87,11 @@ import {
   PhoneCall,
   Shield,
   ClipboardList,
+  Volume2,
+  Maximize,
+  PhoneOff,
+  Copy,
+  MoreHorizontal,
   type LucideIcon,
 } from "lucide-react";
 
@@ -179,7 +184,12 @@ export type IconName =
   | "languages"
   | "phone-call"
   | "shield"
-  | "clipboard";
+  | "clipboard"
+  | "volume"
+  | "maximize"
+  | "phone-off"
+  | "copy"
+  | "more-horizontal";
 
 const icons = {
   activity: Activity,
@@ -271,6 +281,11 @@ const icons = {
   "phone-call": PhoneCall,
   shield: Shield,
   clipboard: ClipboardList,
+  volume: Volume2,
+  maximize: Maximize,
+  "phone-off": PhoneOff,
+  copy: Copy,
+  "more-horizontal": MoreHorizontal,
 } satisfies Record<IconName, LucideIcon>;
 
 interface IconProps extends SVGProps<SVGSVGElement> {

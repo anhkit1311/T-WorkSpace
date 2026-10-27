@@ -12,13 +12,14 @@ test(
   "Call center admin: departments, members, extensions and access rules",
   { skip: process.env.RUN_DB_TESTS !== "1", timeout: 20000 },
   async () => {
-    const [adminId, agentId, outsiderId] = [randomUUID(), randomUUID(), randomUUID()];
+    const [adminId, agentId, outsiderId, studentId] = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
     const tag = randomUUID().slice(0, 6).toUpperCase();
     const pushed = [];
     const removed = [];
     const pbx = {
       pushExtension: async (input) => void pushed.push(input),
       removeExtension: async (number) => void removed.push(number),
+      setGlobal: async () => {},
     };
     let rosterChanges = 0;
     const repo = new CallCenterRepository();
@@ -26,7 +27,7 @@ test(
     const agents = new CallCenterAgentService(repo, admin, () => null, () => null, "wss://pbx.tdtu.local:8089/ws");
     let departmentId;
     try {
-      for (const id of [adminId, agentId, outsiderId])
+      for (const id of [adminId, agentId, outsiderId, studentId])
         await pool.query(`INSERT INTO users(id,email,password_hash,display_name) VALUES($1,$2,'x',$3)`, [
           id,
           `${id}@cc.test`,
@@ -74,7 +75,7 @@ test(
       assert.ok(rosterChanges >= 2);
 
       const sip = await agents.sipAccount(agentId);
-      assert.deepEqual(sip, { number: String(from), secret, wsUrl: "wss://pbx.tdtu.local:8089/ws", domain: "pbx.tdtu.local" });
+      assert.deepEqual(sip, { number: String(from), secret, wsUrl: "wss://pbx.tdtu.local:8089/ws", domain: "pbx.tdtu.local", iceServers: [] }); // no TURN_URLS in tests
       const me = await agents.me(agentId);
       assert.deepEqual(me.departments, [{ id: departmentId, name: `Phòng tuyển sinh ${tag}`, role: "agent" }]);
       assert.deepEqual(me.extension, { number: String(from), transport: "webrtc" });
@@ -102,6 +103,25 @@ test(
       assert.equal(saved.dispositionId, dispositionId);
       assert.equal(saved.notes, "Hỏi về học phí");
       await assert.rejects(agents.recording(agentId, callId), (error) => error.code === "NOT_FOUND");
+
+      // New staff of the unit: joins as agent and gets the next free máy lẻ; existing ones keep theirs.
+      const owned = (await pool.query(`SELECT number FROM cc_extensions WHERE user_id=$1`, [agentId])).rows.map((row) => row.number);
+      const phones = await admin.provisionStaff(adminId, departmentId, [agentId, outsiderId]);
+      if (owned.length) assert.equal(phones.get(agentId), owned[0]);
+      const issued = phones.get(outsiderId);
+      assert.ok(issued && Number(issued) >= from && !owned.includes(issued));
+      assert.ok(pushed.some((item) => item.number === issued), "pushed to the PBX");
+      assert.ok((await pool.query(`SELECT 1 FROM cc_members WHERE department_id=$1 AND user_id=$2 AND role='agent'`, [departmentId, outsiderId])).rowCount);
+      assert.equal((await admin.provisionStaff(adminId, departmentId, [outsiderId])).get(outsiderId), issued, "idempotent");
+      // A new student gets a máy lẻ too, but does not join the switchboard as an agent.
+      const studentPhone = (await admin.provisionStaff(adminId, departmentId, [studentId], false)).get(studentId);
+      assert.ok(studentPhone && studentPhone !== issued);
+      assert.equal((await pool.query(`SELECT 1 FROM cc_members WHERE user_id=$1`, [studentId])).rowCount, 0);
+      // Account deleted: its máy lẻ goes back to the range.
+      const studentExtension = (await pool.query(`SELECT id FROM cc_extensions WHERE user_id=$1`, [studentId])).rows[0].id;
+      await pool.query(`DELETE FROM users WHERE id=$1`, [studentId]);
+      await admin.releaseExtensions([studentExtension]);
+      assert.equal((await pool.query(`SELECT 1 FROM cc_extensions WHERE id=$1`, [studentExtension])).rowCount, 0);
     } finally {
       if (departmentId) {
         await pool.query(`DELETE FROM cc_calls WHERE department_id=$1`, [departmentId]);
@@ -109,7 +129,7 @@ test(
         await pool.query(`DELETE FROM cc_departments WHERE unit_id=$1`, [departmentId]);
         await pool.query(`DELETE FROM academic_units WHERE id=$1`, [departmentId]);
       }
-      await pool.query(`DELETE FROM users WHERE id=ANY($1::uuid[])`, [[adminId, agentId, outsiderId]]);
+      await pool.query(`DELETE FROM users WHERE id=ANY($1::uuid[])`, [[adminId, agentId, outsiderId, studentId]]);
       await pool.end();
     }
   },

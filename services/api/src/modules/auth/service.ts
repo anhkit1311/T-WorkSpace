@@ -37,7 +37,16 @@ type UserRow = {
   show_activity?: boolean;
   show_contact?: boolean;
   notifications_enabled?: boolean;
+  user_code?: string | null;
 };
+
+/** Mã số sinh viên / giảng viên: 4–20 letters or digits, stored upper-case. */
+export function normalizeUserCode(value: unknown): string {
+  const code = typeof value === "string" ? value.trim().toUpperCase() : "";
+  if (!/^[A-Z0-9]{4,20}$/.test(code))
+    throw new HttpError(400, "INVALID_USER_CODE", "Mã số chỉ gồm chữ và số, từ 4 đến 20 ký tự.");
+  return code;
+}
 
 export function normalizeEmail(value: unknown): string {
   if (typeof value !== "string") throw new HttpError(400, "INVALID_EMAIL", "Email không hợp lệ.");
@@ -86,6 +95,7 @@ function toAuthUser(row: UserRow): AuthUser {
     notificationsEnabled: row.notifications_enabled ?? true,
     authProvider: (row.auth_provider as "local" | "google") ?? "local",
     emailVerified: row.email_verified ?? false,
+    userCode: row.user_code ?? null,
   };
 }
 
@@ -120,15 +130,17 @@ export async function login(
   input: { email?: unknown; password?: unknown },
   metadata: SessionMetadata,
 ): Promise<AuthResult> {
-  const email = normalizeEmail(input.email);
+  // The sign-in field takes an email or a mã số sinh viên / giảng viên.
+  const byCode = typeof input.email === "string" && !input.email.includes("@");
+  const identifier = byCode ? normalizeUserCode(input.email) : normalizeEmail(input.email);
   const password = validatePassword(input.password);
   const result = await query<UserRow>(
-    `SELECT id, email, display_name, password_hash, auth_provider, email_verified, avatar_url, bio, cover_url, contact_text, status_text, pronouns, location, interests, favorite_music, profile_visibility, show_activity, show_contact, notifications_enabled FROM users WHERE email = $1`,
-    [email],
+    `SELECT id, email, display_name, password_hash, auth_provider, email_verified, avatar_url, bio, cover_url, contact_text, status_text, pronouns, location, interests, favorite_music, profile_visibility, show_activity, show_contact, notifications_enabled, user_code FROM users WHERE ${byCode ? "user_code" : "email"} = $1`,
+    [identifier],
   );
   const user = result.rows[0];
   if (!user) {
-    throw new HttpError(401, "INVALID_CREDENTIALS", "Email hoặc mật khẩu không đúng.");
+    throw new HttpError(401, "INVALID_CREDENTIALS", "Tài khoản hoặc mật khẩu không đúng.");
   }
 
   // Accounts created by the removed Google sign-in have no password; the hotline sets one.
@@ -149,7 +161,7 @@ export async function login(
   }
 
   if (!user.password_hash || !(await verifyPassword(password, user.password_hash))) {
-    throw new HttpError(401, "INVALID_CREDENTIALS", "Email hoặc mật khẩu không đúng.");
+    throw new HttpError(401, "INVALID_CREDENTIALS", "Tài khoản hoặc mật khẩu không đúng.");
   }
 
   const refreshToken = await withTransaction((client) => createSession(client, user.id, metadata));
@@ -168,7 +180,7 @@ export async function verifyOtpAndLogin(
   await verifyOtp(email, input.otp);
 
   const result = await query<UserRow>(
-    `SELECT id, email, display_name, password_hash, auth_provider, email_verified, avatar_url, bio, cover_url, contact_text, status_text, pronouns, location, interests, favorite_music, profile_visibility, show_activity, show_contact, notifications_enabled FROM users WHERE email = $1`,
+    `SELECT id, email, display_name, password_hash, auth_provider, email_verified, avatar_url, bio, cover_url, contact_text, status_text, pronouns, location, interests, favorite_music, profile_visibility, show_activity, show_contact, notifications_enabled, user_code FROM users WHERE email = $1`,
     [email],
   );
   const user = result.rows[0];
@@ -193,7 +205,7 @@ export async function refreshSession(
 ): Promise<AuthResult> {
   return withTransaction(async (client) => {
     const result = await client.query<UserRow>(
-      `SELECT u.id, u.email, u.display_name, u.password_hash, u.auth_provider, u.email_verified, u.avatar_url, u.bio, u.cover_url, u.contact_text, u.status_text, u.pronouns, u.location, u.interests, u.favorite_music, u.profile_visibility, u.show_activity, u.show_contact, u.notifications_enabled
+      `SELECT u.id, u.email, u.display_name, u.password_hash, u.auth_provider, u.email_verified, u.avatar_url, u.bio, u.cover_url, u.contact_text, u.status_text, u.pronouns, u.location, u.interests, u.favorite_music, u.profile_visibility, u.show_activity, u.show_contact, u.notifications_enabled, u.user_code
        FROM refresh_sessions s
        JOIN users u ON u.id = s.user_id
        WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > now()
@@ -227,7 +239,7 @@ export async function getCurrentUser(accessToken: string): Promise<AuthUser> {
     throw new HttpError(401, "INVALID_TOKEN", "Access token không hợp lệ hoặc đã hết hạn.");
   }
   const result = await query<UserRow>(
-    `SELECT id, email, display_name, password_hash, auth_provider, email_verified, avatar_url, bio, cover_url, contact_text, status_text, pronouns, location, interests, favorite_music, profile_visibility, show_activity, show_contact, notifications_enabled FROM users WHERE id = $1`,
+    `SELECT id, email, display_name, password_hash, auth_provider, email_verified, avatar_url, bio, cover_url, contact_text, status_text, pronouns, location, interests, favorite_music, profile_visibility, show_activity, show_contact, notifications_enabled, user_code FROM users WHERE id = $1`,
     [userId],
   );
   const user = result.rows[0];

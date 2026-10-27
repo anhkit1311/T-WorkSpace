@@ -23,7 +23,10 @@ export type PbxEvent =
   | { type: "dtmf"; channelId: string; digit: string }
   | { type: "playback_finished"; playbackId: string }
   | { type: "recording_finished"; name: string; durationSeconds: number }
-  | { type: "recording_failed"; name: string };
+  | { type: "recording_failed"; name: string }
+  // Channels outside the ARI app too (subscribeAll): extension-to-extension calls run Dial() in the dialplan.
+  | { type: "dialplan"; channelId: string; linkedId: string; context: string; exten: string; app: string; appData: string; callerNumber: string }
+  | { type: "dial"; callerChannelId: string; status: string };
 
 /** Adapter boundary to Asterisk (ARI). The ACD never talks HTTP or SIP itself. */
 export interface Pbx {
@@ -62,7 +65,13 @@ export interface Pbx {
   removeExtension(number: string): Promise<void>;
   /** BR-17: removes a stored recording (call or voicemail); a missing one is not an error. */
   deleteRecording(name: string): Promise<void>;
+  /** A dialplan global (read as ${GLOBAL(name)}); lost on restart, so callers re-push on connect. */
+  setGlobal(name: string, value: string): Promise<void>;
+  /** Busy lamp of every extension that is not free: number → offline, ringing or busy (absent = free). */
+  extensionStates(): Promise<Map<string, ExtensionState>>;
 }
+
+export type ExtensionState = "free" | "offline" | "ringing" | "busy";
 
 export interface HotlineRoute {
   id: string;

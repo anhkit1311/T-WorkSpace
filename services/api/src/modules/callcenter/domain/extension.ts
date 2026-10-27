@@ -8,6 +8,10 @@ export function nextExtensionNumber(range: { from: number; to: number }, taken: 
   return null;
 }
 
+/** A unit's shared number: 1{mã định danh}00 for ranges 1PP01–1PP99, none for older ranges. */
+export const groupNumber = (extensionFrom: number): string | null =>
+  /^1[0-9]{2}01$/.test(String(extensionFrom)) ? String(extensionFrom - 1) : null;
+
 export function inRange(number: string, range: { from: number; to: number }): boolean {
   if (!/^[0-9]{3,6}$/.test(number)) return false;
   const value = Number(number);

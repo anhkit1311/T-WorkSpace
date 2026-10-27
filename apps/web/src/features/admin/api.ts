@@ -19,7 +19,20 @@ export interface AcademicProfile {
   systemAdmin: boolean;
   unitRoles: Record<string, ("unit_admin" | "unit_head")[]>;
   staff: { unitId: string; rank: string; active: boolean } | null;
-  units: { id: string; code: string; name: string }[];
+  units: { id: string; code: string; name: string; idPrefix?: string | null }[];
+}
+
+export interface DepartmentUnit {
+  id: string;
+  code: string | null;
+  name: string;
+  kind: "office" | "faculty";
+  /** Mã định danh 2 số: prefix of the mã số issued to the unit's people. */
+  idPrefix: string | null;
+  hasFreePbx: boolean;
+  extensionFrom?: number | null;
+  extensionTo?: number | null;
+  staffCount: number;
 }
 
 export const rankLabel: Record<string, string> = { cn: "CN", ths: "ThS", ts: "TS", pgs: "PGS.TS", gs: "GS.TS" };

@@ -25,6 +25,8 @@ export type AuthUser = {
   notificationsEnabled?: boolean;
   authProvider?: "local" | "google";
   emailVerified?: boolean;
+  /** Mã số: digits first = sinh viên, GV… = giảng viên, CB… = cán bộ. */
+  userCode?: string | null;
 };
 
 export type MemberProfile = {
@@ -149,7 +151,7 @@ export type ChannelItem = {
   kind?: "workspace" | "direct";
 };
 
-export type DirectUserItem = { userId: string; displayName: string; email: string };
+export type DirectUserItem = { userId: string; displayName: string; email: string; userCode?: string | null };
 
 /** A file sent in a direct conversation, newest first, for the contact panel. */
 export type DirectFileItem = {

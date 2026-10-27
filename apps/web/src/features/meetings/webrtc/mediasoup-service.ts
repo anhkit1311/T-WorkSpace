@@ -167,6 +167,10 @@ export class MediasoupClientService {
       this.producers.delete(source);
     }
 
+    // Tells the browser's encoder/audio pipeline what it carries (voice; text-heavy screen).
+    if (track.kind === "audio") track.contentHint = "speech";
+    else if (source === "screen") track.contentHint = "detail";
+
     const producer = await this.sendTransport.produce({
       track,
       appData: { source },
@@ -174,14 +178,22 @@ export class MediasoupClientService {
       ...(track.kind === "video" && source === "webcam"
         ? {
             encodings: [
-              { rid: "q", scaleResolutionDownBy: 4, maxBitrate: 150000 },
-              { rid: "h", scaleResolutionDownBy: 2, maxBitrate: 400000 },
-              { rid: "f", scaleResolutionDownBy: 1, maxBitrate: 1200000 },
+              { rid: "q", scaleResolutionDownBy: 4, maxBitrate: 200000 },
+              { rid: "h", scaleResolutionDownBy: 2, maxBitrate: 800000 },
+              { rid: "f", scaleResolutionDownBy: 1, maxBitrate: 3000000 },
             ],
           }
         : {}),
+      // Shared screens are mostly text: keep resolution sharp and let frame rate drop instead.
+      ...(source === "screen" ? { encodings: [{ maxBitrate: 3000000 }] } : {}),
       // In-band FEC recovers lost voice packets. DTX stays off: it can clip word endings.
-      ...(track.kind === "audio" ? { codecOptions: { opusStereo: false, opusFec: true } } : {}),
+      // High priority + 64 kbps: congestion control squeezes video first instead of starving voice.
+      ...(track.kind === "audio"
+        ? {
+            encodings: [{ maxBitrate: 64000, priority: "high" as const, networkPriority: "high" as const }],
+            codecOptions: { opusStereo: false, opusFec: true, opusMaxAverageBitrate: 64000 },
+          }
+        : {}),
     });
 
     this.producers.set(source, producer);
@@ -210,6 +222,9 @@ export class MediasoupClientService {
       producerId: options.producerId,
       kind: options.kind,
       rtpParameters: options.rtpParameters as types.RtpParameters,
+      // Own stream per consumer turns off Chrome's lip sync: otherwise voice is time-stretched
+      // to follow the (jittery, layer-switching) video and sounds choppy.
+      streamId: options.id,
       appData: { source: options.source },
     });
 

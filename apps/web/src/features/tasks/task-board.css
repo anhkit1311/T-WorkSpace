@@ -11,7 +11,7 @@
   min-height: 100%;
   color: var(--text);
   overflow-y: auto;
-  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  font-family: var(--font-sans);
 }
 
 /* --------------------------------------------------------------------------
@@ -29,19 +29,19 @@
 }
 
 .task-page-heading h1 {
-  font-family: var(--font-sans, sans-serif);
-  font-size: 16px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-page-title, 22px);
   font-weight: 700;
   letter-spacing: -0.015em;
   color: var(--text);
-  margin: 0 0 2px;
+  margin: 0 0 4px;
 }
 
 .task-page-heading p {
-  color: var(--text-muted);
-  font-size: 11.5px;
+  color: var(--text-secondary);
+  font-size: var(--fs-subtext, 13px);
   margin: 0;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .task-page-heading [role="status"] {
@@ -181,8 +181,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-family: var(--font-sans, sans-serif);
-  font-size: 15px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-card-title, 15px);
   font-weight: 700;
   color: var(--text);
   margin: 0 0 16px;
@@ -191,9 +191,9 @@
 }
 
 .task-column h3 span {
-  font-family: var(--font-sans, sans-serif);
+  font-family: var(--font-sans);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--fs-badge, 11.5px);
   font-weight: 600;
   background: var(--surface);
   border: 1px solid var(--border-strong);
@@ -314,8 +314,8 @@
 }
 
 .task-panel h2 {
-  font-family: var(--font-sans, sans-serif);
-  font-size: 15px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-section, 17px);
   font-weight: 700;
   color: var(--text);
   margin: 0;

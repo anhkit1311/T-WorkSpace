@@ -22,9 +22,6 @@
   font-size: 12px;
 }
 
-[data-theme="dark"] .live-chat {
-  --chat-subtle: rgba(148, 163, 184, 0.1);
-}
 
 .live-chat :is(button, input, textarea, select):focus-visible {
   outline: 2px solid var(--primary);

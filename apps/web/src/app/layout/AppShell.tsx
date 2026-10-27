@@ -5,7 +5,6 @@ import { useSocket } from "../providers/SocketContext";
 import { useMenuAccess, type MenuAccess } from "./useMenuAccess";
 import { useMeetingStatus } from "../providers/MeetingContext";
 import { useGlobalSoftphone } from "../providers/SoftphoneContext";
-import { SidebarSlotContext } from "./SidebarSlot";
 import { GlobalCallBar } from "../../features/call-center/GlobalCallBar";
 import { STATE_LABEL, STATE_TONE } from "../../features/call-center/agent-state";
 import { Icon, type IconName } from "../../shared/ui/Icon";
@@ -20,9 +19,6 @@ const WorkspaceHomePage = lazy(() =>
   import("../../features/workspaces/WorkspaceHomePage").then((m) => ({
     default: m.WorkspaceHomePage,
   })),
-);
-const TaskBoardPage = lazy(() =>
-  import("../../features/tasks/TaskBoardPage").then((m) => ({ default: m.TaskBoardPage })),
 );
 const FilesPage = lazy(() =>
   import("../../features/files/FilesPage").then((m) => ({ default: m.FilesPage })),
@@ -70,6 +66,16 @@ const ELearningPage = lazy(() =>
     default: m.ELearningPage,
   })),
 );
+const SoftphoneDialerPage = lazy(() =>
+  import("../../features/call-center/SoftphoneDialerPage").then((m) => ({
+    default: m.SoftphoneDialerPage,
+  })),
+);
+const StaffDirectoryPage = lazy(() =>
+  import("../../features/staff/StaffDirectoryPage").then((m) => ({
+    default: m.StaffDirectoryPage,
+  })),
+);
 
 function ViewFallback() {
   return (
@@ -81,41 +87,57 @@ function ViewFallback() {
   );
 }
 
-interface SidebarMenuItem {
+interface SubMenuItem {
   id: string;
   label: string;
   icon: IconName;
   targetView: ViewId;
+}
+
+interface SidebarMenuItem {
+  id: string;
+  label: string;
+  icon: IconName;
+  targetView?: ViewId;
   badgeKey?: "notifications" | "messages" | "groups";
   /** Label in the phone bottom bar, where the full one does not fit. */
   short?: string;
+  adminOnly?: boolean;
+  children?: SubMenuItem[];
 }
 
 const SIDEBAR_MENU_ITEMS: SidebarMenuItem[] = [
   { id: "home", label: "Trang chủ", icon: "home", targetView: "overview" },
+  {
+    id: "switchboard",
+    label: "Tổng đài",
+    icon: "headset",
+    targetView: "call-center",
+    children: [
+      { id: "switchboard-dialer", label: "Tổng đài", icon: "phone", targetView: "call-center" },
+      { id: "switchboard-directory", label: "Danh sách cuộc gọi", icon: "phone-call", targetView: "call-directory" },
+      { id: "switchboard-monitor", label: "Giám sát", icon: "activity", targetView: "call-monitoring" },
+    ],
+  },
   { id: "messages", label: "Tin nhắn", icon: "message", targetView: "chat", badgeKey: "messages" },
   { id: "meetings", label: "Họp", icon: "video", targetView: "meetings" },
-  { id: "tasks", label: "Công việc", icon: "check-square", targetView: "tasks" },
-  { id: "files", label: "Tài liệu", icon: "folder", targetView: "files" },
   { id: "elearning", label: "Khóa học", icon: "graduation-cap", targetView: "elearning" },
-  { id: "switchboard", label: "Tổng đài", icon: "headset", targetView: "call-center" },
-  { id: "groups", label: "Nhóm của tôi", icon: "users", targetView: "groups", badgeKey: "groups" },
-  { id: "notifications", label: "Quản lý thông báo", icon: "bell", targetView: "notifications", badgeKey: "notifications" },
-  { id: "access", label: "Quản trị hệ thống", icon: "lock", targetView: "access" },
-  { id: "profile", label: "Trang cá nhân", icon: "profile", targetView: "profile" },
+  { id: "staff", label: "Danh sách nhân sự", icon: "users", targetView: "staff" },
+  { id: "profile", label: "Cài đặt", icon: "settings", targetView: "profile" },
+  // Mục dành riêng cho Admin:
+  { id: "notifications", label: "Quản lý thông báo", icon: "bell", targetView: "notifications", badgeKey: "notifications", adminOnly: true },
+  { id: "access", label: "Quản trị hệ thống", icon: "lock", targetView: "access", adminOnly: true },
 ];
 
 /** The phone bottom bar shows these; the rest open from "Thêm". */
-const BOTTOM_BAR_ITEMS = new Set(["home", "messages", "meetings", "elearning"]);
+const BOTTOM_BAR_ITEMS = new Set(["home", "switchboard", "messages", "elearning"]);
 /** Account and administration entries sit under a divider, after the services. */
-const FIRST_MANAGE_ITEM = "groups";
+const FIRST_MANAGE_ITEM = "notifications";
 /**
  * Entries shown only to users with that role (see useMenuAccess). The switchboard and call list
  * are the core of the system and always stay visible; the page itself explains missing access.
  */
-const RESTRICTED_MENU_ITEMS: Record<string, keyof MenuAccess> = {
-  access: "systemAdmin",
-};
+const RESTRICTED_MENU_ITEMS: Record<string, keyof MenuAccess> = {};
 
 export function AppShell() {
   const {
@@ -160,50 +182,51 @@ export function AppShell() {
     };
   }, [accessToken, socket]);
 
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
+    switchboard: true,
+  });
+  const toggleExpand = (menuId: string) => {
+    setExpandedMenus((prev) => ({
+      ...prev,
+      [menuId]: !prev[menuId],
+    }));
+  };
+
   // Keep activeMenuId synced with current view
   useEffect(() => {
     if (activeView === "overview") setActiveMenuId("home");
-    else if (activeView === "call-center") setActiveMenuId("switchboard");
-    else if (activeView === "call-directory") setActiveMenuId("switchboard");
-    else if (activeView === "chat") setActiveMenuId("messages");
+    else if (activeView === "call-center") {
+      setActiveMenuId("switchboard-dialer");
+      setExpandedMenus((prev) => ({ ...prev, switchboard: true }));
+    } else if (activeView === "call-directory") {
+      setActiveMenuId("switchboard-directory");
+      setExpandedMenus((prev) => ({ ...prev, switchboard: true }));
+    } else if (activeView === "call-monitoring") {
+      setActiveMenuId("switchboard-monitor");
+      setExpandedMenus((prev) => ({ ...prev, switchboard: true }));
+    } else if (activeView === "chat") setActiveMenuId("messages");
     else if (activeView === "meetings") setActiveMenuId("meetings");
     else if (activeView === "notifications") setActiveMenuId("notifications");
     else if (activeView === "elearning") setActiveMenuId("elearning");
+    else if (activeView === "staff") setActiveMenuId("staff");
     else if (activeView === "admin" || activeView === "groups") setActiveMenuId("groups");
     else if (activeView === "profile") setActiveMenuId("profile");
-    else if (activeView === "tasks") setActiveMenuId("tasks");
     else if (activeView === "files") setActiveMenuId("files");
     else if (activeView === "access") setActiveMenuId("access");
   }, [activeView]);
 
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
-    let saved: string | null = null;
-    try {
-      saved = localStorage.getItem("theme");
-    } catch {
-      // storage blocked: follow the OS
-    }
-    return saved === "dark" || saved === "light" ? saved : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  });
-  // The theme belongs to the signed-in shell; the public pages (landing, login) stay light.
+  // Always enforce Light theme across the website
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#0A1322" : "#F4F6F9");
+    try {
+      localStorage.removeItem("theme");
+    } catch {}
+    document.documentElement.setAttribute("data-theme", "light");
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#F4F6F9");
     return () => {
       document.documentElement.removeAttribute("data-theme");
-      document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#e8eef6");
+      document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#F4F6F9");
     };
-  }, [theme]);
-
-  const toggleTheme = () => {
-    const nextTheme = theme === "dark" ? "light" : "dark";
-    setTheme(nextTheme);
-    try {
-      localStorage.setItem("theme", nextTheme);
-    } catch {
-      // not persisted; the choice still applies to this visit
-    }
-  };
+  }, []);
 
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -221,7 +244,6 @@ export function AppShell() {
     }
   };
   const [moreOpen, setMoreOpen] = useState(false);
-  const [subnavSlot, setSubnavSlot] = useState<HTMLDivElement | null>(null);
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -230,7 +252,8 @@ export function AppShell() {
   const avatarButtonRef = useRef<HTMLButtonElement>(null);
 
   const displayName = user?.displayName?.trim() || user?.email || "Tài khoản";
-  const userEmail = user?.email || "";
+  // Only a real grant (academic_role_grants system_admin) shows the administration entries.
+  const isUserAdmin = Boolean(menuAccess?.systemAdmin);
   const presence =
     user?.showActivity === false || connectionStatus === "disconnected"
       ? "offline"
@@ -269,7 +292,7 @@ export function AppShell() {
   }, []);
 
   /** Pages that fill the viewport edge to edge (their own columns scroll). */
-  const isWorkspaceScope = activeView === "chat" || activeView === "tasks" || activeView === "meetings";
+  const isWorkspaceScope = activeView === "chat" || activeView === "meetings";
 
   const renderPage = () => {
     if (route.invalid)
@@ -284,18 +307,19 @@ export function AppShell() {
       );
     let Component;
     if (activeView === "overview") Component = <WorkspaceHomePage />;
-    else if (activeView === "call-center") Component = <CallCenterWorkspace />;
+    else if (activeView === "call-center") Component = <SoftphoneDialerPage />;
     else if (activeView === "call-directory") Component = <CallDirectoryPage />;
+    else if (activeView === "call-monitoring") Component = <CallCenterWorkspace initialTab="live" />;
     else if (activeView === "chat") Component = <MessagesPage />;
-    else if (activeView === "tasks") Component = <TaskBoardPage />;
     else if (activeView === "files") Component = <FilesPage />;
     else if (activeView === "meetings") Component = <MeetingPage />;
+    else if (activeView === "elearning") Component = <ELearningPage />;
+    else if (activeView === "staff") Component = <StaffDirectoryPage />;
     else if (activeView === "groups") Component = <GroupsPage />;
     else if (activeView === "profile") Component = <ProfilePage />;
     else if (activeView === "admin") Component = <WorkspaceAdminPage />;
     else if (activeView === "invitation") Component = <InvitationPage />;
     else if (activeView === "notifications") Component = <NotificationsPage />;
-    else if (activeView === "elearning") Component = <ELearningPage />;
     else if (activeView === "access") Component = <AccessPage />;
     else Component = <WorkspaceHomePage />;
 
@@ -357,17 +381,6 @@ export function AppShell() {
             </button>
           )}
 
-
-          {/* Dark Mode Toggle */}
-          <button
-            type="button"
-            className="tdtu-icon-btn"
-            title={theme === "dark" ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối"}
-            aria-label="Chế độ giao diện"
-            onClick={toggleTheme}
-          >
-            <Icon name={theme === "dark" ? "sun" : "moon"} size={14} />
-          </button>
 
           {/* Notifications Bell with Red Badge */}
           <button
@@ -485,10 +498,15 @@ export function AppShell() {
           className={`editorial-dock tdtu-sidebar ${collapsed ? "is-collapsed" : ""} ${moreOpen ? "is-more-open" : ""}`}
           aria-label="Menu chức năng chính"
         >
-          {SIDEBAR_MENU_ITEMS.filter(
-            (item) => (!RESTRICTED_MENU_ITEMS[item.id] || menuAccess?.[RESTRICTED_MENU_ITEMS[item.id]]),
-          ).map((item) => {
-            const isSelected = activeMenuId === item.id;
+          {SIDEBAR_MENU_ITEMS.filter((item) => {
+            if (item.adminOnly && !isUserAdmin) return false;
+            if (RESTRICTED_MENU_ITEMS[item.id] && !menuAccess?.[RESTRICTED_MENU_ITEMS[item.id]]) return false;
+            return true;
+          }).map((item) => {
+            const hasChildren = Boolean(item.children && item.children.length > 0);
+            const isExpanded = Boolean(expandedMenus[item.id]);
+            const isChildActive = Boolean(item.children?.some((c) => activeMenuId === c.id || activeView === c.targetView));
+            const isSelected = activeMenuId === item.id || isChildActive;
             const badgeCount =
               item.badgeKey === "notifications"
                 ? unreadNotifications
@@ -507,8 +525,23 @@ export function AppShell() {
                   className={`tdtu-sidebar__item ${isSelected ? "is-active" : ""} ${BOTTOM_BAR_ITEMS.has(item.id) ? "" : "is-secondary"}`}
                   aria-current={isSelected ? "page" : undefined}
                   onClick={() => {
-                    setActiveMenuId(item.id);
-                    setActiveView(item.targetView);
+                    if (hasChildren) {
+                      if (collapsed) {
+                        setCollapsed(false);
+                        setExpandedMenus((prev) => ({ ...prev, [item.id]: true }));
+                        if (item.targetView) setActiveView(item.targetView);
+                        setActiveMenuId(item.children![0].id);
+                      } else {
+                        toggleExpand(item.id);
+                        if (!isChildActive && item.targetView) {
+                          setActiveView(item.targetView);
+                          setActiveMenuId(item.children![0].id);
+                        }
+                      }
+                    } else {
+                      setActiveMenuId(item.id);
+                      if (item.targetView) setActiveView(item.targetView);
+                    }
                     setMoreOpen(false);
                   }}
                   title={item.label}
@@ -516,6 +549,13 @@ export function AppShell() {
                   <Icon name={item.icon} size={17} strokeWidth={isSelected ? 2 : 1.7} />
                   <span className={`tdtu-sidebar__label ${item.short ? "has-short" : ""}`}>{item.label}</span>
                   {item.short && <span className="tdtu-sidebar__short" aria-hidden="true">{item.short}</span>}
+                  {hasChildren && !collapsed && (
+                    <Icon
+                      name="chevron-right"
+                      size={13}
+                      className={`tdtu-sidebar__chevron ${isExpanded ? "is-expanded" : ""}`}
+                    />
+                  )}
                   {live && <span className="tdtu-sidebar__live" role="img" aria-label="đang diễn ra" />}
                   {badgeCount !== undefined && badgeCount > 0 && (
                     <span className="tdtu-sidebar__item-badge">
@@ -523,8 +563,29 @@ export function AppShell() {
                     </span>
                   )}
                 </button>
-                {item.id === "switchboard" && isSelected && !collapsed && (
-                  <div ref={setSubnavSlot} className="tdtu-sidebar__sub" />
+
+                {hasChildren && isExpanded && !collapsed && (
+                  <div className="tdtu-sidebar__submenu">
+                    {item.children!.map((sub) => {
+                      const isSubActive = activeMenuId === sub.id || activeView === sub.targetView;
+                      return (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          className={`tdtu-sidebar__subitem ${isSubActive ? "is-active" : ""}`}
+                          aria-current={isSubActive ? "page" : undefined}
+                          onClick={() => {
+                            setActiveMenuId(sub.id);
+                            setActiveView(sub.targetView);
+                            setMoreOpen(false);
+                          }}
+                        >
+                          <Icon name={sub.icon} size={14} strokeWidth={isSubActive ? 2 : 1.6} />
+                          <span>{sub.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
               </Fragment>
             );
@@ -580,7 +641,7 @@ export function AppShell() {
             className={`editorial-main-content view-${activeView} ${isWorkspaceScope ? "is-workspace-scope" : ""}`}
           >
             <div className="view-transition-wrapper">
-              <SidebarSlotContext.Provider value={subnavSlot}>{renderPage()}</SidebarSlotContext.Provider>
+              {renderPage()}
             </div>
           </main>
         </div>

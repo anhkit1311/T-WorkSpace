@@ -1,5 +1,4 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import type {
   MonitorMode,
   AgentState,
@@ -12,7 +11,6 @@ import type {
 } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import { appRouteUrl } from "../../app/navigation";
-import { useSidebarSlot } from "../../app/layout/SidebarSlot";
 import { useSocket } from "../../app/providers/SocketContext";
 import { Badge, Button, Field, FilterPills, KpiStatCard } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
@@ -110,7 +108,6 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
     { key: "contact", label: "Hỗ trợ của tôi" },
   ];
   const activeTab = tabs.some((item) => item.key === tab) ? tab : (tabs[0].key as Tab);
-  const sidebarSlot = useSidebarSlot();
 
   if (loadError)
     return (
@@ -131,6 +128,55 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
       </div>
     );
   if (!me) return <div className="callcenter-page"><div className="callcenter-panel">Đang tải tổng đài…</div></div>;
+
+  // Dedicated view for "Danh sách cuộc gọi"
+  if (initialTab === "history") {
+    return (
+      <div className="callcenter-page">
+        <div className="callcenter-header">
+          <div>
+            <h1 className="callcenter-header__title">Danh sách cuộc gọi</h1>
+            <p className="callcenter-header__subtitle">
+              Xem toàn bộ nhật ký cuộc gọi, nghe lại bản ghi âm và thông tin chi tiết cuộc gọi.
+            </p>
+          </div>
+        </div>
+        <CallHistory me={me} api={api} fail={fail} token={accessToken!} />
+      </div>
+    );
+  }
+
+  // Dedicated view for "Giám sát"
+  if (initialTab === "live") {
+    return (
+      <div className="callcenter-page">
+        <div className="callcenter-header">
+          <div>
+            <h1 className="callcenter-header__title">Giám sát tổng đài</h1>
+            <p className="callcenter-header__subtitle">
+              Theo dõi cuộc gọi trực tiếp, trạng thái điện thoại viên và hàng đợi cuộc gọi thời gian thực.
+            </p>
+          </div>
+        </div>
+        <LiveBoard
+          departments={me.isAdmin ? null : supervised}
+          api={api}
+          fail={fail}
+          token={accessToken!}
+          onMonitor={
+            me.extension
+              ? (callId, mode) =>
+                  api(`live-calls/${callId}/monitor`, "POST", { mode }).then(() => {
+                    setAutoAnswerUntil(Date.now() + 20_000);
+                    notify("Giám sát cuộc gọi", `Máy lẻ ${me.extension!.number} đang kết nối vào cuộc gọi…`, "info");
+                  }, fail)
+              : null
+          }
+        />
+      </div>
+    );
+  }
+
   // Everyone else (students, lecturers without a desk): contact a department and follow their requests.
   if (!me.departments.length && !me.isAdmin && !me.extension)
     return (
@@ -155,23 +201,7 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
           </p>
         </div>
       </div>
-      {/* On wide screens the tabs live in the sidebar (the pills stay for phones and a collapsed menu). */}
-      <FilterPills options={tabs} activeKey={activeTab} onChange={(key) => setTab(key as Tab)} className={`desk-tabs ${sidebarSlot ? "has-sidebar-tabs" : ""}`} />
-      {sidebarSlot &&
-        createPortal(
-          tabs.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={`tdtu-subnav__item ${activeTab === item.key ? "is-active" : ""}`}
-              aria-current={activeTab === item.key ? "page" : undefined}
-              onClick={() => setTab(item.key as Tab)}
-            >
-              {item.label}
-            </button>
-          )),
-          sidebarSlot,
-        )}
+      <FilterPills options={tabs} activeKey={activeTab} onChange={(key) => setTab(key as Tab)} className="desk-tabs" />
       {/* Always mounted: the softphone registration and an unfinished wrap-up survive tab switches. */}
       {hasDesk && (
         <div hidden={activeTab !== "desk"}>

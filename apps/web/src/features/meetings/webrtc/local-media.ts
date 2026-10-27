@@ -25,8 +25,8 @@ export function mediaConstraints(options: JoinMediaOptions): MediaStreamConstrai
     options.quality === "low"
       ? { width: 640, height: 360 }
       : options.quality === "high"
-        ? { width: 1280, height: 720 }
-        : { width: 960, height: 540 };
+        ? { width: 1920, height: 1080 }
+        : { width: 1280, height: 720 };
   return {
     audio: options.micEnabled === false ? false : micConstraints(options.audioInputId),
     video:
@@ -36,6 +36,7 @@ export function mediaConstraints(options: JoinMediaOptions): MediaStreamConstrai
             deviceId: options.videoInputId ? { ideal: options.videoInputId } : undefined,
             width: { ideal: dimensions.width },
             height: { ideal: dimensions.height },
+            frameRate: { ideal: 30 },
           },
   };
 }

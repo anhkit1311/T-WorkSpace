@@ -1,6 +1,8 @@
 import type { AgentState, CcAgentProfile, CcCallerProfile, CcSipAccount, CcTransferDirectory, MonitorMode } from "@doan/shared";
 import { HttpError } from "../../../shared/http/http-error.js";
 import { addWorkspaceMember, createWorkspace, getWorkspaceChannels } from "../../workspaces/service.js";
+import { getIceServers } from "../../meetings/media/ice.js";
+import { groupNumber } from "../domain/extension.js";
 import type { CallCenterRepository } from "../repository/callcenter-repository.js";
 import type { AcdService } from "./acd-service.js";
 import type { CallCenterAdminService } from "./admin-service.js";
@@ -85,11 +87,17 @@ export class CallCenterAgentService {
   /** Transfer targets: active departments and every active extension with its agent's live state. */
   async directory(userId: string): Promise<CcTransferDirectory> {
     if (!(await this.admin.access(userId)).isMember()) throw forbidden();
-    const [departments, extensions] = await Promise.all([this.repo.departments(null), this.repo.extensions(null)]);
+    const [departments, extensions, lamps] = await Promise.all([
+      this.repo.departments(null),
+      this.repo.extensions(null),
+      this.admin.extensionStates(),
+    ]);
     const names = new Map(departments.map((department) => [department.id, department.name]));
     const acd = this.acd();
     return {
-      departments: departments.filter((department) => department.active).map(({ id, name }) => ({ id, name })),
+      departments: departments
+        .filter((department) => department.active)
+        .map(({ id, name, extensionFrom }) => ({ id, name, groupNumber: groupNumber(extensionFrom) })),
       extensions: extensions
         .filter((extension) => extension.active && extension.userId !== userId)
         .map((extension) => ({
@@ -97,6 +105,7 @@ export class CallCenterAgentService {
           name: extension.userName || extension.label || extension.number,
           departmentName: names.get(extension.departmentId) ?? "",
           state: extension.userId ? (acd?.agentView(extension.userId)?.state ?? null) : null,
+          deviceState: lamps ? (lamps.get(extension.number) ?? "free") : null,
           // Lets "Tin nhắn" offer a call to the person you are chatting with.
           userId: extension.userId ?? null,
         })),
@@ -125,6 +134,7 @@ export class CallCenterAgentService {
       secret: extension.sip_secret,
       wsUrl: this.sipWsUrl,
       domain: new URL(this.sipWsUrl).hostname,
+      iceServers: getIceServers(userId),
     };
   }
 

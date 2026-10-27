@@ -303,13 +303,13 @@
 
 .ws-empty-stage__card h1 {
   margin: 4px 0;
-  font-size: 1.45rem;
+  font-size: var(--fs-page-title, 22px);
 }
 
 .ws-empty-stage__card p {
   margin: 0;
   color: var(--nexo-text-muted, #8A8780);
-  font-size: 0.9rem;
+  font-size: var(--fs-subtext, 13px);
 }
 
 .ws-empty-stage__actions {
@@ -347,7 +347,7 @@
 
 .files-page h1 {
   margin: 0 0 4px;
-  font-size: 22px;
+  font-size: var(--fs-page-title, 22px);
   font-weight: 700;
 }
 

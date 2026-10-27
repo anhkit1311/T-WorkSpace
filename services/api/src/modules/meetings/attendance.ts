@@ -36,14 +36,14 @@ export async function getMeetingAttendance(userId: string, sessionId: unknown): 
     throw new HttpError(403, "FORBIDDEN", "Chỉ chủ trì hoặc đồng chủ trì xem được danh sách tham dự.");
 
   const end = (session.ended_at ?? session.now).getTime();
-  const rows = await query<{ user_id: string; display_name: string; email: string; joined_at: Date; left_at: Date | null }>(
-    `SELECT p.user_id,u.display_name,u.email,p.joined_at,p.left_at FROM meeting_participations p JOIN users u ON u.id=p.user_id
+  const rows = await query<{ user_id: string; display_name: string; email: string; student_code: string | null; joined_at: Date; left_at: Date | null }>(
+    `SELECT p.user_id,u.display_name,u.email,CASE WHEN u.user_code ~ '^[0-9]' THEN u.user_code END AS student_code,p.joined_at,p.left_at FROM meeting_participations p JOIN users u ON u.id=p.user_id
      WHERE p.session_id=$1 ORDER BY p.joined_at`,
     [session.id],
   );
-  const people = new Map<string, { displayName: string; email: string; intervals: { from: number; to: number }[]; first: Date; last: Date | null; open: boolean }>();
+  const people = new Map<string, { displayName: string; email: string; studentCode: string | null; intervals: { from: number; to: number }[]; first: Date; last: Date | null; open: boolean }>();
   for (const row of rows.rows) {
-    const person = people.get(row.user_id) ?? { displayName: row.display_name, email: row.email, intervals: [], first: row.joined_at, last: null, open: false };
+    const person = people.get(row.user_id) ?? { displayName: row.display_name, email: row.email, studentCode: row.student_code, intervals: [], first: row.joined_at, last: null, open: false };
     // A connection still open counts until the session ended (or now, while it runs).
     person.intervals.push({ from: row.joined_at.getTime(), to: Math.min(row.left_at?.getTime() ?? end, end) });
     if (!row.left_at) person.open = true;
@@ -63,6 +63,7 @@ export async function getMeetingAttendance(userId: string, sessionId: unknown): 
         userId: id,
         displayName: person.displayName,
         email: person.email,
+        studentCode: person.studentCode,
         firstJoinedAt: person.first.toISOString(),
         lastLeftAt: person.open ? null : (person.last?.toISOString() ?? null),
         presentSeconds: Math.round(present / 1000),
@@ -84,7 +85,8 @@ export async function exportMeetingAttendance(userId: string, sessionId: unknown
     ["Họ tên", "MSSV", "Email", "Vào lúc", "Rời lúc", "Có mặt (phút)", "Tỉ lệ (%)"],
     ...attendance.rows.map((row) => [
       row.displayName,
-      studentIdFromEmail(row.email),
+      // Any email domain: the mã số sinh viên, else the TDTU student mailbox name.
+      row.studentCode ?? studentIdFromEmail(row.email),
       row.email,
       time(row.firstJoinedAt),
       row.lastLeftAt ? time(row.lastLeftAt) : "Đang trong phòng",

@@ -1,5 +1,5 @@
 import type { ExtensionTransport } from "@doan/shared";
-import type { Pbx, PbxEvent } from "../domain/ports.js";
+import type { ExtensionState, Pbx, PbxEvent } from "../domain/ports.js";
 
 export interface AriOptions {
   url: string; // http://asterisk:8088
@@ -260,6 +260,29 @@ export class AriPbx implements Pbx {
     });
   }
 
+  async setGlobal(name: string, value: string): Promise<void> {
+    const params = new URLSearchParams({ variable: name, value });
+    await this.request("POST", `/asterisk/variable?${params}`);
+  }
+
+  /**
+   * Busy lamps from two reads: endpoint registration (offline) and live channels named
+   * "PJSIP/<number>-…" (ringing until answered, then busy). /deviceStates only covers ARI's own devices.
+   */
+  async extensionStates(): Promise<Map<string, ExtensionState>> {
+    const [endpoints, channels] = await Promise.all([
+      this.request<{ resource: string; state: string }[]>("GET", "/endpoints/PJSIP"),
+      this.request<{ name: string; state: string }[]>("GET", "/channels"),
+    ]);
+    const states = new Map<string, ExtensionState>();
+    for (const endpoint of endpoints) if (endpoint.state !== "online") states.set(endpoint.resource, "offline");
+    for (const channel of channels) {
+      const number = /^PJSIP\/([0-9]{3,6})-/.exec(channel.name)?.[1];
+      if (number && states.get(number) !== "busy") states.set(number, channel.state === "Up" ? "busy" : "ringing");
+    }
+    return states;
+  }
+
   /** Streams a stored recording (call or voicemail) for playback in the browser (CC-7). */
   async recording(name: string): Promise<Response> {
     const response = await fetch(`${this.base}/recordings/stored/${encodeURIComponent(name)}/file`, {
@@ -275,7 +298,15 @@ interface AriEvent {
   type: string;
   args?: string[];
   digit?: string;
-  channel?: { id: string; state: string; caller?: { number?: string; name?: string }; dialplan?: { exten?: string } };
+  channel?: {
+    id: string;
+    state: string;
+    linkedid?: string;
+    caller?: { number?: string; name?: string };
+    dialplan?: { context?: string; exten?: string; app_name?: string; app_data?: string };
+  };
+  caller?: { id: string };
+  dialstatus?: string;
   playback?: { id: string };
   recording?: { name: string; duration?: number };
 }
@@ -305,6 +336,20 @@ function translate(event: AriEvent): PbxEvent | null {
       return { type: "recording_finished", name: event.recording!.name, durationSeconds: event.recording!.duration ?? 0 };
     case "RecordingFailed":
       return { type: "recording_failed", name: event.recording!.name };
+    case "ChannelDialplan":
+      return {
+        type: "dialplan",
+        channelId: channel!.id,
+        linkedId: channel!.linkedid ?? channel!.id,
+        context: channel!.dialplan?.context ?? "",
+        exten: channel!.dialplan?.exten ?? "",
+        app: channel!.dialplan?.app_name ?? "",
+        appData: channel!.dialplan?.app_data ?? "",
+        callerNumber: channel!.caller?.number ?? "",
+      };
+    case "Dial":
+      // Only the end of a dial attempt matters (the start has an empty status).
+      return event.caller && event.dialstatus ? { type: "dial", callerChannelId: event.caller.id, status: event.dialstatus } : null;
     default:
       return null;
   }

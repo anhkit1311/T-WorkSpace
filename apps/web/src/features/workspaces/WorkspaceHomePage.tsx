@@ -350,10 +350,10 @@ export function WorkspaceHomePage() {
               <button
                 type="button"
                 className="tdtu-home-shortcut-btn"
-                onClick={() => setActiveView("chat")}
+                onClick={() => setActiveView("access")}
               >
-                <Icon name="message" size={17} />
-                <span>Tin nhắn</span>
+                <Icon name="building" size={17} />
+                <span>Khoa / Phòng ban</span>
               </button>
             </div>
           </div>

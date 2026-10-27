@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
-import type { CcContactDepartment, CcPersonalVoicemail, CcTicket, CcTicketEvent, CcWebCallAccount, TicketStatus } from "@doan/shared";
+import type { CcContactDepartment, CcPersonalVoicemail, CcRecentCall, CcTicket, CcTicketEvent, CcWebCallAccount, TicketStatus } from "@doan/shared";
 import { HttpError } from "../../../shared/http/http-error.js";
+import { getIceServers } from "../../meetings/media/ice.js";
 import { isOpen } from "../domain/business-hours.js";
 import type { Pbx } from "../domain/ports.js";
 import type { CallCenterRepository } from "../repository/callcenter-repository.js";
@@ -38,6 +39,10 @@ export class CallCenterVoipService {
 
   voicemails(userId: string): Promise<CcPersonalVoicemail[]> {
     return this.repo.personalVoicemails(userId);
+  }
+
+  recentCalls(userId: string): Promise<CcRecentCall[]> {
+    return this.repo.recentCalls(userId);
   }
 
   private async ownVoicemail(userId: string, voicemailId: string) {
@@ -101,6 +106,7 @@ export class CallCenterVoipService {
       secret,
       wsUrl: this.sipWsUrl,
       domain: new URL(this.sipWsUrl).hostname,
+      iceServers: getIceServers(userId),
       target: "hotline",
       departmentName: department.name,
       expiresAt: expiresAt.toISOString(),

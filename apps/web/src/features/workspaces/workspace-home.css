@@ -61,11 +61,6 @@
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-[data-theme="dark"] .tdtu-home-kpi-card {
-  background: #1E293B;
-  border-color: #334155;
-}
-
 .tdtu-home-kpi-card:hover {
   box-shadow: none;
 }
@@ -106,10 +101,6 @@
   line-height: 1.1;
 }
 
-[data-theme="dark"] .tdtu-home-kpi-card__number {
-  color: #F8FAFC;
-}
-
 .tdtu-home-kpi-card__label {
   font-size: 12.5px;
   color: var(--text-muted);
@@ -146,10 +137,6 @@
   color: var(--text);
 }
 
-[data-theme="dark"] .tdtu-home-feed__title {
-  color: #F8FAFC;
-}
-
 .tdtu-home-feed__filters {
   display: flex;
   gap: 6px;
@@ -167,12 +154,6 @@
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
-}
-
-[data-theme="dark"] .tdtu-home-filter-pill {
-  background: #1E293B;
-  border-color: #334155;
-  color: #94A3B8;
 }
 
 .tdtu-home-filter-pill:hover:not(.is-active) {
@@ -206,11 +187,6 @@
   transform: translateY(-1px);
   border-color: #BFDBFE;
   box-shadow: 0 3px 8px rgba(37, 99, 235, 0.08);
-}
-
-[data-theme="dark"] .tdtu-home-featured-card {
-  background: #1E293B;
-  border-color: #334155;
 }
 
 .tdtu-home-featured-banner {
@@ -303,10 +279,6 @@
   font-weight: 700;
   color: var(--text);
   line-height: 1.4;
-}
-
-[data-theme="dark"] .tdtu-home-featured-title {
-  color: #F8FAFC;
 }
 
 .tdtu-home-featured-desc {
@@ -426,11 +398,6 @@
   box-shadow: none;
 }
 
-[data-theme="dark"] .tdtu-home-side-card {
-  background: #1E293B;
-  border-color: #334155;
-}
-
 .tdtu-home-side-card__head {
   display: flex;
   justify-content: space-between;
@@ -443,10 +410,6 @@
   font-size: 14.5px;
   font-weight: 700;
   color: var(--text);
-}
-
-[data-theme="dark"] .tdtu-home-side-card__title {
-  color: #F8FAFC;
 }
 
 .tdtu-home-side-card__link {
@@ -504,10 +467,6 @@
   text-overflow: ellipsis;
 }
 
-[data-theme="dark"] .tdtu-home-meeting-name {
-  color: #F8FAFC;
-}
-
 .tdtu-home-meeting-time {
   font-size: 12px;
   color: var(--text-muted);
@@ -553,12 +512,6 @@
   color: var(--text);
   cursor: pointer;
   transition: all 0.15s ease;
-}
-
-[data-theme="dark"] .tdtu-home-shortcut-btn {
-  background: #334155;
-  border-color: #475569;
-  color: #F8FAFC;
 }
 
 .tdtu-home-shortcut-btn svg {

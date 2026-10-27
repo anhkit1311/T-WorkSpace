@@ -5,7 +5,7 @@ import { Button } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
 import { getMeetingCalendarApi } from "./api";
 import { MicLevelMeter } from "./MicLevelMeter";
-import { mapMediaError, micConstraints, type JoinMediaOptions } from "./webrtc/local-media";
+import { mapMediaError, mediaConstraints, type JoinMediaOptions } from "./webrtc/local-media";
 
 export type PreJoinChoice = JoinMediaOptions & { outputDeviceId: string };
 
@@ -96,14 +96,7 @@ export function PreJoinScreen({
     }
     setPreviewLoading(true);
     navigator.mediaDevices
-      .getUserMedia({
-        video: {
-          deviceId: videoInputId ? { ideal: videoInputId } : undefined,
-          width: { ideal: quality === "high" ? 1280 : quality === "low" ? 640 : 960 },
-          height: { ideal: quality === "high" ? 720 : quality === "low" ? 360 : 540 },
-        },
-        audio: micConstraints(audioInputId),
-      })
+      .getUserMedia(mediaConstraints({ audioInputId, videoInputId, quality }))
       .then((stream) => {
         acquiredStream = stream;
         if (active) {
@@ -161,157 +154,173 @@ export function PreJoinScreen({
 
   return (
     <section className="meeting-prejoin" aria-labelledby="prejoin-title">
-      <Button variant="text" size="sm" icon="chevron-left" onClick={onBack} disabled={joining}>
-        Lịch họp
-      </Button>
-      <header className="meeting-prejoin__head">
-        <h1 id="prejoin-title">{title ?? room.name}</h1>
-        <p>
-          {room.workspace}
-          {title ? ` · ${room.name}` : ""}
-        </p>
-        {people && (
-          <p className="meeting-prejoin__people" role="status">
-            <Icon name="users" size={14} />
-            {people.length ? `Đang trong phòng: ${people.join(", ")}` : "Chưa có ai trong phòng"}
-          </p>
-        )}
-      </header>
+      <div className="meeting-prejoin__top">
+        <Button variant="text" size="sm" icon="chevron-left" onClick={onBack} disabled={joining}>
+          Lịch họp
+        </Button>
+      </div>
 
-      <div className="meeting-lobby-preview-box" aria-label="Kiểm tra thiết bị">
-        <div className="meeting-preview-screen">
-          {previewCam && previewStream ? (
-            <video ref={previewVideoRef} autoPlay playsInline muted className="meeting-preview-video" />
-          ) : (
-            <div className="meeting-preview-placeholder">
-              <div className="meeting-preview-avatar">{(user?.displayName || "Bạn").slice(0, 1).toUpperCase()}</div>
-              <span style={{ fontSize: "13px" }}>{previewEnabled ? "Camera đang tắt" : "Chưa kiểm tra camera"}</span>
+      <div className="meeting-prejoin__horizontal">
+        {/* Cột trái: Khung xem trước camera và các nút bật/tắt nhanh */}
+        <div className="meeting-prejoin__stage-col">
+          <div className="meeting-preview-screen">
+            {previewCam && previewStream ? (
+              <video ref={previewVideoRef} autoPlay playsInline muted className="meeting-preview-video" />
+            ) : (
+              <div className="meeting-preview-placeholder">
+                <div className="meeting-preview-avatar">{(user?.displayName || "Bạn").slice(0, 1).toUpperCase()}</div>
+                <span className="meeting-preview-placeholder-text">{previewEnabled ? "Camera đang tắt" : "Chưa kiểm tra camera"}</span>
+              </div>
+            )}
+
+            <div className="meeting-preview-floating-controls">
+              <button
+                type="button"
+                className={`lobby-control-btn ${!previewCam ? "is-muted" : ""}`}
+                disabled={joining}
+                aria-pressed={previewCam}
+                onClick={togglePreviewCam}
+                title={previewCam ? "Tắt Camera" : "Bật Camera"}
+              >
+                <Icon name={previewCam ? "camera" : "camera-off"} size={16} />
+                <span>{previewCam ? "Tắt Camera" : "Bật Camera"}</span>
+              </button>
+              <button
+                type="button"
+                className={`lobby-control-btn ${!previewMic ? "is-muted" : ""}`}
+                disabled={joining}
+                aria-pressed={previewMic}
+                onClick={togglePreviewMic}
+                title={previewMic ? "Tắt Mic" : "Bật Mic"}
+              >
+                <Icon name={previewMic ? "mic" : "mic-off"} size={16} />
+                <span>{previewMic ? "Tắt Mic" : "Bật Mic"}</span>
+              </button>
+            </div>
+          </div>
+
+          {!previewEnabled && (
+            <Button variant="secondary" size="sm" icon="camera" onClick={() => setPreviewEnabled(true)}>
+              Kiểm tra camera và micro
+            </Button>
+          )}
+          {previewLoading && (
+            <p className="meeting-device-status" role="status">
+              Đang chờ quyền truy cập thiết bị…
+            </p>
+          )}
+          {previewError && (
+            <div className="meeting-device-error" role="alert">
+              <span>{previewError}</span>
+              <Button variant="ghost" size="sm" onClick={() => setPreviewRetry((value) => value + 1)}>
+                Thử lại
+              </Button>
             </div>
           )}
-        </div>
-        {!previewEnabled && (
-          <Button variant="secondary" size="sm" icon="camera" onClick={() => setPreviewEnabled(true)}>
-            Kiểm tra camera và micro
-          </Button>
-        )}
-        {previewLoading && (
-          <p className="meeting-device-status" role="status">
-            Đang chờ quyền truy cập thiết bị…
-          </p>
-        )}
-        {previewError && (
-          <div className="meeting-device-error" role="alert">
-            <span>{previewError}</span>
-            <Button variant="ghost" size="sm" onClick={() => setPreviewRetry((value) => value + 1)}>
-              Thử lại
-            </Button>
+
+          <div className="meeting-prejoin__meter-box">
+            <MicLevelMeter stream={previewStream} enabled={previewMic} />
           </div>
-        )}
-
-        <div className="meeting-preview-controls">
-          <button
-            type="button"
-            className={`lobby-control-btn ${!previewCam ? "is-muted" : ""}`}
-            disabled={joining}
-            aria-pressed={previewCam}
-            onClick={togglePreviewCam}
-          >
-            <Icon name={previewCam ? "camera" : "camera-off"} size={16} />
-            <span>{previewCam ? "Tắt Camera" : "Bật Camera"}</span>
-          </button>
-          <button
-            type="button"
-            className={`lobby-control-btn ${!previewMic ? "is-muted" : ""}`}
-            disabled={joining}
-            aria-pressed={previewMic}
-            onClick={togglePreviewMic}
-          >
-            <Icon name={previewMic ? "mic" : "mic-off"} size={16} />
-            <span>{previewMic ? "Tắt Mic" : "Bật Mic"}</span>
-          </button>
         </div>
 
-        <MicLevelMeter stream={previewStream} enabled={previewMic} />
-
-        {previewEnabled && (
-          <div className="meeting-device-grid">
-            <label>
-              Micro
-              <select aria-label="Chọn micro" value={audioInputId} onChange={(event) => setAudioInputId(event.target.value)}>
-                <option value="">Thiết bị mặc định</option>
-                {devices
-                  .filter((device) => device.kind === "audioinput")
-                  .map((device, index) => (
-                    <option key={device.deviceId || index} value={device.deviceId}>
-                      {device.label || `Micro ${index + 1}`}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label>
-              Camera
-              <select aria-label="Chọn camera" value={videoInputId} onChange={(event) => setVideoInputId(event.target.value)}>
-                <option value="">Thiết bị mặc định</option>
-                {devices
-                  .filter((device) => device.kind === "videoinput")
-                  .map((device, index) => (
-                    <option key={device.deviceId || index} value={device.deviceId}>
-                      {device.label || `Camera ${index + 1}`}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            {"setSinkId" in HTMLMediaElement.prototype && (
-              <label>
-                Loa
-                <select aria-label="Chọn loa" value={outputDeviceId} onChange={(event) => setOutputDeviceId(event.target.value)}>
-                  <option value="">Thiết bị mặc định</option>
-                  {devices
-                    .filter((device) => device.kind === "audiooutput")
-                    .map((device, index) => (
-                      <option key={device.deviceId || index} value={device.deviceId}>
-                        {device.label || `Loa ${index + 1}`}
-                      </option>
-                    ))}
-                </select>
-              </label>
+        {/* Cột phải: Thông tin phòng họp, chọn thiết bị và nút vào phòng */}
+        <div className="meeting-prejoin__side-col">
+          <header className="meeting-prejoin__head">
+            <h1 id="prejoin-title">{title ?? room.name}</h1>
+            <p className="meeting-prejoin__sub">
+              {room.workspace}
+              {title ? ` · ${room.name}` : ""}
+            </p>
+            {people && (
+              <div className="meeting-prejoin__people" role="status">
+                <Icon name="users" size={15} />
+                <span>{people.length ? `Đang trong phòng: ${people.join(", ")}` : "Chưa có ai trong phòng"}</span>
+              </div>
             )}
-            <label>
-              Chất lượng video
-              <select
-                aria-label="Chọn chất lượng video"
-                value={quality}
-                onChange={(event) => setQuality(event.target.value as "low" | "standard" | "high")}
+          </header>
+
+          <div className="meeting-prejoin__card">
+            {previewEnabled && (
+              <div className="meeting-device-grid">
+                <label>
+                  Micro
+                  <select aria-label="Chọn micro" value={audioInputId} onChange={(event) => setAudioInputId(event.target.value)}>
+                    <option value="">Thiết bị mặc định</option>
+                    {devices
+                      .filter((device) => device.kind === "audioinput")
+                      .map((device, index) => (
+                        <option key={device.deviceId || index} value={device.deviceId}>
+                          {device.label || `Micro ${index + 1}`}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label>
+                  Camera
+                  <select aria-label="Chọn camera" value={videoInputId} onChange={(event) => setVideoInputId(event.target.value)}>
+                    <option value="">Thiết bị mặc định</option>
+                    {devices
+                      .filter((device) => device.kind === "videoinput")
+                      .map((device, index) => (
+                        <option key={device.deviceId || index} value={device.deviceId}>
+                          {device.label || `Camera ${index + 1}`}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                {"setSinkId" in HTMLMediaElement.prototype && (
+                  <label>
+                    Loa
+                    <select aria-label="Chọn loa" value={outputDeviceId} onChange={(event) => setOutputDeviceId(event.target.value)}>
+                      <option value="">Thiết bị mặc định</option>
+                      {devices
+                        .filter((device) => device.kind === "audiooutput")
+                        .map((device, index) => (
+                          <option key={device.deviceId || index} value={device.deviceId}>
+                            {device.label || `Loa ${index + 1}`}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                )}
+                <label>
+                  Chất lượng video
+                  <select
+                    aria-label="Chọn chất lượng video"
+                    value={quality}
+                    onChange={(event) => setQuality(event.target.value as "low" | "standard" | "high")}
+                  >
+                    <option value="low">Tiết kiệm dữ liệu · 360p</option>
+                    <option value="standard">Rõ nét · 720p</option>
+                    <option value="high">Full HD · 1080p</option>
+                  </select>
+                </label>
+              </div>
+            )}
+
+            <p className="meeting-connectivity" role="status">
+              <span className={isConnected ? "is-online" : ""} />{" "}
+              {isConnected ? "Máy chủ đã kết nối · sẵn sàng tham gia" : "Mất kết nối · chưa thể tham gia"}
+            </p>
+
+            <div className="meeting-lobby-action">
+              <Button
+                size="lg"
+                icon="video"
+                disabled={joining || !isConnected}
+                loading={joining}
+                onClick={() => void join()}
+                style={{ width: "100%", justifyContent: "center" }}
               >
-                <option value="low">Tiết kiệm dữ liệu · 360p</option>
-                <option value="standard">Cân bằng · 540p</option>
-                <option value="high">Rõ nét · 720p</option>
-              </select>
-            </label>
+                {joining ? "Đang kết nối…" : "Vào phòng"}
+              </Button>
+              {joining && (
+                <Button variant="secondary" onClick={onCancelJoin}>
+                  Hủy tham gia
+                </Button>
+              )}
+            </div>
           </div>
-        )}
-
-        <p className="meeting-connectivity" role="status">
-          <span className={isConnected ? "is-online" : ""} />{" "}
-          {isConnected ? "Máy chủ đã kết nối · sẵn sàng tham gia" : "Mất kết nối · chưa thể tham gia"}
-        </p>
-
-        <div className="meeting-lobby-action">
-          <Button
-            size="lg"
-            icon="video"
-            disabled={joining || !isConnected}
-            loading={joining}
-            onClick={() => void join()}
-            style={{ width: "100%", justifyContent: "center" }}
-          >
-            {joining ? "Đang kết nối…" : "Vào phòng"}
-          </Button>
-          {joining && (
-            <Button variant="secondary" onClick={onCancelJoin}>
-              Hủy tham gia
-            </Button>
-          )}
         </div>
       </div>
     </section>

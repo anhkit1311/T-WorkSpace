@@ -1446,7 +1446,7 @@ export function ChatPage() {
   useEffect(() => {
     const term = channelSearch.trim();
     setPeopleResults([]);
-    if (!accessToken || term.length < 2 || filterTab !== "all") return;
+    if (!accessToken || term.length < 2) return;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       void governanceApi<{ users: DirectUserItem[] }>(
@@ -1465,7 +1465,7 @@ export function ChatPage() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [accessToken, channelSearch, filterTab]);
+  }, [accessToken, channelSearch]);
 
   async function startDirect(peer: DirectUserItem) {
     if (!accessToken) return;
@@ -1538,7 +1538,7 @@ export function ChatPage() {
             type="search"
             className="chat-search-pill-input"
             aria-label="Tìm cuộc trò chuyện hoặc người để nhắn tin"
-            placeholder="Tìm trên Tin nhắn…"
+            placeholder="Tìm người (tên, email, MSSV) hoặc đoạn chat…"
             value={channelSearch}
             onChange={(e) => setChannelSearch(e.target.value)}
           />
@@ -1577,7 +1577,7 @@ export function ChatPage() {
                     ? "Bạn đã đọc hết tin nhắn"
                     : filterTab === "groups"
                       ? "Bạn chưa ở trong nhóm chat nào"
-                      : "Tìm tên hoặc email ở ô trên để bắt đầu trò chuyện"}
+                      : "Tìm tên, email hoặc MSSV ở ô trên để bắt đầu trò chuyện"}
             </p>
           )}
           {conversations.map((c) => {
@@ -1651,7 +1651,9 @@ export function ChatPage() {
                         <div className="chat-convo-info">
                           <strong className="chat-convo-name">{person.displayName}</strong>
                           <div className="chat-convo-bottom">
-                            <span className="chat-convo-preview">{person.email}</span>
+                            <span className="chat-convo-preview">
+                              {person.userCode ? `${person.userCode} · ${person.email}` : person.email}
+                            </span>
                           </div>
                         </div>
                       </button>
@@ -2513,18 +2515,6 @@ export function ChatPage() {
                   <span>Tin đã đánh dấu của bạn</span>
                 </div>
               </button>
-              {workspace && !isDirect && (
-                <button
-                  type="button"
-                  className="chat-info-menu-item"
-                  onClick={() => navigate({ view: "tasks", workspaceId: workspace.id, channelId: channel?.id })}
-                >
-                  <div className="menu-item-left">
-                    <Icon name="check-square" size={18} />
-                    <span>Công việc của nhóm</span>
-                  </div>
-                </button>
-              )}
             </InfoSection>
 
             {channel && (

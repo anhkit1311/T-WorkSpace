@@ -27,11 +27,6 @@
   transition: fill 0.2s ease, stroke 0.2s ease;
 }
 
-[data-theme="dark"] .t-workspace-badge__bg {
-  fill: #111C2E;
-  stroke: rgba(255, 255, 255, 0.16);
-}
-
 .t-workspace-logo__text-wrap {
   display: flex;
   flex-direction: column;
@@ -39,7 +34,7 @@
 }
 
 .t-workspace-logo__text {
-  font-family: var(--font-heading, 'Be Vietnam Pro', system-ui, -apple-system, sans-serif);
+  font-family: var(--font-sans);
   font-weight: 800;
   letter-spacing: -0.03em;
   display: inline-flex;
@@ -51,20 +46,12 @@
   font-weight: 850;
 }
 
-[data-theme="dark"] .t-workspace-logo__prefix {
-  color: #60A5FA;
-}
-
 .t-workspace-logo__name {
   color: var(--text, #0F172A);
 }
 
-[data-theme="dark"] .t-workspace-logo__name {
-  color: #F8FAFC;
-}
-
 .t-workspace-logo__tagline {
-  font-family: var(--font-body, 'Be Vietnam Pro', system-ui, sans-serif);
+  font-family: var(--font-sans);
   font-size: 0.48em;
   font-weight: 600;
   letter-spacing: 0.1em;

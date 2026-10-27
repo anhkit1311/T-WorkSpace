@@ -4,6 +4,8 @@ export interface MeetingAttendanceRow {
   userId: string;
   displayName: string;
   email: string;
+  /** Mã số sinh viên (digits first), null for lecturers / staff. */
+  studentCode: string | null;
   firstJoinedAt: string;
   lastLeftAt: string | null;
   /** Time actually in the room, overlapping tabs counted once. */

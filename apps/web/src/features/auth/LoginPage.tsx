@@ -58,8 +58,9 @@ export function LoginPage() {
     event.preventDefault();
     const next: typeof errors = {};
 
-    if (!/^\S+@\S+\.\S+$/.test(email)) {
-      next.email = "Vui lòng nhập email hợp lệ.";
+    // Email, or a mã số sinh viên / giảng viên (letters and digits only).
+    if (!/^\S+@\S+\.\S+$/.test(email.trim()) && !/^[A-Za-z0-9]{4,20}$/.test(email.trim())) {
+      next.email = "Vui lòng nhập email hoặc mã số sinh viên / giảng viên hợp lệ.";
     }
     if (password.length < 8) {
       next.password = "Mật khẩu cần có ít nhất 8 ký tự.";
@@ -299,16 +300,16 @@ export function LoginPage() {
 
                 <form onSubmit={submit} noValidate>
                   <div className="editorial-field">
-                    <label className="editorial-field-label" htmlFor="auth-email">Email tài khoản</label>
+                    <label className="editorial-field-label" htmlFor="auth-email">Email hoặc mã số SV / GV</label>
                     <div className="editorial-input-wrap">
                       <Mail className="editorial-input-icon editorial-auth-style-6"  />
                       <input
-                        type="email"
-                        autoComplete="email"
+                        type="text"
+                        autoComplete="username"
                         value={email}
                         id="auth-email" name="email" aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "auth-email-error" : undefined}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="mssv@student.tdtu.edu.vn"
+                        placeholder="523H0048 hoặc mssv@student.tdtu.edu.vn"
                         className="editorial-input"
                       />
                     </div>

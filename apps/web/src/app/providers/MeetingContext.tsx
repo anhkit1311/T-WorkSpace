@@ -950,7 +950,10 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
         setSharing(false);
         return;
       }
-      captured = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      captured = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: { ideal: 30 } },
+        audio: false,
+      });
       if (epoch !== joinEpochRef.current || ms !== mediasoupRef.current)
         throw new Error("Cuộc họp đã kết thúc.");
       const track = captured.getVideoTracks()[0];

@@ -1,7 +1,7 @@
 import type { CcDepartment, CcExtension } from "@doan/shared";
 import { CallCenterAccess } from "../domain/access.js";
-import { generateSipSecret, inRange, nextExtensionNumber } from "../domain/extension.js";
-import type { Pbx } from "../domain/ports.js";
+import { generateSipSecret, groupNumber, inRange, nextExtensionNumber } from "../domain/extension.js";
+import type { ExtensionState, Pbx } from "../domain/ports.js";
 import type { CallCenterRepository } from "../repository/callcenter-repository.js";
 import { bool, conflict, forbidden, id, integer, invalid, notFound, oneOf, optionalId, text, type Body } from "./input.js";
 
@@ -157,6 +157,41 @@ export class CallCenterAdminService {
     return userId;
   }
 
+  /**
+   * New accounts of a unit that runs the switchboard get the next free máy lẻ of its range (a web phone;
+   * nobody needs the secret, the browser fetches it); staff (`asAgents`) also join its department as
+   * agents, students only get the phone. Units without a switchboard, and people who already have a
+   * máy lẻ there, are skipped. The caller checked authority.
+   */
+  async provisionStaff(grantedBy: string, unitId: string, userIds: string[], asAgents = true): Promise<Map<string, string>> {
+    const issued = new Map<string, string>();
+    const department = (await this.repo.departments([id(unitId)]))[0];
+    if (!department || !userIds.length) return issued;
+    const range = { from: department.extensionFrom, to: department.extensionTo };
+    const taken = await this.repo.extensionNumbers();
+    const existing = await this.repo.extensions([department.id]);
+    const created: string[] = [];
+    for (const userId of userIds) {
+      if (asAgents && (await this.repo.addMember(department.id, userId, "agent", grantedBy)) && department.trainingCourseId)
+        await this.repo.enrollAgents(department.id, department.trainingCourseId, grantedBy, userId);
+      const own = existing.find((extension) => extension.userId === userId);
+      if (own) {
+        issued.set(userId, own.number);
+        continue;
+      }
+      const number = nextExtensionNumber(range, taken);
+      if (!number) break; // range full: the rest are members without a máy lẻ
+      taken.push(number);
+      created.push(
+        await this.repo.createExtension({ number, departmentId: department.id, userId, label: "", transport: "webrtc", secret: generateSipSecret() }),
+      );
+      issued.set(userId, number);
+    }
+    if (created.length) await this.sync(created);
+    await this.rosterChanged();
+    return issued;
+  }
+
   /** Creates the extension and returns its SIP secret once; later reads never include it (CC-12). */
   async createExtension(userId: string, body: Body) {
     await this.admin(userId);
@@ -195,7 +230,7 @@ export class CallCenterAdminService {
       active,
     });
     if (active) await this.sync([current.id]);
-    else await this.unpublish(current.number);
+    else await this.unpublish(current.number).then(() => this.pushGroups());
     await this.rosterChanged();
     return this.extension(current.id);
   }
@@ -210,12 +245,28 @@ export class CallCenterAdminService {
     return { extension: await this.extension(current.id), secret };
   }
 
+  /**
+   * Máy lẻ of a deleted account go back to their range. One with call history (cc_calls keeps it)
+   * stays, unassigned. The caller checked authority.
+   */
+  async releaseExtensions(extensionIds: string[]): Promise<void> {
+    if (!extensionIds.length) return;
+    for (const extensionId of extensionIds) {
+      const current = await this.repo.extension(extensionId);
+      if (!current || current.user_id) continue;
+      if (await this.repo.deleteExtension(current.id).then(() => true, () => false)) await this.unpublish(current.number);
+    }
+    await this.pushGroups();
+    await this.rosterChanged();
+  }
+
   async deleteExtension(userId: string, extensionId: string) {
     await this.admin(userId);
     const current = await this.repo.extension(id(extensionId));
     if (!current) throw notFound("Không tìm thấy máy lẻ.");
     await this.unpublish(current.number);
     await this.repo.deleteExtension(current.id);
+    await this.pushGroups();
     await this.rosterChanged();
     return { ok: true };
   }
@@ -246,6 +297,32 @@ export class CallCenterAdminService {
       }
     }
     if (synced.length) await this.repo.markSynced(synced);
+    await this.pushGroups();
+  }
+
+  /** Busy lamps for the directory; null while no PBX answers (the page then shows no state). */
+  async extensionStates(): Promise<Map<string, ExtensionState> | null> {
+    const pbx = this.pbx();
+    if (!pbx) return null;
+    return pbx.extensionStates().catch((error: Error) => {
+      this.log("cc_extension_states_failed", { message: error.message });
+      return null;
+    });
+  }
+
+  /** Group number 1PP00 of each unit: the dialplan rings every active extension listed in GROUP_1PP00. */
+  private async pushGroups(): Promise<void> {
+    const pbx = this.pbx();
+    if (!pbx) return;
+    const [departments, extensions] = await Promise.all([this.repo.departments(null), this.repo.extensions(null)]);
+    for (const department of departments) {
+      const group = groupNumber(department.extensionFrom);
+      if (!group) continue;
+      const members = extensions.filter((extension) => extension.departmentId === department.id && extension.active);
+      await pbx
+        .setGlobal(`GROUP_${group}`, members.map((extension) => `PJSIP/${extension.number}`).join("&"))
+        .catch((error: Error) => this.log("cc_group_sync_failed", { group, message: error.message }));
+    }
   }
 
   private async unpublish(number: string) {

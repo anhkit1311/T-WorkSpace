@@ -124,6 +124,8 @@ export interface CcSipAccount {
   secret: string;
   wsUrl: string;
   domain: string;
+  /** TURN (short-lived credentials) for calls across NAT; empty when no TURN server is configured. */
+  iceServers?: { urls: string[]; username?: string; credential?: string }[];
 }
 
 /** Sent to an agent when a hotline call is ringing their extension. */
@@ -145,8 +147,17 @@ export type MonitorMode = "listen" | "whisper" | "barge";
 
 /** Who an agent can transfer to: departments (back through their queue) or extensions. */
 export interface CcTransferDirectory {
-  departments: { id: string; name: string }[];
-  extensions: { number: string; name: string; departmentName: string; state: AgentState | null; userId: string | null }[];
+  /** groupNumber: the unit's shared number 1PP00 that rings all its extensions (null for older ranges). */
+  departments: { id: string; name: string; groupNumber: string | null }[];
+  extensions: {
+    number: string;
+    name: string;
+    departmentName: string;
+    state: AgentState | null;
+    /** Busy lamp from the PBX; null when the PBX is not reachable. */
+    deviceState: "free" | "offline" | "ringing" | "busy" | null;
+    userId: string | null;
+  }[];
 }
 
 export interface CcLiveSnapshot {
@@ -253,6 +264,19 @@ export interface CcPersonalVoicemail {
   durationSeconds: number;
   receivedAt: string;
   listened: boolean;
+}
+
+/** A call between two extensions, seen from one of them ("Gần đây" on the dialer). */
+export interface CcRecentCall {
+  id: string;
+  /** "out" when this user's extension placed the call. */
+  way: "in" | "out";
+  /** The other extension and its owner. */
+  number: string;
+  name: string | null;
+  startedAt: string;
+  durationSeconds: number;
+  outcome: "answered" | "abandoned" | "missed" | "busy" | "transferred";
 }
 
 /** "Liên hệ phòng ban": a temporary browser phone that can only call one department's queue. */

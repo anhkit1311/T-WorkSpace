@@ -38,6 +38,12 @@ export function GlobalCallBar() {
           {phone.muted ? "Bật micro" : "Tắt micro"}
         </button>
       )}
+      {phone.phase === "active" && (
+        <button type="button" className="live-strip__btn" onClick={phone.toggleHold} aria-pressed={phone.held}>
+          <Icon name={phone.held ? "play" : "pause"} size={15} />
+          {phone.held ? "Tiếp tục" : "Giữ máy"}
+        </button>
+      )}
       <button type="button" className="live-strip__btn is-end" onClick={phone.hangup} title="Alt+H">
         Gác máy
       </button>
