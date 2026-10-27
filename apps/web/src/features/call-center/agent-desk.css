@@ -679,14 +679,6 @@
   height: 32px;
   margin-top: 6px;
 }
-.desk-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  white-space: nowrap;
-  cursor: pointer;
-}
 
 /* NV-CC1 caller profile */
 .desk-profile { display: grid; gap: 10px; margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--border, rgba(0, 0, 0, 0.08)); }
@@ -905,11 +897,6 @@
   margin: 0;
 }
 /* The tabs moved to the sidebar on wide screens. */
-@media (min-width: 769px) {
-  .desk-tabs.has-sidebar-tabs {
-    display: none;
-  }
-}
 @media (max-width: 1200px) {
   .desk-layout {
     grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);

@@ -563,10 +563,6 @@ export function Card({ children, className = "", style, ...props }: CardProps) {
   );
 }
 
-export function Surface({ children, className = "", style, ...props }: CardProps) {
-  return <Card className={`surface ${className}`.trim()} style={style} {...props}>{children}</Card>;
-}
-
 export interface FilterPillOption {
   key: string;
   label: string;

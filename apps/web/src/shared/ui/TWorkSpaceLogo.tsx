@@ -127,9 +127,3 @@ export function TWorkSpaceLogo({
     </span>
   );
 }
-
-// Aliases and related exports
-export { TdtuGraduationLogo } from "./TdtuGraduationLogo";
-export { TdtuLogo } from "./TdtuLogo";
-export const NexoMark = TWorkSpaceMark;
-export const NexoLogo = TWorkSpaceLogo;

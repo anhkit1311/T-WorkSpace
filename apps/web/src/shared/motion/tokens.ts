@@ -1,4 +1,4 @@
-// One timing vocabulary for Motion (React presence/layout) and GSAP (timelines, WebGL uniforms).
+// One timing vocabulary for Motion (React presence/layout).
 export const EASE = {
   out: [0.16, 1, 0.3, 1],
   inOut: [0.65, 0, 0.35, 1],
@@ -10,8 +10,6 @@ export const SPRING = {
   gentle: { type: "spring", stiffness: 260, damping: 30, mass: 0.9 },
   bouncy: { type: "spring", stiffness: 420, damping: 24, mass: 0.7 },
 } as const;
-export const GSAP_EASE_OUT = "expo.out";
-export const GSAP_EASE_INOUT = "power2.inOut";
 
 export const DURATION = {
   micro: 0.12,

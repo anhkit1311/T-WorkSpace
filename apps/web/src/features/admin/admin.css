@@ -38,13 +38,6 @@
   gap: 20px;
 }
 
-.admin-page .admin-columns {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
-  gap: 20px;
-  align-items: start;
-}
-
 .admin-page .admin-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -58,10 +51,6 @@
   width: auto !important;
   min-width: 160px;
   flex: 0 1 240px;
-}
-
-.admin-page .admin-gap {
-  margin-top: 18px !important;
 }
 
 .admin-page .admin-note {
@@ -103,23 +92,8 @@
   }
 }
 
-.admin-page .admin-members {
-  display: grid;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 14px;
-}
-
 .workspace-admin .admin-form {
   margin: 0;
-  gap: 10px;
-}
-
-.admin-page .admin-form-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 10px;
 }
 
@@ -356,11 +330,6 @@
 
 .dept-action-delete {
   color: #dc2626;
-  margin-left: 14px;
-}
-
-.dept-action-staff {
-  color: #475569;
   margin-left: 14px;
 }
 

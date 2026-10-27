@@ -23,6 +23,3 @@ export function canTransition(from: AgentState, to: AgentState): boolean {
 export function canAgentChoose(from: AgentState, to: AgentState): boolean {
   return agentChoices.includes(to) && from !== "ringing" && from !== "on_call" && canTransition(from, to);
 }
-
-export const isAgentState = (value: unknown): value is AgentState =>
-  typeof value === "string" && value in transitions;

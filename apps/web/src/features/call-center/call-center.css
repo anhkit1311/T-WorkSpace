@@ -41,100 +41,12 @@
   margin-bottom: 16px;
 }
 
-.callcenter-kpi-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 10px 14px;
-  box-shadow: none;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.callcenter-kpi-card__icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-}
-
-.callcenter-kpi-card__icon--queue {
-  background: var(--tint-violet-bg);
-  color: var(--tint-violet-fg);
-}
-
-.callcenter-kpi-card__icon--agents {
-  background: var(--tint-green-bg);
-  color: var(--tint-green-fg);
-}
-
-.callcenter-kpi-card__icon--sla {
-  background: var(--tint-blue-bg);
-  color: var(--tint-blue-fg);
-}
-
-.callcenter-kpi-card__number {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.1;
-}
-
-.callcenter-kpi-card__label {
-  font-size: 11.5px;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
-
 /* Main 2-Column Layout (70% - 30%) */
 .callcenter-main-grid {
   display: grid;
   grid-template-columns: 7fr 3fr;
   gap: 20px;
   align-items: start;
-}
-
-/* Left Column: Queue & Monitoring */
-.callcenter-left-column {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.callcenter-filter-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-}
-
-.callcenter-pill {
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 12.5px;
-  font-weight: 500;
-  padding: 4px 10px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.15s ease;
-}
-
-.callcenter-pill:hover:not(.is-active) {
-  background: var(--bg-subtle);
-  color: var(--text);
-}
-
-.callcenter-pill.is-active {
-  background: var(--primary-soft);
-  color: var(--primary-text);
-  border-color: transparent;
-  font-weight: 600;
 }
 
 /* Panel Card */
@@ -161,18 +73,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.callcenter-badge-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--tint-blue-bg);
-  color: var(--tint-blue-fg);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 9999px;
 }
 
 /* List Items in Queue & Active */
@@ -211,23 +111,6 @@
   gap: 8px;
 }
 
-.call-item-mssv {
-  font-size: 11.5px;
-  font-weight: 600;
-  background: var(--tint-blue-bg);
-  color: var(--tint-blue-fg);
-  padding: 1px 6px;
-  border-radius: 4px;
-}
-
-.call-item-topic {
-  font-size: 12.5px;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .call-item-meta {
   display: flex;
   align-items: center;
@@ -242,46 +125,6 @@
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-}
-
-.btn-spy, .btn-whisper, .btn-barge {
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 5px 10px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  transition: all 0.15s ease;
-}
-
-.btn-spy {
-  background: var(--surface);
-  color: #2563EB;
-}
-.btn-spy:hover, .btn-spy.is-active {
-  background: var(--tint-blue-bg);
-  border-color: #93C5FD;
-}
-
-.btn-whisper {
-  background: var(--surface);
-  color: #D97706;
-}
-.btn-whisper:hover, .btn-whisper.is-active {
-  background: var(--tint-amber-bg);
-  border-color: #FCD34D;
-}
-
-.btn-barge {
-  background: var(--surface);
-  color: #7C3AED;
-}
-.btn-barge:hover, .btn-barge.is-active {
-  background: var(--tint-violet-bg);
-  border-color: #C4B5FD;
 }
 
 /* Keypad Grid 3x4 */
@@ -348,36 +191,6 @@
   letter-spacing: 0.05em;
 }
 
-/* Video Stage Area */
-.callcenter-video-stage {
-  background: #0F172A;
-  border-radius: 8px;
-  overflow: hidden;
-  margin-top: 14px;
-  position: relative;
-  min-height: 240px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #FFFFFF;
-}
-
-.callcenter-video-stage video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.callcenter-video-controls {
-  position: absolute;
-  bottom: 12px;
-  display: flex;
-  gap: 8px;
-  background: rgba(15, 23, 42, 0.75);
-  padding: 6px 12px;
-  border-radius: 9999px;
-}
-
 /* ==========================================================================
    Call Directory (CDR) Table Styles
    ========================================================================== */
@@ -418,186 +231,4 @@
 
 .cdr-table tr:hover td {
   background: var(--bg-subtle);
-}
-
-/* Audio Player Pill */
-.audio-player-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--bg-subtle);
-  border-radius: 9999px;
-  padding: 4px 10px;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.audio-player-pill:hover {
-  background: #E2E8F0;
-  color: var(--text);
-}
-
-/* Score Badges */
-.qa-score-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 3px 9px;
-  border-radius: 9999px;
-}
-
-.qa-score-badge.score-high {
-  background: var(--tint-green-bg);
-  color: var(--tint-green-fg);
-}
-
-.qa-score-badge.score-mid {
-  background: var(--tint-amber-bg);
-  color: var(--tint-amber-fg);
-}
-
-.qa-score-badge.score-low {
-  background: var(--tint-red-bg);
-  color: var(--tint-red-fg);
-}
-
-.qa-score-badge.score-none {
-  background: var(--bg-subtle);
-  color: var(--text-muted);
-}
-
-/* QA Scoring Drawer */
-.qa-drawer-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 250;
-  background: rgba(15, 23, 42, 0.45);
-  display: flex;
-  justify-content: flex-end;
-}
-
-.qa-drawer {
-  width: min(600px, 100vw);
-  height: 100vh;
-  background: var(--surface);
-  box-shadow: -4px 0 24px rgba(15, 23, 42, 0.12);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-}
-
-.qa-drawer__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px 24px;
-  border-bottom: 1px solid var(--border);
-}
-
-.qa-drawer__body {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  flex: 1;
-}
-
-.qa-drawer__footer {
-  padding: 16px 24px;
-  border-top: 1px solid var(--border);
-  background: var(--bg-subtle);
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-/* Audio Player in Drawer */
-.qa-audio-box {
-  background: var(--bg-subtle);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.qa-audio-controls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.qa-play-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: #2563EB;
-  color: #FFFFFF;
-  border: none;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-}
-
-/* Rubric Scoring Table */
-.qa-rubric-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.qa-rubric-table th {
-  padding: 10px 12px;
-  border-bottom: 1.5px solid var(--border);
-  color: var(--text-muted);
-  font-weight: 600;
-  text-align: left;
-}
-
-.qa-rubric-table td {
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-}
-
-.qa-score-input {
-  width: 70px;
-  height: 34px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  text-align: center;
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--text);
-}
-
-.qa-total-row {
-  background: var(--bg-subtle);
-  font-weight: 700;
-  font-size: 14px;
-}
-
-/* Lock Warning Box */
-.qa-lock-alert {
-  background: var(--tint-red-bg);
-  border: 1px solid #FECACA;
-  border-radius: 6px;
-  padding: 14px;
-  display: flex;
-  gap: 10px;
-  color: #991B1B;
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-/* Modal Ticket Creator */
-.ticket-form {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
 }

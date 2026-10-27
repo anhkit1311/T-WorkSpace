@@ -83,12 +83,6 @@ export type AuthResponse = {
   accessToken: string;
 };
 
-export type RegisterResponse = {
-  requireOtp: boolean;
-  email: string;
-  message: string;
-};
-
 export type VerifyOtpInput = {
   email: string;
   otp: string;

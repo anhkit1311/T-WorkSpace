@@ -1,8 +1,6 @@
 import type {
   ChannelItem,
   GroupMemberItem,
-  WorkspaceFileItem,
-  WorkspaceOverviewSummary,
 } from "@doan/shared";
 import { ApiError } from "../auth/api";
 
@@ -56,35 +54,4 @@ export async function governanceApi<T = { success: boolean }>(
   return data as T;
 }
 
-export async function getWorkspaceOverviewApi(
-  token: string,
-  workspaceId: string,
-  signal?: AbortSignal,
-): Promise<WorkspaceOverviewSummary> {
-  return governanceApi<WorkspaceOverviewSummary>(
-    token,
-    `workspaces/${workspaceId}/overview`,
-    "GET",
-    undefined,
-    signal,
-  );
-}
-
-export async function getWorkspaceFilesApi(
-  token: string,
-  workspaceId: string,
-  options?: { before?: string | null; limit?: number; signal?: AbortSignal },
-): Promise<{ files: WorkspaceFileItem[]; nextCursor: string | null }> {
-  const params = new URLSearchParams();
-  if (options?.before) params.set("before", options.before);
-  if (options?.limit) params.set("limit", String(options.limit));
-  const query = params.toString();
-  return governanceApi<{ files: WorkspaceFileItem[]; nextCursor: string | null }>(
-    token,
-    `workspaces/${workspaceId}/files${query ? `?${query}` : ""}`,
-    "GET",
-    undefined,
-    options?.signal,
-  );
-}
 

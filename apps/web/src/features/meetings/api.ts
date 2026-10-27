@@ -1,30 +1,6 @@
 import { ApiError } from "../auth/api";
 import type { MeetingAttendance, MeetingCalendar, MeetingRecordings, MeetingNotes, MeetingOutcomes, MeetingScheduleItem, TaskItem } from "@doan/shared";
 
-export type MeetingHistoryItem = {
-  id: string;
-  roomId: string;
-  name: string;
-  joinedAt: string;
-  leftAt: string | null;
-};
-
-export async function getMeetingHistoryApi(accessToken: string): Promise<MeetingHistoryItem[]> {
-  const response = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/meetings/history`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    credentials: "include",
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    throw new ApiError(
-      response.status,
-      data.error?.code ?? "UNKNOWN_ERROR",
-      data.error?.message ?? "Không tải được lịch sử cuộc họp.",
-    );
-  }
-  return data.meetings;
-}
-
 export type MeetingScheduleInput = {
   roomId: string;
   title: string;

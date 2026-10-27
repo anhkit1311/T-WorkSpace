@@ -10,54 +10,6 @@
   font-weight: 600;
 }
 
-.ws-file-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 6px;
-  border-radius: 0;
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid var(--nexo-border-beige, #E6E2DA);
-}
-
-.ws-meeting-item__body,
-.ws-file-item__body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.ws-meeting-item__top,
-.ws-file-item__top {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex-wrap: wrap;
-}
-
-.ws-file-item__top strong {
-  font-size: 0.85rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 210px;
-}
-
-.ws-meeting-item__meta,
-.ws-file-item__meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  font-size: 0.76rem;
-  color: var(--nexo-text-muted, #8A8780);
-}
-
-.ws-file-item__icon,
 .ws-file-row__icon {
   width: 32px;
   height: 32px;
@@ -276,8 +228,7 @@
   flex-shrink: 0;
 }
 
-.ws-files-empty,
-.ws-empty-stage__card {
+.ws-files-empty {
   padding: 28px 24px;
   border-radius: 0;
   background: transparent;
@@ -287,38 +238,6 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
-}
-
-.ws-empty-stage {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  padding: 20px;
-}
-
-.ws-empty-stage__card {
-  max-width: 520px;
-}
-
-.ws-empty-stage__card h1 {
-  margin: 4px 0;
-  font-size: var(--fs-page-title, 22px);
-}
-
-.ws-empty-stage__card p {
-  margin: 0;
-  color: var(--nexo-text-muted, #8A8780);
-  font-size: var(--fs-subtext, 13px);
-}
-
-.ws-empty-stage__actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
 }
 
 .ws-files-more {

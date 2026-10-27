@@ -11,14 +11,6 @@
   width: 100%;
 }
 
-/* 1. Top 3 KPI Stat Cards */
-.meetings-kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 2px;
-}
-
 /* 2. Meeting Hub Toolbar */
 .meetings-hub-toolbar {
   background: var(--surface);
@@ -881,9 +873,6 @@
 }
 
 @media (max-width: 768px) {
-  .meetings-kpi-grid {
-    grid-template-columns: 1fr;
-  }
 
   .meeting-week {
     display: none;

@@ -73,15 +73,3 @@
 .t-workspace-logo--lg {
   gap: 0.75rem;
 }
-
-/* Legacy lockup aliases to maintain layout consistency */
-.nexo-lockup,
-.tdtu-brand-lockup {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: inherit;
-  vertical-align: middle;
-  white-space: nowrap;
-  line-height: 1;
-}

@@ -28,7 +28,7 @@ type SaveState = "idle" | "saving" | "saved" | "error";
 // Agenda, shared notes and tasks of one meeting session. While the session runs it follows
 // realtime changes; after it ends the same view is read-only history.
 export function MeetingOutcomesPanel({ sessionId, live }: { sessionId: string; live: boolean }) {
-  const { accessToken, navigate } = useApp();
+  const { accessToken } = useApp();
   const { controlSocket } = useMeeting();
   const { socket } = useSocket();
   const [outcomes, setOutcomes] = useState<MeetingOutcomes | null>(null);
