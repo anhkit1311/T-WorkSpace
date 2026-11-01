@@ -1141,6 +1141,8 @@ export function MeetingPage() {
                       <div><dt>Băng thông</dt><dd>{meeting.qos?.bitrate ?? "—"} kbps</dd></div>
                       <div><dt>Mất gói</dt><dd>{meeting.qos?.packetLoss ?? "—"}%</dd></div>
                       <div><dt>Jitter</dt><dd>{meeting.qos?.jitter ?? "—"} ms</dd></div>
+                      <div><dt>Kết nối</dt><dd>{meeting.qos?.transportPath?.toUpperCase() ?? "—"}</dd></div>
+                      <div><dt>Âm bị che</dt><dd>{meeting.qos?.audioConcealed?.toFixed(1) ?? "—"}%</dd></div>
                     </dl>
                     <p className="meeting-network-cap">
                       Chất lượng nhận: <strong>{NETWORK_CAP_LABEL[String(meeting.networkCap)]}</strong>

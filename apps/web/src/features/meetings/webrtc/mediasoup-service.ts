@@ -228,6 +228,11 @@ export class MediasoupClientService {
       appData: { source: options.source },
     });
 
+    // Chrome's default audio jitter buffer (~20-40 ms) runs dry on bursty Wi-Fi/4G and sounds choppy;
+    // ~120 ms of buffer absorbs that for a barely noticeable delay. Unsupported browsers ignore it.
+    const receiver = consumer.rtpReceiver as (RTCRtpReceiver & { jitterBufferTarget?: number | null }) | undefined;
+    if (consumer.kind === "audio" && receiver && "jitterBufferTarget" in receiver) receiver.jitterBufferTarget = 120;
+
     this.consumers.set(consumer.id, consumer);
 
     consumer.on("transportclose", () => {

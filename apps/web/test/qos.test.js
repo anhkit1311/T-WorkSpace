@@ -9,3 +9,9 @@ test('QoS uses selected pair, interval RTP counters, separate directions and res
  assert.equal(collector.collect(sample(3000,10,5,0)).bitrate,null);assert.equal(collector.collect(sample(4000,1010,105,0)).packetLoss,0);
  collector.reset();assert.equal(collector.collect(sample(5000,2010,205,0)).packetLoss,null);
 });
+test('QoS reports the selected path and audio concealment per interval',()=>{
+ const collector=new QosCollector();
+ const sample=(timestamp,total,concealed)=>[{direction:'receive',samples:[{id:'transport',type:'transport',timestamp,selectedCandidatePairId:'pair'},{id:'pair',type:'candidate-pair',state:'succeeded',timestamp,localCandidateId:'local'},{id:'local',type:'local-candidate',timestamp,candidateType:'relay',protocol:'udp',relayProtocol:'tls'},{id:'mic',type:'inbound-rtp',kind:'audio',timestamp,totalSamplesReceived:total,concealedSamples:concealed}]}];
+ const first=collector.collect(sample(1000,48000,4800));assert.equal(first.transportPath,'relay/tls');assert.equal(first.audioConcealed,null);
+ assert.equal(collector.collect(sample(2000,96000,7200)).audioConcealed,5);
+});

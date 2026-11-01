@@ -41,8 +41,9 @@ export const mediasoupConfig = {
         announcedIp: process.env.MEDIASOUP_ANNOUNCED_IP ?? "127.0.0.1",
       },
     ],
-    // Start receivers near HD so video is sharp within seconds; congestion control still backs off.
-    initialAvailableOutgoingBitrate: 2_500_000,
+    // Start at 1 Mbps: 2.5 Mbps flooded weak links on join and dropped voice packets with the video.
+    // Congestion control still climbs to HD within seconds on good networks.
+    initialAvailableOutgoingBitrate: 1_000_000,
     maxSctpMessageSize: 262_144,
   },
 };

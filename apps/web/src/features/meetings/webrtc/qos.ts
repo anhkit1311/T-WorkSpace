@@ -10,6 +10,8 @@ interface Counter {
   bytes?: number;
   received?: number;
   lost?: number;
+  concealed?: number;
+  samples?: number;
 }
 export class QosCollector {
   private counters = new Map<string, Counter>();
@@ -24,16 +26,27 @@ export class QosCollector {
       hasReceive = false,
       deltaPackets = 0,
       deltaLost = 0,
-      hasLoss = false;
+      hasLoss = false,
+      deltaSamples = 0,
+      deltaConcealed = 0,
+      hasAudio = false;
     let rtt: number | null = null,
       jitter: number | null = null;
     const selected: string[] = [];
+    const paths = new Set<string>();
     for (const { direction, samples } of reports) {
       const byId = new Map(samples.map((sample) => [sample.id, sample]));
       for (const transport of samples.filter((sample) => sample.type === "transport")) {
         const pair = byId.get(String(transport.selectedCandidatePairId ?? ""));
         if (pair?.type === "candidate-pair" && pair.state === "succeeded") {
           selected.push(`${direction}:${pair.id}`);
+          const local = byId.get(String(pair.localCandidateId ?? ""));
+          if (local?.protocol)
+            paths.add(
+              local.candidateType === "relay"
+                ? `relay/${String(local.relayProtocol ?? local.protocol)}`
+                : String(local.protocol),
+            );
           if (typeof pair.currentRoundTripTime === "number")
             rtt = Math.max(rtt ?? 0, pair.currentRoundTripTime * 1000);
         }
@@ -83,6 +96,24 @@ export class QosCollector {
               hasLoss = true;
             }
           }
+          if (
+            sample.kind === "audio" &&
+            typeof sample.totalSamplesReceived === "number" &&
+            typeof sample.concealedSamples === "number"
+          ) {
+            counter.samples = sample.totalSamplesReceived;
+            counter.concealed = sample.concealedSamples;
+            if (
+              old?.samples !== undefined &&
+              old.concealed !== undefined &&
+              counter.samples > old.samples &&
+              counter.concealed >= old.concealed
+            ) {
+              deltaSamples += counter.samples - old.samples;
+              deltaConcealed += counter.concealed - old.concealed;
+              hasAudio = true;
+            }
+          }
         }
         next.set(key, counter);
       }
@@ -99,6 +130,8 @@ export class QosCollector {
       sendBitrate: hasSend ? Math.round(sent) : null,
       receiveBitrate: hasReceive ? Math.round(received) : null,
       selectedCandidatePairs: selected,
+      transportPath: paths.size ? [...paths].join(", ") : null,
+      audioConcealed: hasAudio ? Math.min(100, (100 * deltaConcealed) / deltaSamples) : null,
     };
   }
 }

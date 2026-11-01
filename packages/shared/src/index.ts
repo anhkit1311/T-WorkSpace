@@ -253,6 +253,10 @@ export type QosMetrics = {
   sendBitrate?:number|null;
   receiveBitrate?:number|null;
   selectedCandidatePairs?:string[];
+  /** Selected path, e.g. "udp", "tcp", "relay/tls": TCP or relay makes voice choppy. */
+  transportPath?:string|null;
+  /** % of received audio the browser had to conceal (the audible choppiness). */
+  audioConcealed?:number|null;
   rtt: number | null;
   packetLoss: number | null;
   bitrate: number | null;
