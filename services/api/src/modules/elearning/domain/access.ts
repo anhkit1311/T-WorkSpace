@@ -6,7 +6,7 @@ export interface CourseRef {
   ownerId: string;
   instructorIds: string[];
   status: "draft" | "published" | "archived";
-  enrollment: "open" | "assigned";
+  enrollment: "open" | "assigned" | "approval";
 }
 
 export class CourseAccess {
@@ -38,6 +38,6 @@ export class CourseAccess {
   }
 
   canSelfEnroll(course: CourseRef) {
-    return course.status === "published" && course.enrollment === "open";
+    return course.status === "published" && course.enrollment !== "assigned";
   }
 }

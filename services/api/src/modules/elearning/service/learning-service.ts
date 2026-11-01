@@ -35,6 +35,8 @@ export class LearningService {
         questionIds,
         drawCount: lesson.drawCount,
         shuffle: lesson.shuffle,
+        maxAttempts: lesson.maxAttempts,
+        attemptsLeft: lesson.maxAttempts === null ? null : Math.max(0, lesson.maxAttempts - (best?.used ?? 0)),
         bestPercent: best?.best === null || best?.best === undefined ? null : Math.round(best.best * 100) / 100,
         passed: Boolean(best?.passed),
         openAttemptId,
@@ -119,6 +121,9 @@ export class LearningService {
     if (!enrolled && !manages) throw forbidden();
     if (!(await this.repo.quizQuestionIds(lesson.id)).length) throw conflict("NOT_READY", "Bài kiểm tra chưa có câu hỏi.");
     const open = await this.repo.openAttempt(lesson.id, userId);
+    // Staff try their own quiz freely; learners get the attempts the quiz allows.
+    if (!open && !manages && lesson.maxAttempts !== null && (await this.repo.bestQuiz(lesson.id, userId)).used >= lesson.maxAttempts)
+      throw conflict("NO_ATTEMPTS_LEFT", "Bạn đã dùng hết số lần làm bài kiểm tra này.");
     const attemptId =
       open ??
       (await this.repo

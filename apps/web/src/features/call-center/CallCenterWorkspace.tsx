@@ -39,6 +39,7 @@ const OUTCOME_LABEL: Record<string, string> = {
   abandoned: "Bỏ máy",
   missed: "Nhỡ",
   voicemail: "Thư thoại",
+  callback: "Hẹn gọi lại",
   busy: "Bận",
   failed: "Lỗi",
   transferred: "Đã chuyển",
@@ -100,7 +101,8 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
   const hasDesk = isAgent || Boolean(me?.extension);
   const tabs = [
     ...(hasDesk ? [{ key: "desk", label: "Bàn làm việc" }] : []),
-    ...(me?.departments.length || me?.isAdmin ? [{ key: "tickets", label: "Phiếu yêu cầu" }] : []),
+    // Tickets are content: a system admin sees them only with a role in a department.
+    ...(me?.departments.length ? [{ key: "tickets", label: "Phiếu yêu cầu" }] : []),
     ...(supervised.length || me?.isAdmin ? [{ key: "live", label: "Giám sát" }] : []),
     ...(me?.departments.length || me?.isAdmin ? [{ key: "history", label: "Lịch sử cuộc gọi" }] : []),
     ...(me?.departments.length || me?.isAdmin ? [{ key: "quality", label: "Chất lượng" }] : []),
@@ -898,6 +900,13 @@ function CallHistory({ me, api, fail, token }: { me: CcAgentProfile; api: Api; f
           call={{ id: reading.id, title: `${reading.agentName ?? ""} · ${reading.callerName ?? reading.callerNumber}` }}
           api={api}
           onClose={() => setReading(null)}
+          labelOf={labelOf}
+          onApply={async (summary, dispositionId) => {
+            // Notes someone already wrote are kept; the summary only fills an empty field.
+            const change = { dispositionId: dispositionId ?? reading.dispositionId, notes: reading.notes || summary };
+            await api(`calls/${reading.id}`, "PATCH", change);
+            setCalls((list) => list?.map((item) => (item.id === reading.id ? { ...item, ...change } : item)) ?? null);
+          }}
         />
       )}
       {teaching && (

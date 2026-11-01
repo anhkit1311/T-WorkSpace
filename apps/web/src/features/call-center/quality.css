@@ -137,3 +137,14 @@
   gap: 8px;
   font-size: 13px;
 }
+.call-ai-summary {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg-subtle);
+}
+.call-ai-summary p {
+  margin: 0;
+}

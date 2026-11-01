@@ -282,6 +282,29 @@ add(
   "Create a Kanban task linked to the session",
   object,
 );
+add("/api/meetings/sessions/{sessionId}/council", ["get"], "Meetings", "Council (NV-MT3) of the session's schedule, or null");
+add(
+  "/api/meetings/schedules/{scheduleId}/council",
+  ["get", "patch"],
+  "Meetings",
+  "Council view / organizer replaces setup; 409 COUNCIL_LOCKED once scoring started",
+  object,
+);
+add("/api/meetings/schedules/{scheduleId}/council.csv", ["get"], "Meetings", "Council results CSV for Excel");
+add(
+  "/api/meetings/schedules/{scheduleId}/council/members/{userId}",
+  ["patch"],
+  "Meetings",
+  "Chair marks a member absent / present",
+  object,
+);
+add(
+  "/api/meetings/council/presenters/{presenterId}/{action}",
+  ["post", "patch"],
+  "Meetings",
+  "start (chair) · sheet (member scores) · finalize (chair; 409 SHEETS_MISSING, BR-12)",
+  object,
+);
 add(
   "/api/channels/{channelId}/attachments",
   ["post"],
@@ -309,7 +332,7 @@ add(
 export const openapi = {
   openapi: "3.0.3",
   info: {
-    title: "nexo REST API",
+    title: "T-WorkSpace REST API",
     version: "0.2.0",
     description:
       "Policies/payload details: docs/14–17. Generic response objects are intentional; this catalog is not a generated SDK.",

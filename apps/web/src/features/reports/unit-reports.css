@@ -1,0 +1,108 @@
+.unit-reports {
+  padding: 24px 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+.unit-reports__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+}
+.unit-reports__head h1 {
+  margin: 0 0 4px;
+  font-size: 24px;
+}
+.unit-reports__head p,
+.unit-reports__muted {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted, #64748b);
+}
+.unit-reports__range {
+  display: flex;
+  gap: 12px;
+}
+.unit-reports__range label {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+.unit-reports__range input {
+  padding: 6px 10px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  color: var(--text, #0f172a);
+}
+.unit-reports__error {
+  margin: 0;
+  color: var(--danger, #b91c1c);
+}
+.unit-reports__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+.unit-reports__tiles > div {
+  display: grid;
+  gap: 2px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+  background: var(--surface, #fff);
+}
+.unit-reports__tiles span,
+.unit-reports__tiles small {
+  font-size: 13px;
+  color: var(--text-muted, #64748b);
+}
+.unit-reports__tiles strong {
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+}
+.unit-reports__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+  background: var(--surface, #fff);
+}
+.unit-reports__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.unit-reports__table th,
+.unit-reports__table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.unit-reports__table thead th {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted, #64748b);
+  background: var(--bg-subtle, #f8fafc);
+}
+.unit-reports__table tbody th {
+  text-align: left;
+  font-weight: 600;
+}
+.unit-reports__table small {
+  display: block;
+  font-weight: 400;
+  color: var(--text-muted, #64748b);
+}
+.unit-reports__table td small {
+  display: inline;
+}
+@media (max-width: 640px) {
+  .unit-reports {
+    padding: 16px;
+  }
+}

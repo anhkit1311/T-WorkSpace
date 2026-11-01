@@ -572,6 +572,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
         error?: string;
         waiting?: boolean;
         activeSpeakerSocketId?: string | null;
+        muteOnJoin?: boolean;
       }>((resolve, reject) => {
         request("join_meeting", { roomId: targetRoomId, scheduleId })
           .then((value) => resolve(value as Parameters<typeof resolve>[0]))
@@ -589,6 +590,10 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
 
       if (!joinResult.success || !joinResult.routerRtpCapabilities) {
         throw new Error(joinResult.error || "Không thể tham gia phòng họp");
+      }
+      if (joinResult.muteOnJoin && devices.micEnabled !== false) {
+        devices = { ...devices, micEnabled: false };
+        notify("Phòng họp tắt micro khi vào", "Bạn có thể tự bật micro khi cần phát biểu.", "info");
       }
 
       // 2. Nạp router capabilities vào Device

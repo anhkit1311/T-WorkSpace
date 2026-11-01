@@ -459,3 +459,22 @@
     transform: none;
   }
 }
+.course-requests {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.course-requests li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.course-requests li > span {
+  margin-right: auto;
+  display: grid;
+}
+.course-requests small {
+  color: var(--text-muted, #667085);
+}

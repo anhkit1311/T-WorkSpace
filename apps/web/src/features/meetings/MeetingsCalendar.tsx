@@ -14,8 +14,11 @@ import { NoGroups } from "../workspaces/GroupDialogs";
 import { cancelMeetingScheduleApi, getMeetingCalendarApi, saveMeetingScheduleApi } from "./api";
 import { calendarEvents, FIRST_HOUR, LAST_HOUR, layoutDay, weekStart, type CalendarEvent } from "./calendar";
 import { MeetingAttendancePanel } from "./MeetingAttendancePanel";
+import { CouncilSetupDialog } from "./CouncilSetupDialog";
+import { MeetingCouncilPanel } from "./MeetingCouncilPanel";
 import { MeetingOutcomesPanel } from "./MeetingOutcomesPanel";
 import { MeetingRecordingPanel } from "./MeetingRecordingPanel";
+import { inviteInput, ScheduleInviteFields, type InviteState } from "./ScheduleInviteFields";
 import "./meetings-calendar.css";
 
 export type MeetingRoom = { id: string; name: string; workspace: string; workspaceId: string };
@@ -84,6 +87,7 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
   const [form, setForm] = useState<{ item?: MeetingScheduleItem } | null>(null);
   const [startNow, setStartNow] = useState(false);
   const [cancelId, setCancelId] = useState("");
+  const [councilFor, setCouncilFor] = useState<MeetingScheduleItem | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
   // New UI controls for Cổng Hội nghị TDTU
@@ -701,6 +705,14 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
                     <Button
                       variant="text"
                       size="sm"
+                      icon="clipboard"
+                      onClick={() => setCouncilFor(schedule(selected)!)}
+                    >
+                      Hội đồng
+                    </Button>
+                    <Button
+                      variant="text"
+                      size="sm"
                       onClick={() => setCancelId(selected.scheduleId ?? "")}
                     >
                       Huỷ
@@ -715,6 +727,7 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
               {selected.people.length > 0 && <p>Đã tham gia: {selected.people.join(", ")}</p>}
               <MeetingRecordingPanel sessionId={selected.sessionId} live={false} />
               <MeetingOutcomesPanel sessionId={selected.sessionId} live={false} />
+              <MeetingCouncilPanel sessionId={selected.sessionId} live={false} />
               <MeetingAttendancePanel sessionId={selected.sessionId} />
             </div>
           ) : selected.status === "past" ? (
@@ -747,6 +760,17 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
             rooms={rooms}
             defaultGroupId={groupId}
             onClose={() => setStartNow(false)}
+          />
+        )}
+        {councilFor && (
+          <CouncilSetupDialog
+            scheduleId={councilFor.id}
+            workspaceId={councilFor.workspaceId}
+            onClose={() => setCouncilFor(null)}
+            onSaved={() => {
+              setCouncilFor(null);
+              notify("Đã lưu hội đồng", councilFor.title, "success");
+            }}
           />
         )}
         {cancelId && (
@@ -808,6 +832,17 @@ function ScheduleDialog({
     return localDateTime(next);
   });
   const [end, setEnd] = useState(() => (item ? localDateTime(new Date(item.endsAt)) : localDateTime(new Date(new Date(start).getTime() + 3_600_000))));
+  const [settings, setSettings] = useState({
+    waitingRoom: item?.waitingRoom ?? false,
+    autoRecord: item?.autoRecord ?? false,
+    muteOnJoin: item?.muteOnJoin ?? false,
+  });
+  const [invite, setInvite] = useState<InviteState>(() => ({
+    mode: item?.inviteeIds?.length ? "list" : "all",
+    userIds: item?.inviteeIds ?? [],
+    workspaceIds: [],
+    unitIds: [],
+  }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -835,6 +870,8 @@ function ScheduleDialog({
             .filter(Boolean),
           startsAt: startsAt.toISOString(),
           endsAt: endsAt.toISOString(),
+          ...settings,
+          invite: inviteInput(invite),
         },
         item?.id,
       );
@@ -907,6 +944,22 @@ function ScheduleDialog({
         <Field label="Agenda (mỗi dòng một mục)" hint="Thời gian theo múi giờ của thiết bị bạn.">
           <textarea rows={3} value={agenda} onChange={(event) => setAgenda(event.target.value)} placeholder={"Báo cáo tiến độ\nPhân công tuần tới"} />
         </Field>
+        <ScheduleInviteFields workspaceId={groupId} groups={groups} value={invite} onChange={setInvite} />
+        <fieldset className="meeting-room-settings">
+          <legend>Cấu hình phòng</legend>
+          {(
+            [
+              ["waitingRoom", "Bật phòng chờ (người ngoài danh sách mời chờ duyệt)"],
+              ["autoRecord", "Tự động ghi hình khi bắt đầu"],
+              ["muteOnJoin", "Tắt micro khi vào phòng"],
+            ] as const
+          ).map(([key, label]) => (
+            <label key={key}>
+              <input type="checkbox" checked={settings[key]} onChange={(event) => setSettings({ ...settings, [key]: event.target.checked })} />
+              {label}
+            </label>
+          ))}
+        </fieldset>
       </form>
     </Modal>
   );

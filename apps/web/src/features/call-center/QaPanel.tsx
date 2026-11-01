@@ -281,15 +281,43 @@ export function CallLessonDialog({ call, onClose }: { call: { id: string; title:
 const minuteSecond = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
 
 /** 2.1: the automatic speech-to-text of a call recording. */
-export function CallTranscriptDialog({ call, api, onClose }: { call: { id: string; title: string }; api: Api; onClose: () => void }) {
+export function CallTranscriptDialog({
+  call,
+  api,
+  onClose,
+  labelOf = () => "",
+  onApply,
+}: {
+  call: { id: string; title: string };
+  api: Api;
+  onClose: () => void;
+  labelOf?: (dispositionId: string) => string;
+  /** Puts the AI summary into the call's notes and its suggested disposition on the call. */
+  onApply?: (summary: string, dispositionId: string | null) => Promise<void>;
+}) {
   const [transcript, setTranscript] = useState<CcCallTranscript | null>(null);
   const [error, setError] = useState("");
+  const [applied, setApplied] = useState(false);
   useEffect(() => {
     api<CcCallTranscript>(`calls/${call.id}/transcript`).then(setTranscript, (failure: Error) => setError(failure.message));
   }, [api, call.id]);
+  const apply = (summary: string, dispositionId: string | null) =>
+    onApply?.(summary, dispositionId).then(() => setApplied(true), (failure: Error) => setError(failure.message));
   return (
     <Modal title="Lời thoại cuộc gọi" eyebrow={call.title} onClose={onClose}>
       <div className="qa-sheet">
+        {transcript?.aiSummary && (
+          <section className="call-ai-summary" aria-label="Tóm tắt bằng AI">
+            <strong>Tóm tắt (AI, cần kiểm tra lại)</strong>
+            <p>{transcript.aiSummary}</p>
+            {transcript.aiDispositionId && <p className="desk-muted">Gợi ý mã kết quả: {labelOf(transcript.aiDispositionId) || "—"}</p>}
+            {onApply && (
+              <Button size="sm" variant="secondary" disabled={applied} onClick={() => void apply(transcript.aiSummary!, transcript.aiDispositionId)}>
+                {applied ? "Đã áp dụng" : "Áp dụng vào ghi nhận"}
+              </Button>
+            )}
+          </section>
+        )}
         {error ? <p className="desk-warning" role="alert">{error}</p> : !transcript ? <p className="desk-muted">Đang tải…</p> : transcript.segments.length ? (
           <ol className="call-transcript">
             {transcript.segments.map((segment, index) => (

@@ -4,6 +4,7 @@ import { governanceApi } from "../workspaces/api";
 import { Button, Badge, FilterPills, KpiStatCard } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
 import { useApp } from "../../app/providers/AppContext";
+import type { AppRoute } from "../../app/navigation";
 import { useSocket } from "../../app/providers/SocketContext";
 import {
   getAnnouncementsApi,
@@ -19,16 +20,19 @@ import "./notifications.css";
 
 export interface NotificationItem {
   id: string;
-  kind: "mention" | "thread" | "direct";
+  kind: "mention" | "thread" | "direct" | "meeting" | "course";
   readAt: string | null;
   createdAt: string;
-  messageId: string;
+  /** Chat notifications point at a message; meeting and course ones carry title + link instead. */
+  messageId: string | null;
   content: string;
   threadRootId: string | null;
-  channelId: string;
-  channelName: string;
+  channelId: string | null;
+  channelName: string | null;
   workspaceId: string | null;
-  authorName: string;
+  authorName: string | null;
+  title: string | null;
+  link: AppRoute | null;
 }
 
 export interface NotificationPage {
@@ -655,7 +659,7 @@ export function NotificationsPage() {
             <div className="notifications-empty-card" style={{ padding: 32, textAlign: "center", background: "#FFFFFF", borderRadius: 14, border: "1px solid #E2E8F0" }}>
               <Icon name="check" size={28} />
               <h3>Bạn đã cập nhật hết thông báo</h3>
-              <p>Khi có ai đó nhắc tên bạn hoặc trả lời tin nhắn của bạn trong nhóm, thông báo sẽ hiển thị ở đây.</p>
+              <p>Khi có ai đó nhắc tên hoặc trả lời bạn, mời bạn họp, nhắc giờ họp hoặc ghi danh bạn vào khóa học, thông báo sẽ hiển thị ở đây.</p>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -674,7 +678,7 @@ export function NotificationsPage() {
                 >
                   <div>
                     <div style={{ fontSize: 13.5, fontWeight: 600, color: "#0F172A" }}>
-                      {item.authorName} trong #{item.channelName}
+                      {item.title ?? `${item.authorName} trong #${item.channelName}`}
                     </div>
                     <div style={{ fontSize: 13, color: "#475569", marginTop: 2 }}>
                       {item.content}
@@ -684,7 +688,8 @@ export function NotificationsPage() {
                     size="sm"
                     variant="ghost"
                     onClick={() => {
-                      if (item.workspaceId) {
+                      if (item.link) navigate(item.link);
+                      else if (item.workspaceId && item.channelId && item.messageId) {
                         navigate({ view: "chat", workspaceId: item.workspaceId, channelId: item.channelId, messageId: item.messageId });
                       }
                     }}

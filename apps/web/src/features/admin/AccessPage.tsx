@@ -7,6 +7,7 @@ import { parseAccountLines } from "./labels";
 import { AccountForm } from "./AccountForm";
 import { FacultyPanel } from "./FacultyPanel";
 import { HealthPanel } from "./HealthPanel";
+import { ActivityPanel } from "./ActivityPanel";
 import "../workspaces/workspace-admin.css";
 import "./admin.css";
 
@@ -72,7 +73,7 @@ export function AccessPage() {
 
 function AccessPanel({ token, run, units, onUnitCreated }: { token: string; run: Run; units: Unit[]; onUnitCreated: (unit: Unit) => void }) {
   const { user } = useApp();
-  const [activeTab, setActiveTab] = useState<"departments" | "permissions" | "accounts" | "health">("departments");
+  const [activeTab, setActiveTab] = useState<"departments" | "permissions" | "accounts" | "health" | "activity">("departments");
   const [query, setQuery] = useState("");
   const [unitFilter, setUnitFilter] = useState("");
   const [rows, setRows] = useState<AccessRow[] | null>(null);
@@ -180,6 +181,13 @@ function AccessPanel({ token, run, units, onUnitCreated }: { token: string; run:
         >
           Sức khỏe hệ thống
         </button>
+        <button
+          type="button"
+          className={`admin-tab-btn ${activeTab === "activity" ? "is-active" : ""}`}
+          onClick={() => setActiveTab("activity")}
+        >
+          Nhật ký hoạt động
+        </button>
       </nav>
 
       {/* Tab 1: Khoa & Phòng ban (Mặc định) */}
@@ -277,6 +285,9 @@ function AccessPanel({ token, run, units, onUnitCreated }: { token: string; run:
       {activeTab === "health" && (
         <HealthPanel token={token} />
       )}
+
+      {/* Tab 5: Nhật ký hoạt động */}
+      {activeTab === "activity" && <ActivityPanel token={token} />}
     </div>
   );
 }

@@ -3,6 +3,8 @@ import { HttpError } from "../../shared/http/http-error.js";
 import { getAuthUserId, readJson, sendJson } from "../../shared/http/utils.js";
 import { limitRequest } from "../../shared/http/rate-limit.js";
 import * as organization from "./organization.js";
+import { listActivity } from "./activity.js";
+import { unitReport } from "./reports.js";
 import { provisionStaffPhones, releasePhones } from "../callcenter/index.js";
 
 type Body = Record<string, unknown>;
@@ -44,6 +46,8 @@ const routes: Route[] = [
   r("POST", "/accounts/:id/unit", (u, m, b) => organization.setUserUnit(u, m[1], b)),
   r("GET", "/access", (u, _m, _b, p) => organization.listAccess(u, p)),
   r("GET", "/directory", (u) => organization.listDirectory(u)),
+  r("GET", "/activity", (u, _m, _b, p) => listActivity(u, p)),
+  r("GET", "/reports", (u, _m, _b, p) => unitReport(u, p)),
 ];
 
 /**

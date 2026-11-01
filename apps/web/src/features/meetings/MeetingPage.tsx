@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { MeetingState } from "@doan/shared";
 import type { ChatMessageItem, WorkspaceItem } from "@doan/shared";
 import { getChannelsApi, getMessagesApi, getWorkspacesApi } from "../chat/api";
-import { getDialInApi, downloadMeetingAttendanceApi } from "./api";
+import { getDialInApi, downloadMeetingAttendanceApi, getSessionCouncilApi } from "./api";
+import { MeetingCouncilPanel } from "./MeetingCouncilPanel";
 import { MeetingsCalendar } from "./MeetingsCalendar";
 import { useApp } from "../../app/providers/AppContext";
 import { useMeeting, type RemotePeer } from "../../app/providers/MeetingContext";
@@ -454,7 +455,7 @@ export function MeetingPage() {
   const gridRef = useRef<HTMLDivElement>(null);
   const [gridSize, setGridSize] = useState({ width: 0, height: 0 });
   const [gridPage, setGridPage] = useState(0);
-  const [sidePanel, setSidePanel] = useState<"none" | "people" | "chat" | "notes" | "network">("none");
+  const [sidePanel, setSidePanel] = useState<"none" | "people" | "chat" | "notes" | "network" | "council">("none");
 
   const [callMessages, setCallMessages] = useState<ChatMessageItem[]>([]);
   const [callDraft, setCallDraft] = useState("");
@@ -471,7 +472,9 @@ export function MeetingPage() {
         ? "Biên bản cuộc họp"
         : sidePanel === "network"
           ? "Chất lượng mạng"
-          : "Chat cuộc họp";
+          : sidePanel === "council"
+            ? "Hội đồng chấm"
+            : "Chat cuộc họp";
   useEffect(() => {
     const list = callListRef.current;
     if(sidePanel === "chat") {
@@ -481,6 +484,20 @@ export function MeetingPage() {
   },[callMessages,sidePanel]);
   const control = useMeetingControl(meeting.inCall ? meeting.roomId : "");
   const meetingState = control.state;
+  // NV-MT3: a scheduled council meeting gets its own side panel.
+  const [hasCouncil, setHasCouncil] = useState(false);
+  const meetingSessionId = meetingState?.id;
+  useEffect(() => {
+    if (!accessToken || !meetingSessionId) return setHasCouncil(false);
+    let alive = true;
+    getSessionCouncilApi(accessToken, meetingSessionId).then(
+      (council) => alive && setHasCouncil(Boolean(council)),
+      () => alive && setHasCouncil(false),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [accessToken, meetingSessionId]);
   const participantCount = control.admitted.length || meeting.remotePeers.length + 1;
   // Corner toasts: someone waits to be let in (hosts only) or raises a hand.
   const previousState = useRef<MeetingState | null>(null);
@@ -606,7 +623,7 @@ export function MeetingPage() {
     if (!accessToken || !meetingState) return;
     setExportingAttendance(true);
     try {
-      await downloadMeetingAttendanceApi(accessToken, meetingState.id, `diem-danh-${meetingState.startedAt.slice(0, 10)}.csv`);
+      await downloadMeetingAttendanceApi(accessToken, meetingState.id, `diem-danh-${meetingState.startedAt.slice(0, 10)}.xlsx`);
       notify("Đã xuất điểm danh", "Giờ vào, giờ rời và thời gian có mặt của từng người trong phiên họp.", "success");
     } catch (failure) {
       notify("Không xuất được điểm danh", failure instanceof Error ? failure.message : "Hãy thử lại.", "warning");
@@ -834,6 +851,7 @@ export function MeetingPage() {
     { heading: "Cuộc họp" },
     { label: "Chất lượng mạng", icon: "activity", onSelect: () => setSidePanel("network") },
     { label: "Biên bản và ghi hình", icon: "record", onSelect: () => setSidePanel("notes") },
+    ...(hasCouncil ? [{ label: "Hội đồng chấm", icon: "clipboard" as IconName, onSelect: () => setSidePanel("council") }] : []),
     ...(control.canManage && meetingState
       ? ([
           { heading: "Điều hành" },
@@ -1134,6 +1152,8 @@ export function MeetingPage() {
                   ) : (
                     <p className="meeting-outcomes-empty">Đang tải phiên họp…</p>
                   )
+                ) : sidePanel === "council" && meetingState?.id ? (
+                  <MeetingCouncilPanel sessionId={meetingState.id} live />
                 ) : sidePanel === "network" ? (
                   <div className="meeting-network-panel">
                     <dl className="meeting-network-stats">

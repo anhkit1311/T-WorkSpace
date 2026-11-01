@@ -57,6 +57,8 @@ export const coursesApi = {
     request<{ ticketNumber: string; hotline: string | null; departmentId: string; context: string }>(t, `lessons/${lessonId}/support`, "POST", { message }),
   enroll: (t: string, id: string) => request<CourseDetail>(t, `courses/${id}/enroll`, "POST"),
   assign: (t: string, id: string, body: object) => request<CourseAssignmentResult>(t, `courses/${id}/assignments`, "POST", body),
+  decideRequest: (t: string, id: string, userId: string, approve: boolean) =>
+    request<{ ok: true }>(t, `courses/${id}/requests/${userId}`, "POST", { approve }),
   unenroll: (t: string, id: string, userId: string) => request<{ ok: true }>(t, `courses/${id}/learners/${userId}`, "DELETE"),
   questions: (t: string, id: string) => request<CourseQuestion[]>(t, `courses/${id}/questions`),
   saveQuestion: (t: string, courseId: string, questionId: string | null, body: object) =>
@@ -110,7 +112,7 @@ export async function openLessonFile(token: string, lessonId: string, name: stri
 
 /** Downloads the progress table as CSV (Excel). */
 export async function downloadProgressCsv(token: string, courseId: string, fileName: string) {
-  const response = await fetch(`${base()}courses/${courseId}/progress.csv`, { headers: { Authorization: `Bearer ${token}` }, credentials: "include" });
+  const response = await fetch(`${base()}courses/${courseId}/progress.xlsx`, { headers: { Authorization: `Bearer ${token}` }, credentials: "include" });
   if (!response.ok) throw new ApiError(response.status, "EXPORT_FAILED", "Không xuất được tệp.");
   const url = URL.createObjectURL(await response.blob());
   Object.assign(document.createElement("a"), { href: url, download: fileName }).click();

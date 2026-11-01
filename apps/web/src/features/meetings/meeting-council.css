@@ -1,0 +1,109 @@
+.meeting-council__members,
+.meeting-council__presenters {
+  margin: 4px 0 8px;
+  padding: 0;
+  font-size: 13px;
+}
+.meeting-council__members {
+  list-style: none;
+}
+.meeting-council__members li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+}
+.meeting-council__presenters {
+  padding-left: 20px;
+}
+.meeting-council__presenters > li {
+  border-bottom: 1px solid var(--border, #e4e7ec);
+  padding: 6px 0;
+}
+.meeting-council__presenters summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.meeting-council__presenters summary > span {
+  margin-right: auto;
+}
+.meeting-council__presenters small,
+.meeting-council__finalize small {
+  color: var(--text-muted, #667085);
+}
+.meeting-council__detail {
+  display: grid;
+  gap: 8px;
+  padding: 8px 0 4px;
+  justify-items: start;
+}
+.meeting-council__sheet,
+.meeting-council__finalize {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+.meeting-council__sheet p {
+  margin: 0;
+  color: var(--text-muted, #667085);
+}
+.meeting-council__sheet label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.meeting-council__sheet input {
+  width: 80px;
+}
+.meeting-council__sheet textarea,
+.meeting-council__finalize textarea {
+  width: 100%;
+  resize: vertical;
+}
+.meeting-council__sheet-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.meeting-council__finalize button {
+  justify-self: start;
+}
+.meeting-council__result {
+  margin: 0;
+}
+.meeting-council-setup__people {
+  display: grid;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: 14px;
+}
+.meeting-council-setup__people label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.field .meeting-council-setup__people input[type="checkbox"] {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+}
+.field .meeting-council-setup__people input[type="text"] {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  height: 30px;
+}
+.field textarea.meeting-council-setup__criteria {
+  height: auto;
+  padding: 6px 10px;
+}
+.field .meeting-council-setup__people label {
+  white-space: nowrap;
+}

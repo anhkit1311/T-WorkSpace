@@ -17,6 +17,7 @@ export type ViewId =
   | "staff"
   | "elearning"
   | "access"
+  | "reports"
   | "groups";
 
 export type PublicScreen = "landing" | "login" | "app";

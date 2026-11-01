@@ -30,7 +30,7 @@ export class CallCenterTicketService {
   private async workable(userId: string, ticketId: string) {
     const ticket = await this.repo.ticket(id(ticketId));
     if (!ticket) throw notFound("Không tìm thấy phiếu.");
-    if (!(await this.admin.access(userId)).belongsTo(ticket.departmentId)) throw forbidden();
+    if (!(await this.admin.access(userId)).worksIn(ticket.departmentId)) throw forbidden();
     return ticket;
   }
 
@@ -47,10 +47,10 @@ export class CallCenterTicketService {
     const access = await this.admin.access(userId);
     if (!access.isMember()) throw forbidden();
     const departmentId = params.get("departmentId");
-    if (departmentId && !access.belongsTo(id(departmentId))) throw forbidden();
+    if (departmentId && !access.worksIn(id(departmentId))) throw forbidden();
     const status = params.get("status");
     return this.repo.tickets({
-      departmentIds: departmentId ? [departmentId] : access.memberDepartments(),
+      departmentIds: departmentId ? [departmentId] : access.workDepartments(),
       status: status ? oneOf({ status }, "status", STATUSES) : null,
       assigneeId: params.get("mine") === "1" ? userId : null,
       limit: integer({ limit: Number(params.get("limit") ?? 100) }, "limit", 1, 300),
@@ -65,7 +65,7 @@ export class CallCenterTicketService {
   async create(userId: string, body: Body) {
     const access = await this.admin.access(userId);
     const departmentId = id(body.departmentId);
-    if (!access.belongsTo(departmentId)) throw forbidden();
+    if (!access.worksIn(departmentId)) throw forbidden();
     const callId = optionalId(body.callId);
     let callerNumber = body.callerNumber ? text(body, "callerNumber", 16, { pattern: /^\+?[0-9]{3,15}$/ }) : null;
     if (callId) {
@@ -113,7 +113,7 @@ export class CallCenterTicketService {
   async voicemailRecording(userId: string, voicemailId: string): Promise<Response> {
     const voicemail = await this.repo.voicemail(id(voicemailId));
     if (!voicemail) throw notFound("Không tìm thấy thư thoại.");
-    if (!voicemail.department_id || !(await this.admin.access(userId)).belongsTo(voicemail.department_id)) throw forbidden();
+    if (!(await this.admin.access(userId)).worksIn(voicemail.department_id)) throw forbidden();
     const fetchRecording = this.recordings();
     if (!fetchRecording) throw notFound("Tổng đài chưa kết nối.");
     const audio = await fetchRecording(voicemail.recording_key).catch(() => {

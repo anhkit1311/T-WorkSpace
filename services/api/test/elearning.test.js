@@ -22,7 +22,7 @@ test("E-learning: course → enrollment → document, quiz, live class with repl
   const live = new LiveClassService(repo, courses, () => {});
 
   const people = {};
-  for (const name of ["lecturer", "student", "other", "outsider"]) {
+  for (const name of ["lecturer", "student", "other", "outsider", "applicant"]) {
     const userId = randomUUID();
     people[name] = { id: userId, email: `el-${userId}@example.test` };
     await sql(`INSERT INTO users(id,email,password_hash,display_name,email_verified) VALUES($1,$2,'test-only',$3,true)`, [userId, people[name].email, `EL ${name}`]);
@@ -86,7 +86,28 @@ test("E-learning: course → enrollment → document, quiz, live class with repl
     assert.equal(course.progress, 0);
     const assigned = await courses.assign(id("lecturer"), course.id, { emails: [people.other.email, "nobody@example.test", people.student.email] });
     assert.deepEqual([assigned.added, assigned.alreadyEnrolled, assigned.notFound], [1, 1, ["nobody@example.test"]]);
+    const { listNotifications: bell } = await import("../../../dist/api/modules/chat/conversations.js");
+    assert.equal((await bell(id("other"))).items[0].title, "Đã được ghi danh", "NV-EL2: assigned learners are told");
     await rejects(courses.assign(id("student"), course.id, { emails: [] }), "FORBIDDEN");
+
+    // NV-EL2 "cần duyệt": a request waits for the instructor; reject drops it, approve enrolls.
+    await courses.update(id("lecturer"), course.id, { enrollment: "approval" });
+    let applied = await courses.enrollSelf(id("applicant"), course.id);
+    assert.deepEqual([applied.enrolled, applied.requested, applied.canEnroll], [false, true, false]);
+    await rejects(learning.lesson(id("applicant"), doc.id), "FORBIDDEN");
+    assert.deepEqual((await courses.progress(id("lecturer"), course.id)).requests.map((item) => item.userId), [id("applicant")]);
+    await rejects(courses.decideRequest(id("student"), course.id, id("applicant"), { approve: true }), "FORBIDDEN");
+    await courses.decideRequest(id("lecturer"), course.id, id("applicant"), { approve: false });
+    const { listNotifications } = await import("../../../dist/api/modules/chat/conversations.js");
+    assert.equal((await listNotifications(id("applicant"))).items[0].title, "Yêu cầu ghi danh bị từ chối");
+    assert.equal((await courses.detail(id("applicant"), course.id)).requested, false);
+    await rejects(courses.decideRequest(id("lecturer"), course.id, id("applicant"), { approve: true }), "NOT_FOUND");
+    await courses.enrollSelf(id("applicant"), course.id);
+    await courses.decideRequest(id("lecturer"), course.id, id("applicant"), { approve: true });
+    applied = await courses.detail(id("applicant"), course.id);
+    assert.deepEqual([applied.enrolled, applied.requested], [true, false]);
+    await courses.unenroll(id("lecturer"), course.id, id("applicant"));
+    await courses.update(id("lecturer"), course.id, { enrollment: "open" });
 
     // ---- learning: document and quiz -------------------------------------------------------------------
     await learning.complete(id("student"), doc.id);
@@ -122,6 +143,13 @@ test("E-learning: course → enrollment → document, quiz, live class with repl
     assert.equal(graded.passed, true);
     assert.equal(graded.review.length, 2);
     await courses.updateLesson(id("lecturer"), quiz.id, { drawCount: null, shuffle: false });
+
+    // NV-EL1 attempt limit: "student" has used 2, so a limit of 2 stops a third; BR-15 keeps the best score.
+    await courses.updateLesson(id("lecturer"), quiz.id, { maxAttempts: 2 });
+    const limited = (await learning.lesson(id("student"), quiz.id)).quiz;
+    assert.deepEqual([limited.maxAttempts, limited.attemptsLeft, limited.bestPercent, limited.passed], [2, 0, 100, true]);
+    await rejects(learning.startQuiz(id("student"), quiz.id), "NO_ATTEMPTS_LEFT");
+    await courses.updateLesson(id("lecturer"), quiz.id, { maxAttempts: null });
 
     // ---- EL-6 live class from a meeting schedule, LT-2 replay --------------------------------------------
     workspace = await createWorkspace(id("lecturer"), "Lớp QA e-learning");
@@ -179,7 +207,7 @@ test("E-learning: course → enrollment → document, quiz, live class with repl
     assert.equal(student.quizPercents[quiz.id], 100);
     assert.equal(report.learners.find((learner) => learner.userId === id("other")).quizPercents[quiz.id], 100, "best of the late (25%) and drawn (100%) attempts");
     await rejects(courses.progress(id("student"), course.id), "FORBIDDEN");
-    assert.match(await courses.progressCsv(id("lecturer"), course.id), /Hoàn thành \(%\)/);
+    assert.ok((await courses.progressTable(id("lecturer"), course.id)).rows[0].includes("Hoàn thành (%)"));
     // EL-5: the 3500 s replay is done by watching 90% of it, not by a click.
     assert.deepEqual((await learning.lesson(id("student"), replay.id)).watch, { watchedSeconds: 0, positionSeconds: 0 });
     await rejects(learning.complete(id("student"), replay.id), "NOT_WATCHED");

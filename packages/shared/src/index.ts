@@ -58,7 +58,16 @@ export type MeetingScheduleItem = {
   endsAt: string;
   canManage: boolean;
   agenda?: string[];
+  /** NV-MT1 room settings (schedule and calendar lists; not the home summary). */
+  waitingRoom?: boolean;
+  autoRecord?: boolean;
+  muteOnJoin?: boolean;
+  /** BR-10: the invite list; empty means everyone in the room's group. */
+  inviteeIds?: string[];
 };
+
+/** Who to invite when saving a schedule: people of the group, a whole class (group) or unit. */
+export type MeetingInviteInput = { userIds?: string[]; workspaceIds?: string[]; unitIds?: string[] };
 
 /** A meeting that ran or is running (ended_at null), for the "Họp" week view. */
 export type MeetingCalendarSession = {
@@ -77,6 +86,16 @@ export type MeetingCalendarSession = {
 };
 
 export type MeetingCalendar = { schedules: MeetingScheduleItem[]; sessions: MeetingCalendarSession[] };
+
+/** NV-MT1: invitation, change, cancellation or 15-minute reminder of a scheduled meeting. */
+export type MeetingScheduleNotice = {
+  kind: "created" | "updated" | "canceled" | "reminder";
+  scheduleId: string;
+  workspaceId: string;
+  roomId: string;
+  title: string;
+  startsAt: string;
+};
 
 export type AuthResponse = {
   user: AuthUser;
@@ -314,6 +333,7 @@ export interface MeetingState {
   hostId: string;
   waitingEnabled: boolean;
   locked: boolean;
+  muteOnJoin: boolean;
   startedAt: string;
   maxUsers: number;
   participants: {
@@ -429,6 +449,7 @@ export interface WorkspaceOverviewSummary {
 export * from "./callcenter.js";
 export * from "./meeting-attendance.js";
 export * from "./meeting-recordings.js";
+export * from "./meeting-council.js";
 export * from "./elearning.js";
 
 export type AnnouncementCategory = "general" | "training" | "event" | "urgent";

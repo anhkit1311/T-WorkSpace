@@ -33,7 +33,7 @@ export function KpiPanel({ departmentId, api, fail, token, refreshKey }: { depar
         <div className="desk-admin__inline">
           <input type="date" value={from} max={to} onChange={(event) => setFrom(event.target.value)} aria-label="Từ ngày" />
           <input type="date" value={to} min={from} onChange={(event) => setTo(event.target.value)} aria-label="Đến ngày" />
-          <Button size="sm" variant="ghost" icon="download" onClick={() => downloadCsv(token, `departments/${departmentId}/calls.csv?from=${from}&to=${to}`, `cuoc-goi-${from}_${to}.csv`).catch(fail)}>
+          <Button size="sm" variant="ghost" icon="download" onClick={() => downloadCsv(token, `departments/${departmentId}/calls.xlsx?from=${from}&to=${to}`, `cuoc-goi-${from}_${to}.xlsx`).catch(fail)}>
             Xuất Excel
           </Button>
         </div>

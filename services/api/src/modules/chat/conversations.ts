@@ -236,12 +236,24 @@ export async function listSavedMessages(
 
 export async function listNotifications(userId: string, before?: string, unread = false) {
   if (before) validateId(before);
+  // Chat notifications stay visible only while the message and the reader's access last; system
+  // ones (meetings, courses) carry their own title, body and link.
+  const visibleMessage = `JOIN messages m ON m.id=n.message_id AND m.deleted_at IS NULL AND (m.thread_root_id IS NULL OR EXISTS(SELECT 1 FROM messages active_root WHERE active_root.id=m.thread_root_id AND active_root.deleted_at IS NULL)) JOIN channel_access access ON access.channel_id=m.channel_id AND access.user_id=$1`;
   const items = await query(
-    `SELECT n.id,n.kind,n.read_at AS "readAt",n.created_at AS "createdAt",m.id AS "messageId",m.content,m.thread_root_id AS "threadRootId",c.id AS "channelId",c.name AS "channelName",c.workspace_id AS "workspaceId",u.display_name AS "authorName" FROM notifications n JOIN messages m ON m.id=n.message_id AND m.deleted_at IS NULL AND (m.thread_root_id IS NULL OR EXISTS(SELECT 1 FROM messages active_root WHERE active_root.id=m.thread_root_id AND active_root.deleted_at IS NULL)) JOIN channels c ON c.id=m.channel_id JOIN channel_access access ON access.channel_id=c.id AND access.user_id=$1 JOIN users u ON u.id=m.author_id WHERE n.user_id=$1 AND ($3::boolean=false OR n.read_at IS NULL) AND ($2::uuid IS NULL OR (n.created_at,n.id)<(SELECT created_at,id FROM notifications WHERE id=$2 AND user_id=$1)) ORDER BY n.created_at DESC,n.id DESC LIMIT 30`,
+    `SELECT * FROM (
+       SELECT n.id,n.kind,n.read_at AS "readAt",n.created_at AS "createdAt",m.id AS "messageId",m.content,m.thread_root_id AS "threadRootId",c.id AS "channelId",c.name AS "channelName",c.workspace_id AS "workspaceId",u.display_name AS "authorName",NULL::text AS title,NULL::jsonb AS link
+       FROM notifications n ${visibleMessage} JOIN channels c ON c.id=m.channel_id JOIN users u ON u.id=m.author_id WHERE n.user_id=$1
+       UNION ALL
+       SELECT n.id,n.kind,n.read_at,n.created_at,NULL,n.body,NULL,NULL,NULL,NULL,NULL,n.title,n.link
+       FROM notifications n WHERE n.user_id=$1 AND n.message_id IS NULL
+     ) x
+     WHERE ($3::boolean=false OR x."readAt" IS NULL) AND ($2::uuid IS NULL OR (x."createdAt",x.id)<(SELECT created_at,id FROM notifications WHERE id=$2 AND user_id=$1))
+     ORDER BY x."createdAt" DESC,x.id DESC LIMIT 30`,
     [userId, before ?? null, unread],
   );
   const count = await query<{ total: number }>(
-    `SELECT count(*)::integer AS total FROM notifications n JOIN messages m ON m.id=n.message_id AND m.deleted_at IS NULL AND (m.thread_root_id IS NULL OR EXISTS(SELECT 1 FROM messages active_root WHERE active_root.id=m.thread_root_id AND active_root.deleted_at IS NULL)) JOIN channel_access access ON access.channel_id=m.channel_id AND access.user_id=$1 WHERE n.user_id=$1 AND n.read_at IS NULL`,
+    `SELECT (SELECT count(*) FROM notifications n ${visibleMessage} WHERE n.user_id=$1 AND n.read_at IS NULL)::integer
+       + (SELECT count(*) FROM notifications n WHERE n.user_id=$1 AND n.message_id IS NULL AND n.read_at IS NULL)::integer AS total`,
     [userId],
   );
   return { items: items.rows, unreadCount: count.rows[0].total, hasMore: items.rows.length === 30 };

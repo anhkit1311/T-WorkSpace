@@ -107,7 +107,7 @@ export interface CallPatch {
   queuedAt?: Date;
   answeredAt?: Date;
   endedAt?: Date;
-  outcome?: "answered" | "abandoned" | "missed" | "voicemail" | "failed" | "transferred";
+  outcome?: "answered" | "abandoned" | "missed" | "voicemail" | "callback" | "failed" | "transferred";
   agentUserId?: string | null;
   recordingKey?: string;
 }
@@ -141,6 +141,8 @@ export interface AcdStore {
   }): Promise<void>;
   /** A caller hung up while queued: opens (or extends) a call-back ticket (CC-8). */
   missedCall(input: { callId: string; departmentId: string; callerNumber: string; callerUserId: string | null }): Promise<void>;
+  /** 2.4: a waiting caller pressed the callback key: a high-priority call-back ticket. */
+  callbackRequested(input: { callId: string; departmentId: string; callerNumber: string; callerUserId: string | null }): Promise<void>;
   agentRoster(): Promise<AgentRecord[]>;
   recordAgentState(userId: string, state: AgentState, reason: string, callId: string | null): Promise<void>;
   /** Calls left open by a crash or restart: their channels are gone, so they end as failed. */

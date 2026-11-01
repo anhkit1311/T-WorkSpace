@@ -61,6 +61,9 @@ const CallDirectoryPage = lazy(() =>
 const AccessPage = lazy(() =>
   import("../../features/admin/AccessPage").then((m) => ({ default: m.AccessPage })),
 );
+const UnitReportsPage = lazy(() =>
+  import("../../features/reports/UnitReportsPage").then((m) => ({ default: m.UnitReportsPage })),
+);
 const ELearningPage = lazy(() =>
   import("../../features/elearning/ELearningPage").then((m) => ({
     default: m.ELearningPage,
@@ -124,7 +127,8 @@ const SIDEBAR_MENU_ITEMS: SidebarMenuItem[] = [
   { id: "elearning", label: "Khóa học", icon: "graduation-cap", targetView: "elearning" },
   { id: "staff", label: "Danh sách nhân sự", icon: "users", targetView: "staff" },
   { id: "profile", label: "Cài đặt", icon: "settings", targetView: "profile" },
-  // Mục dành riêng cho Admin:
+  // Mục dành riêng cho lãnh đạo đơn vị và Admin:
+  { id: "reports", label: "Báo cáo đơn vị", icon: "dashboard", targetView: "reports" },
   { id: "notifications", label: "Quản lý thông báo", icon: "bell", targetView: "notifications", badgeKey: "notifications", adminOnly: true },
   { id: "access", label: "Quản trị hệ thống", icon: "lock", targetView: "access", adminOnly: true },
 ];
@@ -132,12 +136,12 @@ const SIDEBAR_MENU_ITEMS: SidebarMenuItem[] = [
 /** The phone bottom bar shows these; the rest open from "Thêm". */
 const BOTTOM_BAR_ITEMS = new Set(["home", "switchboard", "messages", "elearning"]);
 /** Account and administration entries sit under a divider, after the services. */
-const FIRST_MANAGE_ITEM = "notifications";
+const FIRST_MANAGE_ITEM = "reports";
 /**
  * Entries shown only to users with that role (see useMenuAccess). The switchboard and call list
  * are the core of the system and always stay visible; the page itself explains missing access.
  */
-const RESTRICTED_MENU_ITEMS: Record<string, keyof MenuAccess> = {};
+const RESTRICTED_MENU_ITEMS: Record<string, keyof MenuAccess> = { reports: "unitReports" };
 
 export function AppShell() {
   const {
@@ -213,6 +217,7 @@ export function AppShell() {
     else if (activeView === "profile") setActiveMenuId("profile");
     else if (activeView === "files") setActiveMenuId("files");
     else if (activeView === "access") setActiveMenuId("access");
+    else if (activeView === "reports") setActiveMenuId("reports");
   }, [activeView]);
 
   // Always enforce Light theme across the website
@@ -252,6 +257,7 @@ export function AppShell() {
   const avatarButtonRef = useRef<HTMLButtonElement>(null);
 
   const displayName = user?.displayName?.trim() || user?.email || "Tài khoản";
+  const userEmail = user?.email || "";
   // Only a real grant (academic_role_grants system_admin) shows the administration entries.
   const isUserAdmin = Boolean(menuAccess?.systemAdmin);
   const presence =
@@ -321,6 +327,7 @@ export function AppShell() {
     else if (activeView === "invitation") Component = <InvitationPage />;
     else if (activeView === "notifications") Component = <NotificationsPage />;
     else if (activeView === "access") Component = <AccessPage />;
+    else if (activeView === "reports") Component = <UnitReportsPage />;
     else Component = <WorkspaceHomePage />;
 
     return (

@@ -98,10 +98,11 @@ export function CourseView({ courseId, onBack }: { courseId: string; onBack: () 
             <Button icon="star" onClick={() => setCertificateOpen(true)}>Nhận chứng nhận</Button>
           )}
           {course.canEnroll && (
-            <Button icon="user-plus" onClick={() => void run("Đã ghi danh", () => coursesApi.enroll(token, course.id))}>
-              Ghi danh
+            <Button icon="user-plus" onClick={() => void run(course.enrollment === "approval" ? "Đã gửi yêu cầu ghi danh" : "Đã ghi danh", () => coursesApi.enroll(token, course.id))}>
+              {course.enrollment === "approval" ? "Gửi yêu cầu ghi danh" : "Ghi danh"}
             </Button>
           )}
+          {course.requested && <Badge tone="amber">Đang chờ giảng viên duyệt</Badge>}
         </div>
       </header>
       {certificateOpen && <CertificateDialog token={token} courseId={course.id} onClose={() => setCertificateOpen(false)} />}
@@ -281,6 +282,7 @@ function CourseSettings({ course, run }: { course: CourseDetail; run: Run }) {
           <select value={enrollment} onChange={(event) => setEnrollment(event.target.value as typeof enrollment)}>
             <option value="open">Mở: học viên tự đăng ký</option>
             <option value="assigned">Chỉ định: giảng viên gán học viên</option>
+            <option value="approval">Cần duyệt: học viên gửi yêu cầu, giảng viên duyệt</option>
           </select>
         </label>
         <div className="course-outline__tools">

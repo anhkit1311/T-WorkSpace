@@ -3,13 +3,15 @@ import { readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { MeetingRecording, MeetingRecordings } from "@doan/shared";
 import { query } from "../../../infrastructure/database/db.js";
+import { logMediaAccess } from "../../../infrastructure/operations/media-access.js";
 import { HttpError } from "../../../shared/http/http-error.js";
 import { requireChannelAccess, validateId } from "../../workspaces/service.js";
 import { config } from "../../../config/config.js";
 import { roomManager } from "../media/room-manager.js";
 import { enqueueMedia, joinPlaylists, transcodeToHls } from "./ffmpeg.js";
 import { RoomRecorder, type Manifest } from "./recorder.js";
-import { transcribeDir, transcriptionEnabled } from "../../../infrastructure/speech/transcribe.js";
+import { transcribeDir, transcriptionEnabled, type Segment } from "../../../infrastructure/speech/transcribe.js";
+import { summarizeMeeting, summaryEnabled } from "../../../infrastructure/ai/summarize.js";
 import { enqueueJob, registerJob } from "../../../infrastructure/jobs/queue.js";
 import { archiveQuietly } from "../../../infrastructure/media-storage.js";
 
@@ -33,6 +35,8 @@ type Row = {
   error: string | null;
   started_by_name: string | null;
   transcript_status: MeetingRecording["transcriptStatus"];
+  ai_summary: string | null;
+  ai_actions: string[] | null;
 };
 
 const toRecording = (row: Row): MeetingRecording => ({
@@ -46,6 +50,8 @@ const toRecording = (row: Row): MeetingRecording => ({
   startedByName: row.started_by_name,
   error: row.error,
   transcriptStatus: row.transcript_status,
+  aiSummary: row.ai_summary,
+  aiActions: row.ai_actions ?? [],
 });
 
 /** The viewer's standing in a session: host/co-host manage, admitted attendees watch. */
@@ -137,6 +143,8 @@ export async function recordingFile(userId: string, recordingId: unknown, name: 
   if (caption && row.transcript_status !== "ready") throw new HttpError(404, "NOT_FOUND", "Bản ghi chưa có phụ đề.");
   const { attended } = await standing(userId, row.session_id);
   if (!attended && !row.shared) throw forbidden();
+  // The playlist is fetched once per playback; segments and captions are not separate views.
+  if (name === "index.m3u8") await logMediaAccess(userId, "meeting", recordingId as string);
   return path.join(config.mediaDir, dirOf(recordingId as string), name);
 }
 
@@ -184,6 +192,8 @@ registerJob("recording_transcript", async (id, last) => {
   try {
     await transcribeDir(dirOf(id));
     await archiveQuietly(dirOf(id), ["captions.vtt", "transcript.json"]);
+    // Before "ready", so viewers polling for the transcript also get the summary.
+    await digest(id);
     await query(`UPDATE meeting_recordings SET transcript_status='ready' WHERE id=$1`, [id]);
   } catch (error) {
     console.error(JSON.stringify({ level: "warn", event: "recording_transcript_failed", id, message: String(error), last }));
@@ -192,6 +202,19 @@ registerJob("recording_transcript", async (id, last) => {
   }
   await notify(id);
 });
+
+/** 2.1: summary and follow-ups from the transcript; a failure keeps the captions and is only logged. */
+async function digest(id: string) {
+  if (!summaryEnabled()) return;
+  try {
+    const { segments } = JSON.parse(await readFile(path.join(config.mediaDir, dirOf(id), "transcript.json"), "utf8")) as { segments: Segment[] };
+    if (!segments.length) return;
+    const result = await summarizeMeeting(segments);
+    await query(`UPDATE meeting_recordings SET ai_summary=$2, ai_actions=$3 WHERE id=$1`, [id, result.summary, JSON.stringify(result.actions)]);
+  } catch (error) {
+    console.error(JSON.stringify({ level: "warn", event: "recording_summary_failed", id, message: String(error) }));
+  }
+}
 
 /** Host/co-host asks for captions again (first time for older recordings, or after a failure). */
 export async function requestRecordingTranscript(userId: string, recordingId: unknown, changed: Changed) {

@@ -4,6 +4,7 @@ import type {
   ConsumerOptions,
   MediaKind,
   MeetingNotes,
+  MeetingScheduleNotice,
   PresenceEvent,
   ProducerInfo,
   ProducerSource,
@@ -22,13 +23,14 @@ export interface ServerToClientEvents {
   callcenter_live: (data: { departmentId: string }) => void;
   /** M2: an agent moved this user's call to a video room; offer to join it. */
   meeting_invite: (data: { workspaceId: string; roomId: string; from: string }) => void;
+  meeting_schedule_notice: (data: MeetingScheduleNotice) => void;
   meeting_state_changed: (data: { roomId: string }) => void;
   meeting_closed: (data: { roomId: string; reason: string }) => void;
   meeting_mute: (data: { roomId: string }) => void;
   meeting_outcomes_changed: (data: {
     roomId: string;
     sessionId: string;
-    part: "notes" | "agenda" | "tasks" | "channel" | "summary" | "recording";
+    part: "notes" | "agenda" | "tasks" | "channel" | "summary" | "recording" | "council";
     notes?: MeetingNotes;
   }) => void;
   task_changed: (data: { channelId: string; taskId: string; version: number }) => void;
@@ -122,6 +124,8 @@ export interface ClientToServerEvents {
       waiting?: boolean;
       sessionId?: string;
       activeSpeakerSocketId?: string | null;
+      /** NV-MT1: the room starts newcomers with the mic off. */
+      muteOnJoin?: boolean;
     }) => void,
   ) => void;
   create_webrtc_transport: (

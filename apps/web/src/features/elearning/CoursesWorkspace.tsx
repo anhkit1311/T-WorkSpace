@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type CSSProperties, type FormEvent } from "react";
-import type { CourseSummary } from "@doan/shared";
+import type { CourseEnrollmentMode, CourseSummary } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import { Badge, Button, Field, Modal } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
@@ -114,6 +114,7 @@ export function CoursesWorkspace() {
                 {course.canManage && <Badge tone={course.status === "published" ? "green" : "amber"}>{STATUS_LABEL[course.status]}</Badge>}
                 {course.enrolled && (course.progress === 100 ? <Badge tone="green">Đã hoàn thành</Badge> : <Badge tone="blue">Đang học</Badge>)}
                 {course.enrollment === "assigned" && <Badge>Theo chỉ định</Badge>}
+                {course.enrollment === "approval" && <Badge>{course.requested ? "Chờ duyệt" : "Cần duyệt"}</Badge>}
               </span>
               {course.progress !== null && (
                 <span className="course-card__progress">
@@ -148,7 +149,7 @@ function CreateCourse({ units, onClose, onCreated }: { units: { id: string; code
   const [code, setCode] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [enrollment, setEnrollment] = useState<"open" | "assigned">("open");
+  const [enrollment, setEnrollment] = useState<CourseEnrollmentMode>("open");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -195,9 +196,10 @@ function CreateCourse({ units, onClose, onCreated }: { units: { id: string; code
           <textarea rows={3} value={description} onChange={(event) => setDescription(event.target.value)} maxLength={4000} />
         </Field>
         <Field label="Ghi danh">
-          <select value={enrollment} onChange={(event) => setEnrollment(event.target.value as "open" | "assigned")}>
+          <select value={enrollment} onChange={(event) => setEnrollment(event.target.value as CourseEnrollmentMode)}>
             <option value="open">Mở: học viên tự đăng ký</option>
             <option value="assigned">Chỉ định: giảng viên gán học viên</option>
+            <option value="approval">Cần duyệt: học viên gửi yêu cầu, giảng viên duyệt</option>
           </select>
         </Field>
         {error && <p role="alert" className="courses-error">{error}</p>}

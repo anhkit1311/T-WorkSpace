@@ -24,6 +24,8 @@ import { roomManager } from "./modules/meetings/media/room-manager.js";
 import { recoverRecordings, stopAllRecordings } from "./modules/meetings/recording/recordings.js";
 import { publishOutcomeChange } from "./modules/meetings/outcome-events.js";
 import { startMaintenance } from "./infrastructure/operations/maintenance.js";
+import { startMeetingReminders } from "./modules/meetings/reminders.js";
+import { setNoticeEmitter } from "./infrastructure/realtime/notices.js";
 import { openapi } from "./shared/http/openapi.js";
 import { renderMetrics, type Metric } from "./infrastructure/operations/prometheus.js";
 const port = Number(process.env.API_PORT ?? 3001);
@@ -91,6 +93,7 @@ export function createApiServer(): Server {
   });
 
   io = initSocketServer(server, webOrigin);
+  setNoticeEmitter(io);
   ioForShutdown.set(server, io);
   server.requestTimeout = 30000;
   server.headersTimeout = 10000;
@@ -283,6 +286,7 @@ if (process.argv[1]?.endsWith("server.ts") || process.argv[1]?.endsWith("server.
   const stopMaintenance = startMaintenance();
   const stopCallCenter = startCallCenter(ioForShutdown.get(server)!);
   const stopElearning = startElearning();
+  const stopReminders = startMeetingReminders(ioForShutdown.get(server)!);
   // Q3: media jobs (handlers registered by the modules above) from the PostgreSQL queue.
   const stopJobs = startJobWorker((event, details = {}) =>
     console.log(JSON.stringify({ level: event.endsWith("failed") ? "warn" : "info", event, ...details })),
@@ -297,6 +301,7 @@ if (process.argv[1]?.endsWith("server.ts") || process.argv[1]?.endsWith("server.
     stopMaintenance();
     stopCallCenter();
     stopElearning();
+    stopReminders();
     stopJobs();
     console.log(JSON.stringify({ level: "info", event: "shutdown_started" }));
     const deadline = setTimeout(() => process.exit(1), 10000);

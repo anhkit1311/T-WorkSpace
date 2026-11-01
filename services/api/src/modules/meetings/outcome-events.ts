@@ -4,7 +4,7 @@ import { getMessageItem } from "../chat/conversations.js";
 
 type OutcomeChange = Parameters<ServerToClientEvents["meeting_outcomes_changed"]>[0];
 // Structural type keeps this module free of a runtime import cycle with the socket server.
-interface Emitter {
+export interface Emitter {
   to(rooms: string | string[]): {
     emit<E extends keyof ServerToClientEvents>(
       event: E,

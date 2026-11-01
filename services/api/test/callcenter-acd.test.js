@@ -41,6 +41,13 @@ test("Call center domain rules", () => {
   assert.equal(supervisor.canReviewCall({ department_id: "d2", agent_user_id: "u2" }), false);
   assert.equal(supervisor.canReviewCall({ department_id: "d2", agent_user_id: "u1" }), true);
   assert.equal(new CallCenterAccess("u3", true, new Map()).supervisedDepartments(), null);
+  // A system admin configures every department but hears recordings / reads tickets only where given a role.
+  const admin = new CallCenterAccess("u3", true, new Map([["d1", new Set(["supervisor"])]]));
+  assert.equal(admin.supervises("d2"), true);
+  assert.equal(admin.canReviewCall({ department_id: "d2", agent_user_id: "u2" }), false);
+  assert.equal(admin.canReviewCall({ department_id: "d1", agent_user_id: "u2" }), true);
+  assert.deepEqual([admin.worksIn("d1"), admin.worksIn("d2"), admin.worksIn(null)], [true, false, false]);
+  assert.deepEqual(admin.workDepartments(), ["d1"]);
 });
 
 function harness({ webSessions = {}, online = () => true } = {}) {
@@ -72,6 +79,7 @@ function harness({ webSessions = {}, online = () => true } = {}) {
   const states = [];
   const voicemails = [];
   const missed = [];
+  const callbacks = [];
   const department = (id, wrapUpSeconds) => ({
     id,
     name: id,
@@ -98,6 +106,7 @@ function harness({ webSessions = {}, online = () => true } = {}) {
     updateCall: async (id, patch) => void Object.assign(calls.get(id), patch),
     saveVoicemail: async (input) => void voicemails.push(input),
     missedCall: async (input) => void missed.push(input),
+    callbackRequested: async (input) => void callbacks.push(input),
     agentRoster: async () => [
       { userId: "alice", displayName: "Alice", departments: ["sales"], extension: "2101", state: "offline", reason: "", since: null },
       { userId: "bob", displayName: "Bob", departments: ["sales"], extension: "2102", state: "offline", reason: "", since: null },
@@ -118,7 +127,7 @@ function harness({ webSessions = {}, online = () => true } = {}) {
   };
   const call = () => [...calls.values()][0];
   const agentState = (userId) => acd.agentView(userId).state;
-  return { acd, pbxCalls, calls, call, voicemails, missed, agentState, advance, flush };
+  return { acd, pbxCalls, calls, call, voicemails, missed, callbacks, agentState, advance, flush };
 }
 
 const inbound = { type: "call_started", channelId: "caller", args: ["inbound", "19001234"], callerNumber: "+84912345678", callerName: "", exten: "19001234" };
@@ -204,6 +213,31 @@ test("ACD: a caller who hangs up in the queue opens a missed-call ticket; one wh
   await second.acd.handle({ type: "dtmf", channelId: "caller", digit: "2" });
   await second.acd.handle({ type: "channel_ended", channelId: "caller" });
   assert.deepEqual(second.missed, [{ callId: second.call().id, departmentId: "support", callerNumber: "0912345678", callerUserId: null }]);
+});
+
+test("ACD 2.4: a waiting caller presses * to be called back; browser callers are not offered it", async () => {
+  const { acd, pbxCalls, call, callbacks, missed, flush } = harness();
+  await acd.handle({ type: "connected" });
+  await acd.handle(inbound);
+  await acd.handle({ type: "dtmf", channelId: "caller", digit: "1" }); // nobody is ready: the caller waits
+  const hold = pbxCalls.filter(([name]) => name === "play").at(-1);
+  assert.ok(hold[2].includes("sound:digits/star"), "the hold prompt offers the callback key");
+  await acd.handle({ type: "dtmf", channelId: "caller", digit: "*" });
+  assert.equal(acd.snapshot("sales").waiting.length, 0, "left the queue");
+  assert.deepEqual(callbacks, [{ callId: call().id, departmentId: "sales", callerNumber: "0912345678", callerUserId: null }]);
+  const thanks = pbxCalls.filter(([name]) => name === "play").at(-1);
+  assert.deepEqual(thanks[2], ["sound:auth-thankyou"]);
+  // Hanging up during the thank-you still counts as a callback, not an abandoned call.
+  await acd.handle({ type: "channel_ended", channelId: "caller" });
+  await flush();
+  assert.equal(call().outcome, "callback");
+  assert.equal(missed.length, 0);
+
+  const ivr = harness();
+  await ivr.acd.handle({ type: "connected" });
+  await ivr.acd.handle(inbound);
+  await ivr.acd.handle({ type: "dtmf", channelId: "caller", digit: "*" }); // still in the menu: ignored
+  assert.equal(ivr.callbacks.length, 0);
 });
 
 test("CC-9 KPI: ASA, AHT, abandon rate and service level", () => {

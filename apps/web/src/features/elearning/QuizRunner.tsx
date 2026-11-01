@@ -81,8 +81,9 @@ export function QuizRunner({ lesson, onFinished }: { lesson: LessonDetail; onFin
           {quiz.drawCount && quiz.drawCount < quiz.questionIds.length ? `${quiz.drawCount} câu rút ngẫu nhiên từ ${quiz.questionIds.length}` : `${quiz.questionIds.length} câu hỏi`} · {quiz.timeLimitSeconds ? `${Math.round(quiz.timeLimitSeconds / 60)} phút` : "không giới hạn thời gian"} · đạt từ {quiz.passPercent}%
         </p>
         {quiz.bestPercent !== null && <Badge tone={quiz.passed ? "green" : "amber"}>Điểm cao nhất: {quiz.bestPercent}%{quiz.passed ? " · Đạt" : ""}</Badge>}
+        {quiz.attemptsLeft !== null && <Badge>Còn {quiz.attemptsLeft}/{quiz.maxAttempts} lần làm</Badge>}
         {error && <p role="alert" className="courses-error">{error}</p>}
-        <Button icon="play" onClick={() => void start()}>{quiz.openAttemptId ? "Làm tiếp" : quiz.bestPercent === null ? "Bắt đầu làm bài" : "Làm lại"}</Button>
+        <Button icon="play" disabled={!quiz.openAttemptId && quiz.attemptsLeft === 0} onClick={() => void start()}>{quiz.openAttemptId ? "Làm tiếp" : quiz.bestPercent === null ? "Bắt đầu làm bài" : "Làm lại"}</Button>
       </div>
     );
 

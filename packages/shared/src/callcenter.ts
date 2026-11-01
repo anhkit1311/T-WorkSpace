@@ -9,6 +9,8 @@ export type CallOutcome =
   | "abandoned"
   | "missed"
   | "voicemail"
+  /** 2.4: left the queue asking to be called back. */
+  | "callback"
   | "busy"
   | "failed"
   | "transferred";
@@ -103,6 +105,9 @@ export interface CcCallRecord {
 export interface CcCallTranscript {
   status: CcCallRecord["transcriptStatus"];
   segments: { start: number; end: number; text: string }[];
+  /** 2.1: the language model's summary and suggested disposition; null while SUMMARY_URL is unset. */
+  aiSummary: string | null;
+  aiDispositionId: string | null;
 }
 
 /** What an agent's screen needs: who they are in the call center and their softphone account. */
@@ -176,7 +181,7 @@ export interface CcLiveSnapshot {
 
 export type TicketStatus = "open" | "in_progress" | "waiting" | "resolved" | "closed";
 export type TicketPriority = "low" | "normal" | "high" | "urgent";
-export type TicketSource = "call" | "missed_call" | "voicemail" | "manual" | "elearning";
+export type TicketSource = "call" | "missed_call" | "voicemail" | "callback" | "manual" | "elearning";
 
 export interface CcTicket {
   id: string;

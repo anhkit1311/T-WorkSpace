@@ -275,6 +275,7 @@ function LessonEditor({ lesson, courseId, run, onDeleted }: { lesson: LessonDeta
   const [picked, setPicked] = useState<string[]>(lesson.quiz?.questionIds ?? []);
   const [drawCount, setDrawCount] = useState(lesson.quiz?.drawCount ? String(lesson.quiz.drawCount) : "");
   const [shuffle, setShuffle] = useState(lesson.quiz?.shuffle ?? false);
+  const [maxAttempts, setMaxAttempts] = useState(lesson.quiz?.maxAttempts ? String(lesson.quiz.maxAttempts) : "");
   const [bank, setBank] = useState<CourseQuestion[]>([]);
   const [upload, setUpload] = useState<number | null>(null);
   useEffect(() => {
@@ -292,6 +293,7 @@ function LessonEditor({ lesson, courseId, run, onDeleted }: { lesson: LessonDeta
               passPercent: Number(passPercent),
               timeLimitSeconds: timeLimit ? Math.round(Number(timeLimit) * 60) : null,
               drawCount: drawCount ? Number(drawCount) : null,
+              maxAttempts: maxAttempts ? Number(maxAttempts) : null,
               shuffle,
             }
           : {}),
@@ -335,6 +337,10 @@ function LessonEditor({ lesson, courseId, run, onDeleted }: { lesson: LessonDeta
             <label>
               Rút ngẫu nhiên (câu, để trống = tất cả)
               <input type="number" min={1} max={Math.max(1, picked.length)} value={drawCount} onChange={(event) => setDrawCount(event.target.value)} />
+            </label>
+            <label>
+              Số lần làm (để trống = không giới hạn)
+              <input type="number" min={1} max={100} value={maxAttempts} onChange={(event) => setMaxAttempts(event.target.value)} />
             </label>
           </div>
           <label className="course-check">

@@ -6,8 +6,7 @@
 //
 // Every record goes through the real service layer, acting as the existing system administrator.
 // All accounts share SEED_ACADEMIC_PASSWORD; without it a random password is generated and printed once.
-// `--reset` removes the demo faculty and its accounts first (development databases only); it also
-// clears rows an older version of this script left in the (kept) thesis_* tables.
+// `--reset` removes the demo faculty and its accounts first (development databases only).
 import { randomBytes, randomUUID } from "node:crypto";
 import { pool } from "../../dist/api/infrastructure/database/db.js";
 import { hashPassword } from "../../dist/api/modules/auth/password.js";
@@ -47,29 +46,10 @@ async function reset() {
     await client.query("BEGIN");
     if (unit) {
       await client.query(`SET LOCAL session_replication_role = replica`);
-      const terms = `(SELECT id FROM thesis_terms WHERE unit_id=$1)`;
-      const projects = `(SELECT id FROM thesis_projects WHERE term_id IN ${terms})`;
-      const workspaces = (await client.query(`SELECT workspace_id FROM thesis_projects WHERE term_id IN ${terms} AND workspace_id IS NOT NULL`, [unit.id])).rows.map((r) => r.workspace_id);
-      for (const table of ["thesis_appeals", "thesis_results", "thesis_reviews", "thesis_supervision_logs", "thesis_submissions", "thesis_project_events"])
-        await client.query(`DELETE FROM ${table} WHERE project_id IN ${projects}`, [unit.id]);
-      await client.query(`DELETE FROM thesis_score_items WHERE sheet_id IN (SELECT id FROM thesis_score_sheets WHERE project_id IN ${projects})`, [unit.id]);
-      await client.query(`DELETE FROM thesis_score_sheets WHERE project_id IN ${projects}`, [unit.id]);
-      await client.query(`DELETE FROM thesis_lecturer_bookings WHERE slot_id IN (SELECT id FROM thesis_defense_slots WHERE project_id IN ${projects})`, [unit.id]);
-      await client.query(`DELETE FROM thesis_defense_slots WHERE project_id IN ${projects}`, [unit.id]);
-      await client.query(`DELETE FROM thesis_grade_ledger WHERE term_id IN ${terms}`, [unit.id]);
-      await client.query(`DELETE FROM thesis_committee_members WHERE committee_id IN (SELECT id FROM thesis_committees WHERE term_id IN ${terms})`, [unit.id]);
-      await client.query(`DELETE FROM thesis_committees WHERE term_id IN ${terms}`, [unit.id]);
-      await client.query(`DELETE FROM thesis_projects WHERE term_id IN ${terms}`, [unit.id]);
-      await client.query(`DELETE FROM thesis_registrations WHERE group_id IN (SELECT id FROM thesis_groups WHERE term_id IN ${terms})`, [unit.id]);
-      for (const table of ["thesis_group_members", "thesis_groups", "thesis_rubric_criteria", "thesis_milestones", "thesis_enrollments", "thesis_term_supervisors"])
-        await client.query(`DELETE FROM ${table} WHERE term_id IN ${terms}`, [unit.id]);
-      await client.query(`DELETE FROM thesis_topic_decisions WHERE topic_id IN (SELECT id FROM thesis_topics WHERE term_id IN ${terms})`, [unit.id]);
-      await client.query(`DELETE FROM thesis_topics WHERE term_id IN ${terms}`, [unit.id]);
-      await client.query(`DELETE FROM academic_audit_events WHERE unit_id=$1 OR term_id IN ${terms}`, [unit.id]);
-      for (const table of ["thesis_terms", "academic_role_grants", "academic_staff", "academic_departments"]) await client.query(`DELETE FROM ${table} WHERE unit_id=$1`, [unit.id]);
+      await client.query(`DELETE FROM academic_audit_events WHERE unit_id=$1`, [unit.id]);
+      for (const table of ["academic_role_grants", "academic_staff", "academic_departments"]) await client.query(`DELETE FROM ${table} WHERE unit_id=$1`, [unit.id]);
       await client.query(`DELETE FROM academic_units WHERE id=$1`, [unit.id]);
       await client.query(`SET LOCAL session_replication_role = origin`);
-      if (workspaces.length) await client.query(`DELETE FROM workspaces WHERE id=ANY($1::uuid[])`, [workspaces]);
     }
     const users = `(SELECT id FROM users WHERE email LIKE '%@${DOMAIN}')`;
     await client.query(`DELETE FROM academic_role_grants WHERE user_id IN ${users}`);

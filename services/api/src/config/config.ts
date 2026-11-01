@@ -25,9 +25,9 @@ export const config = {
   smtpUser: process.env.SMTP_USER,
   smtpPass: process.env.SMTP_PASS,
   // Keep a configured/verified sender address; only normalize the old brand's display name.
-  smtpFrom: (process.env.SMTP_FROM ?? "nexo <no-reply@collabspace.vn>").replace(
+  smtpFrom: (process.env.SMTP_FROM ?? "T-WorkSpace <no-reply@collabspace.vn>").replace(
     /^Colla[bp]Space(?=\s*<)/i,
-    "nexo",
+    "T-WorkSpace",
   ),
   resendApiKey: process.env.RESEND_API_KEY,
   otpExpirationMinutes: readPositiveInteger("OTP_EXPIRATION_MINUTES", 10),
@@ -51,6 +51,10 @@ export const config = {
   transcribeApiKey: process.env.TRANSCRIBE_API_KEY ?? "",
   transcribeModel: process.env.TRANSCRIBE_MODEL ?? "whisper-1",
   transcribeLanguage: process.env.TRANSCRIBE_LANGUAGE ?? "vi",
+  // Any OpenAI-compatible /v1/chat/completions endpoint (Ollama, vLLM, a hosted model).
+  summaryUrl: process.env.SUMMARY_URL ?? "",
+  summaryApiKey: process.env.SUMMARY_API_KEY ?? "",
+  summaryModel: process.env.SUMMARY_MODEL ?? "qwen2.5:7b-instruct",
 };
 
 export function getJwtSecret(): Uint8Array {

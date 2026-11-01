@@ -75,6 +75,12 @@ test(
       // After it is resolved, a new miss opens a fresh ticket.
       await repo.missedCall({ callId: missedId, departmentId, callerNumber: "0912000111", callerUserId: null });
       assert.equal((await tickets.list(agentId, params({ status: "open" }))).length, 1);
+      // 2.4: a callback request from the same caller lands on that open ticket and raises it to high.
+      // (Left unqueued here so the KPI numbers below stay as they are.)
+      const callbackCall = await call({ started: t(250), queued: null, ended: t(260), outcome: "callback" });
+      await repo.callbackRequested({ callId: callbackCall, departmentId, callerNumber: "0912000111", callerUserId: null });
+      const reopened = await tickets.list(agentId, params({ status: "open" }));
+      assert.deepEqual(reopened.map((item) => item.priority), ["high"]);
 
       // A ticket from an answered call carries the caller's number.
       const answered = await call({ started: t(300), queued: t(301), answered: t(311), ended: t(371), outcome: "answered", agent: agentId, caller: "0988777666" });
@@ -93,9 +99,10 @@ test(
       assert.equal(kpi.asa, 10);
       assert.equal(kpi.aht, 60);
       assert.equal(kpi.serviceLevel, 0.5);
-      const csv = await reports.exportCsv(adminId, departmentId, params({ from: day }));
-      assert.equal(csv.content.split("\r\n").length, 4);
-      assert.match(csv.content, /0988777666,Đã nghe,10,60,Agent Two/);
+      const table = await reports.exportCsv(adminId, departmentId, params({ from: day }));
+      assert.equal(table.rows.length, 5, "header + 4 calls (the callback included)");
+      assert.match(table.rows.map((row) => row.join(",")).join("\n"), /Hẹn gọi lại/);
+      assert.match(table.rows.map((row) => row.join(",")).join("\n"), /0988777666,Đã nghe,10,60,Agent Two/);
       await assert.rejects(reports.kpi(adminId, departmentId, params({ from: "2026-01-01", to: "2026-12-31" })), (error) => error.code === "INVALID_INPUT");
     } finally {
       if (departmentId) {

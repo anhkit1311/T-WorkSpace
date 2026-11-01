@@ -64,6 +64,13 @@ services:
       # Recordings and lesson videos (HLS) on a volume; FFmpeg is in the image.
       FFMPEG_COMMAND: ffmpeg
       MEDIA_DIR: /app/data/media
+      # Speech-to-text and AI summaries (OpenAI-compatible endpoints); empty turns them off.
+      TRANSCRIBE_URL: ${TRANSCRIBE_URL:-}
+      TRANSCRIBE_API_KEY: ${TRANSCRIBE_API_KEY:-}
+      TRANSCRIBE_MODEL: ${TRANSCRIBE_MODEL:-whisper-1}
+      SUMMARY_URL: ${SUMMARY_URL:-}
+      SUMMARY_API_KEY: ${SUMMARY_API_KEY:-}
+      SUMMARY_MODEL: ${SUMMARY_MODEL:-qwen2.5:7b-instruct}
       # Call center: ARI over the Docker network, browsers reach SIP over WSS through Nginx.
       ASTERISK_ARI_URL: http://asterisk:8088
       ASTERISK_ARI_USER: nexo

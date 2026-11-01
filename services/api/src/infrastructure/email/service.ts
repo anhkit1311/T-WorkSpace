@@ -39,9 +39,9 @@ function escapeHtml(value: string): string {
 }
 
 export async function sendWorkspaceInvitation(to: string, link: string): Promise<void> {
-  const subject = "[nexo] Lời mời tham gia nhóm làm việc";
-  const textBody = `Bạn được mời tham gia nhóm làm việc trên nexo. Đăng nhập hoặc đăng ký bằng email này rồi mở liên kết để nhận lời mời:\n${link}\nLời mời hết hạn sau 7 ngày. Nếu bạn không muốn tham gia, hãy bỏ qua email này.`;
-  const html = `<p>Bạn được mời tham gia nhóm trên nexo.</p><p><a href="${escapeHtml(link)}">Mở lời mời</a></p><p>Đăng nhập hoặc đăng ký bằng email này. Liên kết có hiệu lực 7 ngày.</p>`;
+  const subject = "[T-WorkSpace] Lời mời tham gia nhóm làm việc";
+  const textBody = `Bạn được mời tham gia nhóm làm việc trên T-WorkSpace. Đăng nhập hoặc đăng ký bằng email này rồi mở liên kết để nhận lời mời:\n${link}\nLời mời hết hạn sau 7 ngày. Nếu bạn không muốn tham gia, hãy bỏ qua email này.`;
+  const html = `<p>Bạn được mời tham gia nhóm trên T-WorkSpace.</p><p><a href="${escapeHtml(link)}">Mở lời mời</a></p><p>Đăng nhập hoặc đăng ký bằng email này. Liên kết có hiệu lực 7 ngày.</p>`;
   if (config.resendApiKey) {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -67,8 +67,8 @@ export async function sendOtpEmail({
   otp,
   displayName,
 }: SendOtpEmailOptions): Promise<void> {
-  const subject = `[nexo] ${otp} là mã xác thực tài khoản của bạn`;
-  const textBody = `Xin chào ${displayName},\n\nMã xác thực OTP của bạn là: ${otp}\n\nMã này có hiệu lực trong ${config.otpExpirationMinutes} phút. Vui lòng không chia sẻ mã này cho bất kỳ ai. Nếu bạn không yêu cầu, hãy bỏ qua email này.\n\nTrân trọng,\nĐội ngũ nexo`;
+  const subject = `[T-WorkSpace] ${otp} là mã xác thực tài khoản của bạn`;
+  const textBody = `Xin chào ${displayName},\n\nMã xác thực OTP của bạn là: ${otp}\n\nMã này có hiệu lực trong ${config.otpExpirationMinutes} phút. Vui lòng không chia sẻ mã này cho bất kỳ ai. Nếu bạn không yêu cầu, hãy bỏ qua email này.\n\nTrân trọng,\nĐội ngũ T-WorkSpace`;
 
   const htmlBody = `
 <!DOCTYPE html>
@@ -90,17 +90,17 @@ export async function sendOtpEmail({
 </head>
 <body>
   <div class="card">
-    <div class="logo">nexo</div>
+    <div class="logo">T-WorkSpace</div>
     <h2>Xác thực tài khoản của bạn</h2>
     <p>Xin chào <strong>${escapeHtml(displayName)}</strong>,</p>
-    <p>Cảm ơn bạn đã đăng ký tài khoản trên nền tảng không gian làm việc cộng tác nexo. Vui lòng sử dụng mã xác thực OTP bên dưới để kích hoạt tài khoản:</p>
+    <p>Cảm ơn bạn đã đăng ký tài khoản trên nền tảng không gian làm việc cộng tác T-WorkSpace. Vui lòng sử dụng mã xác thực OTP bên dưới để kích hoạt tài khoản:</p>
     <div class="otp-box">
       <div class="otp-code">${otp}</div>
       <div class="expiry">Mã có hiệu lực trong vòng ${config.otpExpirationMinutes} phút</div>
     </div>
     <p>Nếu bạn không thực hiện đăng ký tài khoản này, vui lòng bỏ qua email.</p>
     <div class="footer">
-      Email này được gửi tự động từ hệ thống nexo. Vui lòng không trả lời trực tiếp email này.
+      Email này được gửi tự động từ hệ thống T-WorkSpace. Vui lòng không trả lời trực tiếp email này.
     </div>
   </div>
 </body>

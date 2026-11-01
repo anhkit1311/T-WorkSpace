@@ -20,6 +20,8 @@ export async function listMeetingCalendar(userId: string, from: Date, to: Date):
          c.name AS "roomName", w.name AS "workspaceName", s.created_by AS "createdBy",
          u.display_name AS "organizerName", s.title, s.description,
          s.starts_at AS "startsAt", s.ends_at AS "endsAt",
+         s.waiting_room AS "waitingRoom", s.auto_record AS "autoRecord", s.mute_on_join AS "muteOnJoin",
+         COALESCE((SELECT json_agg(v.user_id) FROM meeting_invitees v WHERE v.schedule_id=s.id),'[]'::json) AS "inviteeIds",
          COALESCE((SELECT json_agg(i.label ORDER BY i.position,i.id) FROM meeting_agenda_items i WHERE i.schedule_id=s.id),'[]'::json) AS agenda,
          (m.can_write AND (s.created_by=$1 OR m.role IN ('owner','admin'))) AS "canManage"
        FROM meeting_schedules s

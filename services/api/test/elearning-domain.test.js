@@ -63,6 +63,7 @@ test("Course access: staff of the unit create, owner/co-teacher/unit admin manag
   assert.equal(student.canSee(course, false), false, "drafts are hidden");
   assert.equal(student.canSee({ ...course, status: "published" }, false), true);
   assert.equal(student.canSelfEnroll({ ...course, status: "published", enrollment: "assigned" }), false);
+  assert.equal(student.canSelfEnroll({ ...course, status: "published", enrollment: "approval" }), true, "approval courses take requests");
 });
 
 test("Quiz draws N questions at random and keeps option order stable per attempt", () => {

@@ -87,7 +87,10 @@ test("Recording access: host manages, attendees watch, the room only once shared
     await recordings.shareRecording(owner, id, true);
     assert.equal((await recordings.listRecordings(latecomer, sessionId)).recordings.length, 1);
     await recordings.recordingFile(latecomer, id, "p0001_00000.ts");
+    const views = await pool.query(`SELECT user_id FROM media_access_log WHERE ref_id=$1`, [id]);
+    assert.deepEqual(views.rows.map((row) => row.user_id), [member], "one view per playlist; refused and segment requests are not views");
   } finally {
+    await pool.query(`DELETE FROM media_access_log WHERE user_id=ANY($1::uuid[])`, [[owner, member, latecomer]]);
     if (workspace) await pool.query(`DELETE FROM workspaces WHERE id=$1`, [workspace.id]);
     for (const id of [owner, member, latecomer]) await pool.query(`DELETE FROM users WHERE id=$1`, [id]);
     await pool.end();

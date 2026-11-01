@@ -33,8 +33,25 @@ export class CallCenterAccess {
     return this.isAdmin || this.roles.size > 0;
   }
 
+  /**
+   * Spec "Quy tắc bảo vệ dữ liệu": a system admin configures the call center but does not hear recordings
+   * or read tickets unless also given a role in that department. Content checks therefore skip isAdmin.
+   */
+  worksIn(departmentId: string | null): boolean {
+    return departmentId !== null && this.roles.has(departmentId);
+  }
+
+  supervisesContent(departmentId: string | null): boolean {
+    return departmentId !== null && Boolean(this.roles.get(departmentId)?.has("supervisor"));
+  }
+
+  /** Departments whose tickets and voicemails this user may read. */
+  workDepartments(): string[] {
+    return [...this.roles.keys()];
+  }
+
   /** CC-7: a recording or wrap-up is open to the agent who took the call and the department's supervisors. */
   canReviewCall(call: { department_id: string | null; agent_user_id: string | null }): boolean {
-    return call.agent_user_id === this.userId || this.supervises(call.department_id);
+    return call.agent_user_id === this.userId || this.supervisesContent(call.department_id);
   }
 }

@@ -5,8 +5,9 @@ import { useMeeting } from "../../app/providers/MeetingContext";
 import { Button } from "../../shared/ui/Primitives";
 import { HlsPlayer } from "../../shared/ui/HlsPlayer";
 import {
+  createMeetingTaskApi,
   getMeetingRecordingsApi,
-  meetingRecordingPlaylist,
+  meetingRecordingLinkApi,
   requestRecordingTranscriptApi,
   shareMeetingRecordingApi,
   startMeetingRecordingApi,
@@ -34,8 +35,10 @@ export function MeetingRecordingPanel({ sessionId, live }: { sessionId: string; 
   const { controlSocket } = useMeeting();
   const [data, setData] = useState<MeetingRecordings | null>(null);
   const [playing, setPlaying] = useState<string | null>(null);
+  const [src, setSrc] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [added, setAdded] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -47,6 +50,20 @@ export function MeetingRecordingPanel({ sessionId, live }: { sessionId: string; 
   }, [accessToken, sessionId]);
 
   useEffect(() => void load(), [load]);
+
+  useEffect(() => {
+    setSrc(null);
+    if (!playing || !accessToken) return;
+    let alive = true;
+    void meetingRecordingLinkApi(accessToken, playing).then(
+      (url) => alive && setSrc(url),
+      (failure: Error) => alive && setError(failure.message),
+    );
+    return () => {
+      alive = false;
+    };
+    // A refreshed token must not restart the player.
+  }, [playing]);
 
   useEffect(() => {
     if (!live || !controlSocket) return;
@@ -138,13 +155,43 @@ export function MeetingRecordingPanel({ sessionId, live }: { sessionId: string; 
               </label>
             )}
             {item.status === "failed" && item.error && <small>{item.error}</small>}
+            {item.aiSummary && (
+              <div className="meeting-ai-summary">
+                <strong>Tóm tắt (AI, cần kiểm tra lại)</strong>
+                <p>{item.aiSummary}</p>
+                {item.aiActions.length > 0 && (
+                  <ul>
+                    {item.aiActions.map((action) => (
+                      <li key={action}>
+                        <span>{action}</span>
+                        {data.canManage && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={busy || added.has(action)}
+                            onClick={() =>
+                              void run(async () => {
+                                await createMeetingTaskApi(accessToken!, sessionId, { clientTaskId: crypto.randomUUID(), title: action, assigneeId: null, dueAt: null });
+                                setAdded((current) => new Set(current).add(action));
+                              })
+                            }
+                          >
+                            {added.has(action) ? "Đã thêm" : "Thêm vào việc cần làm"}
+                          </Button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </li>
         ))}
       </ul>
-      {playing && (
+      {playing && src && (
         <div className="meeting-recording-player">
           <HlsPlayer
-            src={meetingRecordingPlaylist(playing)}
+            src={src}
             label="Bản ghi cuộc họp"
             captions={data.recordings.find((item) => item.id === playing)?.transcriptStatus === "ready"}
           />

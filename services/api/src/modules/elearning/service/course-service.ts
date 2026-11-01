@@ -5,6 +5,8 @@ import { conflict, forbidden, id, integer, invalid, notFound, oneOf, optionalId,
 import { questionProblem, type Answer, type QuestionOption } from "../domain/quiz.js";
 import { completionPercent } from "../domain/progress.js";
 import type { CourseRow, ElearningRepository } from "../repository/elearning-repository.js";
+import type { Table } from "../../../shared/http/table-export.js";
+import { addNotices } from "../../../infrastructure/realtime/notices.js";
 
 const KINDS = ["video", "document", "quiz", "live"] as const satisfies readonly LessonKind[];
 
@@ -30,7 +32,7 @@ export class CourseService {
       .map((row) => this.summary(row, access.manages(row), row.enrolled, access.canSelfEnroll(row), row));
   }
 
-  private summary(course: CourseRow, manages: boolean, enrolled: boolean, canEnroll: boolean, counts: { lessonCount: number; learnerCount: number; progress: number | null }): CourseSummary {
+  private summary(course: CourseRow, manages: boolean, enrolled: boolean, canEnroll: boolean, counts: { lessonCount: number; learnerCount: number; progress: number | null; requested: boolean }): CourseSummary {
     return {
       id: course.id,
       code: course.code,
@@ -44,19 +46,22 @@ export class CourseService {
       lessonCount: counts.lessonCount,
       learnerCount: counts.learnerCount,
       enrolled,
+      requested: counts.requested,
       progress: counts.progress,
       canManage: manages,
-      canEnroll: canEnroll && !enrolled,
+      // Staff of an approval course have nobody to ask but themselves.
+      canEnroll: canEnroll && !enrolled && !counts.requested && !(manages && course.enrollment === "approval"),
     };
   }
 
   async detail(userId: string, courseId: string): Promise<CourseDetail> {
     const { course, access, manages, enrolled } = await this.load(userId, courseId, "see");
-    const [chapters, lessons, instructors, hotline] = await Promise.all([
+    const [chapters, lessons, instructors, hotline, requested] = await Promise.all([
       this.repo.chapters(course.id),
       this.repo.lessons(course.id, userId),
       this.repo.instructors(course.id),
       this.repo.supportHotline(course.unitId),
+      enrolled ? false : this.repo.hasRequest(course.id, userId),
     ]);
     // Learners see published lessons only; staff see drafts too.
     const visible = lessons.filter((lesson) => manages || lesson.status === "published");
@@ -67,6 +72,7 @@ export class CourseService {
         lessonCount: published.length,
         learnerCount: learners,
         progress: enrolled ? completionPercent(published.length, published.filter((lesson) => lesson.completed).length) : null,
+        requested,
       }),
       chapters: chapters.map((chapter) => ({ ...chapter, lessons: visible.filter((lesson) => lesson.chapterId === chapter.id) })),
       instructors,
@@ -89,7 +95,7 @@ export class CourseService {
       code: text(body, "code", 20, { pattern: /^[A-Z0-9_-]{2,20}$/ }),
       title: text(body, "title", 160),
       description: text(body, "description", 4000, { optional: true }),
-      enrollment: oneOf(body, "enrollment", ["open", "assigned"] as const, "open"),
+      enrollment: oneOf(body, "enrollment", ["open", "assigned", "approval"] as const, "open"),
     });
     return this.detail(userId, courseId);
   }
@@ -99,7 +105,7 @@ export class CourseService {
     await this.repo.updateCourse(course.id, {
       title: body.title === undefined ? course.title : text(body, "title", 160),
       description: body.description === undefined ? course.description : text(body, "description", 4000, { optional: true }),
-      enrollment: oneOf(body, "enrollment", ["open", "assigned"] as const, course.enrollment),
+      enrollment: oneOf(body, "enrollment", ["open", "assigned", "approval"] as const, course.enrollment),
       status: oneOf(body, "status", ["draft", "published", "archived"] as const, course.status),
     });
     return this.detail(userId, course.id);
@@ -179,6 +185,7 @@ export class CourseService {
         change.timeLimitSeconds = body.timeLimitSeconds === null ? null : integer(body, "timeLimitSeconds", 60, 14400);
       if (body.passPercent !== undefined) change.passPercent = integer(body, "passPercent", 0, 100);
       if (body.drawCount !== undefined) change.drawCount = body.drawCount === null ? null : integer(body, "drawCount", 1, 200);
+      if (body.maxAttempts !== undefined) change.maxAttempts = body.maxAttempts === null ? null : integer(body, "maxAttempts", 1, 100);
       if (body.shuffle !== undefined) change.shuffle = body.shuffle === true;
       if (body.questionIds !== undefined) {
         if (!Array.isArray(body.questionIds) || body.questionIds.length > 200) throw invalid("Danh sách câu hỏi không hợp lệ.");
@@ -214,8 +221,25 @@ export class CourseService {
   async enrollSelf(userId: string, courseId: string) {
     const { course, access, enrolled } = await this.load(userId, courseId, "see");
     if (!enrolled && !access.canSelfEnroll(course)) throw forbidden();
-    await this.repo.enroll(course.id, [userId], "self", null);
+    // NV-EL2: a course that needs approval only records the request.
+    if (!enrolled && course.enrollment === "approval") await this.repo.requestEnrollment(course.id, userId);
+    else await this.repo.enroll(course.id, [userId], "self", null);
     return this.detail(userId, course.id);
+  }
+
+  /** NV-EL2: an instructor approves (enrolls) or rejects a pending request. */
+  async decideRequest(userId: string, courseId: string, learnerId: string, body: Body) {
+    const { course } = await this.load(userId, courseId, "manage");
+    if (typeof body.approve !== "boolean") throw invalid("approve phải là true hoặc false.");
+    if (!(await this.repo.dropRequest(course.id, id(learnerId)))) throw notFound("Không còn yêu cầu ghi danh này.");
+    if (body.approve) await this.repo.enroll(course.id, [learnerId], "self", userId);
+    await addNotices([learnerId], {
+      kind: "course",
+      title: body.approve ? "Đã được ghi danh" : "Yêu cầu ghi danh bị từ chối",
+      body: `${course.code} · ${course.title}`,
+      link: { view: "elearning" },
+    });
+    return { ok: true };
   }
 
   /** By list of emails, by class (a workspace's members) or by unit (its staff and agents). */
@@ -243,7 +267,9 @@ export class CourseService {
     if (!workspaceId && !unitId && body.emails === undefined) throw invalid("Chọn danh sách email, lớp hoặc đơn vị.");
     const unique = [...new Set(userIds)];
     const added = await this.repo.enroll(course.id, unique, "assigned", userId);
-    return { added, alreadyEnrolled: unique.length - added, notFound: missing };
+    // NV-EL2: learners are told when they are enrolled.
+    await addNotices(added, { kind: "course", title: "Đã được ghi danh", body: `${course.code} · ${course.title}`, link: { view: "elearning" } });
+    return { added: added.length, alreadyEnrolled: unique.length - added.length, notFound: missing };
   }
 
   async unenroll(userId: string, courseId: string, learnerId: string) {
@@ -364,14 +390,14 @@ export class CourseService {
           completedAt: learner.completedAt?.toISOString() ?? null,
         };
       }),
+      requests: report.requests.map((request) => ({ ...request, requestedAt: request.requestedAt.toISOString() })),
     };
   }
 
-  /** CSV of the progress table for Excel. */
-  async progressCsv(userId: string, courseId: string) {
+  /** The progress table for Excel. */
+  async progressTable(userId: string, courseId: string): Promise<Table> {
     const report = await this.progress(userId, courseId);
     const quizzes = report.lessons.filter((lesson) => lesson.kind === "quiz");
-    const cell = (value: string) => (/[",\n;]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value);
     const lines = [
       ["Họ tên", "Email", "Hoàn thành (%)", ...quizzes.map((quiz) => `Điểm: ${quiz.title}`)],
       ...report.learners.map((learner) => [
@@ -381,7 +407,7 @@ export class CourseService {
         ...quizzes.map((quiz) => (learner.quizPercents[quiz.id] === undefined ? "" : String(learner.quizPercents[quiz.id]))),
       ]),
     ];
-    return lines.map((line) => line.map(cell).join(",")).join("\r\n");
+    return { name: `tien-do-${courseId.slice(0, 8)}`, rows: lines };
   }
 }
 

@@ -8,7 +8,8 @@ import { query, pool } from "../database/db.js";
 import { createAdapter } from "@socket.io/postgres-adapter";
 import { addPresence, onlinePeers, startPresence } from "./presence.js";
 import { roomManager } from "../../modules/meetings/media/room-manager.js";
-import { publishMeetingSummary } from "../../modules/meetings/outcome-events.js";
+import { publishMeetingSummary, publishOutcomeChange } from "../../modules/meetings/outcome-events.js";
+import { startRecording } from "../../modules/meetings/recording/recordings.js";
 import { limitActor } from "../../shared/http/rate-limit.js";
 import {
   enterSession,
@@ -635,7 +636,15 @@ export function initSocketServer(
           routerRtpCapabilities: result.routerRtpCapabilities,
           existingProducers: result.existingProducers,
           activeSpeakerSocketId: roomManager.activeSpeaker(data.roomId),
+          muteOnJoin: admission.muteOnJoin,
         });
+        // NV-MT1 "tự động ghi hình": the host who opened the scheduled session starts it.
+        if (admission.autoRecord)
+          void startRecording(user.id, admission.sessionId, (roomId, sessionId) =>
+            publishOutcomeChange(io, { roomId, sessionId, part: "recording" }),
+          ).catch((error: Error) =>
+            console.warn(JSON.stringify({ level: "warn", event: "auto_record_failed", message: error.message })),
+          );
       } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : "Lỗi tham gia phòng họp";
         dropMeeting();

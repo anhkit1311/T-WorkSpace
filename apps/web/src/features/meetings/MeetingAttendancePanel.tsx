@@ -31,7 +31,7 @@ export function MeetingAttendancePanel({ sessionId }: { sessionId: string }) {
   const load = () => run(async () => setAttendance(await getMeetingAttendanceApi(accessToken!, sessionId)));
   const exportFile = () =>
     run(() =>
-      downloadMeetingAttendanceApi(accessToken!, sessionId, `tham-du-${(attendance?.startedAt ?? "").slice(0, 10)}.csv`),
+      downloadMeetingAttendanceApi(accessToken!, sessionId, `tham-du-${(attendance?.startedAt ?? "").slice(0, 10)}.xlsx`),
     );
 
   return (

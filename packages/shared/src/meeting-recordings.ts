@@ -12,6 +12,9 @@ export interface MeetingRecording {
   error: string | null;
   /** M3: speech-to-text captions (null: never requested). */
   transcriptStatus: "processing" | "ready" | "failed" | null;
+  /** 2.1: the language model's summary and follow-ups once the transcript is ready (SUMMARY_URL). */
+  aiSummary: string | null;
+  aiActions: string[];
 }
 
 /** M3: transcript.json beside a recording or video lesson. */

@@ -491,7 +491,7 @@ export async function deleteAccount(userId: string, targetId: string) {
     if (!target.rowCount) throw notFound("Không tìm thấy tài khoản.");
     const refused = (error: { code?: string; table?: string }) => {
       if (error.code !== "23503") throw error;
-      const what = error.table?.startsWith("thesis_") ? "dữ liệu đồ án" : (blockingData[error.table ?? ""] ?? `dữ liệu (${error.table})`);
+      const what = blockingData[error.table ?? ""] ?? `dữ liệu (${error.table})`;
       throw conflict("ACCOUNT_IN_USE", `Không xoá được ${target.rows[0].email}: tài khoản còn ${what}.`);
     };
     // Its máy lẻ become unassigned (ON DELETE SET NULL); returned so the switchboard can free them.

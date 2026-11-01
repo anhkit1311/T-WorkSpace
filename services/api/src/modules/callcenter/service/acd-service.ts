@@ -17,7 +17,7 @@ import type {
   PbxEvent,
 } from "../domain/ports.js";
 
-type Phase = "ivr" | "queued" | "offering" | "connected" | "voicemail" | "ended";
+type Phase = "ivr" | "queued" | "offering" | "connected" | "voicemail" | "callback" | "ended";
 
 /** CC-10: the leg ringing (or talking to) the transfer target. */
 interface Consult {
@@ -99,7 +99,13 @@ export const prompts = {
   /** BR-06: said once, before the caller reaches anyone (the bridge recording starts on answer). */
   recordingNotice: ["sound:conf-now-recording"],
   voicemailIntro: ["sound:vm-intro"],
+  /** 2.4: offered while waiting, to callers whose number can be called back. */
+  callbackOffer: ["sound:vm-press", "sound:digits/star"],
+  callbackConfirmed: ["sound:auth-thankyou"],
 };
+
+/** 2.4: the key a waiting caller presses to be called back instead of holding. */
+export const CALLBACK_DIGIT = "*";
 
 const IVR_DIGIT_TIMEOUT_MS = 6000;
 const IVR_MAX_TRIES = 2;
@@ -628,6 +634,8 @@ export class AcdService {
 
   private async onDigit(channelId: string, digit: string): Promise<void> {
     const call = this.callOf(channelId);
+    if (call?.phase === "queued" && channelId === call.channelId && digit === CALLBACK_DIGIT && this.canCallBack(call))
+      return this.requestCallback(call);
     if (!call || call.phase !== "ivr" || channelId !== call.channelId) return;
     const option = call.hotline?.options.find((item) => item.digit === digit);
     if (!option) return; // unknown keys are ignored; the timeout replays the menu
@@ -646,6 +654,8 @@ export class AcdService {
       call.timer = this.clock.setTimeout(() => this.run(() => this.onIvrTimeout(call.id)), IVR_DIGIT_TIMEOUT_MS);
     } else if (call.phase === "queued") {
       await this.pbx.startMusicOnHold(call.channelId).catch(() => undefined);
+    } else if (call.phase === "callback") {
+      await this.finish(call, "callback", !call.callerGone);
     } else if (call.phase === "voicemail" && !call.callerGone) {
       call.voicemailName = `vm-${call.id}`;
       await this.pbx.recordVoicemail(call.channelId, call.voicemailName, VOICEMAIL_MAX_SECONDS);
@@ -671,13 +681,34 @@ export class AcdService {
     this.queues.enqueue({ callId: call.id, departmentId: department.id, enqueuedAt: call.enqueuedAt });
     await this.store.updateCall(call.recordId, { queuedAt: new Date(call.enqueuedAt) });
     // Single-department hotlines and browser calls skip the menu, so the notice goes here.
-    await this.playTo(call, this.withNotice(call, prompts.hold));
+    await this.playTo(call, this.withNotice(call, this.canCallBack(call) ? [...prompts.hold, ...prompts.callbackOffer] : prompts.hold));
     call.timer = this.clock.setTimeout(
       () => this.run(() => this.onMaxWait(call.id)),
       department.maxWaitSeconds * 1000,
     );
     this.notifier.live(department.id);
     await this.distribute(department.id);
+  }
+
+  /** Only a real phone number can be dialled back (not anonymous callers or browser calls). */
+  private canCallBack(call: ActiveCall) {
+    return /^\d{3,15}$/.test(call.caller.number);
+  }
+
+  /** 2.4: the caller leaves the queue; a high-priority callback ticket keeps their turn for the desk. */
+  private async requestCallback(call: ActiveCall): Promise<void> {
+    this.clock.clearTimeout(call.timer);
+    if (this.queues.remove(call.id)) this.notifier.live(call.department!.id);
+    call.phase = "callback";
+    await this.store.callbackRequested({
+      callId: call.recordId,
+      departmentId: call.department!.id,
+      callerNumber: call.caller.number,
+      callerUserId: call.caller.userId,
+    });
+    if (call.playbackId) await this.pbx.stopPlayback(call.playbackId).catch(() => undefined);
+    await this.pbx.stopMusicOnHold(call.channelId).catch(() => undefined);
+    await this.playTo(call, prompts.callbackConfirmed);
   }
 
   private async onMaxWait(callId: string): Promise<void> {
@@ -810,7 +841,7 @@ export class AcdService {
     // A blind transfer still ringing has no one on the line yet: the caller gave up waiting.
     if (call.phase === "connected") return this.finish(call, call.agentChannelId ? "answered" : "abandoned", false);
     if (call.phase === "voicemail" && call.voicemailName) return; // RecordingFinished closes it
-    return this.finish(call, "abandoned", false);
+    return this.finish(call, call.phase === "callback" ? "callback" : "abandoned", false);
   }
 
   private async onRecordingDone(name: string, durationSeconds: number | null): Promise<void> {
@@ -830,7 +861,7 @@ export class AcdService {
 
   // ---- helpers -------------------------------------------------------------------------------
 
-  private async finish(call: ActiveCall, outcome: "answered" | "abandoned" | "voicemail" | "failed", hangup: boolean) {
+  private async finish(call: ActiveCall, outcome: "answered" | "abandoned" | "voicemail" | "callback" | "failed", hangup: boolean) {
     if (call.phase === "ended") return;
     const wasOffering = call.phase === "offering";
     call.phase = "ended";

@@ -136,12 +136,8 @@ export class CallCenterRepository implements AcdStore {
   /** The caller's account details when known; for outside callers only the history of their number. */
   async callerProfile(number: string, userId: string | null): Promise<CcCallerProfile> {
     const [student, tickets, courses, calls] = await Promise.all([
-      query<{ student_code: string; class_name: string; faculty: string }>(
-        `SELECT e.student_code,e.class_name,u.name AS faculty FROM thesis_enrollments e
-           JOIN thesis_terms t ON t.id=e.term_id JOIN academic_units u ON u.id=t.unit_id
-         WHERE e.student_id=$1::uuid ORDER BY t.registration_opens_at DESC LIMIT 1`,
-        [userId],
-      ),
+      // A numeric user code is an MSSV (same rule as the attendance export).
+      query<{ student_code: string }>(`SELECT user_code AS student_code FROM users WHERE id=$1::uuid AND user_code ~ '^[0-9]'`, [userId]),
       query<{ id: string; code: string; subject: string; status: TicketStatus; updated_at: Date }>(
         `SELECT id,'TK-'||lpad(number::text,6,'0') AS code,subject,status,updated_at FROM cc_tickets
          WHERE caller_user_id=$1::uuid OR ($1::uuid IS NULL AND caller_number=$2) ORDER BY (status IN ('resolved','closed')),updated_at DESC LIMIT 5`,
@@ -161,7 +157,7 @@ export class CallCenterRepository implements AcdStore {
     ]);
     const row = student.rows[0];
     return {
-      student: row ? { code: row.student_code, className: row.class_name, faculty: row.faculty } : null,
+      student: row ? { code: row.student_code, className: "", faculty: "" } : null,
       tickets: tickets.rows.map((item) => ({ id: item.id, code: item.code, subject: item.subject, status: item.status, updatedAt: item.updated_at.toISOString() })),
       courses: courses.rows,
       calls: calls.rows.map((item) => ({
@@ -246,6 +242,22 @@ export class CallCenterRepository implements AcdStore {
     );
   }
 
+  async callbackRequested(input: Parameters<AcdStore["callbackRequested"]>[0]): Promise<void> {
+    await withTransaction((client) =>
+      this.followUp(client, {
+        source: "callback",
+        departmentId: input.departmentId,
+        callId: input.callId,
+        voicemailId: null,
+        callerNumber: input.callerNumber,
+        callerUserId: input.callerUserId,
+        subject: `Gọi lại cho ${input.callerNumber} (khách hẹn gọi lại)`,
+        note: "Người gọi bấm phím hẹn gọi lại khi đang chờ trong hàng đợi.",
+        priority: "high",
+      }),
+    );
+  }
+
   /**
    * One open follow-up ticket per caller and department: a repeated miss or voicemail is appended to
    * it instead of flooding the queue with duplicates. Anonymous callers always get their own ticket.
@@ -253,7 +265,7 @@ export class CallCenterRepository implements AcdStore {
   private async followUp(
     client: PoolClient,
     input: {
-      source: "missed_call" | "voicemail";
+      source: "missed_call" | "voicemail" | "callback";
       departmentId: string;
       callId: string;
       voicemailId: string | null;
@@ -261,6 +273,7 @@ export class CallCenterRepository implements AcdStore {
       callerUserId: string | null;
       subject: string;
       note: string;
+      priority?: "normal" | "high";
     },
   ) {
     const open =
@@ -269,12 +282,16 @@ export class CallCenterRepository implements AcdStore {
         : (
             await client.query<{ id: string }>(
               `SELECT id FROM cc_tickets WHERE department_id=$1 AND caller_number=$2 AND status IN ('open','in_progress','waiting')
-               AND source IN ('missed_call','voicemail') ORDER BY created_at DESC LIMIT 1 FOR UPDATE`,
+               AND source IN ('missed_call','voicemail','callback') ORDER BY created_at DESC LIMIT 1 FOR UPDATE`,
               [input.departmentId, input.callerNumber],
             )
           ).rows[0];
     if (open) {
-      await client.query(`UPDATE cc_tickets SET updated_at=now() WHERE id=$1`, [open.id]);
+      // A callback request raises an open follow-up for the same caller; it never lowers one.
+      await client.query(
+        `UPDATE cc_tickets SET updated_at=now(), priority=CASE WHEN $2 AND priority IN ('low','normal') THEN 'high' ELSE priority END WHERE id=$1`,
+        [open.id, input.priority === "high"],
+      );
       await client.query(`INSERT INTO cc_ticket_events(created_at,id,ticket_id,kind,body,call_id) VALUES(clock_timestamp(),$1,$2,'comment',$3,$4)`, [
         randomUUID(),
         open.id,
@@ -284,9 +301,9 @@ export class CallCenterRepository implements AcdStore {
       return;
     }
     await client.query(
-      `INSERT INTO cc_tickets(id,department_id,source,call_id,voicemail_id,caller_number,caller_user_id,subject,description)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-      [randomUUID(), input.departmentId, input.source, input.callId, input.voicemailId, input.callerNumber, input.callerUserId, input.subject, input.note],
+      `INSERT INTO cc_tickets(id,department_id,source,call_id,voicemail_id,caller_number,caller_user_id,subject,description,priority)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [randomUUID(), input.departmentId, input.source, input.callId, input.voicemailId, input.callerNumber, input.callerUserId, input.subject, input.note, input.priority ?? "normal"],
     );
   }
 
@@ -776,12 +793,31 @@ export class CallCenterRepository implements AcdStore {
   }
 
   async callTranscript(id: string) {
-    const result = await query<{ transcript_status: CcCallTranscript["status"]; transcript: Segment[] | null }>(
-      `SELECT transcript_status,transcript FROM cc_calls WHERE id=$1`,
+    const result = await query<{ transcript_status: CcCallTranscript["status"]; transcript: Segment[] | null; ai_summary: string | null; ai_disposition_id: string | null }>(
+      `SELECT transcript_status,transcript,ai_summary,ai_disposition_id FROM cc_calls WHERE id=$1`,
       [id],
     );
     const row = result.rows[0];
-    return { status: row?.transcript_status ?? null, segments: row?.transcript ?? [] } satisfies CcCallTranscript;
+    return {
+      status: row?.transcript_status ?? null,
+      segments: row?.transcript ?? [],
+      aiSummary: row?.ai_summary ?? null,
+      aiDispositionId: row?.ai_disposition_id ?? null,
+    } satisfies CcCallTranscript;
+  }
+
+  /** The dispositions an AI suggestion may pick from: the call's department's and the shared ones. */
+  async callDispositions(callId: string) {
+    const result = await query<{ id: string; label: string }>(
+      `SELECT d.id,d.label FROM cc_dispositions d JOIN cc_calls c ON c.id=$1
+       WHERE d.active AND (d.department_id IS NULL OR d.department_id=c.department_id) ORDER BY d.department_id NULLS FIRST,d.code`,
+      [callId],
+    );
+    return result.rows;
+  }
+
+  async setCallSummary(id: string, summary: string, dispositionId: string | null) {
+    await query(`UPDATE cc_calls SET ai_summary=$2, ai_disposition_id=$3 WHERE id=$1`, [id, summary, dispositionId]);
   }
 
   async setCallVideo(id: string, workspaceId: string) {

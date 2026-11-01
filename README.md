@@ -1,6 +1,6 @@
 # Dịch vụ call center, video conferencing, e-learning cho TDTU
 
-[Cấu trúc mã nguồn](docs/guides/24-cau-truc-du-an.md) · [Mục lục tài liệu](docs/README.md)
+[Triển khai lên VPS](docs/deploy/trien-khai-vps.md) · [Kết quả đo](docs/benchmarks/README.md) · [Chương đánh giá](docs/thesis/chuong-danh-gia.md) · [Đặc tả](docs/thesis/Đặc%20tả%20đề%20tài%20đồ%20án.docx)
 
 Đồ án: **Xây dựng các dịch vụ call center, video conferencing, e-learning cho doanh nghiệp**. Doanh nghiệp áp dụng là Đại học Tôn Đức Thắng (TDTU), dùng nội bộ.
 
@@ -23,23 +23,33 @@ Kiến trúc modular monolith: React/TypeScript + Node.js/Socket.IO + PostgreSQL
 - Ổn định: tự vào lại phòng khi mất mạng (rớt socket hoặc lỗi ICE), khởi động lại ICE, tạm dừng nhận video khi tab bị ẩn.
 - Chất lượng mạng (QoS): RTT, băng thông, mất gói, jitter, tự hạ chất lượng khi mạng yếu; xuất CSV/JSON.
 - Biên bản: chương trình họp, ghi chú chung (phát hiện sửa trùng), việc cần làm đưa sang Kanban, gửi tóm tắt vào kênh nhóm.
+- Họp hội đồng (NV-MT3): người tổ chức bấm "Hội đồng" ở lịch họp để chọn chủ tịch, thành viên, người trình bày (kèm đề tài) và tiêu chí có trọng số. Trong phòng (menu "Hội đồng chấm"), chủ tịch mời từng người trình bày; thành viên chấm phiếu riêng thang 10; chỉ chủ tịch xem phiếu của người khác trước khi chốt; chỉ chốt được khi mọi thành viên có mặt đã nộp (BR-12), chủ tịch có thể đánh dấu thành viên vắng. Kết quả khóa sau khi chốt, xuất CSV (`047_council_meetings`).
+- Lời mời và nhắc họp (NV-MT1): tạo, sửa, hủy lịch họp gửi thông báo (toast realtime) và email cho thành viên phòng; 15 phút trước giờ họp hệ thống nhắc một lần, đổi giờ bắt đầu thì nhắc lại (`048_meeting_reminders`). Lời mời và lời nhắc cũng vào chuông thông báo, bấm "Xem" mở thẳng phòng họp (`051_system_notifications`).
+- Mời theo danh sách: lịch họp có thể chỉ mời một số người, cả một nhóm/lớp khác hoặc cả một đơn vị (tối đa 500 người); người ngoài nhóm được thêm vào nhóm của phòng. Cấu hình phòng theo lịch: bật phòng chờ (người được mời vào thẳng, người khác chờ duyệt), tự ghi hình khi chủ trì vào, tắt micro khi vào lần đầu (`052_meeting_room_settings`).
 - Điểm danh từ máy chủ: giờ vào, giờ rời, thời gian có mặt (gộp nhiều tab/kết nối lại), xuất CSV có MSSV; chỉ chủ trì và đồng chủ trì xem.
 - Ghi hình phía máy chủ (FFmpeg, không giải mã khi đang họp), xem lại và chia sẻ bản ghi. Cần container FFmpeg: `docker compose -f infra/docker-compose.yml --profile recording up -d ffmpeg` và `FFMPEG_COMMAND="docker exec -i -w /work nexo-ffmpeg ffmpeg"`.
 - Chép lời bản ghi (Whisper hoặc faster-whisper qua `TRANSCRIBE_URL`); chưa đặt biến này thì nút chép lời không chạy.
+- Tóm tắt bằng AI (`055_ai_summaries`): khi chép lời xong, bản chép lời được gửi tới `SUMMARY_URL` (endpoint `/v1/chat/completions` dạng OpenAI, ví dụ Ollama tự host để dữ liệu không rời trường; mô hình `SUMMARY_MODEL`). Bản ghi họp có đoạn tóm tắt và danh sách việc cần làm, chủ trì bấm "Thêm vào việc cần làm" để đưa từng việc sang Kanban. Chỉ gửi văn bản chép lời, không gửi âm thanh; kết quả chỉ là gợi ý, người dùng vẫn tự viết biên bản.
 - Chưa có: làm mờ/thay nền; chưa kiểm RTP qua nhiều mạng với TURN thật. Gọi vào phòng họp từ máy lẻ (dial-in) đi qua Asterisk nên tạm dừng cùng tổng đài.
 
 ### E-learning
 
 - Khóa học thuộc khoa/phòng ban, có giảng viên phụ trách, bản nháp/xuất bản, chương và bài học sắp xếp được.
 - Bốn loại bài: video (tải lên tới 2 GB, FFmpeg chuyển sang HLS, phát bằng hls.js), tài liệu (nội dung hoặc PDF), bài kiểm tra, buổi live.
-- Kiểm tra: ngân hàng câu hỏi (một lựa chọn, nhiều lựa chọn, đúng/sai), bốc ngẫu nhiên số câu, trộn phương án, giới hạn thời gian tính trên máy chủ, lưu bài làm dở, chấm tự động theo điểm đạt.
+- Kiểm tra: ngân hàng câu hỏi (một lựa chọn, nhiều lựa chọn, đúng/sai), bốc ngẫu nhiên số câu, trộn phương án, giới hạn thời gian tính trên máy chủ, lưu bài làm dở, chấm tự động theo điểm đạt, giới hạn số lần làm cho người học (`053_quiz_max_attempts`).
 - Buổi live là một lịch họp của khóa: điểm danh tự động (có mặt từ 70% thời lượng), đóng buổi, xem lại bản ghi.
-- Người học: tự ghi danh hoặc được giao khóa, theo dõi tiến độ, chứng nhận khi hoàn thành với mã xác minh công khai (`/verify/<mã>`).
-- Giảng viên: danh sách người học, tiến độ từng người, xuất CSV tiến độ.
+- Người học: tự ghi danh, gửi yêu cầu ghi danh vào khóa "cần duyệt" (giảng viên duyệt hoặc từ chối ở tab Học viên, `049_course_enrollment_requests`) hoặc được giao khóa (được báo qua chuông khi ghi danh xong hoặc bị từ chối), theo dõi tiến độ, chứng nhận khi hoàn thành với mã xác minh công khai (`/verify/<mã>`).
+- Giảng viên: danh sách người học, tiến độ từng người, xuất tiến độ (`.xlsx`/`.csv`).
 - Thảo luận khóa học qua một nhóm làm việc riêng (chat, tệp, phòng họp); gửi yêu cầu hỗ trợ ngay từ bài học.
 - Chép lời video bài học (cùng dịch vụ Whisper như bản ghi họp).
 - Theo dõi thời gian xem video: trình phát gửi từng đoạn đã thực sự phát (tua không tính, mỗi lần gửi bị giới hạn theo thời gian thực), bài video chỉ hoàn thành khi đã xem đủ 90%, mở lại thì phát tiếp từ chỗ xem dở. Bài tài liệu và video chưa rõ thời lượng vẫn do người học tự bấm hoàn thành.
 - Chưa có: bài tự luận/nộp bài chấm tay; tệp bài học đang lưu trên đĩa của máy chủ API (một máy chủ).
+
+Tổng đài: cuộc gọi có ghi âm được chép lời rồi tóm tắt bằng AI (cùng `SUMMARY_URL`), kèm gợi ý mã kết quả lấy từ danh sách mã của phòng ban; ở "Lời thoại" bấm "Áp dụng vào ghi nhận" để điền mã kết quả và ghi chú (ghi chú đã có thì giữ nguyên). Khi đang chờ trong hàng đợi, người gọi nghe hướng dẫn bấm `*` để hẹn gọi lại: cuộc gọi kết thúc là "Hẹn gọi lại" (không tính là bỏ máy trong KPI) và phòng ban có ticket gọi lại ưu tiên cao (`056_queue_callback`). Chỉ số điện thoại thật mới được đề nghị; cuộc gọi từ trình duyệt và số ẩn thì không.
+
+Báo cáo đơn vị (menu "Báo cáo đơn vị", cho quản trị hệ thống và trưởng khoa / giáo vụ đơn vị): theo khoảng ngày, mỗi khoa/phòng ban có số cuộc gọi vào hàng đợi, nghe máy, bỏ máy, hẹn gọi lại; số phiên và giờ họp do giảng viên, nhân viên của đơn vị chủ trì; số khóa đang mở, lượt ghi danh và hoàn thành. Chỉ có số đếm, không có dữ liệu từng người.
+
+Nhật ký truy cập (dùng chung): mỗi lượt nghe ghi âm cuộc gọi, tin nhắn thoại hoặc mở bản ghi cuộc họp được ghi lại (`050_media_access_log`); quản trị hệ thống xem ở Quản trị hệ thống → "Nhật ký hoạt động", gộp cùng thay đổi nhóm và tổ chức. Ghi âm và bản ghi họp chỉ phát qua link ký HMAC gắn với người xem và hết hạn (ghi âm 60 giây, playlist 5 phút); quản trị hệ thống không tự nghe ghi âm hay đọc ticket của phòng ban mình không có vai trò. Điểm danh, hội đồng, tiến độ khóa học và báo cáo cuộc gọi xuất được `.xlsx` (dòng tiêu đề in đậm) hoặc `.csv`; ô văn bản trong `.xlsx` là chuỗi thuần, CSV chặn công thức Excel (ô bắt đầu bằng `= + - @`).
 
 Menu đi theo chức năng, không theo nhóm: "Tin nhắn", "Họp", "Công việc", "Tài liệu" gom dữ liệu của mọi nhóm bạn tham gia (nhóm chỉ là bộ lọc); "Nhóm của tôi" để tạo nhóm, nhập mã mời, xem thành viên, rời nhóm và vào trang quản lý. Link cũ `/app/workspace?...` tự chuyển sang trang tương ứng.
 
@@ -47,7 +57,7 @@ Chat nhóm giữ làm kênh trao đổi nội bộ: ảnh/file/voice, reaction, 
 
 Nền tảng chung: đăng nhập email + mật khẩu (OTP qua email), hồ sơ, presence, lưu file DB/S3, metrics, migration có khóa.
 
-"Công việc" là một bảng Kanban cho việc ở mọi nhóm (mặc định việc giao cho tôi; lọc theo nhóm, sắp hết hạn, trạng thái, ưu tiên); mỗi thẻ ghi tên nhóm và kênh, việc cần làm từ biên bản họp cũng vào đây. Phân hệ quản lý đồ án tốt nghiệp đã được gỡ; chỉ còn khoa, bộ môn, giảng viên và phân quyền (trang "Quản trị hệ thống"). Các bảng `thesis_*` (migration 022–024) vẫn giữ trong DB, không còn code dùng.
+"Công việc" là một bảng Kanban cho việc ở mọi nhóm (mặc định việc giao cho tôi; lọc theo nhóm, sắp hết hạn, trạng thái, ưu tiên); mỗi thẻ ghi tên nhóm và kênh, việc cần làm từ biên bản họp cũng vào đây. Phân hệ quản lý đồ án tốt nghiệp đã được gỡ; chỉ còn khoa, bộ môn, giảng viên và phân quyền (trang "Quản trị hệ thống"). Các bảng `thesis_*` đã được xóa (`054_drop_thesis_tables`); hồ sơ người gọi lấy MSSV từ mã người dùng.
 
 ## Chạy local
 
@@ -70,7 +80,7 @@ npm run dev
 
 Cần chạy riêng thì dùng `npm run dev:api` hoặc `npm run dev:web`.
 
-Web localhost:5173; API localhost:3001. Vite dùng polling watcher trong development Windows. DB đã có dữ liệu nâng cấp bằng migrate, không xóa volume. Tổng 40 migration (`services/api/migrations`), bytea cũ vẫn tương thích.
+Web localhost:5173; API localhost:3001. Vite dùng polling watcher trong development Windows. DB đã có dữ liệu nâng cấp bằng migrate, không xóa volume. Tổng 56 migration (`services/api/migrations`), bytea cũ vẫn tương thích.
 
 Dev server dùng cổng của `WEB_ORIGIN` trong `.env` (mẫu mặc định 5173), báo lỗi nếu cổng bận.
 
@@ -112,7 +122,7 @@ npm run verify:restore
 
 Dữ liệu demo khoa CNTT: tạo quản trị hệ thống trước (`node scripts/ops/create-user.mjs admin@tdtu.edu.vn "Quản trị hệ thống" --admin`), đặt `SEED_ACADEMIC_PASSWORD` trong `.env` rồi chạy `npm run seed:academic` (thêm `-- --reset` để tạo lại). `giaovu@demo.nexo.test` là giáo vụ khoa, `truongkhoa@…` là lãnh đạo khoa, `gv.*@…` là giảng viên, `sv01…sv30@…` là sinh viên.
 
-Benchmark local50/100/200 socket,2 API process,4tin/giây,30s ×2/mức:732tin,0lỗi/trùng trong kịch bản. Raw, phân vị và giới hạn ở [báo cáo20](docs/benchmarks/20-benchmark-va-nghiem-thu.md). Restore dùng hai DB QA mới, kiểm20 migration/dữ liệu Unicode và dọn đúng fixtures.
+Benchmark local50/100/200 socket,2 API process,4tin/giây,30s ×2/mức:732tin,0lỗi/trùng trong kịch bản. Kết quả đo tải (k6, chat, ACD, SIPp, Mesh/SFU), dữ liệu gốc và giới hạn ở [docs/benchmarks](docs/benchmarks/README.md). Restore dùng hai DB QA mới, kiểm20 migration/dữ liệu Unicode và dọn đúng fixtures.
 
 ## API và vận hành
 
@@ -124,20 +134,17 @@ Benchmark local50/100/200 socket,2 API process,4tin/giây,30s ×2/mức:732tin,0
 - SOCKET_ADAPTER=postgres: đồng bộ chat/task/notification giữa node, lease45s/heartbeat15s. WebSocket hoặc sticky-session nếu polling.
 - SFU_PUBLIC_URL/room affinity: media socket đến đúng owner; một room/router trên một worker/node. Adapter không chia sẻ media transport.
 
-[Triển khai HTTPS/Compose](docs/guides/10-trien-khai-production.md), [backend/storage/retention/backup](docs/guides/17-backend-va-van-hanh.md). Compose production truyền các env mới, kiểm /ready, proxy upload8MiB; vẫn cần secrets, domain, email, public IP và TURN thực.
+[Triển khai lên VPS](docs/deploy/trien-khai-vps.md): tường lửa, chứng chỉ Let's Encrypt, `infra/.env.prod`, Compose production (`--profile turn` bật coturn), migrate, tạo quản trị, kiểm tra sau triển khai. Vẫn cần VPS có IP công khai, tên miền, email và trunk Pitel thật.
 
-## Tài liệu bàn giao
+## Tài liệu
 
-| Nội dung                            | Tài liệu                                              |
-| ----------------------------------- | ----------------------------------------------------- |
-| Checklist8 giai đoạn                | [13](docs/planning/13-trien-khai-theo-giai-doan-2026-09-30.md) |
-| Quyền/quản trị/invitation           | [14](docs/modules/14-quan-tri-va-hop-dong.md)                 |
-| Chat/thread/search/Kanban           | [15](docs/modules/15-chat-va-kanban.md)                       |
-| Session/host/media                  | [16](docs/modules/16-dieu-hanh-hop-va-media.md)               |
-| Backend và vận hành                 | [17](docs/guides/17-backend-va-van-hanh.md)                  |
-| UI/drafts/before-after bundle       | [18](docs/modules/18-giao-dien-va-ban-nhap.md)                |
-| Kiến trúc/ERD/6 sequence            | [19](docs/analysis/19-kien-truc-schema-va-luong.md)            |
-| Benchmark/raw/QoS/procedure         | [20](docs/benchmarks/20-benchmark-va-nghiem-thu.md)              |
-| Cài đặt/env/quyền/traceability/demo | [21](docs/guides/21-ban-giao-va-demo.md)                     |
+| Nội dung | Tài liệu |
+| --- | --- |
+| Đặc tả đề tài | [docs/thesis/Đặc tả đề tài đồ án.docx](docs/thesis/Đặc%20tả%20đề%20tài%20đồ%20án.docx) |
+| Báo cáo đồ án | [docs/thesis](docs/thesis) (`Bao_Cao_Do_An_T-WorkSpace*.docx/pdf`) |
+| Triển khai VPS | [docs/deploy/trien-khai-vps.md](docs/deploy/trien-khai-vps.md) |
+| Kết quả đo, dữ liệu gốc | [docs/benchmarks/README.md](docs/benchmarks/README.md) |
+| Chương đánh giá (bản nháp) | [docs/thesis/chuong-danh-gia.md](docs/thesis/chuong-danh-gia.md) |
+| Mở rộng nhiều máy chủ | [docs/architecture/scale-out.md](docs/architecture/scale-out.md) |
 
-Source đã triển khai và kiểm local; còn gate RTP3/6/10 đa mạng/TURN, email/S3 cloud, native zoom200%, máy yếu, CI remote và backup production. Không kết luận production-ready. Audit npm còn7 high trong devtool transitive; chi tiết giới hạn ở bàn giao.
+Source đã triển khai và kiểm local; còn gate RTP3/6/10 đa mạng/TURN, email/S3 cloud, native zoom200%, máy yếu, CI remote và backup production. Không kết luận production-ready. `npm audit --omit=dev` không còn lỗ hổng (đã nâng nodemailer); còn một lỗi mức moderate của `minimatch` trong công cụ dev (eslint), chưa có bản sửa.

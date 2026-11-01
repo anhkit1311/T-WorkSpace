@@ -14,7 +14,7 @@ function useTranscript(src: string, enabled: boolean, token: string | null) {
     let vtt: string | null = null;
     let alive = true;
     const get = (name: string) =>
-      fetch(src.replace(/index\.m3u8$/, name), { credentials: "include", headers: { Authorization: `Bearer ${token}` } }).then((response) =>
+      fetch(src.replace(/index\.m3u8(\?.*)?$/, name), { credentials: "include", headers: { Authorization: `Bearer ${token}` } }).then((response) =>
         response.ok ? response : Promise.reject(new Error(String(response.status))),
       );
     Promise.all([get("captions.vtt").then((response) => response.blob()), get("transcript.json").then((response) => response.json())]).then(

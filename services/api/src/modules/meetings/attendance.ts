@@ -2,6 +2,7 @@ import type { MeetingAttendance } from "@doan/shared";
 import { query } from "../../infrastructure/database/db.js";
 import { HttpError } from "../../shared/http/http-error.js";
 import { requireChannelAccess, validateId } from "../workspaces/service.js";
+import type { Table } from "../../shared/http/table-export.js";
 
 // MT-2: who attended a session and for how long, from the per-connection rows in
 // meeting_participations. EL-6 reuses presentMs for "present for at least 70% of the class".
@@ -80,7 +81,6 @@ export const studentIdFromEmail = (email: string) => /^([0-9a-z]+)@student\.tdtu
 export async function exportMeetingAttendance(userId: string, sessionId: unknown) {
   const attendance = await getMeetingAttendance(userId, sessionId);
   const time = (iso: string | null) => (iso ? new Date(iso).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour12: false }) : "");
-  const cell = (value: string) => (/[",\n;]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value);
   const lines = [
     ["Họ tên", "MSSV", "Email", "Vào lúc", "Rời lúc", "Có mặt (phút)", "Tỉ lệ (%)"],
     ...attendance.rows.map((row) => [
@@ -94,8 +94,5 @@ export async function exportMeetingAttendance(userId: string, sessionId: unknown
       String(Math.round(row.ratio * 100)),
     ]),
   ];
-  return {
-    fileName: `tham-du-${attendance.startedAt.slice(0, 10)}.csv`,
-    content: lines.map((line) => line.map(cell).join(",")).join("\r\n"),
-  };
+  return { name: `tham-du-${attendance.startedAt.slice(0, 10)}`, rows: lines } satisfies Table;
 }

@@ -38,7 +38,7 @@ export class CallCenterQaService {
     const call = await this.qa.callForReview(id(callId));
     if (!call) throw notFound("Không tìm thấy cuộc gọi.");
     const access = await this.access(userId);
-    if (call.agentId !== userId && !access.supervises(call.departmentId)) throw forbidden();
+    if (call.agentId !== userId && !access.supervisesContent(call.departmentId)) throw forbidden();
     return this.qa.review(call.id);
   }
 
@@ -59,7 +59,8 @@ export class CallCenterQaService {
     if (!call.departmentId || !call.agentId || !call.answeredAt) throw conflict("NOT_REVIEWABLE", "Chỉ chấm được cuộc gọi đã có tổng đài viên nghe máy.");
     if (!call.endedAt) throw conflict("CALL_IN_PROGRESS", "Cuộc gọi chưa kết thúc.");
     const access = await this.access(userId);
-    if (!access.supervises(call.departmentId)) throw forbidden();
+    // Scoring means listening to the call, so it needs the supervisor role itself.
+    if (!access.supervisesContent(call.departmentId)) throw forbidden();
     if (call.agentId === userId) throw forbidden();
     const department = (await this.repo.departments([call.departmentId]))[0];
     const scored = scoreReview(await this.qa.criteria(call.departmentId), body.scores);

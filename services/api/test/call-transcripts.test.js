@@ -35,6 +35,26 @@ test("voicemails, empty recordings, other events and STT off are ignored", () =>
   assert.equal(setup({ enabled: false }).service.handle({ type: "recording_finished", name: `call-${CALL}`, durationSeconds: 5 }), null);
 });
 
+test("with a summarizer, the transcript gets a summary and a disposition from the call's own list", async () => {
+  const writes = [];
+  const seen = [];
+  const store = {
+    setCallTranscript: async () => {},
+    callDispositions: async () => [{ id: "d1", label: "Hỏi học phí" }],
+    setCallSummary: async (...args) => void writes.push(args),
+  };
+  const summarize = async (segments, dispositions) => (seen.push([segments.length, dispositions.length]), { summary: "Hỏi học phí HK1", dispositionId: "d1" });
+  const service = new CallTranscriptService(store, async () => ({ arrayBuffer: async () => new ArrayBuffer(1) }), () => {}, () => true, async () => [{ start: 0, end: 1, text: "Học phí bao nhiêu?" }], () => summarize);
+  await service.handle({ type: "recording_finished", name: `call-${CALL}`, durationSeconds: 5 });
+  assert.deepEqual(seen, [[1, 1]]);
+  assert.deepEqual(writes, [[CALL, "Hỏi học phí HK1", "d1"]]);
+
+  // A summarizer failure keeps the transcript and does not throw.
+  const failing = new CallTranscriptService(store, async () => ({ arrayBuffer: async () => new ArrayBuffer(1) }), () => {}, () => true, async () => [{ start: 0, end: 1, text: "a" }], () => async () => { throw new Error("down"); });
+  await failing.handle({ type: "recording_finished", name: `call-${CALL}`, durationSeconds: 5 });
+  assert.equal(writes.length, 1);
+});
+
 test("a speech service failure marks the call failed and does not throw", async () => {
   const { service, writes } = setup({ transcribe: async () => { throw new Error("503"); } });
   await service.handle({ type: "recording_finished", name: `call-${CALL}`, durationSeconds: 5 });

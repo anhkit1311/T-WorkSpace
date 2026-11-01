@@ -1,7 +1,7 @@
 // E-learning (EL-1..EL-6, LT-1, LT-2).
 
 export type CourseStatus = "draft" | "published" | "archived";
-export type CourseEnrollmentMode = "open" | "assigned";
+export type CourseEnrollmentMode = "open" | "assigned" | "approval";
 export type LessonKind = "video" | "document" | "quiz" | "live";
 export type LessonStatus = "draft" | "published";
 export type LessonMediaStatus = "none" | "processing" | "ready" | "failed";
@@ -20,6 +20,8 @@ export interface CourseSummary {
   lessonCount: number;
   learnerCount: number;
   enrolled: boolean;
+  /** NV-EL2: the user's enrollment request is waiting for approval. */
+  requested: boolean;
   /** Completion of the current user, when enrolled. */
   progress: number | null;
   canManage: boolean;
@@ -72,6 +74,9 @@ export interface QuizInfo {
   drawCount: number | null;
   /** Question and option order shuffled per attempt. */
   shuffle: boolean;
+  /** NV-EL1: attempts allowed (null: no limit) and those the current user has left. */
+  maxAttempts: number | null;
+  attemptsLeft: number | null;
   /** Best percentage of the current user, if attempted. */
   bestPercent: number | null;
   passed: boolean;
@@ -146,6 +151,8 @@ export interface CourseProgressReport {
     quizPercents: Record<string, number>;
     completedAt: string | null;
   }[];
+  /** NV-EL2: learners waiting for approval. */
+  requests: { userId: string; displayName: string; email: string; requestedAt: string }[];
 }
 
 export interface LiveAttendanceRow {

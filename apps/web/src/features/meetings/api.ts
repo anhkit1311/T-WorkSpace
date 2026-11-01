@@ -1,5 +1,5 @@
 import { ApiError } from "../auth/api";
-import type { MeetingAttendance, MeetingCalendar, MeetingRecordings, MeetingNotes, MeetingOutcomes, MeetingScheduleItem, TaskItem } from "@doan/shared";
+import type { CouncilSetupInput, CouncilView, MeetingAttendance, MeetingCalendar, MeetingInviteInput, MeetingNotes, MeetingOutcomes, MeetingRecordings, MeetingScheduleItem, TaskItem } from "@doan/shared";
 
 export type MeetingScheduleInput = {
   roomId: string;
@@ -8,6 +8,10 @@ export type MeetingScheduleInput = {
   startsAt: string;
   endsAt: string;
   agenda?: string[];
+  waitingRoom?: boolean;
+  autoRecord?: boolean;
+  muteOnJoin?: boolean;
+  invite?: MeetingInviteInput;
 };
 
 async function scheduleRequest<T>(
@@ -162,11 +166,14 @@ export async function getMeetingAttendanceApi(accessToken: string, sessionId: st
 }
 
 /** MT-2: the register as CSV; Excel opens it directly thanks to the BOM the API adds. */
-export async function downloadMeetingAttendanceApi(accessToken: string, sessionId: string, fileName: string) {
-  const response = await fetch(
-    `${import.meta.env.VITE_API_URL ?? ""}/api/meetings/sessions/${sessionId}/attendance.csv`,
-    { credentials: "include", headers: { Authorization: `Bearer ${accessToken}` } },
-  );
+export const downloadMeetingAttendanceApi = (accessToken: string, sessionId: string, fileName: string) =>
+  downloadCsv(accessToken, `sessions/${sessionId}/attendance.xlsx`, fileName);
+
+async function downloadCsv(accessToken: string, path: string, fileName: string) {
+  const response = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/meetings/${path}`, {
+    credentials: "include",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     throw new ApiError(response.status, data.error?.code ?? "EXPORT_FAILED", data.error?.message ?? "Không xuất được tệp.");
@@ -202,8 +209,9 @@ export const shareMeetingRecordingApi = (accessToken: string, recordingId: strin
   meetingsRequest<{ ok: true }>(accessToken, `recordings/${recordingId}`, "PATCH", { shared });
 export const requestRecordingTranscriptApi = (accessToken: string, recordingId: string) =>
   meetingsRequest<{ transcriptStatus: "processing" }>(accessToken, `recordings/${recordingId}/transcript`, "POST");
-export const meetingRecordingPlaylist = (recordingId: string) =>
-  `${recordingsBase()}/recordings/${recordingId}/files/index.m3u8`;
+/** A five-minute signed playlist link (spec: recordings only through links that expire). */
+export const meetingRecordingLinkApi = async (accessToken: string, recordingId: string) =>
+  `${import.meta.env.VITE_API_URL ?? ""}${(await meetingsRequest<{ url: string }>(accessToken, `recordings/${recordingId}/link`)).url}`;
 
 /** M1: number and 6-digit code to join this room from a phone (internal extension). */
 export async function getDialInApi(accessToken: string, roomId: string): Promise<{ number: string; code: string }> {
@@ -215,3 +223,24 @@ export async function getDialInApi(accessToken: string, roomId: string): Promise
   if (!response.ok) throw new ApiError(response.status, data.error?.code ?? "UNKNOWN_ERROR", data.error?.message ?? "Không lấy được mã gọi vào.");
   return data;
 }
+
+// NV-MT3 họp hội đồng
+export const getSessionCouncilApi = async (accessToken: string, sessionId: string) =>
+  (await meetingsRequest<{ council: CouncilView | null }>(accessToken, `sessions/${sessionId}/council`)).council;
+export const getCouncilApi = async (accessToken: string, scheduleId: string) =>
+  (await meetingsRequest<{ council: CouncilView | null }>(accessToken, `schedules/${scheduleId}/council`)).council;
+export const saveCouncilApi = (accessToken: string, scheduleId: string, input: CouncilSetupInput) =>
+  meetingsRequest(accessToken, `schedules/${scheduleId}/council`, "PATCH", input);
+export const setCouncilMemberAbsentApi = (accessToken: string, scheduleId: string, userId: string, absent: boolean) =>
+  meetingsRequest(accessToken, `schedules/${scheduleId}/council/members/${userId}`, "PATCH", { absent });
+export const startPresenterApi = (accessToken: string, presenterId: string) =>
+  meetingsRequest(accessToken, `council/presenters/${presenterId}/start`, "POST");
+export const submitCouncilSheetApi = (
+  accessToken: string,
+  presenterId: string,
+  input: { scores: Record<string, number>; comment: string },
+) => meetingsRequest(accessToken, `council/presenters/${presenterId}/sheet`, "PATCH", input);
+export const finalizePresenterApi = (accessToken: string, presenterId: string, conclusion: string) =>
+  meetingsRequest(accessToken, `council/presenters/${presenterId}/finalize`, "POST", { conclusion });
+export const downloadCouncilApi = (accessToken: string, scheduleId: string) =>
+  downloadCsv(accessToken, `schedules/${scheduleId}/council.xlsx`, "bang-diem-hoi-dong.xlsx");

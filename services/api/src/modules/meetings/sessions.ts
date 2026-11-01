@@ -60,23 +60,24 @@ export async function enterSession(
       await finishSession(client, session.id);
       session = null;
     }
+    let settings: { waiting_room: boolean; auto_record: boolean; mute_on_join: boolean } | undefined;
     if (scheduleId) {
       validateId(scheduleId);
-      if (
-        !(
-          await client.query(
-            `SELECT 1 FROM meeting_schedules WHERE id=$1 AND channel_id=$2 AND canceled_at IS NULL`,
-            [scheduleId, channelId],
-          )
-        ).rowCount
-      )
-        throw new HttpError(400, "INVALID_SCHEDULE", "Lịch họp không thuộc phòng hoặc đã hủy.");
+      settings = (
+        await client.query(
+          `SELECT waiting_room,auto_record,mute_on_join FROM meeting_schedules WHERE id=$1 AND channel_id=$2 AND canceled_at IS NULL`,
+          [scheduleId, channelId],
+        )
+      ).rows[0];
+      if (!settings) throw new HttpError(400, "INVALID_SCHEDULE", "Lịch họp không thuộc phòng hoặc đã hủy.");
     }
+    let autoRecord = false;
     if (!session) {
       const id = randomUUID();
+      // NV-MT1: a session started from a schedule takes the room settings chosen when scheduling.
       session = (
         await client.query(
-          `INSERT INTO meeting_sessions(id,channel_id,host_id,schedule_id,media_instance_id,outcome_channel_id) VALUES($1,$2,$3,$4,$5,$6) RETURNING *`,
+          `INSERT INTO meeting_sessions(id,channel_id,host_id,schedule_id,media_instance_id,outcome_channel_id,waiting_enabled,mute_on_join) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
           [
             id,
             channelId,
@@ -84,9 +85,12 @@ export async function enterSession(
             scheduleId ?? null,
             affinity ? instanceId : null,
             await defaultOutcomeChannel(client, channelId),
+            settings?.waiting_room ?? false,
+            settings?.mute_on_join ?? false,
           ],
         )
       ).rows[0];
+      autoRecord = settings?.auto_record ?? false;
     }
     if (affinity && !session.media_instance_id)
       await client.query(`UPDATE meeting_sessions SET media_instance_id=$2 WHERE id=$1`, [
@@ -124,9 +128,18 @@ export async function enterSession(
       ).rowCount
     )
       throw new HttpError(409, "TAB_LIMIT", "Bạn đã mở quá nhiều tab trong phòng.");
+    // BR-10: the organizer and people on the schedule's invite list go straight in.
+    const invited =
+      session.schedule_id &&
+      (
+        await client.query(
+          `SELECT 1 FROM meeting_schedules s WHERE s.id=$1 AND (s.created_by=$2 OR EXISTS(SELECT 1 FROM meeting_invitees i WHERE i.schedule_id=s.id AND i.user_id=$2))`,
+          [session.schedule_id, userId],
+        )
+      ).rowCount;
     const state =
       attendee?.state ??
-      (session.host_id === userId || !session.waiting_enabled ? "admitted" : "waiting");
+      (session.host_id === userId || !session.waiting_enabled || invited ? "admitted" : "waiting");
     await client.query(
       `INSERT INTO meeting_attendees(session_id,user_id,role,state) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING`,
       [session.id, userId, session.host_id === userId ? "host" : "member", state],
@@ -135,7 +148,15 @@ export async function enterSession(
       `INSERT INTO meeting_connections(socket_id,session_id,user_id,instance_id) VALUES($1,$2,$3,$4) ON CONFLICT(socket_id) DO UPDATE SET session_id=$2,user_id=$3,instance_id=$4`,
       [socketId, session.id, userId, instanceId],
     );
-    return { sessionId: session.id as string, state: state as "admitted" | "waiting" };
+    return {
+      sessionId: session.id as string,
+      state: state as "admitted" | "waiting",
+      // Only on a person's first time in the room (after the waiting room too), so a reconnect keeps their mic choice.
+      muteOnJoin:
+        Boolean(session.mute_on_join && session.host_id !== userId) &&
+        !(await client.query(`SELECT 1 FROM meeting_participations WHERE session_id=$1 AND user_id=$2`, [session.id, userId])).rowCount,
+      autoRecord,
+    };
   });
 }
 export async function getMeetingState(
@@ -144,7 +165,7 @@ export async function getMeetingState(
 ): Promise<MeetingState | null> {
   await requireChannelAccess(userId, channelId, true);
   const session = await query(
-    `SELECT id,channel_id AS "channelId",schedule_id AS "scheduleId",host_id AS "hostId",waiting_enabled AS "waitingEnabled",locked,started_at AS "startedAt" FROM meeting_sessions WHERE channel_id=$1 AND ended_at IS NULL`,
+    `SELECT id,channel_id AS "channelId",schedule_id AS "scheduleId",host_id AS "hostId",waiting_enabled AS "waitingEnabled",locked,mute_on_join AS "muteOnJoin",started_at AS "startedAt" FROM meeting_sessions WHERE channel_id=$1 AND ended_at IS NULL`,
     [channelId],
   );
   if (!session.rowCount) return null;

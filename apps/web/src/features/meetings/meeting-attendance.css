@@ -58,3 +58,22 @@
   border-radius: 6px;
   margin-top: 8px;
 }
+.meeting-ai-summary {
+  flex-basis: 100%;
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--bg-subtle, #f4f5f7);
+}
+.meeting-ai-summary p {
+  margin: 0;
+}
+.meeting-ai-summary ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.meeting-ai-summary li {
+  border-bottom: 0;
+}

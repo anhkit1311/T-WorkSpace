@@ -12,6 +12,9 @@ import type { CallCenterReportService } from "../service/report-service.js";
 import type { CallCenterTicketService } from "../service/ticket-service.js";
 import type { CallCenterVoipService } from "../service/voip-service.js";
 import type { Body } from "../service/input.js";
+import { logMediaAccess } from "../../../infrastructure/operations/media-access.js";
+import { signLink, verifyLink } from "../../../shared/http/signed-link.js";
+import { sendTable } from "../../../shared/http/table-export.js";
 
 type Handler = (userId: string, match: string[], body: Body, params: URLSearchParams) => Promise<unknown>;
 interface Route {
@@ -114,25 +117,26 @@ export function callCenterRoutes(
 
   return async function routesHandler({ request, response, pathname, params }: RouteContext): Promise<void> {
     if (!pathname.startsWith("/api/callcenter/")) return;
-    const audio = pathname.match(new RegExp(`^/api/callcenter/(calls|voicemails)/${uuid}/recording$`));
-    if (audio && request.method === "GET") {
-      const userId = await getAuthUserId(request);
-      await stream(
-        response,
-        audio[1] === "calls"
-          ? await agents.recording(userId, audio[2])
-          : ((await voip.voicemailRecording(userId, audio[2])) ?? (await tickets.voicemailRecording(userId, audio[2]))),
-      );
+    const audio = pathname.match(new RegExp(`^/api/callcenter/(calls|voicemails)/${uuid}/recording(/link)?$`));
+    if (audio && request.method === "GET" && audio[3]) {
+      // The signed-in user gets a one-minute link; the audio itself is served only through it.
+      sendJson(response, 200, signLink(pathname.slice(0, -"/link".length), await getAuthUserId(request), 60));
       return;
     }
-    const csv = pathname.match(new RegExp(`^/api/callcenter/departments/${uuid}/calls\\.csv$`));
+    if (audio && request.method === "GET") {
+      const userId = verifyLink(pathname, params);
+      if (!userId) throw new HttpError(403, "LINK_EXPIRED", "Liên kết ghi âm không hợp lệ hoặc đã hết hạn.");
+      const recording =
+        audio[1] === "calls"
+          ? await agents.recording(userId, audio[2])
+          : ((await voip.voicemailRecording(userId, audio[2])) ?? (await tickets.voicemailRecording(userId, audio[2])));
+      await logMediaAccess(userId, audio[1] === "calls" ? "call" : "voicemail", audio[2]);
+      await stream(response, recording);
+      return;
+    }
+    const csv = pathname.match(new RegExp(`^/api/callcenter/departments/${uuid}/calls(\\.csv|\\.xlsx)$`));
     if (csv && request.method === "GET") {
-      const { fileName, content } = await reports.exportCsv(await getAuthUserId(request), csv[1], params);
-      response.statusCode = 200;
-      response.setHeader("Content-Type", "text/csv; charset=utf-8");
-      response.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
-      response.setHeader("Cache-Control", "private, no-store");
-      response.end("﻿" + content); // BOM so Excel reads Vietnamese correctly
+      sendTable(response, await reports.exportCsv(await getAuthUserId(request), csv[1], params), csv[2]);
       return;
     }
     const candidates = routes.filter((route) => route.pattern.test(pathname));

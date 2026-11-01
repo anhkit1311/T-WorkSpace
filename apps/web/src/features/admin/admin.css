@@ -834,3 +834,10 @@
   color: #334155;
   font-weight: 500;
 }
+.admin-activity__tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}

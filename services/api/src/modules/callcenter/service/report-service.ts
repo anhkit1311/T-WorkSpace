@@ -4,6 +4,7 @@ import { kpiSummary, periodBounds } from "../domain/kpi.js";
 import type { CallCenterRepository } from "../repository/callcenter-repository.js";
 import type { CallCenterAdminService } from "./admin-service.js";
 import { forbidden, id, integer, invalid } from "./input.js";
+import type { Table } from "../../../shared/http/table-export.js";
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: CALL_CENTER_TIME_ZONE }).format(new Date());
@@ -12,6 +13,7 @@ const OUTCOMES: Record<string, string> = {
   abandoned: "Bỏ máy",
   missed: "Nhỡ",
   voicemail: "Thư thoại",
+  callback: "Hẹn gọi lại",
   busy: "Bận",
   failed: "Lỗi",
   transferred: "Đã chuyển",
@@ -55,7 +57,6 @@ export class CallCenterReportService {
     const time = (date: Date | null) =>
       date ? date.toLocaleString("vi-VN", { timeZone: CALL_CENTER_TIME_ZONE, hour12: false }) : "";
     const span = (a: Date | null, b: Date | null) => (a && b ? String(Math.round((b.getTime() - a.getTime()) / 1000)) : "");
-    const cell = (value: string) => (/[",\n;]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value);
     const rows = [
       ["Bắt đầu", "Số gọi đến", "Kết quả", "Chờ (giây)", "Đàm thoại (giây)", "Tổng đài viên", "Phân loại", "Ghi chú"],
       ...calls.map((call) => [
@@ -69,9 +70,6 @@ export class CallCenterReportService {
         call.notes,
       ]),
     ];
-    return {
-      fileName: `cuoc-goi-${from}${to === from ? "" : `_${to}`}.csv`,
-      content: rows.map((row) => row.map(cell).join(",")).join("\r\n"),
-    };
+    return { name: `cuoc-goi-${from}${to === from ? "" : `_${to}`}`, rows } satisfies Table;
   }
 }

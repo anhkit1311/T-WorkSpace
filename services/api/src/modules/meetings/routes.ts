@@ -20,7 +20,21 @@ import {
   updateAgendaItem,
 } from "./outcomes.js";
 import { publishOutcomeChange } from "./outcome-events.js";
+import { noticeSchedule } from "./reminders.js";
+
+const logNoticeFailure = (error: Error) =>
+  console.warn(JSON.stringify({ level: "warn", event: "meeting_notice_failed", message: error.message }));
 import { exportMeetingAttendance, getMeetingAttendance } from "./attendance.js";
+import {
+  exportCouncil,
+  finalizePresenter,
+  getCouncil,
+  getSessionCouncil,
+  saveCouncil,
+  setMemberAbsent,
+  startPresenter,
+  submitSheet,
+} from "./council.js";
 import {
   listRecordings,
   recordingFile,
@@ -33,6 +47,11 @@ import { pipeline } from "node:stream/promises";
 import { limitRequest } from "../../shared/http/rate-limit.js";
 import { dialInInfo } from "./dial-in.js";
 import { openMediaPath } from "../../infrastructure/media-storage.js";
+import { signLink, verifyLink } from "../../shared/http/signed-link.js";
+import { sendTable } from "../../shared/http/table-export.js";
+
+/** Segment links outlive the playlist link so a long recording plays to the end. */
+const SEGMENT_LINK_SECONDS = 6 * 3600;
 export async function meetingRoutes({
   request,
   response,
@@ -40,7 +59,7 @@ export async function meetingRoutes({
   params,
   io,
 }: RouteContext): Promise<void> {
-  const attendance = pathname.match(/^\/api\/meetings\/sessions\/([^/]+)\/attendance(\.csv)?$/);
+  const attendance = pathname.match(/^\/api\/meetings\/sessions\/([^/]+)\/attendance(\.csv|\.xlsx)?$/);
   if (attendance && request.method === "GET") {
     const userId = await getAuthUserId(request);
     response.setHeader("Cache-Control", "no-store");
@@ -48,12 +67,43 @@ export async function meetingRoutes({
       sendJson(response, 200, { attendance: await getMeetingAttendance(userId, attendance[1]) });
       return;
     }
-    const file = await exportMeetingAttendance(userId, attendance[1]);
-    response.writeHead(200, {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${file.fileName}"`,
-    });
-    response.end("﻿" + file.content); // BOM so Excel reads Vietnamese correctly
+    sendTable(response, await exportMeetingAttendance(userId, attendance[1]), attendance[2]);
+    return;
+  }
+  const council = pathname.match(
+    /^\/api\/meetings\/(?:sessions\/([^/]+)\/council|schedules\/([^/]+)\/council(\.csv|\.xlsx|\/members\/[^/]+)?|council\/presenters\/([^/]+)\/(start|sheet|finalize))$/,
+  );
+  if (council) {
+    const userId = await getAuthUserId(request);
+    const [, sessionId, scheduleId, scheduleSub, presenterId, action] = council;
+    response.setHeader("Cache-Control", "no-store");
+    if (request.method === "GET" && sessionId) {
+      sendJson(response, 200, { council: await getSessionCouncil(userId, sessionId) });
+      return;
+    }
+    if (request.method === "GET" && scheduleId && !scheduleSub) {
+      sendJson(response, 200, { council: await getCouncil(userId, scheduleId) });
+      return;
+    }
+    if (request.method === "GET" && (scheduleSub === ".csv" || scheduleSub === ".xlsx")) {
+      sendTable(response, await exportCouncil(userId, scheduleId), scheduleSub);
+      return;
+    }
+    await limitRequest(request, `meeting-council:${userId}`, 120, 60);
+    let change: { roomId: string; sessionId: string | null } | null = null;
+    if (request.method === "PATCH" && scheduleId && !scheduleSub)
+      change = await saveCouncil(userId, scheduleId, await readJson(request));
+    else if (request.method === "PATCH" && scheduleSub?.startsWith("/members/"))
+      change = await setMemberAbsent(userId, scheduleId, scheduleSub.slice(9), (await readJson(request)).absent);
+    else if (request.method === "POST" && action === "start") change = await startPresenter(userId, presenterId);
+    else if (request.method === "PATCH" && action === "sheet")
+      change = await submitSheet(userId, presenterId, await readJson(request));
+    else if (request.method === "POST" && action === "finalize")
+      change = await finalizePresenter(userId, presenterId, await readJson(request));
+    if (!change) throw new HttpError(405, "METHOD_NOT_ALLOWED", "Phương thức không được hỗ trợ.");
+    if (change.sessionId)
+      publishOutcomeChange(io, { roomId: change.roomId, sessionId: change.sessionId, part: "council" });
+    sendJson(response, 200, { ok: true });
     return;
   }
   const dialIn = pathname.match(/^\/api\/meetings\/rooms\/([^/]+)\/dial-in$/);
@@ -86,13 +136,30 @@ export async function meetingRoutes({
     sendJson(response, 202, await requestRecordingTranscript(userId, transcript[1], changed));
     return;
   }
-  const recording = pathname.match(/^\/api\/meetings\/recordings\/([^/]+)(?:\/(stop)|\/files\/([^/]+))?$/);
+  const recording = pathname.match(/^\/api\/meetings\/recordings\/([^/]+)(?:\/(stop|link)|\/files\/([^/]+))?$/);
   if (recording) {
-    const userId = await getAuthUserId(request);
-    const [, recordingId, stop, file] = recording;
+    const [, recordingId, action, file] = recording;
     if (file && request.method === "GET") {
-      const media = await openMediaPath(await recordingFile(userId, recordingId, file));
+      // The video (playlist and segments) is served only through signed links; captions keep the token.
+      const video = file === "index.m3u8" || file.endsWith(".ts");
+      const viewer = video ? verifyLink(pathname, params) : await getAuthUserId(request);
+      if (!viewer) throw new HttpError(403, "LINK_EXPIRED", "Liên kết bản ghi không hợp lệ hoặc đã hết hạn.");
+      const media = await openMediaPath(await recordingFile(viewer, recordingId, file));
       if (!media) throw new HttpError(404, "NOT_FOUND", "Không tìm thấy tệp.");
+      if (file === "index.m3u8") {
+        const chunks: Buffer[] = [];
+        for await (const chunk of media.stream) chunks.push(Buffer.from(chunk));
+        const folder = pathname.slice(0, -file.length);
+        const playlist = Buffer.concat(chunks)
+          .toString("utf8")
+          .split("\n")
+          .map((line) => (line.trim() && !line.startsWith("#") ? signLink(folder + line.trim(), viewer, SEGMENT_LINK_SECONDS).url : line))
+          .join("\n");
+        // Not cached, so every playback reaches the server and is logged.
+        response.writeHead(200, { "Content-Type": "application/vnd.apple.mpegurl", "Cache-Control": "private, no-store" });
+        response.end(playlist);
+        return;
+      }
       response.writeHead(200, {
         "Content-Type": file.endsWith(".m3u8")
           ? "application/vnd.apple.mpegurl"
@@ -105,6 +172,12 @@ export async function meetingRoutes({
         "Cache-Control": "private, max-age=3600",
       });
       await pipeline(media.stream, response);
+      return;
+    }
+    const userId = await getAuthUserId(request);
+    const stop = action === "stop";
+    if (action === "link" && request.method === "GET") {
+      sendJson(response, 200, signLink(`/api/meetings/recordings/${recordingId}/files/index.m3u8`, userId, 300));
       return;
     }
     if (stop && request.method === "POST") {
@@ -224,6 +297,7 @@ export async function meetingRoutes({
     if (request.method === "POST") {
       const schedule = await createMeetingSchedule(userId, await readJson(request));
       sendJson(response, 201, { schedule });
+      void noticeSchedule(io, schedule.id, "created", userId).catch(logNoticeFailure);
       return;
     }
   }
@@ -239,9 +313,11 @@ export async function meetingRoutes({
         await readJson(request),
       );
       sendJson(response, 200, { schedule });
+      void noticeSchedule(io, schedule.id, "updated", userId).catch(logNoticeFailure);
     } else {
       await cancelMeetingSchedule(userId, scheduleMatch[1]);
       sendJson(response, 200, { ok: true });
+      void noticeSchedule(io, scheduleMatch[1], "canceled", userId).catch(logNoticeFailure);
     }
     return;
   }

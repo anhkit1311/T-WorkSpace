@@ -38,6 +38,7 @@ export type LessonRow = {
   timeLimitSeconds: number | null;
   passPercent: number;
   drawCount: number | null;
+  maxAttempts: number | null;
   shuffle: boolean;
   scheduleId: string | null;
   attendanceClosedAt: Date | null;
@@ -53,7 +54,7 @@ const COURSE = `SELECT c.id,c.unit_id AS "unitId",c.owner_id AS "ownerId",c.code
 const LESSON = `SELECT id,course_id AS "courseId",chapter_id AS "chapterId",title,kind,status,position,body,
   media_status AS "mediaStatus",media_name AS "mediaName",media_error AS "mediaError",duration_seconds AS "durationSeconds",
   recording_id AS "recordingId",time_limit_seconds AS "timeLimitSeconds",pass_percent AS "passPercent",
-  draw_count AS "drawCount",shuffle,schedule_id AS "scheduleId",attendance_closed_at AS "attendanceClosedAt",
+  draw_count AS "drawCount",max_attempts AS "maxAttempts",shuffle,schedule_id AS "scheduleId",attendance_closed_at AS "attendanceClosedAt",
   COALESCE((SELECT r.transcript_status FROM meeting_recordings r WHERE r.id=recording_id),transcript_status) AS "transcriptStatus"
   FROM course_lessons`;
 
@@ -86,11 +87,12 @@ export class ElearningRepository {
 
   /** Every course the user may see, with their own progress where enrolled. */
   async listCourses(userId: string): Promise<(CourseRow & Omit<CourseSummary, "canManage" | "canEnroll">)[]> {
-    const rows = await query<CourseRow & { lessonCount: number; learnerCount: number; enrolled: boolean; done: number }>(
+    const rows = await query<CourseRow & { lessonCount: number; learnerCount: number; enrolled: boolean; requested: boolean; done: number }>(
       `SELECT x.*,
          (SELECT count(*)::int FROM course_lessons l WHERE l.course_id=x.id AND l.status='published') AS "lessonCount",
          (SELECT count(*)::int FROM course_enrollments e WHERE e.course_id=x.id) AS "learnerCount",
          EXISTS(SELECT 1 FROM course_enrollments e WHERE e.course_id=x.id AND e.user_id=$1) AS enrolled,
+         EXISTS(SELECT 1 FROM course_enrollment_requests q WHERE q.course_id=x.id AND q.user_id=$1) AS requested,
          (SELECT count(*)::int FROM course_lesson_progress p JOIN course_lessons l ON l.id=p.lesson_id
            WHERE l.course_id=x.id AND l.status='published' AND p.user_id=$1) AS done
        FROM (${COURSE} WHERE c.status<>'archived' OR EXISTS(SELECT 1 FROM course_enrollments e WHERE e.course_id=c.id AND e.user_id=$1)
@@ -223,10 +225,10 @@ export class ElearningRepository {
     return id;
   }
 
-  async updateLesson(id: string, change: Partial<{ title: string; status: string; body: string; position: number; chapterId: string; timeLimitSeconds: number | null; passPercent: number; drawCount: number | null; shuffle: boolean }>) {
+  async updateLesson(id: string, change: Partial<{ title: string; status: string; body: string; position: number; chapterId: string; timeLimitSeconds: number | null; passPercent: number; drawCount: number | null; maxAttempts: number | null; shuffle: boolean }>) {
     const columns: Record<string, string> = {
       title: "title", status: "status", body: "body", position: "position", chapterId: "chapter_id",
-      timeLimitSeconds: "time_limit_seconds", passPercent: "pass_percent", drawCount: "draw_count", shuffle: "shuffle",
+      timeLimitSeconds: "time_limit_seconds", passPercent: "pass_percent", drawCount: "draw_count", maxAttempts: "max_attempts", shuffle: "shuffle",
     };
     const keys = Object.keys(change).filter((key) => key in columns);
     if (!keys.length) return;
@@ -255,15 +257,28 @@ export class ElearningRepository {
 
   // ---- enrollment (EL-2) ----------------------------------------------------------------------
 
-  /** Adds learners who are not enrolled yet; returns how many were added. */
+  /** Adds learners who are not enrolled yet; returns the ones added. */
   async enroll(courseId: string, userIds: string[], source: "self" | "assigned", by: string | null) {
-    if (!userIds.length) return 0;
-    const result = await query(
+    if (!userIds.length) return [];
+    const result = await query<{ user_id: string }>(
       `INSERT INTO course_enrollments(course_id,user_id,source,assigned_by) SELECT $1,u,$3,$4 FROM unnest($2::uuid[]) u
-       ON CONFLICT DO NOTHING`,
+       ON CONFLICT DO NOTHING RETURNING user_id`,
       [courseId, [...new Set(userIds)], source, by],
     );
-    return result.rowCount ?? 0;
+    return result.rows.map((row) => row.user_id);
+  }
+
+  async hasRequest(courseId: string, userId: string) {
+    return Boolean((await query(`SELECT 1 FROM course_enrollment_requests WHERE course_id=$1 AND user_id=$2`, [courseId, userId])).rowCount);
+  }
+
+  async requestEnrollment(courseId: string, userId: string) {
+    await query(`INSERT INTO course_enrollment_requests(course_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, [courseId, userId]);
+  }
+
+  /** Removes a pending request; false when there was none. */
+  async dropRequest(courseId: string, userId: string) {
+    return Boolean((await query(`DELETE FROM course_enrollment_requests WHERE course_id=$1 AND user_id=$2`, [courseId, userId])).rowCount);
   }
 
   async unenroll(courseId: string, userId: string) {
@@ -463,8 +478,8 @@ export class ElearningRepository {
 
   async bestQuiz(lessonId: string, userId: string) {
     return (
-      await query<{ best: number | null; passed: boolean }>(
-        `SELECT max(score/NULLIF(max_score,0)*100)::float8 AS best,COALESCE(bool_or(passed),false) AS passed
+      await query<{ best: number | null; passed: boolean; used: number }>(
+        `SELECT max(score/NULLIF(max_score,0)*100)::float8 AS best,COALESCE(bool_or(passed),false) AS passed,count(*)::int AS used
          FROM course_quiz_attempts WHERE lesson_id=$1 AND user_id=$2 AND submitted_at IS NOT NULL`,
         [lessonId, userId],
       )
@@ -487,7 +502,7 @@ export class ElearningRepository {
   }
 
   async progressReport(courseId: string) {
-    const [learners, done, quizzes] = await Promise.all([
+    const [learners, done, quizzes, requests] = await Promise.all([
       query<{ userId: string; displayName: string; email: string; source: "self" | "assigned"; completedAt: Date | null }>(
         `SELECT u.id AS "userId",u.display_name AS "displayName",u.email,e.source,e.completed_at AS "completedAt"
          FROM course_enrollments e JOIN users u ON u.id=e.user_id WHERE e.course_id=$1 ORDER BY u.display_name`,
@@ -502,8 +517,13 @@ export class ElearningRepository {
          JOIN course_lessons l ON l.id=a.lesson_id WHERE l.course_id=$1 AND a.submitted_at IS NOT NULL GROUP BY a.user_id,a.lesson_id`,
         [courseId],
       ),
+      query<{ userId: string; displayName: string; email: string; requestedAt: Date }>(
+        `SELECT u.id AS "userId",u.display_name AS "displayName",u.email,q.requested_at AS "requestedAt"
+         FROM course_enrollment_requests q JOIN users u ON u.id=q.user_id WHERE q.course_id=$1 ORDER BY q.requested_at`,
+        [courseId],
+      ),
     ]);
-    return { learners: learners.rows, done: done.rows, quizzes: quizzes.rows };
+    return { learners: learners.rows, done: done.rows, quizzes: quizzes.rows, requests: requests.rows };
   }
 
   // ---- live classes (EL-6, LT-2) ----------------------------------------------------------------

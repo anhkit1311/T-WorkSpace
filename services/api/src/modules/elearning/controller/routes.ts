@@ -4,6 +4,7 @@ import { HttpError } from "../../../shared/http/http-error.js";
 import { limitRequest } from "../../../shared/http/rate-limit.js";
 import { openMediaPath } from "../../../infrastructure/media-storage.js";
 import { getAuthUserId, readJson, sendJson } from "../../../shared/http/utils.js";
+import { sendTable } from "../../../shared/http/table-export.js";
 import type { Body } from "../../callcenter/service/input.js";
 import type { CourseService } from "../service/course-service.js";
 import type { LearningService } from "../service/learning-service.js";
@@ -58,6 +59,7 @@ export function elearningRoutes(courses: CourseService, learning: LearningServic
     r("POST", "/courses/:id/enroll", (u, m) => courses.enrollSelf(u, m[1])),
     r("POST", "/courses/:id/assignments", (u, m, b) => courses.assign(u, m[1], b)),
     r("DELETE", "/courses/:id/learners/:id", (u, m) => courses.unenroll(u, m[1], m[2])),
+    r("POST", "/courses/:id/requests/:id", (u, m, b) => courses.decideRequest(u, m[1], m[2], b)),
     r("GET", "/courses/:id/questions", (u, m) => courses.questions(u, m[1])),
     r("POST", "/courses/:id/questions", (u, m, b) => courses.saveQuestion(u, m[1], null, b), 201),
     r("PATCH", "/questions/:id", (u, m, b) => courses.saveQuestion(u, null, m[1], b)),
@@ -92,11 +94,9 @@ export function elearningRoutes(courses: CourseService, learning: LearningServic
       await pipeline(stored.stream, response);
       return;
     }
-    const csv = pathname.match(new RegExp(`^/api/elearning/courses/${uuid}/progress\\.csv$`));
+    const csv = pathname.match(new RegExp(`^/api/elearning/courses/${uuid}/progress(\\.csv|\\.xlsx)$`));
     if (csv && request.method === "GET") {
-      const content = await courses.progressCsv(await getAuthUserId(request), csv[1]);
-      response.writeHead(200, { "Content-Type": "text/csv; charset=utf-8", "Cache-Control": "private, no-store" });
-      response.end("﻿" + content); // BOM so Excel reads Vietnamese correctly
+      sendTable(response, await courses.progressTable(await getAuthUserId(request), csv[1]), csv[2]);
       return;
     }
     const candidates = routes.filter((route) => route.pattern.test(pathname));

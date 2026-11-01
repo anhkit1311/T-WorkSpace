@@ -79,9 +79,34 @@ export function CourseLearners({ course }: { course: CourseDetail }) {
         </fieldset>
       </form>
       {error && <p role="alert" className="courses-error">{error}</p>}
+      {report && report.requests.length > 0 && (
+        <>
+          <h3>Yêu cầu ghi danh ({report.requests.length})</h3>
+          <ul className="course-requests">
+            {report.requests.map((item) => (
+              <li key={item.userId}>
+                <span>
+                  {item.displayName}
+                  <small>{item.email} · {new Date(item.requestedAt).toLocaleString("vi-VN")}</small>
+                </span>
+                {[true, false].map((approve) => (
+                  <Button
+                    key={String(approve)}
+                    size="sm"
+                    variant={approve ? "primary" : "ghost"}
+                    onClick={() => void coursesApi.decideRequest(token, course.id, item.userId, approve).then(load, (failure) => setError(failure.message))}
+                  >
+                    {approve ? "Duyệt" : "Từ chối"}
+                  </Button>
+                ))}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <div className="course-outline__tools">
         <h3>Tiến độ học viên ({report?.learners.length ?? 0})</h3>
-        <Button size="sm" variant="secondary" icon="download" onClick={() => void downloadProgressCsv(token, course.id, `tien-do-${course.code}.csv`).catch((failure) => setError(failure.message))}>
+        <Button size="sm" variant="secondary" icon="download" onClick={() => void downloadProgressCsv(token, course.id, `tien-do-${course.code}.xlsx`).catch((failure) => setError(failure.message))}>
           Xuất Excel
         </Button>
       </div>
