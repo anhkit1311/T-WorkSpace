@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import type { CreateAnnouncementInput, HomeSummary, PortalAnnouncement } from "@doan/shared";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import type { AnnouncementCategory, CreateAnnouncementInput, HomeSummary, PortalAnnouncement } from "@doan/shared";
 import { governanceApi } from "../workspaces/api";
-import { Button, Badge, FilterPills, KpiStatCard } from "../../shared/ui/Primitives";
-import { Icon } from "../../shared/ui/Icon";
+import { Avatar } from "../../shared/ui/Primitives";
+import { Icon, type IconName } from "../../shared/ui/Icon";
 import { useApp } from "../../app/providers/AppContext";
 import type { AppRoute } from "../../app/navigation";
 import { useSocket } from "../../app/providers/SocketContext";
@@ -11,11 +11,11 @@ import {
   createAnnouncementApi,
   updateAnnouncementApi,
   deleteAnnouncementApi,
+  getPublishersApi,
 } from "../announcements/api";
 import { AnnouncementDetailModal } from "../announcements/AnnouncementDetailModal";
-import { CreateAnnouncementModal } from "../announcements/CreateAnnouncementModal";
+import { AnnouncementComposer, CATEGORIES, CATEGORY_META, FeatureCard, formatStamp } from "../announcements/AnnouncementComposer";
 import { PublisherManagementModal } from "../announcements/PublisherManagementModal";
-import "../workspaces/workspace-admin.css";
 import "./notifications.css";
 
 export interface NotificationItem {
@@ -41,77 +41,129 @@ export interface NotificationPage {
   hasMore: boolean;
 }
 
-const CATEGORY_PILLS = [
-  { key: "all", label: "Tất cả" },
-  { key: "general", label: "Thông báo chung" },
-  { key: "training", label: "Đào tạo" },
-  { key: "event", label: "Sự kiện" },
-  { key: "urgent", label: "Khẩn" },
+type Kind = NotificationItem["kind"];
+type InboxFilter = "all" | "unread" | Kind;
+
+const KINDS: { key: Kind; label: string; icon: IconName; action: string }[] = [
+  { key: "mention", label: "Nhắc tên", icon: "at-sign", action: "Trả lời" },
+  { key: "thread", label: "Trả lời luồng", icon: "messages", action: "Trả lời" },
+  { key: "direct", label: "Tin nhắn riêng", icon: "message", action: "Mở" },
+  { key: "meeting", label: "Họp", icon: "video", action: "Mở họp" },
+  { key: "course", label: "Khóa học", icon: "graduation-cap", action: "Mở khóa học" },
 ];
+const KIND = Object.fromEntries(KINDS.map((kind) => [kind.key, kind])) as Record<Kind, (typeof KINDS)[number]>;
+
+const ROLE_LABEL: Record<string, string> = {
+  system_admin: "Quản trị hệ thống",
+  unit_admin: "Quản trị đơn vị",
+  unit_head: "Trưởng đơn vị",
+  lecturer: "Giảng viên",
+  publisher: "Được cấp quyền đăng",
+  workspace_admin: "Quản trị nhóm",
+};
+
+const DAY = 86_400_000;
+
+function dayGroup(iso: string) {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const at = new Date(iso).getTime();
+  return at >= start.getTime() ? "Hôm nay" : at >= start.getTime() - DAY ? "Hôm qua" : "Trước đó";
+}
+
+function timeLabel(iso: string) {
+  const date = new Date(iso);
+  return dayGroup(iso) === "Hôm nay"
+    ? date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
+    : `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Items arrive newest first, so groups come out in Hôm nay → Hôm qua → Trước đó order. */
+function byDay<T extends { createdAt: string }>(items: T[]) {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const label = dayGroup(item.createdAt);
+    groups.set(label, [...(groups.get(label) ?? []), item]);
+  }
+  return [...groups];
+}
+
+const badgeTone = (badge: string) => (badge === "Khẩn" ? "is-urgent" : badge === "Quan trọng" ? "is-important" : "is-new");
 
 export function NotificationsPage() {
-  const { accessToken, navigate, notify } = useApp();
+  const { accessToken, navigate, notify, user } = useApp();
   const { socket } = useSocket();
 
-  // Tab view: "portal_announcements" (Quản lý đăng tải thông báo) | "personal_alerts" (Nhắc tên/thảo luận)
-  const [activeTab, setActiveTab] = useState<"portal_announcements" | "personal_alerts">("portal_announcements");
+  const [tab, setTab] = useState<"board" | "inbox" | null>(null);
 
-  // Portal Announcements State
+  // Portal announcements
   const [announcements, setAnnouncements] = useState<PortalAnnouncement[]>([]);
-  const [announcementsLoading, setAnnouncementsLoading] = useState(true);
-  const [announcementsError, setAnnouncementsError] = useState("");
+  const [annLoaded, setAnnLoaded] = useState(false);
+  const [annError, setAnnError] = useState("");
+  const [annTick, setAnnTick] = useState(0);
   const [canPublish, setCanPublish] = useState(false);
-  const [userRole, setUserRole] = useState("student");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [role, setRole] = useState("student");
+  const [publisherCount, setPublisherCount] = useState<number | null>(null);
+  const [category, setCategory] = useState<"all" | AnnouncementCategory>("all");
+  const [mineOnly, setMineOnly] = useState(false);
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [composing, setComposing] = useState<{ item: PortalAnnouncement | null } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [detail, setDetail] = useState<PortalAnnouncement | null>(null);
+  const [publishersOpen, setPublishersOpen] = useState(false);
 
-  // Modals
-  const [detailAnnouncement, setDetailAnnouncement] = useState<PortalAnnouncement | null>(null);
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [editingAnnouncement, setEditingAnnouncement] = useState<PortalAnnouncement | null>(null);
-  const [publishersModalOpen, setPublishersModalOpen] = useState(false);
-  const [submittingAnnouncement, setSubmittingAnnouncement] = useState(false);
-
-  // Personal alerts state (legacy inbox)
+  // Personal inbox
   const [page, setPage] = useState<NotificationPage>({ items: [], unreadCount: 0, hasMore: false });
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [unreadChannels, setUnreadChannels] = useState<HomeSummary["unreadChannels"]>([]);
+  const [inboxFilter, setInboxFilter] = useState<InboxFilter>("all");
 
-  // Fetch announcements
-  const fetchAnnouncements = async () => {
-    if (!accessToken) return;
-    try {
-      setAnnouncementsLoading(true);
-      const res = await getAnnouncementsApi(accessToken, selectedCategory);
-      setAnnouncements(res.items);
-      setCanPublish(res.canPublish);
-      setUserRole(res.role);
-      setAnnouncementsError("");
-    } catch (err: unknown) {
-      setAnnouncementsError(err instanceof Error ? err.message : "Không thể tải danh sách thông báo.");
-    } finally {
-      setAnnouncementsLoading(false);
-    }
-  };
+  const reloadAnnouncements = () => setAnnTick((tick) => tick + 1);
 
   useEffect(() => {
-    void fetchAnnouncements();
-  }, [accessToken, selectedCategory]);
+    if (!accessToken) return;
+    let active = true;
+    getAnnouncementsApi(accessToken)
+      .then((res) => {
+        if (!active) return;
+        setAnnouncements(res.items);
+        setCanPublish(res.canPublish);
+        setRole(res.role);
+        setAnnError("");
+      })
+      .catch((reason) => {
+        if (active) setAnnError(reason instanceof Error ? reason.message : "Không thể tải danh sách thông báo.");
+      })
+      .finally(() => {
+        if (active) setAnnLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [accessToken, annTick]);
 
-  // Realtime updates for announcements
   useEffect(() => {
     if (!socket) return;
-    const handleAnnouncementsChanged = () => {
-      void fetchAnnouncements();
-    };
-    socket.on("announcements_changed", handleAnnouncementsChanged);
+    socket.on("announcements_changed", reloadAnnouncements);
     return () => {
-      socket.off("announcements_changed", handleAnnouncementsChanged);
+      socket.off("announcements_changed", reloadAnnouncements);
     };
-  }, [socket, accessToken, selectedCategory]);
+  }, [socket]);
 
-  // Load personal alerts
+  useEffect(() => {
+    if (!accessToken || !canPublish) return;
+    let active = true;
+    getPublishersApi(accessToken)
+      .then((res) => active && setPublisherCount(res.publishers.length))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [accessToken, canPublish, annTick]);
+
   useEffect(() => {
     if (!accessToken) return;
     let active = true;
@@ -119,9 +171,7 @@ export function NotificationsPage() {
     const load = () =>
       void governanceApi<HomeSummary>(accessToken, "home")
         .then((data) => {
-          if (active) {
-            setUnreadChannels(data.unreadChannels);
-          }
+          if (active) setUnreadChannels(data.unreadChannels);
         })
         .catch(() => undefined);
     const refresh = () => {
@@ -150,8 +200,7 @@ export function NotificationsPage() {
           }
         })
         .catch((reason) => {
-          if (active)
-            setError(reason instanceof Error ? reason.message : "Không tải được thông báo.");
+          if (active) setError(reason instanceof Error ? reason.message : "Không tải được thông báo.");
         })
         .finally(() => {
           if (active) setLoading(false);
@@ -169,569 +218,566 @@ export function NotificationsPage() {
     };
   }, [accessToken, socket]);
 
-  // Handle Create / Edit announcement submit
-  const handleSaveAnnouncement = async (input: CreateAnnouncementInput) => {
-    if (!accessToken) return;
-    try {
-      setSubmittingAnnouncement(true);
-      if (editingAnnouncement) {
-        await updateAnnouncementApi(accessToken, editingAnnouncement.id, input);
-        notify("Thành công", "Đã cập nhật thông báo.", "success");
-      } else {
-        await createAnnouncementApi(accessToken, input);
-        notify("Thành công", "Đã đăng thông báo mới lên Bảng tin.", "success");
-      }
-      setEditingAnnouncement(null);
-      setCreateModalOpen(false);
-      await fetchAnnouncements();
-    } finally {
-      setSubmittingAnnouncement(false);
-    }
-  };
+  // People who cannot publish reach this page from the bell, so they land on their own inbox.
+  const view = tab ?? (annLoaded && !canPublish ? "inbox" : "board");
+  const canGrant = role === "system_admin" || role === "unit_admin" || canPublish;
 
-  // Handle Delete announcement
-  const handleDeleteAnnouncement = async (announcement: PortalAnnouncement) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa thông báo: "${announcement.title}"?`)) return;
-    if (!accessToken) return;
-    try {
-      await deleteAnnouncementApi(accessToken, announcement.id);
-      notify("Đã xóa", "Thông báo đã được gỡ khỏi hệ thống.", "info");
-      await fetchAnnouncements();
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Không thể xóa thông báo.");
-    }
-  };
-
-  // Handle Toggle Pin
-  const handleTogglePin = async (announcement: PortalAnnouncement) => {
-    if (!accessToken) return;
-    try {
-      await updateAnnouncementApi(accessToken, announcement.id, {
-        pinned: !announcement.pinned,
-      });
-      notify("Cập nhật ghim", announcement.pinned ? "Đã bỏ ghim thông báo." : "Đã ghim thông báo lên đầu.", "info");
-      await fetchAnnouncements();
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Không thể cập nhật trạng thái ghim.");
-    }
-  };
-
-  // Filtered announcements by search
-  const filteredAnnouncements = announcements.filter((a) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      a.title.toLowerCase().includes(q) ||
-      a.summary.toLowerCase().includes(q) ||
-      a.authorName.toLowerCase().includes(q) ||
-      a.scope.toLowerCase().includes(q)
-    );
+  /** Server order (pinned first, then newest) decides the home page's featured slot. */
+  const featured = announcements[0] ?? null;
+  const sorted = useMemo(
+    () => [...announcements].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [announcements],
+  );
+  const filtered = sorted.filter((item) => {
+    if (category !== "all" && item.category !== category) return false;
+    if (mineOnly && item.authorId !== user?.id) return false;
+    const q = query.trim().toLowerCase();
+    return !q || [item.title, item.summary, item.authorName, item.authorTitle ?? "", item.scope].some((text) => text.toLowerCase().includes(q));
   });
+  const selected = filtered.find((item) => item.id === selectedId) ?? filtered[0] ?? null;
+  const urgent = sorted.filter((item) => item.category === "urgent");
+  const weekCount = sorted.filter((item) => Date.now() - new Date(item.createdAt).getTime() < 7 * DAY).length;
+  const pinnedTop = featured?.pinned ? featured : null;
 
-  const urgentCount = announcements.filter((a) => a.category === "urgent" || a.pinned).length;
+  const save = async (input: CreateAnnouncementInput) => {
+    if (!accessToken) return;
+    setSubmitting(true);
+    try {
+      const editing = composing?.item;
+      const res = editing
+        ? await updateAnnouncementApi(accessToken, editing.id, input)
+        : await createAnnouncementApi(accessToken, input);
+      notify(editing ? "Đã cập nhật thông báo" : "Đã đăng thông báo", editing ? res.item.title : "Tin đã lên Bảng tin của mọi tài khoản.", "success");
+      setComposing(null);
+      setSelectedId(res.item.id);
+      setCategory("all");
+      reloadAnnouncements();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const remove = async (item: PortalAnnouncement) => {
+    if (!accessToken || !window.confirm(`Xóa thông báo “${item.title}”? Không thể hoàn tác.`)) return;
+    try {
+      await deleteAnnouncementApi(accessToken, item.id);
+      notify("Đã xóa thông báo", item.title, "info");
+      reloadAnnouncements();
+    } catch (reason) {
+      notify("Không xóa được", reason instanceof Error ? reason.message : "Thử lại sau.", "warning");
+    }
+  };
+
+  const togglePin = async (item: PortalAnnouncement) => {
+    if (!accessToken) return;
+    try {
+      await updateAnnouncementApi(accessToken, item.id, { pinned: !item.pinned });
+      notify(item.pinned ? "Đã bỏ ghim" : "Đã ghim lên đầu Trang chủ", item.title, "info");
+      reloadAnnouncements();
+    } catch (reason) {
+      notify("Không cập nhật được ghim", reason instanceof Error ? reason.message : "Thử lại sau.", "warning");
+    }
+  };
+
+  const pick = (item: PortalAnnouncement) => {
+    setSelectedId(item.id);
+    // The preview column is hidden on narrow screens; open the full text instead.
+    if (window.matchMedia("(max-width: 1100px)").matches) setDetail(item);
+  };
+
+  const markAllRead = async () => {
+    if (!accessToken) return;
+    await governanceApi(accessToken, "notifications/read", "POST", {});
+    setPage((prev) => ({
+      ...prev,
+      unreadCount: 0,
+      items: prev.items.map((item) => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })),
+    }));
+  };
+
+  const openNote = (item: NotificationItem) => {
+    if (!item.readAt && accessToken) {
+      void governanceApi(accessToken, "notifications/read", "POST", { id: item.id }).catch(() => undefined);
+      setPage((prev) => ({
+        ...prev,
+        unreadCount: Math.max(0, prev.unreadCount - 1),
+        items: prev.items.map((note) => (note.id === item.id ? { ...note, readAt: new Date().toISOString() } : note)),
+      }));
+    }
+    if (item.link) navigate(item.link);
+    else if (item.workspaceId && item.channelId && item.messageId)
+      navigate({ view: "chat", workspaceId: item.workspaceId, channelId: item.channelId, messageId: item.messageId });
+  };
+
+  const loadMore = async () => {
+    const last = page.items.at(-1);
+    if (!accessToken || !last) return;
+    setLoadingMore(true);
+    try {
+      const next = await governanceApi<NotificationPage>(accessToken, `notifications?before=${last.id}`);
+      setPage((prev) => ({ ...next, items: [...prev.items, ...next.items] }));
+    } catch (reason) {
+      notify("Không tải thêm được", reason instanceof Error ? reason.message : "Thử lại sau.", "warning");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  if (composing)
+    return (
+      <div className="nf-page">
+        <AnnouncementComposer
+          initial={composing.item}
+          featured={featured}
+          authorName={user?.displayName ?? ""}
+          authorRole={ROLE_LABEL[role] ?? ""}
+          submitting={submitting}
+          onCancel={() => setComposing(null)}
+          onSubmit={save}
+        />
+      </div>
+    );
+
+  const notes = page.items.filter((item) =>
+    inboxFilter === "all" ? true : inboxFilter === "unread" ? !item.readAt : item.kind === inboxFilter,
+  );
+  const latestNews = [...urgent.slice(0, 1), ...sorted.filter((item) => item.category !== "urgent")].slice(0, 2);
+  const unreadMessages = unreadChannels.reduce((sum, channel) => sum + channel.unreadCount, 0);
 
   return (
-    <div className="tdtu-home-container">
-      {/* Top Header */}
-      <header style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 500, color: "var(--text-muted, #64748B)", marginBottom: 2 }}>
-              Cổng nội bộ TDTU · Kênh Thông tin Toàn trường
-            </div>
-            <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "var(--text, #0F172A)" }}>
-              Quản lý Thông báo & Bảng tin
-            </h1>
+    <div className="nf-page">
+      <div className="nf-head">
+        <div className="nf-head__title">
+          <div className="nf-eyebrow">
+            <span className="nf-led" />
+            {view === "board" ? "Bảng tin toàn trường · cập nhật tức thì" : "Cá nhân · nhắc tên, tin riêng, họp, khóa học"}
           </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {canPublish ? (
-              <Button
-                variant="primary"
-                onClick={() => {
-                  setEditingAnnouncement(null);
-                  setCreateModalOpen(true);
-                }}
-              >
-                <Icon name="bell" size={15} />
-                <span>+ Đăng thông báo mới</span>
-              </Button>
-            ) : (
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "4px 10px",
-                  borderRadius: 9999,
-                  background: "var(--bg-subtle, #F1F5F9)",
-                  color: "var(--text-muted, #64748B)",
-                  fontSize: 12,
-                  fontWeight: 500,
-                  border: "1px solid var(--border-color, #E2E8F0)",
-                }}
-                title="Tài khoản sinh viên chỉ có quyền xem thông báo"
-              >
-                <Icon name="info" size={13} />
-                <span>Chế độ Sinh viên (Chỉ xem)</span>
-              </div>
-            )}
-
-            {(userRole === "system_admin" || userRole === "unit_admin" || canPublish) && (
-              <Button
-                variant="secondary"
-                onClick={() => setPublishersModalOpen(true)}
-                title="Quản lý danh sách người được cấp quyền đăng thông báo"
-              >
+          <h1>Thông báo</h1>
+        </div>
+        <div className="nf-seg" role="group" aria-label="Khu vực">
+          <button type="button" aria-pressed={view === "board"} onClick={() => setTab("board")}>
+            {canPublish ? "Bảng tin đã đăng" : "Bảng tin trường"} <small>{announcements.length}</small>
+          </button>
+          <button type="button" aria-pressed={view === "inbox"} onClick={() => setTab("inbox")}>
+            Hộp thông báo của tôi {page.unreadCount > 0 && <small className="is-hot">{page.unreadCount}</small>}
+          </button>
+        </div>
+        {view === "board" ? (
+          <>
+            {canGrant && (
+              <button type="button" className="nf-btn" onClick={() => setPublishersOpen(true)}>
                 <Icon name="users" size={15} />
-                <span>Phân quyền đăng bài</span>
-              </Button>
+                Phân quyền đăng
+              </button>
             )}
-          </div>
-        </div>
-
-        {/* Tab Switcher */}
-        <div style={{ display: "flex", gap: 6, marginTop: 12, borderBottom: "1px solid var(--border-color, #E2E8F0)", paddingBottom: 8 }}>
-          <button
-            type="button"
-            className={`filter-pill-btn ${activeTab === "portal_announcements" ? "is-active" : ""}`}
-            onClick={() => setActiveTab("portal_announcements")}
-            style={{
-              padding: "4px 12px",
-              borderRadius: "9999px",
-              fontSize: "12px",
-              fontWeight: 600,
-              cursor: "pointer",
-              border: activeTab === "portal_announcements" ? "1px solid var(--brand-primary, #2563EB)" : "1px solid var(--border-color, #E2E8F0)",
-              background: activeTab === "portal_announcements" ? "var(--brand-primary, #2563EB)" : "var(--bg-surface, #FFFFFF)",
-              color: activeTab === "portal_announcements" ? "#FFFFFF" : "var(--text-secondary, #475569)",
-              transition: "all 0.15s ease",
-            }}
-          >
-            📢 Thông báo sinh viên & Bảng tin ({announcements.length})
+            {canPublish && (
+              <button type="button" className="nf-btn is-primary" onClick={() => setComposing({ item: null })}>
+                <Icon name="plus" size={15} />
+                Đăng thông báo
+              </button>
+            )}
+          </>
+        ) : (
+          <button type="button" className="nf-btn" disabled={!page.unreadCount} onClick={() => void markAllRead()}>
+            <Icon name="check" size={15} />
+            Đánh dấu đã đọc tất cả
           </button>
-          <button
-            type="button"
-            className={`filter-pill-btn ${activeTab === "personal_alerts" ? "is-active" : ""}`}
-            onClick={() => setActiveTab("personal_alerts")}
-            style={{
-              padding: "4px 12px",
-              borderRadius: "9999px",
-              fontSize: "12px",
-              fontWeight: 600,
-              cursor: "pointer",
-              border: activeTab === "personal_alerts" ? "1px solid var(--brand-primary, #2563EB)" : "1px solid var(--border-color, #E2E8F0)",
-              background: activeTab === "personal_alerts" ? "var(--brand-primary, #2563EB)" : "var(--bg-surface, #FFFFFF)",
-              color: activeTab === "personal_alerts" ? "#FFFFFF" : "var(--text-secondary, #475569)",
-              transition: "all 0.15s ease",
-            }}
-          >
-            🔔 Thông báo thảo luận & Nhắc tên ({page.unreadCount})
-          </button>
-        </div>
-      </header>
+        )}
+      </div>
 
-      {/* TAB 1: PORTAL ANNOUNCEMENTS (BẢNG TIN & ĐĂNG TẢI THÔNG BÁO) */}
-      {activeTab === "portal_announcements" && (
-        <div>
-          {/* KPI Cards Row */}
-          <section className="tdtu-home-kpi-grid" style={{ marginBottom: 20 }}>
-            <KpiStatCard
-              icon="bell"
-              tone="purple"
-              value={announcements.length}
-              label="Tổng số thông báo toàn trường"
-            />
-            <KpiStatCard
-              icon="shield"
-              tone={canPublish ? "green" : "blue"}
-              value={canPublish ? "Có quyền đăng bài" : "Chỉ xem"}
-              label={canPublish ? "Bạn được phép đăng thông báo" : "Chế độ xem thông báo chính thức"}
-            />
-            <KpiStatCard
-              icon="message"
-              tone="red"
-              value={urgentCount}
-              label="Thông báo khẩn / Đang ghim"
-            />
-          </section>
-
-          {/* Permission notice for accounts that cannot publish */}
-          {!canPublish && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "8px 14px",
-                background: "#EFF6FF",
-                border: "1px solid #BFDBFE",
-                borderRadius: 8,
-                marginBottom: 14,
-                color: "#1E40AF",
-                fontSize: 12.5,
-              }}
-            >
-              <Icon name="info" size={16} />
-              <div>
-                <strong>Thông tin phân quyền:</strong> Tài khoản của bạn chỉ có quyền xem thông báo. Khi các Đơn vị, Ban Giám hiệu, Phòng ban hoặc Khoa đăng thông báo mới, thông báo sẽ hiển thị trực tiếp tại Trang chủ của bạn. Chỉ cán bộ / giảng viên hoặc người được cấp quyền mới có thể đăng tải thông báo.
-              </div>
+      {view === "board" ? (
+        <>
+          <section className="nf-rack nf-summary" aria-label="Tóm tắt bảng tin">
+            <div className="nf-unit">
+              <span className="nf-unit__label">Đã đăng</span>
+              <b className="nf-big">{announcements.length}</b>
+              <span className="nf-unit__sub">{weekCount} tin trong 7 ngày qua</span>
             </div>
-          )}
-
-          {/* Filters & Search Toolbar */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              marginBottom: 12,
-              flexWrap: "wrap",
-            }}
-          >
-            <FilterPills
-              options={CATEGORY_PILLS}
-              activeKey={selectedCategory}
-              onChange={(key) => setSelectedCategory(key)}
-            />
-
-            <div style={{ position: "relative", minWidth: 240 }}>
-              <input
-                type="text"
-                placeholder="Tìm kiếm thông báo..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  width: "100%",
-                  height: 32,
-                  padding: "0 12px 0 32px",
-                  borderRadius: 9999,
-                  border: "1px solid var(--border-color, #E2E8F0)",
-                  background: "var(--bg-surface, #FFFFFF)",
-                  fontSize: 12.5,
-                  outline: "none",
-                }}
-              />
-              <span style={{ position: "absolute", left: 10, top: 8, color: "var(--text-muted, #64748B)" }}>
-                <Icon name="search" size={14} />
+            <div className={`nf-unit${urgent.length ? " is-alert" : ""}`}>
+              <span className="nf-unit__label">
+                <span className="nf-led is-red" />
+                Tin khẩn
+              </span>
+              <b className="nf-big">{urgent.length}</b>
+              <span className="nf-unit__sub">{urgent[0]?.title ?? "Không có tin khẩn"}</span>
+            </div>
+            <div className="nf-unit is-wide">
+              <span className="nf-unit__label">
+                <span className="nf-led is-amber" />
+                Đang ghim ở đầu Trang chủ
+              </span>
+              {pinnedTop ? (
+                <div className="nf-pinned">
+                  <span className="nf-chip is-dark">{CATEGORY_META[pinnedTop.category].short}</span>
+                  <b>{pinnedTop.title}</b>
+                  {pinnedTop.canManage && (
+                    <button type="button" className="nf-btn is-dark is-sm" onClick={() => void togglePin(pinnedTop)}>
+                      Bỏ ghim
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <b className="nf-pinned is-empty">Chưa ghim tin nào</b>
+              )}
+              <span className="nf-unit__sub">
+                {pinnedTop ? "Tin ghim mới nhất hiện ở ô nổi bật trên Bảng tin của mọi tài khoản" : "Ô nổi bật đang hiện tin mới nhất"}
               </span>
             </div>
-          </div>
-
-          {/* Announcements Feed List */}
-          {announcementsLoading ? (
-            <p style={{ textAlign: "center", padding: 30, color: "var(--text-muted, #64748B)", fontSize: 13 }}>
-              Đang tải danh sách thông báo...
-            </p>
-          ) : announcementsError ? (
-            <div role="alert" style={{ padding: 14, background: "#FEF2F2", color: "#DC2626", borderRadius: 8, fontSize: 13 }}>
-              {announcementsError}
+            <div className="nf-unit">
+              <span className="nf-unit__label">{canPublish ? "Được cấp quyền đăng" : "Quyền của bạn"}</span>
+              <b className="nf-big">{canPublish ? (publisherCount ?? "–") : "Chỉ xem"}</b>
+              <span className="nf-unit__sub">{canPublish ? "Ngoài Quản trị và Giáo vụ khoa" : "Tài khoản của bạn chỉ xem bảng tin"}</span>
             </div>
-          ) : filteredAnnouncements.length === 0 ? (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "40px 16px",
-                background: "var(--bg-surface, #FFFFFF)",
-                borderRadius: 10,
-                border: "1px solid var(--border-color, #E2E8F0)",
-              }}
-            >
-              <Icon name="bell" size={30} />
-              <h3 style={{ margin: "10px 0 4px", fontSize: 14.5, color: "var(--text, #0F172A)" }}>
-                Chưa có thông báo nào trong mục này
-              </h3>
-              <p style={{ margin: 0, fontSize: 12.5, color: "var(--text-muted, #64748B)" }}>
-                {canPublish
-                  ? 'Bấm nút "+ Đăng thông báo mới" ở góc trên để phát thông báo cho sinh viên.'
-                  : "Các thông báo mới từ Nhà trường sẽ xuất hiện ở đây."}
-              </p>
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {filteredAnnouncements.map((item) => (
-                <article
-                  key={item.id}
-                  style={{
-                    background: "var(--bg-surface, #FFFFFF)",
-                    border: item.pinned
-                      ? "1.5px solid var(--brand-primary, #2563EB)"
-                      : "1px solid var(--border-color, #E2E8F0)",
-                    borderRadius: 10,
-                    padding: "12px 16px",
-                    boxShadow: "var(--shadow-card, 0 1px 2px rgba(15, 23, 42, 0.04))",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 8,
-                    transition: "all 0.15s ease",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <Badge tone={item.category === "urgent" ? "red" : item.category === "training" ? "amber" : "blue"}>
-                        {item.category === "general"
-                          ? "📢 Thông báo chung"
-                          : item.category === "training"
-                            ? "📚 Đào tạo"
-                            : item.category === "event"
-                              ? "🎉 Sự kiện"
-                              : "⚠️ Khẩn"}
-                      </Badge>
-                      {item.badge && (
-                        <Badge tone={item.category === "urgent" ? "red" : "amber"}>
-                          {item.badge}
-                        </Badge>
-                      )}
-                      {item.pinned && (
-                        <Badge tone="violet">
-                          ⭐ Đã ghim
-                        </Badge>
-                      )}
-                      <span style={{ fontSize: 11.5, color: "var(--text-muted, #64748B)" }}>
-                        {new Date(item.createdAt).toLocaleDateString("vi-VN", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                        })}
-                      </span>
-                    </div>
+          </section>
 
-                    {/* Action buttons */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => setDetailAnnouncement(item)}
-                      >
-                        Xem chi tiết
-                      </Button>
-
-                      {canPublish && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleTogglePin(item)}
-                            title={item.pinned ? "Bỏ ghim" : "Ghim lên đầu Bảng tin"}
-                          >
-                            {item.pinned ? "Bỏ ghim" : "Ghim"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              setEditingAnnouncement(item);
-                              setCreateModalOpen(true);
-                            }}
-                          >
-                            Sửa
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="danger"
-                            onClick={() => handleDeleteAnnouncement(item)}
-                          >
-                            Xóa
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <h3
-                    style={{
-                      margin: 0,
-                      fontSize: 14.5,
-                      fontWeight: 700,
-                      color: "var(--text, #0F172A)",
-                      lineHeight: 1.35,
-                      cursor: "pointer",
-                    }}
-                    onClick={() => setDetailAnnouncement(item)}
-                  >
-                    {item.title}
-                  </h3>
-
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 12.5,
-                      color: "var(--text-secondary, #475569)",
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    {item.summary}
-                  </p>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      fontSize: 11.5,
-                      color: "var(--text-muted, #64748B)",
-                      paddingTop: 6,
-                      borderTop: "1px dashed var(--border-color, #E2E8F0)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: "50%",
-                        background: "#0F172A",
-                        color: "#FFFFFF",
-                        display: "grid",
-                        placeItems: "center",
-                        fontSize: 10,
-                        fontWeight: 700,
-                      }}
+          <div className="nf-board">
+            <section className="nf-card nf-list" aria-label="Danh sách thông báo">
+              <div className="nf-toolbar">
+                <div className="nf-filters" role="group" aria-label="Lọc theo danh mục">
+                  <button type="button" className="nf-fchip" aria-pressed={category === "all"} onClick={() => setCategory("all")}>
+                    Tất cả <small>{announcements.length}</small>
+                  </button>
+                  {CATEGORIES.map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className={`nf-fchip is-${key}`}
+                      aria-pressed={category === key}
+                      onClick={() => setCategory(key)}
                     >
-                      {item.authorName.charAt(0).toUpperCase()}
-                    </div>
-                    <span>{item.authorName}</span>
-                    <span>·</span>
-                    <span>{item.authorTitle || "Phòng Công tác Sinh viên"}</span>
-                    <span>·</span>
-                    <span>Phạm vi: {item.scope}</span>
+                      <i />
+                      {CATEGORY_META[key].short} <small>{announcements.filter((item) => item.category === key).length}</small>
+                    </button>
+                  ))}
+                  {canPublish && (
+                    <>
+                      <span className="nf-sep" aria-hidden="true" />
+                      <button type="button" className="nf-fchip" aria-pressed={mineOnly} onClick={() => setMineOnly((value) => !value)}>
+                        Tôi đăng
+                      </button>
+                    </>
+                  )}
+                </div>
+                <label className="nf-search">
+                  <Icon name="search" size={14} />
+                  <input
+                    type="search"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Tiêu đề, người đăng, phạm vi…"
+                    aria-label="Tìm thông báo"
+                  />
+                </label>
+              </div>
+
+              {!annLoaded ? (
+                <p className="nf-state">Đang tải thông báo…</p>
+              ) : annError ? (
+                <p className="nf-state is-error" role="alert">
+                  {annError}
+                </p>
+              ) : !filtered.length ? (
+                <div className="nf-empty">
+                  <Icon name="megaphone" size={26} />
+                  <b>{announcements.length ? "Không có thông báo khớp bộ lọc" : "Chưa có thông báo nào"}</b>
+                  <span>{canPublish ? "Bấm “Đăng thông báo” để gửi tin lên Bảng tin." : "Thông báo mới của Nhà trường sẽ hiện ở đây."}</span>
+                </div>
+              ) : (
+                <div className="nf-rows">
+                  {byDay(filtered).map(([label, items]) => (
+                    <Fragment key={label}>
+                      <div className="nf-group">{label}</div>
+                      {items.map((item) => (
+                        <div key={item.id} className={`nf-row${selected?.id === item.id ? " is-selected" : ""}`}>
+                          <span className={`nf-dot is-${item.category}`} />
+                          <button
+                            type="button"
+                            className="nf-row__main"
+                            aria-current={selected?.id === item.id || undefined}
+                            onClick={() => pick(item)}
+                          >
+                            <span className="nf-row__title">
+                              {item.pinned && <Icon name="pin" size={13} />}
+                              <b>{item.title}</b>
+                              <span className={`nf-chip is-${item.category}`}>{CATEGORY_META[item.category].short}</span>
+                              {item.badge && <span className={`nf-chip ${badgeTone(item.badge)}`}>{item.badge}</span>}
+                            </span>
+                            <span className="nf-row__summary">{item.summary}</span>
+                            <span className="nf-row__meta">
+                              {[item.authorName, item.authorTitle, `Phạm vi: ${item.scope}`].filter(Boolean).join(" · ")}
+                            </span>
+                          </button>
+                          <div className="nf-row__side">
+                            <time dateTime={item.createdAt}>{timeLabel(item.createdAt)}</time>
+                            {item.canManage && (
+                              <div className="nf-row__acts">
+                                <IconButton
+                                  icon="pin"
+                                  label={item.pinned ? "Bỏ ghim" : "Ghim lên đầu Trang chủ"}
+                                  active={item.pinned}
+                                  onClick={() => void togglePin(item)}
+                                />
+                                <IconButton icon="edit" label="Sửa" onClick={() => setComposing({ item })} />
+                                <IconButton icon="trash" label="Xóa" danger onClick={() => void remove(item)} />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </Fragment>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {selected && (
+              <aside className="nf-side" aria-label="Thông báo đang chọn">
+                <section className="nf-card nf-side__card">
+                  <div className="nf-side__head">
+                    <h2>Trên Trang chủ</h2>
+                    <span className="nf-mono">
+                      {selected.id === featured?.id ? (selected.pinned ? "Ô nổi bật · đang ghim" : "Ô nổi bật · tin mới nhất") : "Xem trước thẻ"}
+                    </span>
                   </div>
-                </article>
-              ))}
+                  <FeatureCard item={selected} onOpen={() => setDetail(selected)} />
+                </section>
+                <section className="nf-card nf-side__card nf-details">
+                  <h2>Chi tiết</h2>
+                  <dl>
+                    <Fact label="Danh mục">
+                      {CATEGORY_META[selected.category].label}
+                      {selected.badge ? ` · nhãn “${selected.badge}”` : ""}
+                    </Fact>
+                    <Fact label="Phạm vi">{selected.scope}</Fact>
+                    <Fact label="Người đăng">
+                      {selected.authorName}
+                      {selected.authorTitle && <small>{selected.authorTitle}</small>}
+                    </Fact>
+                    <Fact label="Đăng lúc" mono>
+                      {formatStamp(selected.createdAt)}
+                    </Fact>
+                    {selected.updatedAt.slice(0, 19) !== selected.createdAt.slice(0, 19) && (
+                      <Fact label="Sửa lần cuối" mono>
+                        {formatStamp(selected.updatedAt)}
+                      </Fact>
+                    )}
+                  </dl>
+                  <div className="nf-details__actions">
+                    {selected.canManage && (
+                      <button type="button" className="nf-btn is-ink" onClick={() => setComposing({ item: selected })}>
+                        <Icon name="edit" size={14} />
+                        Sửa
+                      </button>
+                    )}
+                    <button type="button" className="nf-btn" onClick={() => setDetail(selected)}>
+                      Xem toàn văn
+                    </button>
+                    {selected.canManage && (
+                      <button type="button" className="nf-btn is-danger" aria-label="Xóa thông báo" title="Xóa thông báo" onClick={() => void remove(selected)}>
+                        <Icon name="trash" size={14} />
+                      </button>
+                    )}
+                  </div>
+                </section>
+              </aside>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="nf-inbox">
+          <nav className="nf-kinds" aria-label="Lọc thông báo">
+            <KindButton icon="bell" label="Tất cả" count={`${page.items.length}${page.hasMore ? "+" : ""}`} active={inboxFilter === "all"} onClick={() => setInboxFilter("all")} />
+            <KindButton icon="eye" label="Chưa đọc" count={page.unreadCount || ""} hot active={inboxFilter === "unread"} onClick={() => setInboxFilter("unread")} />
+            <div className="nf-kinds__label">Theo loại</div>
+            {KINDS.map((kind) => (
+              <KindButton
+                key={kind.key}
+                icon={kind.icon}
+                label={kind.label}
+                count={page.items.filter((item) => item.kind === kind.key).length || ""}
+                active={inboxFilter === kind.key}
+                onClick={() => setInboxFilter(kind.key)}
+              />
+            ))}
+            <p className="nf-kinds__note">Mở một thông báo sẽ đưa bạn tới đúng tin nhắn, cuộc họp hoặc khóa học và đánh dấu đã đọc.</p>
+          </nav>
+
+          <section className="nf-card nf-feed" aria-label="Danh sách thông báo cá nhân">
+            <div className="nf-feed__head">
+              <h2>
+                {inboxFilter === "all" ? "Tất cả" : inboxFilter === "unread" ? "Chưa đọc" : KIND[inboxFilter].label}
+                <span className="nf-mono"> · {page.unreadCount} chưa đọc</span>
+              </h2>
             </div>
-          )}
+            {loading && !page.items.length ? (
+              <p className="nf-state">Đang tải…</p>
+            ) : error ? (
+              <p className="nf-state is-error" role="alert">
+                {error}
+              </p>
+            ) : !notes.length ? (
+              <div className="nf-empty">
+                <Icon name="check" size={26} />
+                <b>{inboxFilter === "all" ? "Bạn đã xem hết thông báo" : "Không có thông báo nào ở mục này"}</b>
+                <span>Khi ai đó nhắc tên, trả lời bạn, mời họp hoặc ghi danh bạn vào khóa học, thông báo sẽ hiện ở đây.</span>
+              </div>
+            ) : (
+              <div className="nf-rows">
+                {byDay(notes).map(([label, items]) => (
+                  <Fragment key={label}>
+                    <div className="nf-group">{label}</div>
+                    {items.map((item) => {
+                      const kind = KIND[item.kind];
+                      const chat = !item.title;
+                      return (
+                        <button key={item.id} type="button" className={`nf-note${item.readAt ? "" : " is-unread"}`} onClick={() => openNote(item)}>
+                          <span className="nf-note__dot" aria-label={item.readAt ? undefined : "Chưa đọc"} />
+                          <span className={`nf-note__kind is-${item.kind}`}>
+                            <Icon name={kind.icon} size={17} />
+                            {chat && item.authorName && <Avatar name={item.authorName} size="xs" />}
+                          </span>
+                          <span className="nf-note__body">
+                            <span className="nf-note__line">
+                              {item.kind === "mention" ? (
+                                <>
+                                  <b>{item.authorName}</b> nhắc bạn trong <b>#{item.channelName}</b>
+                                </>
+                              ) : item.kind === "thread" ? (
+                                <>
+                                  <b>{item.authorName}</b> trả lời trong luồng ở <b>#{item.channelName}</b>
+                                </>
+                              ) : item.kind === "direct" ? (
+                                <>
+                                  <b>{item.authorName}</b> gửi bạn tin nhắn riêng
+                                </>
+                              ) : (
+                                <b>{item.title}</b>
+                              )}
+                            </span>
+                            {item.content && <span className={chat ? "nf-note__quote" : "nf-note__text"}>{item.content}</span>}
+                            <span className="nf-note__meta">{chat && item.channelName && item.kind !== "direct" ? `${kind.label} · #${item.channelName}` : kind.label}</span>
+                          </span>
+                          <span className="nf-note__side">
+                            <time dateTime={item.createdAt}>{timeLabel(item.createdAt)}</time>
+                            <span className={`nf-btn is-sm${!item.readAt && item.kind === "meeting" ? " is-primary" : ""}`}>{kind.action}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </Fragment>
+                ))}
+                {page.hasMore && (
+                  <button type="button" className="nf-more" disabled={loadingMore} onClick={() => void loadMore()}>
+                    {loadingMore ? "Đang tải…" : "Tải thêm thông báo cũ hơn"}
+                  </button>
+                )}
+              </div>
+            )}
+          </section>
+
+          <aside className="nf-rail" aria-label="Tóm tắt">
+            <section className="nf-rack nf-channels" aria-label="Kênh còn tin chưa đọc">
+              <div className="nf-rack__label">
+                <span className="nf-led" />
+                Kênh còn tin chưa đọc
+                <span className="nf-rack__count">{unreadMessages} tin</span>
+              </div>
+              {unreadChannels.length ? (
+                unreadChannels.slice(0, 6).map((channel) => (
+                  <button
+                    key={channel.channelId}
+                    type="button"
+                    className="nf-channel"
+                    onClick={() => navigate({ view: "chat", workspaceId: channel.workspaceId, channelId: channel.channelId })}
+                  >
+                    <span>
+                      #{channel.channelName}
+                      <small>{channel.workspaceName}</small>
+                    </span>
+                    <b>{channel.unreadCount}</b>
+                  </button>
+                ))
+              ) : (
+                <p className="nf-rack__empty">Không còn tin nhắn nhóm chưa đọc.</p>
+              )}
+              <button type="button" className="nf-btn is-dark is-sm" onClick={() => navigate({ view: "chat" })}>
+                Mở Tin nhắn →
+              </button>
+            </section>
+
+            <section className="nf-card nf-news" aria-label="Từ bảng tin trường">
+              <div className="nf-side__head">
+                <h2>Từ bảng tin trường</h2>
+                <span className="nf-mono">{announcements.length} tin</span>
+              </div>
+              {latestNews.length ? (
+                latestNews.map((item) => (
+                  <button key={item.id} type="button" className={`nf-news__item is-${item.category}`} onClick={() => setDetail(item)}>
+                    <span className={`nf-led is-${item.category}`} />
+                    <span>
+                      <b>
+                        {CATEGORY_META[item.category].short} · {item.title}
+                      </b>
+                      <small>
+                        {item.authorName} · {timeLabel(item.createdAt)}
+                      </small>
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <p className="nf-state">Chưa có thông báo nào.</p>
+              )}
+              <button type="button" className="nf-link" onClick={() => setTab("board")}>
+                Xem bảng tin →
+              </button>
+            </section>
+          </aside>
         </div>
       )}
 
-      {/* TAB 2: PERSONAL ALERTS (NHẮC TÊN / THẢO LUẬN CŨ) */}
-      {activeTab === "personal_alerts" && (
-        <section className="notifications-personal-wrap" style={{ marginTop: 10 }}>
-          <div className="notifications-section-head">
-            <h2>Tin nhắn chưa đọc trong nhóm</h2>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={async () => {
-                await governanceApi(accessToken!, "notifications/read", "POST", {});
-                setPage((prev) => ({
-                  ...prev,
-                  unreadCount: 0,
-                  items: prev.items.map((i) => ({ ...i, readAt: i.readAt || new Date().toISOString() })),
-                }));
-              }}
-            >
-              Đánh dấu tất cả đã đọc
-            </Button>
-          </div>
+      {detail && <AnnouncementDetailModal announcement={detail} onClose={() => setDetail(null)} />}
 
-          {unreadChannels.length > 0 ? (
-            <ul className="notifications-unread-channels" style={{ marginBottom: 24 }}>
-              {unreadChannels.map((c) => (
-                <li key={c.channelId}>
-                  <button
-                    type="button"
-                    onClick={() => navigate({ view: "chat", workspaceId: c.workspaceId, channelId: c.channelId })}
-                  >
-                    <span>#{c.channelName}</span>
-                    <small>{c.workspaceName}</small>
-                    <b>{c.unreadCount}</b>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p style={{ fontSize: 13.5, color: "var(--text-muted, #64748B)", marginBottom: 24 }}>
-              Bạn không có tin nhắn nhóm nào chưa đọc.
-            </p>
-          )}
-
-          <div className="notifications-section-head">
-            <h2>Lịch sử thông báo & Nhắc tên ({page.items.length})</h2>
-          </div>
-
-          {loading ? (
-            <p style={{ fontSize: 13.5, color: "var(--text-muted, #64748B)" }}>Đang tải...</p>
-          ) : error ? (
-            <p className="inline-alert" role="alert">{error}</p>
-          ) : page.items.length === 0 ? (
-            <div className="notifications-empty-card" style={{ padding: 32, textAlign: "center", background: "#FFFFFF", borderRadius: 14, border: "1px solid #E2E8F0" }}>
-              <Icon name="check" size={28} />
-              <h3>Bạn đã cập nhật hết thông báo</h3>
-              <p>Khi có ai đó nhắc tên hoặc trả lời bạn, mời bạn họp, nhắc giờ họp hoặc ghi danh bạn vào khóa học, thông báo sẽ hiển thị ở đây.</p>
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {page.items.map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    padding: "12px 16px",
-                    background: item.readAt ? "#FFFFFF" : "#EEF2FF",
-                    border: "1px solid #E2E8F0",
-                    borderRadius: 10,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: 13.5, fontWeight: 600, color: "#0F172A" }}>
-                      {item.title ?? `${item.authorName} trong #${item.channelName}`}
-                    </div>
-                    <div style={{ fontSize: 13, color: "#475569", marginTop: 2 }}>
-                      {item.content}
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      if (item.link) navigate(item.link);
-                      else if (item.workspaceId && item.channelId && item.messageId) {
-                        navigate({ view: "chat", workspaceId: item.workspaceId, channelId: item.channelId, messageId: item.messageId });
-                      }
-                    }}
-                  >
-                    Xem
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Detail Modal */}
-      {detailAnnouncement && (
-        <AnnouncementDetailModal
-          announcement={detailAnnouncement}
-          onClose={() => setDetailAnnouncement(null)}
-        />
-      )}
-
-      {/* Create / Edit Modal */}
-      {createModalOpen && (
-        <CreateAnnouncementModal
-          initialData={editingAnnouncement}
-          onClose={() => {
-            setCreateModalOpen(false);
-            setEditingAnnouncement(null);
-          }}
-          onSubmit={handleSaveAnnouncement}
-          loading={submittingAnnouncement}
-        />
-      )}
-
-      {/* Publishers Management Modal */}
-      {publishersModalOpen && accessToken && (
+      {publishersOpen && accessToken && (
         <PublisherManagementModal
           accessToken={accessToken}
-          onClose={() => setPublishersModalOpen(false)}
-          onChanged={() => void fetchAnnouncements()}
+          onClose={() => setPublishersOpen(false)}
+          onChanged={reloadAnnouncements}
         />
       )}
+    </div>
+  );
+}
+
+function IconButton({ icon, label, active, danger, onClick }: { icon: IconName; label: string; active?: boolean; danger?: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className={`nf-icon-btn${active ? " is-active" : ""}${danger ? " is-danger" : ""}`}
+      aria-label={label}
+      aria-pressed={active}
+      title={label}
+      onClick={onClick}
+    >
+      <Icon name={icon} size={14} />
+    </button>
+  );
+}
+
+function KindButton({ icon, label, count, hot, active, onClick }: { icon: IconName; label: string; count: ReactNode; hot?: boolean; active: boolean; onClick: () => void }) {
+  return (
+    <button type="button" aria-pressed={active} onClick={onClick}>
+      <Icon name={icon} size={16} />
+      <span>{label}</span>
+      {count !== "" && <small className={hot ? "is-hot" : undefined}>{count}</small>}
+    </button>
+  );
+}
+
+function Fact({ label, mono, children }: { label: string; mono?: boolean; children: ReactNode }) {
+  return (
+    <div className="nf-fact">
+      <dt>{label}</dt>
+      <dd className={mono ? "nf-mono-value" : undefined}>{children}</dd>
     </div>
   );
 }

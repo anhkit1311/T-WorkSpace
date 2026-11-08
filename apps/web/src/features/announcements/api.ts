@@ -14,7 +14,8 @@ async function request<T>(
   method = "GET",
   body?: object,
 ): Promise<T> {
-  const url = path ? `${base()}${path.startsWith("/") ? "" : "/"}${path}` : base();
+  // A query string ("?category=…") attaches to the collection itself: /api/announcements/ is not a route.
+  const url = path ? `${base()}${/^[/?]/.test(path) ? "" : "/"}${path}` : base();
   const response = await fetch(url, {
     method,
     headers: {

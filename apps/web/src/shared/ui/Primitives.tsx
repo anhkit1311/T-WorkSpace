@@ -628,12 +628,12 @@ export function KpiStatCard({
       style={{
         background: "var(--bg-surface, #FFFFFF)",
         border: "1px solid var(--border-color, #E2E8F0)",
-        borderRadius: "var(--radius-card, 7px)",
-        padding: "9px 13px",
-        boxShadow: "var(--shadow-card, 0 1px 2px rgba(15, 23, 42, 0.04))",
+        borderRadius: "10px",
+        padding: "12px 15px",
+        boxShadow: "0 1px 3px rgba(15, 23, 42, 0.03), 0 1px 2px rgba(15, 23, 42, 0.02)",
         display: "flex",
         alignItems: "center",
-        gap: "10px",
+        gap: "12px",
         cursor: onClick ? "pointer" : "default",
         transition: "all 0.15s ease",
       }}
@@ -641,9 +641,9 @@ export function KpiStatCard({
       <div
         className="kpi-stat-card__icon"
         style={{
-          width: "32px",
-          height: "32px",
-          borderRadius: "6px",
+          width: "36px",
+          height: "36px",
+          borderRadius: "8px",
           background: toneBg,
           color: toneText,
           display: "grid",
@@ -651,16 +651,17 @@ export function KpiStatCard({
           flexShrink: 0,
         }}
       >
-        <Icon name={icon} size={17} strokeWidth={1.8} />
+        <Icon name={icon} size={18} strokeWidth={1.8} />
       </div>
       <div className="kpi-stat-card__body" style={{ display: "flex", flexDirection: "column" }}>
         <span
           className="kpi-stat-card__number"
           style={{
-            fontSize: "16.5px",
+            fontSize: "18px",
             fontWeight: 700,
             color: "var(--text, #0F172A)",
             lineHeight: 1.15,
+            fontVariantNumeric: "tabular-nums",
           }}
         >
           {value}

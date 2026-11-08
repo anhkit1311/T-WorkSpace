@@ -92,8 +92,9 @@ async function main() {
   const departments = {};
   for (const [code, name] of [["KHMT", "Khoa học máy tính"], ["HTTT", "Hệ thống thông tin"], ["KTPM", "Kỹ thuật phần mềm"]])
     departments[code] = (await org.createDepartment(as, unit.id, { code, name })).id;
-  for (const [handle, , rank, department, staffCode] of lecturers)
-    await org.upsertStaff(as, unit.id, { email: people[handle].email, staffCode, rank, departmentId: departments[department], defaultQuota: 6 });
+  // The mã số (GV…) comes from the unit's code range, like "Tạo tài khoản" in the admin page.
+  for (const [handle, , rank, department] of lecturers)
+    await org.enrollAccount(as, unit.id, { email: people[handle].email, kind: "lecturer", rank, departmentId: departments[department] });
 
   console.log(`Seeded faculty CNTT: ${Object.keys(people).length} accounts @${DOMAIN}.`);
   console.log("Accounts: giaovu (giáo vụ CNTT), truongkhoa (lãnh đạo khoa), gv.* (lecturers), sv01–sv30 (students).");

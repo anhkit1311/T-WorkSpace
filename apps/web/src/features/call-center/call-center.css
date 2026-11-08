@@ -4,7 +4,7 @@
    ========================================================================== */
 
 .callcenter-page {
-  padding: 14px 20px 32px;
+  padding: 14px var(--shell-gutter) 32px;
   max-width: 1480px;
   width: 100%;
   margin: 0 auto;
@@ -33,10 +33,10 @@
   color: var(--text-muted);
 }
 
-/* Top 3 KPI Cards */
+/* Top KPI Cards */
 .callcenter-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -49,13 +49,21 @@
   align-items: start;
 }
 
+@media (max-width: 1024px) {
+  .callcenter-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Panel Card */
 .callcenter-panel {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 18px 20px;
-  box-shadow: none;
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.03),
+    0 1px 2px rgba(15, 23, 42, 0.02);
 }
 
 .callcenter-panel__head {
@@ -119,89 +127,9 @@
   color: var(--text-muted);
 }
 
-/* Supervisor Actions Group */
-.call-supervisor-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-/* Keypad Grid 3x4 */
-.softphone-input-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.softphone-dial-input {
-  width: 100%;
-  height: 40px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  text-align: center;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--text);
-  padding: 0 32px 0 12px;
-  outline: none;
-}
-
-.softphone-keypad-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.softphone-key-btn {
-  height: 42px;
-  background: var(--bg-subtle);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.12s ease;
-}
-
-.softphone-key-btn:hover {
-  background: var(--tint-blue-bg);
-  border-color: #BFDBFE;
-}
-
-.softphone-key-btn:active {
-  transform: scale(0.96);
-}
-
-.softphone-key-num {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1;
-}
-
-.softphone-key-sub {
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--text-muted);
-  letter-spacing: 0.05em;
-}
-
 /* ==========================================================================
    Call Directory (CDR) Table Styles
    ========================================================================== */
-.cdr-table-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: none;
-}
-
 .cdr-table-wrapper {
   overflow-x: auto;
 }

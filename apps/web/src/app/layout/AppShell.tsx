@@ -1,4 +1,4 @@
-import { Fragment, lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type RefObject } from "react";
 import { AnimatePresence } from "motion/react";
 import { useApp } from "../providers/AppContext";
 import { useSocket } from "../providers/SocketContext";
@@ -15,70 +15,34 @@ import { PageErrorBoundary } from "../../shared/ui/PageErrorBoundary";
 import { governanceApi } from "../../features/workspaces/api";
 import type { ViewId } from "../types";
 
-const WorkspaceHomePage = lazy(() =>
-  import("../../features/workspaces/WorkspaceHomePage").then((m) => ({
-    default: m.WorkspaceHomePage,
-  })),
-);
-const FilesPage = lazy(() =>
-  import("../../features/files/FilesPage").then((m) => ({ default: m.FilesPage })),
-);
-const MeetingPage = lazy(() =>
-  import("../../features/meetings/MeetingPage").then((m) => ({ default: m.MeetingPage })),
-);
-const GroupsPage = lazy(() =>
-  import("../../features/workspaces/GroupsPage").then((m) => ({ default: m.GroupsPage })),
-);
-const MessagesPage = lazy(() =>
-  import("../../features/chat/MessagesPage").then((m) => ({ default: m.MessagesPage })),
-);
-const ProfilePage = lazy(() =>
-  import("../../features/profile/ProfilePage").then((m) => ({ default: m.ProfilePage })),
-);
-const WorkspaceAdminPage = lazy(() =>
-  import("../../features/workspaces/WorkspaceAdminPage").then((m) => ({
-    default: m.WorkspaceAdminPage,
-  })),
-);
-const InvitationPage = lazy(() =>
-  import("../../features/workspaces/InvitationPage").then((m) => ({ default: m.InvitationPage })),
-);
-const NotificationsPage = lazy(() =>
-  import("../../features/notifications/NotificationsPage").then((m) => ({
-    default: m.NotificationsPage,
-  })),
-);
-const CallCenterWorkspace = lazy(() =>
-  import("../../features/call-center/CallCenterWorkspace").then((m) => ({
-    default: m.CallCenterWorkspace,
-  })),
-);
-const CallDirectoryPage = lazy(() =>
-  import("../../features/call-center/CallDirectoryPage").then((m) => ({
-    default: m.CallDirectoryPage,
-  })),
-);
-const AccessPage = lazy(() =>
-  import("../../features/admin/AccessPage").then((m) => ({ default: m.AccessPage })),
-);
-const UnitReportsPage = lazy(() =>
-  import("../../features/reports/UnitReportsPage").then((m) => ({ default: m.UnitReportsPage })),
-);
-const ELearningPage = lazy(() =>
-  import("../../features/elearning/ELearningPage").then((m) => ({
-    default: m.ELearningPage,
-  })),
-);
-const SoftphoneDialerPage = lazy(() =>
-  import("../../features/call-center/SoftphoneDialerPage").then((m) => ({
-    default: m.SoftphoneDialerPage,
-  })),
-);
-const StaffDirectoryPage = lazy(() =>
-  import("../../features/staff/StaffDirectoryPage").then((m) => ({
-    default: m.StaffDirectoryPage,
-  })),
-);
+/** Page modules, warmed while the browser is idle so a first visit to a tab opens without waiting. */
+const pageLoaders: (() => Promise<unknown>)[] = [];
+function lazyPage<P extends object>(load: () => Promise<ComponentType<P>>) {
+  let loaded: ComponentType<P> | undefined;
+  const preload = () => load().then((component) => (loaded = component));
+  pageLoaders.push(preload);
+  const Lazy = lazy(() => preload().then((component) => ({ default: component })));
+  // React.lazy suspends once even for a cached module; a warmed page renders directly (no skeleton flash).
+  return function LazyPage(props: P) {
+    const Component = useRef<ComponentType<P> | typeof Lazy>(loaded ?? Lazy).current;
+    return <Component {...props} />;
+  };
+}
+
+const WorkspaceHomePage = lazyPage(() => import("../../features/workspaces/WorkspaceHomePage").then((m) => m.WorkspaceHomePage));
+const FilesPage = lazyPage(() => import("../../features/files/FilesPage").then((m) => m.FilesPage));
+const MeetingPage = lazyPage(() => import("../../features/meetings/MeetingPage").then((m) => m.MeetingPage));
+const GroupsPage = lazyPage(() => import("../../features/workspaces/GroupsPage").then((m) => m.GroupsPage));
+const MessagesPage = lazyPage(() => import("../../features/chat/MessagesPage").then((m) => m.MessagesPage));
+const ProfilePage = lazyPage(() => import("../../features/profile/ProfilePage").then((m) => m.ProfilePage));
+const WorkspaceAdminPage = lazyPage(() => import("../../features/workspaces/WorkspaceAdminPage").then((m) => m.WorkspaceAdminPage));
+const InvitationPage = lazyPage(() => import("../../features/workspaces/InvitationPage").then((m) => m.InvitationPage));
+const NotificationsPage = lazyPage(() => import("../../features/notifications/NotificationsPage").then((m) => m.NotificationsPage));
+const CallCenterWorkspace = lazyPage(() => import("../../features/call-center/CallCenterWorkspace").then((m) => m.CallCenterWorkspace));
+const AccessPage = lazyPage(() => import("../../features/admin/AccessPage").then((m) => m.AccessPage));
+const UnitReportsPage = lazyPage(() => import("../../features/reports/UnitReportsPage").then((m) => m.UnitReportsPage));
+const ELearningPage = lazyPage(() => import("../../features/elearning/ELearningPage").then((m) => m.ELearningPage));
+const StaffDirectoryPage = lazyPage(() => import("../../features/staff/StaffDirectoryPage").then((m) => m.StaffDirectoryPage));
 
 function ViewFallback() {
   return (
@@ -90,44 +54,26 @@ function ViewFallback() {
   );
 }
 
-interface SubMenuItem {
-  id: string;
-  label: string;
-  icon: IconName;
-  targetView: ViewId;
-}
-
 interface SidebarMenuItem {
   id: string;
   label: string;
   icon: IconName;
   targetView?: ViewId;
   badgeKey?: "notifications" | "messages" | "groups";
-  /** Label in the phone bottom bar, where the full one does not fit. */
+  /** Label in the top bar and phone bottom bar, where the full one does not fit (the title keeps it). */
   short?: string;
   adminOnly?: boolean;
-  children?: SubMenuItem[];
 }
 
 const SIDEBAR_MENU_ITEMS: SidebarMenuItem[] = [
   { id: "home", label: "Trang chủ", icon: "home", targetView: "overview" },
-  {
-    id: "switchboard",
-    label: "Tổng đài",
-    icon: "headset",
-    targetView: "call-center",
-    children: [
-      { id: "switchboard-dialer", label: "Tổng đài", icon: "phone", targetView: "call-center" },
-      { id: "switchboard-directory", label: "Danh sách cuộc gọi", icon: "phone-call", targetView: "call-directory" },
-      { id: "switchboard-monitor", label: "Giám sát", icon: "activity", targetView: "call-monitoring" },
-    ],
-  },
+  // Its sub-pages (desk, history, monitoring…) are tabs inside the page, chosen by the user's role.
+  { id: "switchboard", label: "Tổng đài", icon: "headset", targetView: "call-center" },
   { id: "messages", label: "Tin nhắn", icon: "message", targetView: "chat", badgeKey: "messages" },
   { id: "meetings", label: "Họp", icon: "video", targetView: "meetings" },
   { id: "elearning", label: "Khóa học", icon: "graduation-cap", targetView: "elearning" },
-  { id: "staff", label: "Danh sách nhân sự", icon: "users", targetView: "staff" },
-  { id: "profile", label: "Cài đặt", icon: "settings", targetView: "profile" },
-  // Mục dành riêng cho lãnh đạo đơn vị và Admin:
+  { id: "staff", label: "Danh sách nhân sự", short: "Nhân sự", icon: "users", targetView: "staff" },
+  // Mục dành riêng cho lãnh đạo đơn vị và Admin (menu "Quản lý"); "Cài đặt" nằm trong menu tài khoản.
   { id: "reports", label: "Báo cáo đơn vị", icon: "dashboard", targetView: "reports" },
   { id: "notifications", label: "Quản lý thông báo", icon: "bell", targetView: "notifications", badgeKey: "notifications", adminOnly: true },
   { id: "access", label: "Quản trị hệ thống", icon: "lock", targetView: "access", adminOnly: true },
@@ -135,13 +81,34 @@ const SIDEBAR_MENU_ITEMS: SidebarMenuItem[] = [
 
 /** The phone bottom bar shows these; the rest open from "Thêm". */
 const BOTTOM_BAR_ITEMS = new Set(["home", "switchboard", "messages", "elearning"]);
-/** Account and administration entries sit under a divider, after the services. */
-const FIRST_MANAGE_ITEM = "reports";
+/** Administration entries: the "Quản lý" menu on desktop, the "Thêm" sheet on phones. */
+const MANAGE_ITEMS = new Set(["reports", "notifications", "access"]);
 /**
  * Entries shown only to users with that role (see useMenuAccess). The switchboard and call list
  * are the core of the system and always stay visible; the page itself explains missing access.
  */
 const RESTRICTED_MENU_ITEMS: Record<string, keyof MenuAccess> = { reports: "unitReports" };
+
+/** Header popovers close on an outside press or Escape (focus returns to the trigger). */
+function useDismiss(open: boolean, ref: RefObject<HTMLElement | null>, setOpen: (open: boolean) => void) {
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (event: PointerEvent) => {
+      if (!ref.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      ref.current?.querySelector<HTMLElement>("[aria-haspopup]")?.focus();
+    };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, ref, setOpen]);
+}
 
 export function AppShell() {
   const {
@@ -158,7 +125,6 @@ export function AppShell() {
   const phone = useGlobalSoftphone();
   const menuAccess = useMenuAccess(accessToken);
 
-  const [activeMenuId, setActiveMenuId] = useState<string>("home");
   const [meetingWorkspaceId, setMeetingWorkspaceId] = useState("");
   useEffect(() => {
     if (!meeting.inCall) setMeetingWorkspaceId("");
@@ -186,45 +152,13 @@ export function AppShell() {
     };
   }, [accessToken, socket]);
 
-  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
-    switchboard: true,
-  });
-  const toggleExpand = (menuId: string) => {
-    setExpandedMenus((prev) => ({
-      ...prev,
-      [menuId]: !prev[menuId],
-    }));
-  };
-
-  // Keep activeMenuId synced with current view
-  useEffect(() => {
-    if (activeView === "overview") setActiveMenuId("home");
-    else if (activeView === "call-center") {
-      setActiveMenuId("switchboard-dialer");
-      setExpandedMenus((prev) => ({ ...prev, switchboard: true }));
-    } else if (activeView === "call-directory") {
-      setActiveMenuId("switchboard-directory");
-      setExpandedMenus((prev) => ({ ...prev, switchboard: true }));
-    } else if (activeView === "call-monitoring") {
-      setActiveMenuId("switchboard-monitor");
-      setExpandedMenus((prev) => ({ ...prev, switchboard: true }));
-    } else if (activeView === "chat") setActiveMenuId("messages");
-    else if (activeView === "meetings") setActiveMenuId("meetings");
-    else if (activeView === "notifications") setActiveMenuId("notifications");
-    else if (activeView === "elearning") setActiveMenuId("elearning");
-    else if (activeView === "staff") setActiveMenuId("staff");
-    else if (activeView === "admin" || activeView === "groups") setActiveMenuId("groups");
-    else if (activeView === "profile") setActiveMenuId("profile");
-    else if (activeView === "files") setActiveMenuId("files");
-    else if (activeView === "access") setActiveMenuId("access");
-    else if (activeView === "reports") setActiveMenuId("reports");
-  }, [activeView]);
-
   // Always enforce Light theme across the website
   useEffect(() => {
     try {
       localStorage.removeItem("theme");
-    } catch {}
+    } catch {
+      // ignore storage errors
+    }
     document.documentElement.setAttribute("data-theme", "light");
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#F4F6F9");
     return () => {
@@ -233,21 +167,6 @@ export function AppShell() {
     };
   }, []);
 
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem("sidebar") === "collapsed";
-    } catch {
-      return false;
-    }
-  });
-  const toggleCollapsed = () => {
-    setCollapsed(!collapsed);
-    try {
-      localStorage.setItem("sidebar", collapsed ? "expanded" : "collapsed");
-    } catch {
-      // not persisted; the choice still applies to this visit
-    }
-  };
   const [moreOpen, setMoreOpen] = useState(false);
 
   const [profileOpen, setProfileOpen] = useState(false);
@@ -267,23 +186,41 @@ export function AppShell() {
         ? "online"
         : "connecting";
 
-  // Account popover closes on outside click or Escape
+  const [manageOpen, setManageOpen] = useState(false);
+  const manageRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  useDismiss(profileOpen, accountRef, setProfileOpen);
+  useDismiss(manageOpen, manageRef, setManageOpen);
+  useDismiss(moreOpen, navRef, setMoreOpen);
+
+  const visibleItems = SIDEBAR_MENU_ITEMS.filter((item) => {
+    if (item.adminOnly && !isUserAdmin) return false;
+    if (RESTRICTED_MENU_ITEMS[item.id] && !menuAccess?.[RESTRICTED_MENU_ITEMS[item.id]]) return false;
+    return true;
+  });
+  const isCallView = activeView.startsWith("call-");
+  const isItemActive = (item: SidebarMenuItem) => item.targetView === activeView || (item.id === "switchboard" && isCallView);
+  const badgeFor = (item: SidebarMenuItem) =>
+    item.badgeKey === "notifications"
+      ? unreadNotifications
+      : item.badgeKey === "messages"
+        ? unreadCount
+        : item.badgeKey === "groups"
+          ? groupUnreadCount
+          : 0;
+  const manageItems = visibleItems.filter((item) => MANAGE_ITEMS.has(item.id));
+  const manageBadge = manageItems.reduce((sum, item) => sum + badgeFor(item), 0);
+
+  // Warm every page module once the shell is idle; a failed load is retried by the page itself.
   useEffect(() => {
-    if (!profileOpen) return;
-    const close = (event: Event) => {
-      if (event instanceof KeyboardEvent) {
-        if (event.key === "Escape") setProfileOpen(false);
-        return;
-      }
-      if (!accountRef.current?.contains(event.target as Node)) setProfileOpen(false);
-    };
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", close);
-    return () => {
-      document.removeEventListener("pointerdown", close);
-      document.removeEventListener("keydown", close);
-    };
-  }, [profileOpen]);
+    const warm = () => pageLoaders.forEach((load) => void load().catch(() => {}));
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(warm, { timeout: 5000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const timer = window.setTimeout(warm, 2000);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   // Global Ctrl + K search shortcut
   useEffect(() => {
@@ -313,8 +250,8 @@ export function AppShell() {
       );
     let Component;
     if (activeView === "overview") Component = <WorkspaceHomePage />;
-    else if (activeView === "call-center") Component = <SoftphoneDialerPage />;
-    else if (activeView === "call-directory") Component = <CallDirectoryPage />;
+    else if (activeView === "call-center") Component = <CallCenterWorkspace initialTab="desk" />;
+    else if (activeView === "call-directory") Component = <CallCenterWorkspace initialTab="history" />;
     else if (activeView === "call-monitoring") Component = <CallCenterWorkspace initialTab="live" />;
     else if (activeView === "chat") Component = <MessagesPage />;
     else if (activeView === "files") Component = <FilesPage />;
@@ -331,7 +268,8 @@ export function AppShell() {
     else Component = <WorkspaceHomePage />;
 
     return (
-      <PageErrorBoundary key={activeView}>
+      // The call views share one instance: the desk's wrap-up and a browser call survive switching tabs.
+      <PageErrorBoundary key={isCallView ? "call-center" : activeView}>
         <Suspense fallback={<ViewFallback />}>
           {Component}
         </Suspense>
@@ -341,41 +279,111 @@ export function AppShell() {
 
   return (
     <div className="app-shell">
-      {/* 56px Top Header */}
-      <header className="editorial-master-topbar tdtu-header">
-        <div className="tdtu-header__left">
+      <header className="tdtu-header">
+        <button
+          type="button"
+          className="tdtu-header__brand-btn"
+          onClick={() => setActiveView("overview")}
+          title="Về trang chủ"
+          aria-label="T-WorkSpace · Về trang chủ"
+        >
+          <TWorkSpaceLogo size="sm" />
+        </button>
+
+        {/* Top tabs on desktop; on phones the same list is a bottom bar whose "Thêm" opens the rest. */}
+        <nav ref={navRef} className={`tdtu-nav ${moreOpen ? "is-more-open" : ""}`} aria-label="Menu chức năng chính">
+          {visibleItems.map((item) => {
+            const isSelected = isItemActive(item);
+            const badgeCount = badgeFor(item);
+            const live =
+              (item.id === "switchboard" && phone.phase !== "none") || (item.id === "meetings" && meeting.inCall);
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`tdtu-nav__item ${isSelected ? "is-active" : ""} ${BOTTOM_BAR_ITEMS.has(item.id) ? "" : "is-secondary"} ${MANAGE_ITEMS.has(item.id) ? "is-manage" : ""}`}
+                aria-current={isSelected ? "page" : undefined}
+                title={item.label}
+                onClick={() => {
+                  // The switchboard tab keeps its current sub-page; everything else opens its page.
+                  if (item.targetView && !(item.id === "switchboard" && isSelected)) setActiveView(item.targetView);
+                  setMoreOpen(false);
+                }}
+              >
+                <Icon name={item.icon} size={17} strokeWidth={isSelected ? 2.1 : 1.8} />
+                <span className="tdtu-nav__label">{item.short ?? item.label}</span>
+                {live && <span className="tdtu-nav__live" role="img" aria-label="đang diễn ra" />}
+                {badgeCount > 0 && <span className="tdtu-nav__badge">{badgeCount > 99 ? "99+" : badgeCount}</span>}
+              </button>
+            );
+          })}
           <button
             type="button"
-            className="tdtu-header__brand-btn"
-            onClick={() => {
-              setActiveMenuId("home");
-              setActiveView("overview");
-            }}
-            title="T-WorkSpace"
-            aria-label="T-WorkSpace"
+            className={`tdtu-nav__item tdtu-nav__more ${visibleItems.some((item) => !BOTTOM_BAR_ITEMS.has(item.id) && isItemActive(item)) ? "is-active" : ""}`}
+            aria-haspopup="true"
+            aria-expanded={moreOpen}
+            onClick={() => setMoreOpen(!moreOpen)}
           >
-            <TWorkSpaceLogo size="sm" />
+            <Icon name={moreOpen ? "x" : "menu"} size={17} />
+            <span className="tdtu-nav__label">{moreOpen ? "Đóng" : "Thêm"}</span>
           </button>
-
-          <div
-            className="tdtu-header__search"
-            onClick={() => setSearchOpen(true)}
-            role="search"
-          >
-            <Icon name="search" size={14} className="tdtu-header__search-icon" />
-            <input
-              type="text"
-              readOnly
-              placeholder="Tìm tin nhắn, trang, nhóm…"
-              aria-label="Tìm kiếm (Ctrl+K)"
-              className="tdtu-header__search-input"
-              onClick={() => setSearchOpen(true)}
-            />
-            <kbd className="tdtu-header__search-kbd" aria-hidden="true">Ctrl K</kbd>
-          </div>
-        </div>
+        </nav>
 
         <div className="tdtu-header__right">
+          {manageItems.length > 0 && (
+            <div className="tdtu-menu" ref={manageRef}>
+              <button
+                type="button"
+                className={`tdtu-menu__trigger ${manageItems.some(isItemActive) ? "is-active" : ""}`}
+                aria-haspopup="menu"
+                aria-expanded={manageOpen}
+                aria-label="Quản lý"
+                title="Quản lý"
+                onClick={() => setManageOpen(!manageOpen)}
+              >
+                <Icon name="dashboard" size={16} />
+                <span className="tdtu-menu__label">Quản lý</span>
+                {manageBadge > 0 && <span className="tdtu-nav__badge">{manageBadge > 99 ? "99+" : manageBadge}</span>}
+                <Icon name="chevron-down" size={14} className="tdtu-menu__chevron" />
+              </button>
+              {manageOpen && (
+                <div className="tdtu-popover tdtu-menu__panel" role="menu" aria-label="Quản lý">
+                  {manageItems.map((item) => {
+                    const badgeCount = badgeFor(item);
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        role="menuitem"
+                        className={isItemActive(item) ? "is-active" : ""}
+                        onClick={() => {
+                          if (item.targetView) setActiveView(item.targetView);
+                          setManageOpen(false);
+                        }}
+                      >
+                        <Icon name={item.icon} size={15} />
+                        <span>{item.label}</span>
+                        {badgeCount > 0 && <span className="tdtu-nav__badge">{badgeCount > 99 ? "99+" : badgeCount}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="tdtu-search-btn"
+            onClick={() => setSearchOpen(true)}
+            aria-label="Tìm kiếm (Ctrl+K)"
+            title="Tìm kiếm (Ctrl+K)"
+          >
+            <Icon name="search" size={15} />
+            <span className="tdtu-search-btn__label">Tìm kiếm</span>
+            <kbd className="tdtu-search-btn__kbd" aria-hidden="true">Ctrl K</kbd>
+          </button>
+
           {phone.agentState && (
             <button
               type="button"
@@ -388,89 +396,79 @@ export function AppShell() {
             </button>
           )}
 
-
-          {/* Notifications Bell with Red Badge */}
           <button
             type="button"
             className="tdtu-icon-btn"
-            title="Quản lý thông báo"
+            title="Thông báo"
             aria-label={unreadNotifications ? `Thông báo (${unreadNotifications} chưa đọc)` : "Thông báo"}
-            onClick={() => {
-              setActiveMenuId("notifications");
-              setActiveView("notifications");
-            }}
+            onClick={() => setActiveView("notifications")}
           >
-            <Icon name="bell" size={14} />
+            <Icon name="bell" size={17} />
             {unreadNotifications > 0 && (
               <span className="tdtu-badge-num">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>
             )}
           </button>
 
-          {/* User Profile Avatar */}
           <div className="tdtu-avatar-wrap" ref={accountRef}>
             <button
               ref={avatarButtonRef}
               type="button"
               className="tdtu-avatar-btn"
               title={`Tài khoản: ${displayName}`}
+              aria-label={`Tài khoản: ${displayName}`}
               aria-haspopup="menu"
               aria-expanded={profileOpen}
               onClick={() => setProfileOpen(!profileOpen)}
             >
               {user?.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
-                  alt={displayName}
-                  className="tdtu-avatar-img"
-                />
+                <img src={user.avatarUrl} alt="" className="tdtu-avatar-img" />
               ) : (
-                <div className="tdtu-avatar-img">
-                  {displayName.charAt(0).toUpperCase()}
-                </div>
+                <span className="tdtu-avatar-img">{displayName.charAt(0).toUpperCase()}</span>
               )}
               <span
                 className={`tdtu-online-dot is-${presence}`}
                 title={presence === "online" ? "Đang trực tuyến" : presence === "connecting" ? "Đang kết nối lại" : "Ngoại tuyến"}
               />
             </button>
-            <span className="tdtu-avatar-name" aria-hidden="true">{displayName}</span>
 
-            <AnimatePresence>
-              {profileOpen && (
-                <div className="tdtu-account-popover">
-                  <div className="tdtu-account-header">
-                    <div className="tdtu-avatar-img" style={{ width: 36, height: 36 }}>
-                      {displayName.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <strong>{displayName}</strong>
-                      <small>{userEmail}</small>
-                    </div>
+            {profileOpen && (
+              <div className="tdtu-popover tdtu-account-popover" role="menu" aria-label="Tài khoản">
+                <div className="tdtu-account-header">
+                  {user?.avatarUrl ? (
+                    <img src={user.avatarUrl} alt="" className="tdtu-avatar-img is-lg" />
+                  ) : (
+                    <span className="tdtu-avatar-img is-lg">{displayName.charAt(0).toUpperCase()}</span>
+                  )}
+                  <div>
+                    <strong>{displayName}</strong>
+                    <small>{userEmail}</small>
                   </div>
-                  <hr />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveMenuId("profile");
-                      setActiveView("profile");
-                      setProfileOpen(false);
-                    }}
-                  >
-                    <Icon name="profile" size={15} /> Trang cá nhân
-                  </button>
-                  <button
-                    type="button"
-                    className="is-logout"
-                    onClick={() => {
-                      setProfileOpen(false);
-                      setLogoutConfirmOpen(true);
-                    }}
-                  >
-                    <Icon name="logout" size={15} /> Đăng xuất
-                  </button>
                 </div>
-              )}
-            </AnimatePresence>
+                <hr />
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={activeView === "profile" ? "is-active" : ""}
+                  onClick={() => {
+                    setActiveView("profile");
+                    setProfileOpen(false);
+                  }}
+                >
+                  <Icon name="settings" size={15} /> Hồ sơ &amp; cài đặt
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="is-logout"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    setLogoutConfirmOpen(true);
+                  }}
+                >
+                  <Icon name="logout" size={15} /> Đăng xuất
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -498,128 +496,9 @@ export function AppShell() {
         )}
       </div>
 
-      {/* Main Workspace Body: Left 240px Sidebar + Stage Viewport */}
-      <div className="editorial-workspace-body tdtu-body">
-        {/* Labelled sidebar (collapsible to icons); on phones a bottom bar with "Thêm" for the rest. */}
-        <nav
-          className={`editorial-dock tdtu-sidebar ${collapsed ? "is-collapsed" : ""} ${moreOpen ? "is-more-open" : ""}`}
-          aria-label="Menu chức năng chính"
-        >
-          {SIDEBAR_MENU_ITEMS.filter((item) => {
-            if (item.adminOnly && !isUserAdmin) return false;
-            if (RESTRICTED_MENU_ITEMS[item.id] && !menuAccess?.[RESTRICTED_MENU_ITEMS[item.id]]) return false;
-            return true;
-          }).map((item) => {
-            const hasChildren = Boolean(item.children && item.children.length > 0);
-            const isExpanded = Boolean(expandedMenus[item.id]);
-            const isChildActive = Boolean(item.children?.some((c) => activeMenuId === c.id || activeView === c.targetView));
-            const isSelected = activeMenuId === item.id || isChildActive;
-            const badgeCount =
-              item.badgeKey === "notifications"
-                ? unreadNotifications
-                : item.badgeKey === "messages"
-                  ? unreadCount
-                  : item.badgeKey === "groups"
-                    ? groupUnreadCount
-                    : undefined;
-            const live = (item.id === "switchboard" && phone.phase !== "none") || (item.id === "meetings" && meeting.inCall);
-
-            return (
-              <Fragment key={item.id}>
-                {item.id === FIRST_MANAGE_ITEM && <hr className="tdtu-sidebar__divider" />}
-                <button
-                  type="button"
-                  className={`tdtu-sidebar__item ${isSelected ? "is-active" : ""} ${BOTTOM_BAR_ITEMS.has(item.id) ? "" : "is-secondary"}`}
-                  aria-current={isSelected ? "page" : undefined}
-                  onClick={() => {
-                    if (hasChildren) {
-                      if (collapsed) {
-                        setCollapsed(false);
-                        setExpandedMenus((prev) => ({ ...prev, [item.id]: true }));
-                        if (item.targetView) setActiveView(item.targetView);
-                        setActiveMenuId(item.children![0].id);
-                      } else {
-                        toggleExpand(item.id);
-                        if (!isChildActive && item.targetView) {
-                          setActiveView(item.targetView);
-                          setActiveMenuId(item.children![0].id);
-                        }
-                      }
-                    } else {
-                      setActiveMenuId(item.id);
-                      if (item.targetView) setActiveView(item.targetView);
-                    }
-                    setMoreOpen(false);
-                  }}
-                  title={item.label}
-                >
-                  <Icon name={item.icon} size={17} strokeWidth={isSelected ? 2 : 1.7} />
-                  <span className={`tdtu-sidebar__label ${item.short ? "has-short" : ""}`}>{item.label}</span>
-                  {item.short && <span className="tdtu-sidebar__short" aria-hidden="true">{item.short}</span>}
-                  {hasChildren && !collapsed && (
-                    <Icon
-                      name="chevron-right"
-                      size={13}
-                      className={`tdtu-sidebar__chevron ${isExpanded ? "is-expanded" : ""}`}
-                    />
-                  )}
-                  {live && <span className="tdtu-sidebar__live" role="img" aria-label="đang diễn ra" />}
-                  {badgeCount !== undefined && badgeCount > 0 && (
-                    <span className="tdtu-sidebar__item-badge">
-                      {badgeCount > 99 ? "99+" : badgeCount}
-                    </span>
-                  )}
-                </button>
-
-                {hasChildren && isExpanded && !collapsed && (
-                  <div className="tdtu-sidebar__submenu">
-                    {item.children!.map((sub) => {
-                      const isSubActive = activeMenuId === sub.id || activeView === sub.targetView;
-                      return (
-                        <button
-                          key={sub.id}
-                          type="button"
-                          className={`tdtu-sidebar__subitem ${isSubActive ? "is-active" : ""}`}
-                          aria-current={isSubActive ? "page" : undefined}
-                          onClick={() => {
-                            setActiveMenuId(sub.id);
-                            setActiveView(sub.targetView);
-                            setMoreOpen(false);
-                          }}
-                        >
-                          <Icon name={sub.icon} size={14} strokeWidth={isSubActive ? 2 : 1.6} />
-                          <span>{sub.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </Fragment>
-            );
-          })}
-          <button
-            type="button"
-            className="tdtu-sidebar__item tdtu-sidebar__more"
-            aria-expanded={moreOpen}
-            onClick={() => setMoreOpen(!moreOpen)}
-          >
-            <Icon name={moreOpen ? "x" : "menu"} size={17} />
-            <span className="tdtu-sidebar__label">{moreOpen ? "Đóng" : "Thêm"}</span>
-          </button>
-          <button
-            type="button"
-            className="tdtu-sidebar__item tdtu-sidebar__collapse"
-            aria-label={collapsed ? "Mở rộng menu" : "Thu gọn menu"}
-            title={collapsed ? "Mở rộng menu" : "Thu gọn menu"}
-            onClick={toggleCollapsed}
-          >
-            <Icon name={collapsed ? "chevron-right" : "chevron-left"} size={16} />
-            <span className="tdtu-sidebar__label">Thu gọn menu</span>
-          </button>
-        </nav>
-
+      <div className="tdtu-body">
         {/* Content Viewport */}
-        <div className="editorial-stage-viewport tdtu-stage">
+        <div className="tdtu-stage">
           {connectionStatus !== "connected" && (
             <div
               className={`network-reconnect-bar status-${connectionStatus}`}

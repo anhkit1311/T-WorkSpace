@@ -1,0 +1,25 @@
+t,name,cpu,mem
+1793639015,infra-asterisk-1,135.87%,90.98MiB / 11.31GiB
+1793639015,infra-postgres-1,8.61%,51.51MiB / 11.31GiB
+1793639016,infra-asterisk-1,165.71%,90.01MiB / 11.31GiB
+1793639016,infra-postgres-1,10.09%,52.46MiB / 11.31GiB
+1793639018,infra-asterisk-1,165.70%,89.88MiB / 11.31GiB
+1793639018,infra-postgres-1,0.35%,51.72MiB / 11.31GiB
+1793639020,infra-asterisk-1,189.91%,90.27MiB / 11.31GiB
+1793639020,infra-postgres-1,0.02%,51.52MiB / 11.31GiB
+1793639022,infra-asterisk-1,163.97%,88.95MiB / 11.31GiB
+1793639022,infra-postgres-1,0.81%,52.12MiB / 11.31GiB
+1793639024,infra-asterisk-1,146.99%,91.48MiB / 11.31GiB
+1793639024,infra-postgres-1,6.34%,51.62MiB / 11.31GiB
+1793639026,infra-asterisk-1,155.58%,91.51MiB / 11.31GiB
+1793639026,infra-postgres-1,0.01%,51.78MiB / 11.31GiB
+1793639028,infra-asterisk-1,163.80%,91.34MiB / 11.31GiB
+1793639028,infra-postgres-1,0.00%,51.53MiB / 11.31GiB
+1793639030,infra-asterisk-1,168.69%,88.88MiB / 11.31GiB
+1793639030,infra-postgres-1,2.88%,52.16MiB / 11.31GiB
+1793639032,infra-asterisk-1,161.96%,88.45MiB / 11.31GiB
+1793639032,infra-postgres-1,4.08%,52.07MiB / 11.31GiB
+1793639034,infra-asterisk-1,0.78%,84.77MiB / 11.31GiB
+1793639034,infra-postgres-1,0.43%,52.18MiB / 11.31GiB
+1793639036,infra-asterisk-1,0.96%,82.09MiB / 11.31GiB
+1793639036,infra-postgres-1,0.03%,51.98MiB / 11.31GiB

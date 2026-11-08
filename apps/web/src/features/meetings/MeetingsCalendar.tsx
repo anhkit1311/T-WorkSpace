@@ -4,6 +4,7 @@ import type { MeetingCalendar, MeetingScheduleItem, WorkspaceItem } from "@doan/
 import { useApp } from "../../app/providers/AppContext";
 import { Icon } from "../../shared/ui/Icon";
 import {
+  Avatar,
   Button,
   ConfirmDialog,
   Field,
@@ -14,6 +15,7 @@ import { NoGroups } from "../workspaces/GroupDialogs";
 import { cancelMeetingScheduleApi, getMeetingCalendarApi, saveMeetingScheduleApi } from "./api";
 import { calendarEvents, FIRST_HOUR, LAST_HOUR, layoutDay, weekStart, type CalendarEvent } from "./calendar";
 import { MeetingAttendancePanel } from "./MeetingAttendancePanel";
+import { MeetingClock } from "./MeetingClock";
 import { CouncilSetupDialog } from "./CouncilSetupDialog";
 import { MeetingCouncilPanel } from "./MeetingCouncilPanel";
 import { MeetingOutcomesPanel } from "./MeetingOutcomesPanel";
@@ -35,9 +37,6 @@ const dayMonth = (date: Date) => {
   return `${day}/${month}`;
 };
 const clock = (date: Date) => date.toLocaleTimeString("vi-VN", { ...zone, hour: "2-digit", minute: "2-digit" });
-
-const isSameDay = (d1: Date, d2: Date) =>
-  d1.getDate() === d2.getDate() && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
 
 function localDateTime(date: Date) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
@@ -75,7 +74,7 @@ function downloadCalendarEvent(item: MeetingScheduleItem) {
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-/** Cổng Quản lý Hội nghị TDTU (KPIs + Danh sách phòng họp & Chuyển đổi linh hoạt Thẻ/Lịch tuần) */
+/** "Họp": meetings running now, the week's agenda as a timeline, rooms and recent minutes; or the week grid. */
 export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | null; rooms: MeetingRoom[] }) {
   const { accessToken, route, navigate, notify } = useApp();
   const [week, setWeek] = useState(() => weekStart(new Date()));
@@ -90,10 +89,10 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
   const [councilFor, setCouncilFor] = useState<MeetingScheduleItem | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
-  // New UI controls for Cổng Hội nghị TDTU
   const [viewMode, setViewMode] = useState<"cards" | "calendar">("cards");
   const [searchQuery, setSearchQuery] = useState("");
   const [quickRoomId, setQuickRoomId] = useState("");
+  const [agendaFilter, setAgendaFilter] = useState<"next" | "past" | "all">("next");
 
   const groupId = route.workspaceId ?? "";
 
@@ -190,258 +189,343 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
     </button>
   );
 
+  // Day of the loaded week (Vietnam time), so labels match how the week is cut.
+  const dayIndex = (date: Date) => Math.floor((date.getTime() - week.getTime()) / DAY);
+  const dayLabel = (date: Date) => {
+    const index = dayIndex(date);
+    const name = index >= 0 && index < 7 ? `${WEEKDAYS[index]}, ` : "";
+    const prefix = today >= 0 && index === today ? "Hôm nay · " : today >= 0 && index === today + 1 ? "Ngày mai · " : "";
+    return `${prefix}${name}${dayMonth(date)}`;
+  };
+  const query = searchQuery.trim().toLowerCase();
+  const liveSessions = activeSessions.filter(
+    (session) =>
+      (!groupId || session.workspaceId === groupId) &&
+      (!query ||
+        (session.title ?? session.roomName).toLowerCase().includes(query) ||
+        session.workspaceName.toLowerCase().includes(query)),
+  );
+  const livePeople = liveSessions.reduce((sum, session) => sum + session.people.length, 0);
+  const liveIn = (roomId: string) => activeSessions.find((session) => session.roomId === roomId);
+  const readyRooms = rooms.filter((room) => !liveIn(room.id)).length;
+  const counts = {
+    next: filteredEvents.filter((item) => item.status !== "past").length,
+    past: filteredEvents.filter((item) => item.status === "past").length,
+    all: filteredEvents.length,
+  };
+  const agendaDays = filteredEvents
+    .filter((item) => agendaFilter === "all" || (agendaFilter === "past") === (item.status === "past"))
+    .sort((a, b) => a.start.getTime() - b.start.getTime())
+    .reduce<{ label: string; items: CalendarEvent[] }[]>((list, item) => {
+      const label = dayLabel(item.start);
+      const last = list[list.length - 1];
+      if (last?.label === label) last.items.push(item);
+      else list.push({ label, items: [item] });
+      return list;
+    }, []);
+  const quickRoom = rooms.find((room) => room.id === quickRoomId) ?? rooms[0];
+  const roomOf = (roomId: string) => rooms.find((room) => room.id === roomId)?.name ?? "Phòng họp";
+  const weekTitle = `Tuần ${dayMonth(days[0]).slice(0, 2)}–${dayMonth(days[6])}`;
+  const weekNav = (
+    <div className="mt-weeknav">
+      <IconButton label="Tuần trước" icon="chevron-left" onClick={() => setWeek(new Date(week.getTime() - 7 * DAY))} />
+      <span>{weekTitle}</span>
+      <IconButton label="Tuần sau" icon="chevron-right" onClick={() => setWeek(new Date(week.getTime() + 7 * DAY))} />
+      {today < 0 && (
+        <Button size="sm" variant="secondary" onClick={() => setWeek(weekStart(new Date()))}>
+          Hôm nay
+        </Button>
+      )}
+    </div>
+  );
+
+  const detail = selected && (
+    <aside className="meeting-detail" aria-label="Chi tiết cuộc họp">
+      <div className="meeting-detail__head">
+        <span className={`meeting-detail__status is-${selected.status}`}>{STATUS_LABEL[selected.status]}</span>
+        <IconButton label="Đóng chi tiết" icon="x" onClick={() => setSelectedKey("")} />
+      </div>
+      <h2>{selected.title}</h2>
+      <p>
+        {selected.workspaceName} · {roomOf(selected.roomId)}
+      </p>
+      <p className="meeting-detail__time">
+        <Icon name="clock" size={14} /> {dayMonth(selected.start)} · {clock(selected.start)}–{clock(selected.end)}
+      </p>
+      {schedule(selected)?.description && <p className="meeting-detail__note">{schedule(selected)?.description}</p>}
+      {selected.status !== "past" && (
+        <>
+          {selected.status === "live" && (
+            <p className="meeting-detail__people">
+              <Icon name="users" size={14} />{" "}
+              {selected.people.length ? `Đang trong phòng: ${selected.people.join(", ")}` : "Chưa có ai trong phòng"}
+            </p>
+          )}
+          <div className="meeting-detail__actions">
+            <Button icon="video" onClick={() => openRoom(selected)}>
+              Vào phòng
+            </Button>
+            {schedule(selected) && (
+              <Button variant="text" size="sm" icon="calendar" onClick={() => downloadCalendarEvent(schedule(selected)!)}>
+                Tải .ics
+              </Button>
+            )}
+            {selected.canManage && schedule(selected) && (
+              <>
+                <Button variant="text" size="sm" icon="edit" onClick={() => setForm({ item: schedule(selected) })}>
+                  Sửa
+                </Button>
+                <Button variant="text" size="sm" icon="clipboard" onClick={() => setCouncilFor(schedule(selected)!)}>
+                  Hội đồng
+                </Button>
+                <Button variant="text" size="sm" onClick={() => setCancelId(selected.scheduleId ?? "")}>
+                  Huỷ
+                </Button>
+              </>
+            )}
+          </div>
+        </>
+      )}
+      {selected.status !== "live" && selected.sessionId ? (
+        <div className="meeting-detail__past">
+          {selected.people.length > 0 && <p>Đã tham gia: {selected.people.join(", ")}</p>}
+          <MeetingRecordingPanel sessionId={selected.sessionId} live={false} />
+          <MeetingOutcomesPanel sessionId={selected.sessionId} live={false} />
+          <MeetingCouncilPanel sessionId={selected.sessionId} live={false} />
+          <MeetingAttendancePanel sessionId={selected.sessionId} />
+        </div>
+      ) : selected.status === "past" ? (
+        <p>Cuộc họp này đã qua giờ mà chưa ai vào phòng.</p>
+      ) : null}
+    </aside>
+  );
+
   return (
     <section className="meetings-calendar" aria-labelledby="meetings-title">
-      <h1 id="meetings-title" className="sr-only">
-        Quản lý Hội nghị TDTU
-      </h1>
-
-      {/* Thanh công cụ & Chuyển đổi chế độ xem */}
-      <div className="meetings-hub-toolbar">
-        <div className="meetings-hub-toolbar__top">
-          <div className="meetings-hub-toolbar__title-group">
-            <h2 className="meetings-hub-toolbar__heading">
-              <Icon name="video" size={16} /> Hội nghị & Phòng họp
-            </h2>
-
-            {/* Bộ lọc nhóm / Khoa */}
-            <select
-              className="meetings-hub-select"
-              value={groupId}
-              aria-label="Lọc theo nhóm"
-              onChange={(event) =>
-                navigate({ view: "meetings", workspaceId: event.target.value || undefined }, true)
-              }
-            >
-              <option value="">Tất cả các nhóm / Khoa</option>
-              {groups?.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
-              ))}
-            </select>
-
-            {/* Ô tìm kiếm nhanh */}
-            <div className="meetings-hub-search">
-              <Icon name="search" size={13} />
-              <input
-                type="text"
-                placeholder="Tìm phòng hoặc cuộc họp…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="meetings-hub-actions">
-            {/* Chuyển đổi chế độ xem: Dạng Thẻ (Danh sách) vs Dạng Lịch tuần */}
-            <div className="meetings-view-toggle">
-              <button
-                type="button"
-                className={`meetings-view-toggle-btn ${viewMode === "cards" ? "is-active" : ""}`}
-                onClick={() => setViewMode("cards")}
-                title="Xem dạng thẻ phòng họp & danh sách"
-              >
-                <Icon name="grid-2x2" size={13} />
-                <span>Danh sách & Phòng</span>
-              </button>
-              <button
-                type="button"
-                className={`meetings-view-toggle-btn ${viewMode === "calendar" ? "is-active" : ""}`}
-                onClick={() => setViewMode("calendar")}
-                title="Xem thời khóa biểu dạng lưới lịch tuần"
-              >
-                <Icon name="calendar" size={13} />
-                <span>Lịch tuần</span>
-              </button>
-            </div>
-
-            <Button
-              size="sm"
-              variant="secondary"
-              icon="video"
-              disabled={!rooms.length}
-              onClick={() => setStartNow(true)}
-            >
-              Họp ngay
-            </Button>
-            <Button
-              size="sm"
-              icon="plus"
-              disabled={!rooms.length}
-              onClick={() => setForm({})}
-            >
-              Lên lịch
-            </Button>
-          </div>
+      <header className="mt-head">
+        <div>
+          <p className="mt-eyebrow">
+            <span className={`mt-led ${activeSessions.length ? "is-pulse" : "is-off"}`} />
+            Họp trực tuyến ·{" "}
+            {activeSessions.length ? `${activeSessions.length} phiên đang diễn ra` : "chưa có phiên nào đang diễn ra"}
+          </p>
+          <h1 id="meetings-title" className="mt-head__title">
+            Họp
+          </h1>
         </div>
-      </div>
+        <div className="mt-seg" role="group" aria-label="Chế độ xem">
+          <button type="button" className={viewMode === "cards" ? "is-active" : ""} aria-pressed={viewMode === "cards"} onClick={() => setViewMode("cards")}>
+            <Icon name="grid-2x2" size={13} /> Tổng quan
+          </button>
+          <button type="button" className={viewMode === "calendar" ? "is-active" : ""} aria-pressed={viewMode === "calendar"} onClick={() => setViewMode("calendar")}>
+            <Icon name="calendar" size={13} /> Lịch tuần
+          </button>
+        </div>
+        <select
+          className="mt-select"
+          value={groupId}
+          aria-label="Lọc theo nhóm"
+          onChange={(event) => navigate({ view: "meetings", workspaceId: event.target.value || undefined }, true)}
+        >
+          <option value="">Tất cả nhóm / Khoa</option>
+          {groups?.map((group) => (
+            <option key={group.id} value={group.id}>
+              {group.name}
+            </option>
+          ))}
+        </select>
+        <label className="mt-search">
+          <Icon name="search" size={14} />
+          <input
+            type="search"
+            placeholder="Tìm phòng hoặc cuộc họp…"
+            aria-label="Tìm phòng hoặc cuộc họp"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
+        </label>
+        <Button size="sm" variant="secondary" icon="video" disabled={!rooms.length} onClick={() => setStartNow(true)}>
+          Họp ngay
+        </Button>
+        <Button size="sm" icon="plus" disabled={!rooms.length} onClick={() => setForm({})}>
+          Lên lịch
+        </Button>
+      </header>
 
       {error && (
         <p className="inline-alert" role="alert">
           {error}
         </p>
       )}
-
       {!data && !error && (
         <p role="status" className="loading-note">
-          Đang tải dữ liệu hội nghị…
+          Đang tải dữ liệu cuộc họp…
         </p>
       )}
 
-      {/* 3. NỘI DUNG CHÍNH THEO CHẾ ĐỘ XEM */}
-      {viewMode === "cards" ? (
-        /* CHẾ ĐỘ 1: DẠNG THẺ (DANH SÁCH & PHÒNG HỌP) */
-        <div className={`meetings-cards-layout ${selected ? "has-detail" : ""}`}>
-          <div className="meetings-cards-main">
-            {/* Phân mục 1: Danh sách các phòng họp trực tuyến sẵn sàng */}
-            <section className="meetings-rooms-section">
-              <div className="meetings-section-head">
-                <h3>
-                  <Icon name="video" size={15} /> Phòng họp trực tuyến sẵn sàng
-                </h3>
-                <span>{filteredRooms.length} phòng khả dụng</span>
+      {viewMode === "cards" && (
+        <section className="mt-rack" aria-labelledby="mt-live-title">
+          <div className="mt-rack__head">
+            <h2 id="mt-live-title">Đang diễn ra</h2>
+            <span>
+              {liveSessions.length} phiên · {livePeople} người trong phòng
+            </span>
+          </div>
+          <div className="mt-rack__grid">
+            {liveSessions.map((session) => {
+              const plan = data?.schedules.find((item) => item.id === session.scheduleId);
+              return (
+                <article key={session.id} className="mt-unit is-live">
+                  <div className="mt-unit__top">
+                    <span className="mt-led is-pulse" />
+                    <span className="mt-unit__room">
+                      {session.roomName} · {session.workspaceName}
+                    </span>
+                    <MeetingClock since={session.startedAt} className="mt-unit__clock" />
+                  </div>
+                  <h3 className="mt-unit__title">{session.title ?? session.roomName}</h3>
+                  {(plan?.autoRecord || plan?.waitingRoom) && (
+                    <div className="mt-unit__chips">
+                      {plan.autoRecord && (
+                        <span className="mt-chip">
+                          <span className="mt-led tone-red" /> Tự ghi hình
+                        </span>
+                      )}
+                      {plan.waitingRoom && (
+                        <span className="mt-chip">
+                          <span className="mt-led tone-amber" /> Có phòng chờ
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <div className="mt-unit__foot">
+                    <PeopleStack names={session.people} />
+                    <span className="mt-unit__people">
+                      {session.people.length ? `${session.people.length} người trong phòng` : "Chưa có ai trong phòng"}
+                    </span>
+                    <Button
+                      size="sm"
+                      icon="video"
+                      onClick={() => openRoom({ workspaceId: session.workspaceId, roomId: session.roomId, scheduleId: session.scheduleId })}
+                    >
+                      Vào ngay
+                    </Button>
+                  </div>
+                </article>
+              );
+            })}
+            {!liveSessions.length && (
+              <div className="mt-unit is-empty">
+                <Icon name="video" size={18} />
+                <p>Chưa có phiên nào đang diễn ra. Chọn một phòng sẵn sàng hoặc bấm “Họp ngay”.</p>
               </div>
-
-              {filteredRooms.length === 0 ? (
-                <div className="meetings-empty-card">
-                  <Icon name="video" size={24} />
-                  <p>Không tìm thấy phòng họp phù hợp với bộ lọc hiện tại.</p>
-                </div>
-              ) : (
-                <div className="meetings-rooms-grid">
-                  {filteredRooms.map((room) => {
-                    const isLive = activeSessions.some((s) => s.roomId === room.id);
-                    return (
-                      <div key={room.id} className="meeting-room-card">
-                        <div className="meeting-room-card__head">
-                          <div className="meeting-room-card__icon">
-                            <Icon name="video" size={16} />
-                          </div>
-                          <span className={`meeting-room-card__badge ${isLive ? "is-live" : "is-ready"}`}>
-                            <span className={isLive ? "meeting-live-dot" : "meeting-ready-dot"} />
-                            {isLive ? "Đang họp" : "Sẵn sàng"}
-                          </span>
-                        </div>
-
-                        <div className="meeting-room-card__info">
-                          <h4 className="meeting-room-card__title" title={room.name}>
-                            {room.name}
-                          </h4>
-                          <p className="meeting-room-card__group" title={room.workspace}>
-                            {room.workspace}
-                          </p>
-                        </div>
-
-                        <div className="meeting-room-card__footer">
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            icon="video"
-                            onClick={() =>
-                              navigate({
-                                view: "meetings",
-                                workspaceId: room.workspaceId,
-                                channelId: room.id,
-                              })
-                            }
-                          >
-                            Vào phòng
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-
-            {/* Phân mục 2: Lịch các cuộc họp theo danh sách (Agenda) */}
-            <section className="meetings-agenda-section">
-              <div className="meetings-section-head">
-                <h3>
-                  <Icon name="calendar" size={15} /> Lịch các cuộc họp
-                </h3>
-                <span>{filteredEvents.length} cuộc họp được lên lịch</span>
+            )}
+            <div className="mt-unit is-quick">
+              <span className="mt-unit__label">Vào nhanh</span>
+              <select
+                className="mt-select is-dark"
+                aria-label="Chọn phòng để vào nhanh"
+                value={quickRoom?.id ?? ""}
+                disabled={!rooms.length}
+                onChange={(event) => setQuickRoomId(event.target.value)}
+              >
+                {rooms.map((room) => (
+                  <option key={room.id} value={room.id}>
+                    {room.name} ({room.workspace})
+                  </option>
+                ))}
+              </select>
+              <div className="mt-unit__row">
+                <Button
+                  size="sm"
+                  disabled={!quickRoom}
+                  onClick={() =>
+                    quickRoom && navigate({ view: "meetings", workspaceId: quickRoom.workspaceId, channelId: quickRoom.id })
+                  }
+                >
+                  Vào phòng
+                </Button>
+                <Button size="sm" variant="ghost" className="mt-ghost-dark" disabled={!rooms.length} onClick={() => setStartNow(true)}>
+                  Họp ngay
+                </Button>
               </div>
+              <span className="mt-unit__hint">{readyRooms} phòng sẵn sàng · không cần đặt trước</span>
+            </div>
+          </div>
+        </section>
+      )}
 
-              {filteredEvents.length === 0 ? (
-                <div className="meetings-empty-card">
-                  <Icon name="calendar" size={26} />
-                  <p>Chưa có cuộc họp nào được lên lịch theo bộ lọc này.</p>
-                  <Button size="sm" icon="plus" onClick={() => setForm({})}>
+      <div className={`mt-body is-${viewMode} ${selected ? "has-detail" : ""}`}>
+        {viewMode === "cards" ? (
+          <section className="mt-card mt-agenda" aria-labelledby="mt-agenda-title">
+            <div className="mt-card__head">
+              <h2 id="mt-agenda-title">Lịch họp</h2>
+              <div className="mt-chips" role="group" aria-label="Lọc lịch họp">
+                {(
+                  [
+                    ["next", "Sắp tới"],
+                    ["past", "Đã qua"],
+                    ["all", "Tất cả"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`mt-chip-btn ${agendaFilter === value ? "is-active" : ""}`}
+                    aria-pressed={agendaFilter === value}
+                    onClick={() => setAgendaFilter(value)}
+                  >
+                    {label} <small>{counts[value]}</small>
+                  </button>
+                ))}
+              </div>
+              {weekNav}
+            </div>
+            {agendaDays.length === 0 ? (
+              <div className="mt-empty">
+                <Icon name="calendar" size={22} />
+                <p>{agendaFilter === "past" ? "Tuần này chưa có cuộc họp nào đã qua." : "Chưa có cuộc họp nào được lên lịch theo bộ lọc này."}</p>
+                {agendaFilter !== "past" && (
+                  <Button size="sm" icon="plus" disabled={!rooms.length} onClick={() => setForm({})}>
                     Lên lịch cuộc họp mới
                   </Button>
-                </div>
-              ) : (
-                <div className="meeting-agenda-list">
-                  {filteredEvents.map((item) => {
-                    const isLive = item.status === "live";
-                    const isUpcoming = item.status === "upcoming";
+                )}
+              </div>
+            ) : (
+              agendaDays.map((day) => (
+                <div key={day.label} className="mt-day">
+                  <h3 className="mt-day__label">{day.label}</h3>
+                  {day.items.map((item) => {
                     const isSelected = item.key === selectedKey;
-
                     return (
-                      <div
-                        key={item.key}
-                        className={`meeting-agenda-item ${isSelected ? "is-selected" : ""}`}
-                      >
-                        <div className="meeting-agenda-item__left">
-                          <div className="meeting-agenda-time-box">
-                            <span className="meeting-agenda-time-box__date">
-                              {dayMonth(item.start)}
-                            </span>
-                            <span className="meeting-agenda-time-box__clock">
-                              {clock(item.start)}
-                            </span>
+                      <div key={item.key} className={`mt-ev is-${item.status} ${isSelected ? "is-selected" : ""}`}>
+                        <div className="mt-ev__time">
+                          <b>{clock(item.start)}</b>
+                          <span>{clock(item.end)}</span>
+                        </div>
+                        <span className="mt-ev__rail" aria-hidden="true">
+                          <i />
+                        </span>
+                        <div className="mt-ev__body">
+                          <div className="mt-ev__title">
+                            <span>{item.title}</span>
+                            <span className={`mt-status is-${item.status}`}>{STATUS_LABEL[item.status]}</span>
                           </div>
-
-                          <div className="meeting-agenda-item__info">
-                            <div className="meeting-agenda-item__top">
-                              <span className="meeting-agenda-item__title">{item.title}</span>
-                              <span className={`meeting-agenda-item__badge is-${item.status}`}>
-                                {STATUS_LABEL[item.status]}
-                              </span>
-                            </div>
-
-                            <div className="meeting-agenda-item__meta">
-                              <span>{item.workspaceName}</span>
-                              <span>•</span>
-                              <span>
-                                {rooms.find((r) => r.id === item.roomId)?.name ?? "Phòng họp"}
-                              </span>
-                              <span>•</span>
-                              <span>
-                                {clock(item.start)} – {clock(item.end)}
-                              </span>
-                            </div>
+                          <div className="mt-ev__meta">
+                            {item.workspaceName} · {roomOf(item.roomId)}
                           </div>
                         </div>
-
-                        <div className="meeting-agenda-item__actions">
-                          {(isLive || isUpcoming) && (
-                            <Button
-                              size="sm"
-                              variant={isLive ? "primary" : "secondary"}
-                              icon="video"
-                              onClick={() => openRoom(item)}
-                            >
+                        <div className="mt-ev__actions">
+                          <PeopleStack names={item.people} />
+                          {item.status !== "past" && (
+                            <Button size="sm" variant={item.status === "live" ? "primary" : "secondary"} icon="video" onClick={() => openRoom(item)}>
                               Vào họp
                             </Button>
                           )}
-
                           {schedule(item) && (
-                            <IconButton
-                              label="Tải lịch .ics"
-                              icon="calendar"
-                              onClick={() => downloadCalendarEvent(schedule(item)!)}
-                            />
+                            <IconButton label="Tải lịch .ics" icon="calendar" onClick={() => downloadCalendarEvent(schedule(item)!)} />
                           )}
-
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setSelectedKey(isSelected ? "" : item.key)}
-                          >
+                          <Button size="sm" variant="ghost" aria-expanded={isSelected} onClick={() => setSelectedKey(isSelected ? "" : item.key)}>
                             {isSelected ? "Đóng" : "Chi tiết"}
                           </Button>
                         </div>
@@ -449,159 +533,15 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
                     );
                   })}
                 </div>
-              )}
-            </section>
-          </div>
-
-          {/* Cột phải (30%): Các Widget tiện ích */}
-          <div className="meetings-side-widgets">
-            {/* Widget 1: Vào họp nhanh */}
-            <div className="meetings-side-card">
-              <div className="meetings-side-card__head">
-                <h4 className="meetings-side-card__title">
-                  <Icon name="video" size={15} /> Vào họp nhanh
-                </h4>
-              </div>
-
-              <div className="meetings-quick-meet">
-                <p>Chọn phòng họp khả dụng để bắt đầu phiên họp tức thì:</p>
-                <div className="meetings-quick-meet__row">
-                  <select
-                    className="meetings-hub-select"
-                    style={{ flex: 1 }}
-                    value={quickRoomId || (rooms[0]?.id ?? "")}
-                    onChange={(e) => setQuickRoomId(e.target.value)}
-                  >
-                    {rooms.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name} ({r.workspace})
-                      </option>
-                    ))}
-                  </select>
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    disabled={!rooms.length}
-                    onClick={() => {
-                      const targetId = quickRoomId || rooms[0]?.id;
-                      const room = rooms.find((r) => r.id === targetId);
-                      if (room) {
-                        navigate({
-                          view: "meetings",
-                          workspaceId: room.workspaceId,
-                          channelId: room.id,
-                        });
-                      }
-                    }}
-                  >
-                    Vào ngay
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Widget 2: Lịch tuần thu nhỏ (Mini Calendar) */}
-            <div className="meetings-side-card">
-              <div className="meetings-side-card__head">
-                <h4 className="meetings-side-card__title">
-                  <Icon name="calendar" size={15} /> Tuần {dayMonth(days[0]).slice(0, 2)}–{dayMonth(days[6])}
-                </h4>
-                <Button size="sm" variant="text" onClick={() => setViewMode("calendar")}>
-                  Xem chi tiết
-                </Button>
-              </div>
-
-              <div className="meetings-mini-calendar">
-                {days.map((day, idx) => {
-                  const isCurrentDay = idx === today;
-                  const hasEvents = events.some((e) => isSameDay(e.start, day));
-                  return (
-                    <div
-                      key={idx}
-                      className={`meetings-mini-calendar__day ${isCurrentDay ? "is-today" : ""}`}
-                      onClick={() => setViewMode("calendar")}
-                      title={`${WEEKDAYS[idx]} ${dayMonth(day)}`}
-                    >
-                      <span className="meetings-mini-calendar__weekday">{WEEKDAYS[idx].replace("Thứ ", "T")}</span>
-                      <span className="meetings-mini-calendar__date">{day.getDate()}</span>
-                      {hasEvents && <span className="meetings-mini-calendar__dot" />}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Widget 3: Biên bản & Kết luận gần đây */}
-            {pastSessions.length > 0 && (
-              <div className="meetings-side-card">
-                <div className="meetings-side-card__head">
-                  <h4 className="meetings-side-card__title">
-                    <Icon name="file" size={15} /> Biên bản & Ghi âm gần đây
-                  </h4>
-                </div>
-
-                <div className="meetings-outcomes-list">
-                  {pastSessions.map((session) => (
-                    <div
-                      key={session.id}
-                      className="meetings-outcome-item"
-                      onClick={() => {
-                        const matchedEvent = events.find((e) => e.sessionId === session.id);
-                        if (matchedEvent) {
-                          setSelectedKey(matchedEvent.key);
-                        } else {
-                          // Select by id if available
-                          setSelectedKey(session.id);
-                        }
-                      }}
-                    >
-                      <div className="meetings-outcome-item__info">
-                        <span className="meetings-outcome-item__title">
-                          {session.title || session.roomName}
-                        </span>
-                        <span className="meetings-outcome-item__date">
-                          {dayMonth(new Date(session.startedAt))} · {session.workspaceName}
-                        </span>
-                      </div>
-                      <IconButton label="Xem chi tiết" icon="chevron-right" />
-                    </div>
-                  ))}
-                </div>
-              </div>
+              ))
             )}
-          </div>
-        </div>
-      ) : (
-        /* CHẾ ĐỘ 2: DẠNG LƯỚI LỊCH TUẦN (WEEKLY GRID) */
-        <div className={`meetings-calendar__body ${selected ? "has-detail" : ""}`}>
-          <div>
-            <div className="meetings-calendar__bar" style={{ marginBottom: 12 }}>
-              <div className="meetings-calendar__week">
-                <IconButton
-                  label="Tuần trước"
-                  icon="chevron-left"
-                  onClick={() => setWeek(new Date(week.getTime() - 7 * DAY))}
-                />
-                <h2>
-                  Tuần {dayMonth(days[0]).slice(0, 2)}–{dayMonth(days[6])}
-                </h2>
-                <IconButton
-                  label="Tuần sau"
-                  icon="chevron-right"
-                  onClick={() => setWeek(new Date(week.getTime() + 7 * DAY))}
-                />
-                <Button size="sm" variant="secondary" onClick={() => setWeek(weekStart(new Date()))}>
-                  Hôm nay
-                </Button>
-              </div>
-
-              <span className="meetings-calendar__spacer" />
-
-              <span style={{ fontSize: 11.5, color: "var(--text-muted)" }}>
-                Kéo hoặc bấm vào ô cuộc họp để xem chi tiết
-              </span>
+          </section>
+        ) : (
+          <div className="mt-week-wrap">
+            <div className="meetings-calendar__bar">
+              {weekNav}
+              <span className="meetings-calendar__hint">Bấm vào ô cuộc họp để xem chi tiết</span>
             </div>
-
             <div className="meeting-week" role="grid" aria-label="Lịch tuần">
               <div className="meeting-week__head" role="row">
                 <span />
@@ -611,11 +551,7 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
                   </span>
                 ))}
               </div>
-              <div
-                className="meeting-week__grid"
-                role="row"
-                style={{ "--hours": LAST_HOUR - FIRST_HOUR } as React.CSSProperties}
-              >
+              <div className="meeting-week__grid" role="row" style={{ "--hours": LAST_HOUR - FIRST_HOUR } as React.CSSProperties}>
                 <div className="meeting-week__hours" aria-hidden="true">
                   {Array.from({ length: LAST_HOUR - FIRST_HOUR }, (_, index) => (
                     <span key={index}>{FIRST_HOUR + index}:00</span>
@@ -635,7 +571,6 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
                 ))}
               </div>
             </div>
-
             <ol className="meeting-days" aria-label="Lịch tuần theo ngày">
               {days.map((day, index) => {
                 const items = layoutDay(events, day).map(({ event }) => event);
@@ -650,93 +585,110 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
               })}
             </ol>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* 4. PANEL CHI TIẾT CUỘC HỌP (Drawer bên phải) */}
-      {selected && (
-        <aside className="meeting-detail" aria-label="Chi tiết cuộc họp">
-          <div className="meeting-detail__head">
-            <span className={`meeting-detail__status is-${selected.status}`}>{STATUS_LABEL[selected.status]}</span>
-            <IconButton label="Đóng chi tiết" icon="x" onClick={() => setSelectedKey("")} />
+        {(viewMode === "cards" || selected) && (
+          <div className="mt-side">
+            {detail || (
+              <>
+                <section className="mt-card" aria-labelledby="mt-week-title">
+                  <div className="mt-card__head">
+                    <h2 id="mt-week-title">{weekTitle}</h2>
+                    <button type="button" className="mt-link" onClick={() => setViewMode("calendar")}>
+                      Xem lịch tuần
+                    </button>
+                  </div>
+                  <div className="mt-cal">
+                    {days.map((day, index) => {
+                      const count = events.filter((item) => dayIndex(item.start) === index).length;
+                      return (
+                        <button
+                          key={index}
+                          type="button"
+                          className={`mt-cal__day ${index === today ? "is-today" : ""}`}
+                          title={`${WEEKDAYS[index]} ${dayMonth(day)} · ${count} cuộc họp`}
+                          onClick={() => setViewMode("calendar")}
+                        >
+                          <small>{WEEKDAYS[index].replace("Thứ ", "T").replace("Chủ nhật", "CN")}</small>
+                          <b>{dayMonth(day).slice(0, 2)}</b>
+                          <i className={count ? "" : "is-empty"} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                <section className="mt-card" aria-labelledby="mt-rooms-title">
+                  <div className="mt-card__head">
+                    <h2 id="mt-rooms-title">Phòng họp</h2>
+                    <span className="mt-card__meta">
+                      {filteredRooms.length} phòng · {filteredRooms.filter((room) => liveIn(room.id)).length} đang dùng
+                    </span>
+                  </div>
+                  {filteredRooms.length === 0 ? (
+                    <p className="mt-muted">Không tìm thấy phòng họp phù hợp với bộ lọc hiện tại.</p>
+                  ) : (
+                    <ul className="mt-rooms">
+                      {filteredRooms.map((room) => {
+                        const live = liveIn(room.id);
+                        return (
+                          <li key={room.id} className="mt-room">
+                            <span className={`mt-led ${live ? "" : "is-off"}`} />
+                            <div>
+                              <b title={room.name}>{room.name}</b>
+                              <small title={room.workspace}>
+                                {live ? `Đang họp · ${live.people.length} người` : "Sẵn sàng"} · {room.workspace}
+                              </small>
+                            </div>
+                            <button
+                              type="button"
+                              className="mt-link"
+                              aria-label={`Vào ${room.name}`}
+                              onClick={() => navigate({ view: "meetings", workspaceId: room.workspaceId, channelId: room.id })}
+                            >
+                              Vào
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </section>
+
+                {pastSessions.length > 0 && (
+                  <section className="mt-card" aria-labelledby="mt-minutes-title">
+                    <div className="mt-card__head">
+                      <h2 id="mt-minutes-title">Biên bản &amp; ghi hình gần đây</h2>
+                    </div>
+                    <ul className="mt-minutes">
+                      {pastSessions.map((session) => (
+                        <li key={session.id}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedKey(events.find((item) => item.sessionId === session.id)?.key ?? session.id)}
+                          >
+                            <span className="mt-minutes__icon">
+                              <Icon name="file" size={15} />
+                            </span>
+                            <span className="mt-minutes__text">
+                              <b>{session.title || session.roomName}</b>
+                              <small>
+                                {dayMonth(new Date(session.startedAt))} · {session.workspaceName}
+                              </small>
+                            </span>
+                            <Icon name="chevron-right" size={14} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+              </>
+            )}
           </div>
-          <h2>{selected.title}</h2>
-          <p>
-            {selected.workspaceName} · {rooms.find((room) => room.id === selected.roomId)?.name ?? "Phòng họp"}
-          </p>
-          <p>
-            <Icon name="clock" size={14} /> {dayMonth(selected.start)} · {clock(selected.start)}–{clock(selected.end)}
-          </p>
-          {schedule(selected)?.description && (
-            <p className="meeting-detail__note">{schedule(selected)?.description}</p>
-          )}
-          {selected.status !== "past" && (
-            <>
-              {selected.status === "live" && (
-                <p className="meeting-detail__people">
-                  <Icon name="users" size={14} />{" "}
-                  {selected.people.length ? `Đang trong phòng: ${selected.people.join(", ")}` : "Chưa có ai trong phòng"}
-                </p>
-              )}
-              <div className="meeting-detail__actions">
-                <Button icon="video" onClick={() => openRoom(selected)}>
-                  Vào phòng
-                </Button>
-                {schedule(selected) && (
-                  <Button
-                    variant="text"
-                    size="sm"
-                    icon="calendar"
-                    onClick={() => downloadCalendarEvent(schedule(selected)!)}
-                  >
-                    Tải .ics
-                  </Button>
-                )}
-                {selected.canManage && schedule(selected) && (
-                  <>
-                    <Button
-                      variant="text"
-                      size="sm"
-                      icon="edit"
-                      onClick={() => setForm({ item: schedule(selected) })}
-                    >
-                      Sửa
-                    </Button>
-                    <Button
-                      variant="text"
-                      size="sm"
-                      icon="clipboard"
-                      onClick={() => setCouncilFor(schedule(selected)!)}
-                    >
-                      Hội đồng
-                    </Button>
-                    <Button
-                      variant="text"
-                      size="sm"
-                      onClick={() => setCancelId(selected.scheduleId ?? "")}
-                    >
-                      Huỷ
-                    </Button>
-                  </>
-                )}
-              </div>
-            </>
-          )}
-          {selected.status !== "live" && selected.sessionId ? (
-            <div className="meeting-detail__past">
-              {selected.people.length > 0 && <p>Đã tham gia: {selected.people.join(", ")}</p>}
-              <MeetingRecordingPanel sessionId={selected.sessionId} live={false} />
-              <MeetingOutcomesPanel sessionId={selected.sessionId} live={false} />
-              <MeetingCouncilPanel sessionId={selected.sessionId} live={false} />
-              <MeetingAttendancePanel sessionId={selected.sessionId} />
-            </div>
-          ) : selected.status === "past" ? (
-            <p>Cuộc họp này đã qua giờ mà chưa ai vào phòng.</p>
-          ) : null}
-        </aside>
-      )}
+        )}
+      </div>
 
-      {/* 5. CÁC HỘP THOẠI DIALOGS */}
       <AnimatePresence>
         {form && groups && (
           <ScheduleDialog
@@ -755,12 +707,7 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
           />
         )}
         {startNow && groups && (
-          <StartNowDialog
-            groups={groups}
-            rooms={rooms}
-            defaultGroupId={groupId}
-            onClose={() => setStartNow(false)}
-          />
+          <StartNowDialog groups={groups} rooms={rooms} defaultGroupId={groupId} onClose={() => setStartNow(false)} />
         )}
         {councilFor && (
           <CouncilSetupDialog
@@ -785,6 +732,19 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
         )}
       </AnimatePresence>
     </section>
+  );
+}
+
+/** Up to three faces of the people in a room, then "+N". */
+function PeopleStack({ names, max = 3 }: { names: string[]; max?: number }) {
+  if (!names.length) return null;
+  return (
+    <span className="mt-stack" title={names.join(", ")}>
+      {names.slice(0, max).map((name, index) => (
+        <Avatar key={`${name}-${index}`} name={name} size="xs" />
+      ))}
+      {names.length > max && <span className="mt-stack__more">+{names.length - max}</span>}
+    </span>
   );
 }
 

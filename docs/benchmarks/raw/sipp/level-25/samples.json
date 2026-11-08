@@ -10,248 +10,248 @@
       "abandoned": 50
     },
     "peakCpuPercent": {
-      "asterisk": 19.93,
-      "postgres": 4.34
+      "asterisk": 18.67,
+      "postgres": 2.8
     }
   },
   "samples": [
     {
-      "t": 16,
+      "t": 9,
       "containers": [
         {
           "name": "infra-asterisk-1",
-          "cpuPercent": 4.94,
-          "mem": "74.35MiB"
+          "cpuPercent": 11.81,
+          "mem": "90.48MiB"
         },
         {
           "name": "infra-postgres-1",
-          "cpuPercent": 1.94,
-          "mem": "83MiB"
+          "cpuPercent": 2.34,
+          "mem": "51.23MiB"
         }
       ]
     },
     {
-      "t": 3192,
+      "t": 3176,
       "containers": [
         {
           "name": "infra-asterisk-1",
-          "cpuPercent": 18.87,
-          "mem": "75.32MiB"
+          "cpuPercent": 16.19,
+          "mem": "91.38MiB"
         },
         {
           "name": "infra-postgres-1",
-          "cpuPercent": 0.11,
-          "mem": "83.15MiB"
+          "cpuPercent": 2.8,
+          "mem": "53.43MiB"
         }
       ]
     },
     {
-      "t": 5376,
+      "t": 5342,
       "containers": [
         {
           "name": "infra-asterisk-1",
-          "cpuPercent": 14.22,
-          "mem": "75.15MiB"
+          "cpuPercent": 15.96,
+          "mem": "92.62MiB"
+        },
+        {
+          "name": "infra-postgres-1",
+          "cpuPercent": 0.09,
+          "mem": "53.75MiB"
+        }
+      ]
+    },
+    {
+      "t": 8507,
+      "containers": [
+        {
+          "name": "infra-asterisk-1",
+          "cpuPercent": 1,
+          "mem": "90.56MiB"
+        },
+        {
+          "name": "infra-postgres-1",
+          "cpuPercent": 0.09,
+          "mem": "53.64MiB"
+        }
+      ]
+    },
+    {
+      "t": 11677,
+      "containers": [
+        {
+          "name": "infra-asterisk-1",
+          "cpuPercent": 4.16,
+          "mem": "92.53MiB"
+        },
+        {
+          "name": "infra-postgres-1",
+          "cpuPercent": 0.01,
+          "mem": "53.41MiB"
+        }
+      ]
+    },
+    {
+      "t": 13844,
+      "containers": [
+        {
+          "name": "infra-asterisk-1",
+          "cpuPercent": 16.89,
+          "mem": "91.88MiB"
         },
         {
           "name": "infra-postgres-1",
           "cpuPercent": 0,
-          "mem": "83.05MiB"
+          "mem": "53.34MiB"
         }
       ]
     },
     {
-      "t": 8565,
+      "t": 16005,
       "containers": [
         {
           "name": "infra-asterisk-1",
-          "cpuPercent": 1.02,
-          "mem": "74.29MiB"
-        },
-        {
-          "name": "infra-postgres-1",
-          "cpuPercent": 0.11,
-          "mem": "83.73MiB"
-        }
-      ]
-    },
-    {
-      "t": 10745,
-      "containers": [
-        {
-          "name": "infra-asterisk-1",
-          "cpuPercent": 1.22,
-          "mem": "74.54MiB"
-        },
-        {
-          "name": "infra-postgres-1",
-          "cpuPercent": 2.29,
-          "mem": "83.66MiB"
-        }
-      ]
-    },
-    {
-      "t": 12924,
-      "containers": [
-        {
-          "name": "infra-asterisk-1",
-          "cpuPercent": 19.93,
-          "mem": "76.03MiB"
-        },
-        {
-          "name": "infra-postgres-1",
-          "cpuPercent": 4.34,
-          "mem": "83.49MiB"
-        }
-      ]
-    },
-    {
-      "t": 16112,
-      "containers": [
-        {
-          "name": "infra-asterisk-1",
-          "cpuPercent": 9.44,
-          "mem": "76.12MiB"
-        },
-        {
-          "name": "infra-postgres-1",
-          "cpuPercent": 3.82,
-          "mem": "86.71MiB"
-        }
-      ]
-    },
-    {
-      "t": 19303,
-      "containers": [
-        {
-          "name": "infra-asterisk-1",
-          "cpuPercent": 0.95,
-          "mem": "74.32MiB"
+          "cpuPercent": 8.81,
+          "mem": "91.48MiB"
         },
         {
           "name": "infra-postgres-1",
           "cpuPercent": 0.02,
-          "mem": "83.98MiB"
+          "mem": "53.96MiB"
         }
       ]
     },
     {
-      "t": 21478,
+      "t": 18168,
       "containers": [
         {
           "name": "infra-asterisk-1",
-          "cpuPercent": 19.12,
-          "mem": "76.82MiB"
+          "cpuPercent": 1.03,
+          "mem": "91.34MiB"
         },
         {
           "name": "infra-postgres-1",
-          "cpuPercent": 2.42,
-          "mem": "80.81MiB"
+          "cpuPercent": 0.29,
+          "mem": "53.89MiB"
         }
       ]
     },
     {
-      "t": 24656,
+      "t": 21341,
       "containers": [
         {
           "name": "infra-asterisk-1",
-          "cpuPercent": 18.37,
-          "mem": "78.64MiB"
+          "cpuPercent": 15.43,
+          "mem": "92.69MiB"
         },
         {
           "name": "infra-postgres-1",
-          "cpuPercent": 0.16,
-          "mem": "80.82MiB"
+          "cpuPercent": 2.25,
+          "mem": "51.43MiB"
         }
       ]
     },
     {
-      "t": 27840,
+      "t": 23517,
       "containers": [
         {
           "name": "infra-asterisk-1",
-          "cpuPercent": 3.11,
-          "mem": "76.89MiB"
+          "cpuPercent": 18.67,
+          "mem": "93.98MiB"
         },
         {
           "name": "infra-postgres-1",
-          "cpuPercent": 4.29,
-          "mem": "81.16MiB"
+          "cpuPercent": 0.02,
+          "mem": "51.26MiB"
         }
       ]
     },
     {
-      "t": 30009,
+      "t": 26687,
       "containers": [
         {
           "name": "infra-asterisk-1",
-          "cpuPercent": 1.1,
-          "mem": "76.89MiB"
+          "cpuPercent": 3.68,
+          "mem": "93.93MiB"
         },
         {
           "name": "infra-postgres-1",
-          "cpuPercent": 0.01,
-          "mem": "81.16MiB"
+          "cpuPercent": 0.12,
+          "mem": "51.25MiB"
         }
       ]
     },
     {
-      "t": 32195,
+      "t": 29877,
       "containers": [
         {
           "name": "infra-asterisk-1",
-          "cpuPercent": 15.07,
-          "mem": "78.13MiB"
+          "cpuPercent": 1.11,
+          "mem": "92.7MiB"
         },
         {
           "name": "infra-postgres-1",
-          "cpuPercent": 0.04,
-          "mem": "80.86MiB"
+          "cpuPercent": 0.13,
+          "mem": "52.18MiB"
         }
       ]
     },
     {
-      "t": 35375,
+      "t": 33057,
       "containers": [
         {
           "name": "infra-asterisk-1",
-          "cpuPercent": 7.98,
-          "mem": "77.74MiB"
+          "cpuPercent": 13.97,
+          "mem": "93.89MiB"
         },
         {
           "name": "infra-postgres-1",
-          "cpuPercent": 0.01,
-          "mem": "80.91MiB"
+          "cpuPercent": 0.62,
+          "mem": "49.18MiB"
         }
       ]
     },
     {
-      "t": 38559,
+      "t": 35235,
       "containers": [
         {
           "name": "infra-asterisk-1",
-          "cpuPercent": 1.07,
-          "mem": "76.92MiB"
+          "cpuPercent": 14.74,
+          "mem": "93.97MiB"
         },
         {
           "name": "infra-postgres-1",
-          "cpuPercent": 0.14,
-          "mem": "81.62MiB"
+          "cpuPercent": 0.12,
+          "mem": "48.64MiB"
         }
       ]
     },
     {
-      "t": 41749,
+      "t": 38415,
       "containers": [
         {
           "name": "infra-asterisk-1",
-          "cpuPercent": 1.33,
-          "mem": "75.68MiB"
+          "cpuPercent": 0.96,
+          "mem": "93.75MiB"
         },
         {
           "name": "infra-postgres-1",
-          "cpuPercent": 0.63,
-          "mem": "81.04MiB"
+          "cpuPercent": 0.11,
+          "mem": "48.87MiB"
+        }
+      ]
+    },
+    {
+      "t": 41609,
+      "containers": [
+        {
+          "name": "infra-asterisk-1",
+          "cpuPercent": 2.32,
+          "mem": "92.41MiB"
+        },
+        {
+          "name": "infra-postgres-1",
+          "cpuPercent": 0.34,
+          "mem": "48.62MiB"
         }
       ]
     }

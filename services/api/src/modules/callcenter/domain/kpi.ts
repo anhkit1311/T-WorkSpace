@@ -53,6 +53,7 @@ export function kpiSummary(calls: KpiCall[], wrapUpSeconds: number[], thresholdS
     answered: answered.length,
     abandoned: abandoned.length,
     voicemail: offered.filter((call) => call.outcome === "voicemail").length,
+    callback: offered.filter((call) => call.outcome === "callback").length,
     asa: round(average(waits)),
     aht: talk === null ? null : round(talk + (average(wrapUpSeconds) ?? 0)),
     abandonRate: offered.length ? round(abandoned.length / offered.length, 4) : null,

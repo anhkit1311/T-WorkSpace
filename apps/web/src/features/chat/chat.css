@@ -1038,14 +1038,17 @@
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: 12px;
   background: var(--surface);
-  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .chat-floating-dock-form:focus-within {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-soft);
+  box-shadow:
+    0 0 0 3px var(--primary-soft),
+    0 4px 12px rgba(0, 45, 98, 0.08);
 }
 
 .chat-dock-textarea {

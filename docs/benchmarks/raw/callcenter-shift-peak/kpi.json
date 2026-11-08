@@ -1,0 +1,81 @@
+{
+  "shift": {
+    "startedAt": "2026-11-02T17:15:02.876Z",
+    "callers": 28,
+    "callIds": [
+      "2017e0bd-ce43-4bc7-b6f7-9604a51d0dcd",
+      "58a9b561-ff64-4d39-b015-bcb0eed577cb",
+      "3bd24d39-f1ce-4c01-9f81-bd4be0bcd1ec",
+      "2fd3dddb-e1af-4e5e-8ebe-c2be10de478b",
+      "e13ff246-0d89-48ba-adad-bb0ee78b8c95",
+      "287d0823-a6d6-4e19-9a19-8b7241ffb426",
+      "059fb492-67b1-4f7e-8b92-c28ce5f7f8fc",
+      "db242cf9-2443-418b-888b-af543032469c",
+      "47a6c6c8-d731-4377-9fd5-59071e1027bf",
+      "64759c48-f503-4eb2-a0e0-fdc4118349de",
+      "b3847f33-e617-4a56-93eb-f75eb67c1ca7",
+      "1cc24839-5b1d-48d1-8271-bccfaa0e8409",
+      "e4b4a415-9ef7-49ef-b1aa-3d0a2f2edda3",
+      "0efd2d61-aa39-4a33-a269-6bd09b60ebc4",
+      "0fed01ec-501f-4b3b-83d9-95cd501c7add",
+      "71c04fde-682d-4ddb-b7fd-c3d6b6fab2e9",
+      "c1e6a594-d566-4414-ba04-450904ad5f5d",
+      "e8e418b6-e93d-47e9-8103-70a0ad2d777c",
+      "eea924e5-c303-4475-a1e8-eaf6c7ca8b9d",
+      "41973d1a-fab7-49ff-b81c-2afaab82a173",
+      "72be23cc-7732-4793-b774-75a958a9bcfb",
+      "9f06c723-61a3-4b06-9c66-505d9290d887",
+      "4fa37394-5088-4b0e-a222-1af9567babf5",
+      "77bcbb4d-d8a7-45c9-b39c-d6758cc5828a",
+      "c3583983-53ef-466d-8fe6-d28e70ed1788",
+      "1134fe1f-45fb-4dbe-9bf7-13e2a9890b3c",
+      "b013b032-f77a-47e6-87c7-6f8a0dbb17d6",
+      "0dff6b1d-a8f1-4576-bbe4-b37a783c9e4e"
+    ]
+  },
+  "kpi": {
+    "departmentId": "d13b578d-eec2-4364-ac78-99e8561070fe",
+    "from": "2026-11-03",
+    "to": "2026-11-03",
+    "serviceLevelSeconds": 20,
+    "offered": 28,
+    "answered": 24,
+    "abandoned": 1,
+    "voicemail": 0,
+    "callback": 3,
+    "asa": 32.1,
+    "aht": 130.8,
+    "abandonRate": 0.0357,
+    "serviceLevel": 0.6,
+    "agents": [
+      {
+        "userId": "aa77461d-e394-49cd-80ad-b3c88a10f550",
+        "displayName": "Vũ Thu Hà",
+        "answered": 9,
+        "talkSeconds": 934,
+        "averageTalk": 103.8
+      },
+      {
+        "userId": "0e110a34-29a5-448d-8bef-219e72d4dd52",
+        "displayName": "Phòng Giáo vụ khoa CNTT",
+        "answered": 8,
+        "talkSeconds": 1007,
+        "averageTalk": 125.9
+      },
+      {
+        "userId": "38fa2361-4125-4e3e-a1ab-f028a2567721",
+        "displayName": "Nguyễn Thị Lan",
+        "answered": 7,
+        "talkSeconds": 837,
+        "averageTalk": 119.6
+      }
+    ],
+    "hourly": [
+      {
+        "hour": 0,
+        "offered": 28,
+        "answered": 24
+      }
+    ]
+  }
+}

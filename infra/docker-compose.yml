@@ -29,15 +29,22 @@ services:
       SPIKE_SIP_PASSWORD: ${ASTERISK_SPIKE_SIP_PASSWORD:-}
       EXTERNAL_IP: ${ASTERISK_EXTERNAL_IP:-127.0.0.1}
       ARI_ALLOWED_ORIGINS: ${WEB_ORIGIN:-http://localhost:5173}
+      TRUNK_USERNAME: ${ASTERISK_TRUNK_USERNAME:-}
+      TRUNK_PASSWORD: ${ASTERISK_TRUNK_PASSWORD:-}
+      TRUNK_SERVER: ${ASTERISK_TRUNK_SERVER:-}
+      TRUNK_NUMBER: ${ASTERISK_TRUNK_NUMBER:-}
     volumes:
       # Edit config without rebuilding; restart the container to apply.
       - ./asterisk/config:/opt/nexo-asterisk:ro
       # CC-12: security/messages logs on the host for fail2ban (see infra/asterisk/fail2ban).
       - ${ASTERISK_LOG_DIR:-./asterisk/logs}:/var/log/asterisk
+      # Call recordings and voicemails (ARI stored recordings): kept when the container is rebuilt.
+      - asterisk-spool:/var/spool/asterisk
     ports:
       - "5060:5060/udp"
+      - "5070:5070/udp" # SIP trunk (CC-4)
       - "8088:8088/tcp"
-      - "10000-10099:10000-10099/udp"
+      - "10000-10499:10000-10499/udp"
     restart: unless-stopped
 
   # Dev only: FFmpeg next to an API that runs on the host. Start with:
@@ -105,3 +112,4 @@ services:
 
 volumes:
   minio-data:
+  asterisk-spool:

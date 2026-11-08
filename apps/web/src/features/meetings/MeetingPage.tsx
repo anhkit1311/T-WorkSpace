@@ -2,9 +2,10 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { MeetingState } from "@doan/shared";
 import type { ChatMessageItem, WorkspaceItem } from "@doan/shared";
 import { getChannelsApi, getMessagesApi, getWorkspacesApi } from "../chat/api";
-import { getDialInApi, downloadMeetingAttendanceApi, getSessionCouncilApi } from "./api";
+import { getDialInApi, downloadMeetingAttendanceApi, getMeetingRecordingsApi, getSessionCouncilApi } from "./api";
 import { MeetingCouncilPanel } from "./MeetingCouncilPanel";
 import { MeetingsCalendar } from "./MeetingsCalendar";
+import { MeetingClock } from "./MeetingClock";
 import { useApp } from "../../app/providers/AppContext";
 import { useMeeting, type RemotePeer } from "../../app/providers/MeetingContext";
 import { bestGridLayout, layerForTile, pageSizeFor, paginate } from "./grid-layout";
@@ -50,22 +51,6 @@ const studentIdOf = (name: string) => name.match(/\b(5\d{7})\b/)?.[1] ?? "";
 function networkTone(rtt: number | null | undefined, loss: number | null | undefined, connected: boolean) {
   if (!connected) return "bad";
   return (rtt ?? 0) > 300 || (loss ?? 0) > 5 ? "weak" : "good";
-}
-
-function MeetingClock({ since }: { since: string }) {
-  const [, tick] = useState(0);
-  useEffect(() => {
-    const timer = window.setInterval(() => tick((value) => value + 1), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
-  const total = Math.max(0, Math.floor((Date.now() - Date.parse(since)) / 1000));
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return (
-    <time className="meeting-topbar__clock">
-      {total >= 3600 ? `${Math.floor(total / 3600)}:` : ""}
-      {pad(Math.floor(total / 60) % 60)}:{pad(total % 60)}
-    </time>
-  );
 }
 
 function Video({ stream }: { stream: MediaStream | null }) {
@@ -174,7 +159,7 @@ function useAudioActivity(stream: MediaStream | null, enabled: boolean) {
   return isSpeaking;
 }
 
-const GRID_GAP = 16;
+const GRID_GAP = 10;
 const FILMSTRIP_PAGE_SIZE = 5;
 const FILMSTRIP_TILE_WIDTH = 200;
 interface GridTile {
@@ -290,6 +275,7 @@ function ParticipantTile({
   hasAudio,
   pinned = false,
   raisedHand = false,
+  host = false,
   speaking,
   dominant = false,
   onPin,
@@ -302,6 +288,7 @@ function ParticipantTile({
   hasAudio: boolean;
   pinned?: boolean;
   raisedHand?: boolean;
+  host?: boolean;
   /** Server-side audio level for remote peers; local tiles analyse their own track. */
   speaking?: boolean;
   dominant?: boolean;
@@ -324,11 +311,6 @@ function ParticipantTile({
     <article
       className={`video-tile ${isSpeaking ? "is-speaking" : ""} ${dominant ? "is-dominant" : ""} ${pinned ? "is-pinned" : ""} ${isMainSpotlight ? "is-main-spotlight" : ""}`}
     >
-      {!isMainSpotlight && (
-        <button type="button" className="tile-three-dots" title="Tùy chọn" aria-label="Tùy chọn">
-          <Icon name="more" size={13} />
-        </button>
-      )}
       {hasVideo && stream ? (
         <Video stream={stream} />
       ) : (
@@ -351,9 +333,14 @@ function ParticipantTile({
           <Icon name="pin" size={14} />
         </button>
       )}
-      {raisedHand && (
-        <span className="participant-hand" role="img" aria-label="Đang giơ tay" title="Đang giơ tay">
-          <Icon name="hand" size={14} />
+      {(raisedHand || host) && (
+        <span className="tile-badges">
+          {raisedHand && (
+            <span className="participant-hand" role="img" aria-label="Đang giơ tay" title="Đang giơ tay">
+              <Icon name="hand" size={13} /> Giơ tay
+            </span>
+          )}
+          {host && <span className="participant-role">Chủ trì</span>}
         </span>
       )}
       <div className="participant-label">
@@ -498,7 +485,34 @@ export function MeetingPage() {
       alive = false;
     };
   }, [accessToken, meetingSessionId]);
+  // REC chip in the top bar: is a recording running in this session?
+  const [recording, setRecording] = useState(false);
+  const { controlSocket } = meeting;
+  useEffect(() => {
+    if (!accessToken || !meetingSessionId) return setRecording(false);
+    let alive = true;
+    const load = () =>
+      getMeetingRecordingsApi(accessToken, meetingSessionId).then(
+        (data) => alive && setRecording(data.recordings.some((item) => item.status === "recording")),
+        () => alive && setRecording(false),
+      );
+    void load();
+    const changed = (change: { sessionId: string; part: string }) => {
+      if (change.sessionId === meetingSessionId && change.part === "recording") void load();
+    };
+    controlSocket?.on("meeting_outcomes_changed", changed);
+    return () => {
+      alive = false;
+      controlSocket?.off("meeting_outcomes_changed", changed);
+    };
+  }, [accessToken, meetingSessionId, controlSocket]);
   const participantCount = control.admitted.length || meeting.remotePeers.length + 1;
+  const panelTabs: [typeof sidePanel, string, number?][] = [
+    ["people", "Mọi người", participantCount],
+    ["chat", "Chat", callUnread],
+    ["notes", "Biên bản"],
+    ...(hasCouncil ? ([["council", "Hội đồng"]] as [typeof sidePanel, string][]) : []),
+  ];
   // Corner toasts: someone waits to be let in (hosts only) or raises a hand.
   const previousState = useRef<MeetingState | null>(null);
   useEffect(() => {
@@ -900,6 +914,7 @@ export function MeetingPage() {
         hasAudio={Boolean(tile.peer.audioTrack)}
         pinned={main || pinnedId === tile.id}
         raisedHand={raisedHands.has(tile.peer.userId)}
+        host={tile.peer.userId === meetingState?.hostId}
         speaking={meeting.speakingIds.includes(tile.id)}
         dominant={meeting.activeSpeakerId === tile.id && meeting.remotePeers.length > 1}
         onPin={() => togglePin(tile.id)}
@@ -915,6 +930,7 @@ export function MeetingPage() {
         hasAudio={meeting.mic}
         pinned={main || pinnedId === "local"}
         raisedHand={Boolean(user && raisedHands.has(user.id))}
+        host={Boolean(user && user.id === meetingState?.hostId)}
         dominant={meeting.activeSpeakerId === "local" && meeting.remotePeers.length > 1}
         onPin={() => togglePin("local")}
         isMainSpotlight={main}
@@ -987,21 +1003,32 @@ export function MeetingPage() {
             <div className="jitsi-topbar-left">
               <h2 className="jitsi-topbar-title">{roomName}</h2>
               <span className="jitsi-topbar-subtitle">
-                {participantCount} người trong phòng
+                {participantCount} người trong phòng{meetingState?.locked ? " · đã khóa" : ""}
               </span>
-              <div className="jitsi-topbar-brand">
-                <span className="jitsi-logo-text">jitsi</span>
-              </div>
             </div>
 
             <div className="jitsi-topbar-center">
               <div className="jitsi-topbar-chip">
-                <span className="jitsi-chip-name">{roomName}</span>
+                {recording && (
+                  <span className="meeting-rec">
+                    <span className="mt-led tone-red is-pulse" /> REC
+                  </span>
+                )}
                 {meetingState?.startedAt ? (
                   <MeetingClock since={meetingState.startedAt} />
                 ) : (
-                  <span className="meeting-topbar__clock">00:08</span>
+                  <span className="meeting-topbar__clock">00:00</span>
                 )}
+                <span className="meeting-chip-divider" aria-hidden="true" />
+                <button
+                  type="button"
+                  className={`meeting-chip-notes ${sidePanel === "notes" ? "is-active" : ""}`}
+                  aria-pressed={sidePanel === "notes"}
+                  title="Biên bản, ghi hình và việc cần làm"
+                  onClick={() => setSidePanel(sidePanel === "notes" ? "none" : "notes")}
+                >
+                  <Icon name="sparkles" size={13} /> Biên bản
+                </button>
                 <button
                   type="button"
                   className="jitsi-chip-shield"
@@ -1056,7 +1083,8 @@ export function MeetingPage() {
                 onClick={() => setSidePanel(sidePanel === "network" ? "none" : "network")}
                 aria-label={`Chất lượng mạng: ${networkLabel}`}
               >
-                <Icon name={isConnected ? "wifi" : "warning"} size={16} />
+                <Icon name={isConnected ? "wifi" : "warning"} size={15} />
+                {isConnected && meeting.qos?.rtt != null && <span>{meeting.qos.rtt} ms</span>}
               </button>
               <button
                 type="button"
@@ -1142,9 +1170,23 @@ export function MeetingPage() {
             {sidePanel !== "none" && (
               <aside className="meeting-side-panel" aria-label={sidePanelTitle}>
                 <div className="meeting-side-panel-head">
-                  <strong>{sidePanelTitle}</strong>
+                  <div className="meeting-panel-tabs" role="group" aria-label="Bảng phụ">
+                    {panelTabs.map(([id, label, count]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        className={sidePanel === id ? "is-active" : ""}
+                        aria-pressed={sidePanel === id}
+                        onClick={() => setSidePanel(id)}
+                      >
+                        {label}
+                        {count ? <small>{count}</small> : null}
+                      </button>
+                    ))}
+                  </div>
                   <IconButton icon="x" label="Đóng bảng phụ" onClick={() => setSidePanel("none")} />
                 </div>
+                {sidePanel === "network" && <p className="meeting-panel-title">{sidePanelTitle}</p>}
 
                 {sidePanel === "notes" ? (
                   meetingState?.id ? (
@@ -1448,30 +1490,19 @@ export function MeetingPage() {
               <span className="jitsi-dock-badge">{participantCount}</span>
             </button>
 
-            {/* 7. Tile view / Grid toggle */}
+            {/* 7. Minutes, recording and tasks (layout and invite live in the top bar) */}
             <button
               type="button"
-              className={`jitsi-dock-btn ${layout === "grid" ? "is-active" : ""}`}
-              aria-label="Bố cục dạng lưới"
-              aria-pressed={layout === "grid"}
-              title={layout === "grid" ? "Chuyển sang tiêu điểm" : "Chuyển sang dạng lưới"}
-              onClick={() => setLayout(layout === "grid" ? "spotlight" : "grid")}
+              className={`jitsi-dock-btn ${sidePanel === "notes" ? "is-active" : ""}`}
+              aria-label="Biên bản cuộc họp"
+              aria-pressed={sidePanel === "notes"}
+              title="Biên bản, ghi hình và việc cần làm"
+              onClick={() => setSidePanel(sidePanel === "notes" ? "none" : "notes")}
             >
-              <Icon name="grid-2x2" size={18} />
+              <Icon name="file" size={18} />
             </button>
 
-            {/* 8. Invite / Add user */}
-            <button
-              type="button"
-              className="jitsi-dock-btn"
-              aria-label="Mời người khác vào phòng"
-              title="Mời người khác / Sao chép liên kết"
-              onClick={handleCopyInviteLink}
-            >
-              <Icon name="user-plus" size={18} />
-            </button>
-
-            {/* 9. More actions */}
+            {/* 8. More actions */}
             <PopoverMenu
               label="Tùy chọn khác"
               icon="more-horizontal"
@@ -1480,7 +1511,8 @@ export function MeetingPage() {
               items={moreMenu}
             />
 
-            {/* 10. End / Leave call button */}
+            <span className="jitsi-dock-sep" aria-hidden="true" />
+            {/* 9. End / Leave call button */}
             <button
               type="button"
               className="jitsi-dock-btn is-leave"
@@ -1488,9 +1520,25 @@ export function MeetingPage() {
               onClick={requestLeave}
               title="Rời khỏi phòng họp"
             >
-              <Icon name="phone-off" size={19} />
+              <Icon name="phone-off" size={18} />
+              <span>Rời phòng</span>
             </button>
           </div>
+          {control.canManage && waitingPeople.length > 0 && (
+            <div className="meeting-waiting-chip" role="status">
+              <span className="mt-led tone-amber is-pulse" />
+              <span>
+                <b>{waitingPeople[0].displayName}</b>
+                {waitingPeople.length > 1 ? ` và ${waitingPeople.length - 1} người khác` : ""} đang chờ vào
+              </span>
+              <button type="button" disabled={control.busy} onClick={() => void control.action("admit", waitingPeople[0].userId)}>
+                Cho vào
+              </button>
+            </div>
+          )}
+          <span className="meeting-shortcuts" aria-hidden="true">
+            Phím tắt · M · V · S · C · H
+          </span>
           {control.confirmDialog}
         </div>
       )}

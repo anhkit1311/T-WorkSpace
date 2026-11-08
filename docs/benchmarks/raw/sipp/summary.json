@@ -10,8 +10,8 @@
       "abandoned": 20
     },
     "peakCpuPercent": {
-      "asterisk": 9.51,
-      "postgres": 4.4
+      "asterisk": 8.89,
+      "postgres": 4.46
     }
   },
   {
@@ -25,8 +25,8 @@
       "abandoned": 50
     },
     "peakCpuPercent": {
-      "asterisk": 19.93,
-      "postgres": 4.34
+      "asterisk": 18.67,
+      "postgres": 2.8
     }
   },
   {
@@ -40,8 +40,8 @@
       "abandoned": 100
     },
     "peakCpuPercent": {
-      "asterisk": 31.3,
-      "postgres": 5.26
+      "asterisk": 28.5,
+      "postgres": 6.24
     }
   },
   {
@@ -49,14 +49,14 @@
     "rate": 10,
     "holdSeconds": 20,
     "totalCalls": 150,
-    "sippExitCode": 1,
-    "ccCallsRecorded": 50,
+    "sippExitCode": 0,
+    "ccCallsRecorded": 150,
     "outcomes": {
-      "abandoned": 50
+      "abandoned": 150
     },
     "peakCpuPercent": {
-      "asterisk": 34.74,
-      "postgres": 5.01
+      "asterisk": 43.21,
+      "postgres": 5.57
     }
   },
   {
@@ -64,14 +64,44 @@
     "rate": 10,
     "holdSeconds": 20,
     "totalCalls": 200,
-    "sippExitCode": 1,
-    "ccCallsRecorded": 50,
+    "sippExitCode": 0,
+    "ccCallsRecorded": 200,
     "outcomes": {
-      "abandoned": 50
+      "abandoned": 200
     },
     "peakCpuPercent": {
-      "asterisk": 32.76,
-      "postgres": 4.25
+      "asterisk": 38.8,
+      "postgres": 7.33
+    }
+  },
+  {
+    "level": 150,
+    "rate": 10,
+    "holdSeconds": 20,
+    "totalCalls": 300,
+    "sippExitCode": 0,
+    "ccCallsRecorded": 300,
+    "outcomes": {
+      "abandoned": 300
+    },
+    "peakCpuPercent": {
+      "asterisk": 56.11,
+      "postgres": 6.27
+    }
+  },
+  {
+    "level": 200,
+    "rate": 10,
+    "holdSeconds": 20,
+    "totalCalls": 400,
+    "sippExitCode": 0,
+    "ccCallsRecorded": 400,
+    "outcomes": {
+      "abandoned": 400
+    },
+    "peakCpuPercent": {
+      "asterisk": 60.41,
+      "postgres": 7.57
     }
   }
 ]

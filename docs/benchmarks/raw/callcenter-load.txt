@@ -5,17 +5,18 @@
   "holdSeconds": 8,
   "wallSeconds": 19.2,
   "recorded": 40,
-  "failedToOriginate": 0,
+  "queued": 40,
+  "generatorErrors": 0,
   "errors": [],
   "setupMs": {
-    "p50": 206,
-    "p95": 354,
-    "max": 364
+    "p50": 189,
+    "p95": 330,
+    "max": 337
   },
   "ivrToQueueMs": {
-    "p50": 1645,
-    "p95": 1777,
-    "max": 1790
+    "p50": 1693,
+    "p95": 1808,
+    "max": 1816
   },
   "outcomes": {
     "abandoned": 40
@@ -28,17 +29,18 @@
   "holdSeconds": 8,
   "wallSeconds": 19.3,
   "recorded": 100,
-  "failedToOriginate": 0,
+  "queued": 100,
+  "generatorErrors": 0,
   "errors": [],
   "setupMs": {
-    "p50": 433,
-    "p95": 775,
-    "max": 829
+    "p50": 437,
+    "p95": 766,
+    "max": 798
   },
   "ivrToQueueMs": {
-    "p50": 1693,
-    "p95": 1746,
-    "max": 1779
+    "p50": 1678,
+    "p95": 1781,
+    "max": 1805
   },
   "outcomes": {
     "abandoned": 100
@@ -49,29 +51,47 @@
   "calls": 200,
   "concurrency": 100,
   "holdSeconds": 8,
-  "wallSeconds": 3.3,
-  "recorded": 199,
-  "failedToOriginate": 200,
-  "errors": [
-    "fetch failed",
-    "POST /channels/1792426701.301/dtmf → 409",
-    "POST /channels/1792426701.303/dtmf → 409",
-    "POST /channels/1792426701.305/dtmf → 409",
-    "POST /channels/1792426701.307/dtmf → 409"
-  ],
+  "wallSeconds": 20,
+  "recorded": 200,
+  "queued": 200,
+  "generatorErrors": 0,
+  "errors": [],
   "setupMs": {
-    "p50": 794,
-    "p95": 1409,
-    "max": 1526
+    "p50": 883,
+    "p95": 1721,
+    "max": 1806
   },
   "ivrToQueueMs": {
-    "p50": null,
-    "p95": null,
-    "max": null
+    "p50": 1701,
+    "p95": 1854,
+    "max": 1908
   },
   "outcomes": {
-    "abandoned": 52,
-    "failed": 147
+    "abandoned": 200
+  }
+}
+== --calls 300 --concurrency 150 --hold 8
+{
+  "calls": 300,
+  "concurrency": 150,
+  "holdSeconds": 8,
+  "wallSeconds": 20.5,
+  "recorded": 300,
+  "queued": 300,
+  "generatorErrors": 0,
+  "errors": [],
+  "setupMs": {
+    "p50": 1170,
+    "p95": 2237,
+    "max": 2363
+  },
+  "ivrToQueueMs": {
+    "p50": 1733,
+    "p95": 2046,
+    "max": 2196
+  },
+  "outcomes": {
+    "abandoned": 300
   }
 }
 == --calls 400 --concurrency 200 --hold 8
@@ -79,28 +99,22 @@
   "calls": 400,
   "concurrency": 200,
   "holdSeconds": 8,
-  "wallSeconds": 3.4,
-  "recorded": 253,
-  "failedToOriginate": 400,
-  "errors": [
-    "fetch failed",
-    "POST /channels/1792426707.699/dtmf → 409",
-    "POST /channels/1792426707.701/dtmf → 409",
-    "POST /channels/1792426707.703/dtmf → 409",
-    "POST /channels/1792426707.705/dtmf → 409"
-  ],
+  "wallSeconds": 21.9,
+  "recorded": 400,
+  "queued": 400,
+  "generatorErrors": 0,
+  "errors": [],
   "setupMs": {
-    "p50": 1759,
-    "p95": 2744,
-    "max": 2922
+    "p50": 1372,
+    "p95": 2815,
+    "max": 3068
   },
   "ivrToQueueMs": {
-    "p50": null,
-    "p95": null,
-    "max": null
+    "p50": 3252,
+    "p95": 4435,
+    "max": 4650
   },
   "outcomes": {
-    "abandoned": 201,
-    "open": 52
+    "abandoned": 400
   }
 }

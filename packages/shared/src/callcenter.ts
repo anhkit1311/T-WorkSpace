@@ -45,6 +45,8 @@ export interface CcExtension {
   transport: ExtensionTransport;
   active: boolean;
   syncedAt: string | null;
+  /** BR-20: may dial numbers outside the school through the SIP trunk. */
+  canCallOut: boolean;
 }
 
 export interface CcHotline {
@@ -227,6 +229,8 @@ export interface CcKpiReport {
   answered: number;
   abandoned: number;
   voicemail: number;
+  /** Callers who pressed * in the queue to be called back; not abandoned. */
+  callback: number;
   /** Average speed of answer: queue entry to agent pickup. */
   asa: number | null;
   /** Average handle time: talk time plus the agent's wrap-up time. */

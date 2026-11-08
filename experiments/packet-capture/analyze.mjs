@@ -23,8 +23,9 @@ export const FIELDS = [
   "rtcp.rc",
 ];
 
-// Payload type -> RTP clock rate, matching the mediasoup router codecs (Opus 111, VP8 96+).
+// Payload type -> RTP clock rate: G.711 (PCMU 0, PCMA 8) from Asterisk, else the mediasoup router codecs (Opus 111, VP8 96+).
 export function clockRate(payloadType) {
+  if (payloadType === 0 || payloadType === 8) return 8000;
   return payloadType === 111 || payloadType === 100 ? 48000 : 90000;
 }
 
@@ -37,7 +38,7 @@ export function rtcpName(pt, fmt) {
   return RTCP_NAMES[pt] ?? `RTCP/${pt}`;
 }
 
-function parseCsv(text) {
+export function parseCsv(text) {
   const [header, ...lines] = text.trim().split(/\r?\n/);
   const names = header.split(",").map((name) => name.replace(/^"|"$/g, ""));
   return lines.map((line) => {
@@ -132,7 +133,7 @@ export function analyze(rows) {
           ssrc: s.ssrc,
           flow: s.flow,
           payloadType: s.payloadType,
-          kind: clockRate(s.payloadType) === 48000 ? "audio" : "video",
+          kind: clockRate(s.payloadType) === 90000 ? "video" : "audio",
           packets: s.packets,
           kbps: Math.round(((s.bytes * 8) / seconds / 1000) * 10) / 10,
           lossPct: Math.round((Math.max(0, expected - s.packets) / Math.max(1, expected)) * 10000) / 100,

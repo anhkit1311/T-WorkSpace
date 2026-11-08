@@ -128,6 +128,11 @@ export class CallCenterAdminService {
     if (!user) throw notFound("Không tìm thấy người dùng với email này.");
     const role = oneOf(body, "role", ROLES);
     await this.repo.addMember(department.id, user.id, role, userId);
+    // BR-20: agents call requesters back through the trunk, so their extension may dial out.
+    if (role === "agent") {
+      const granted = await this.repo.grantCallOut(user.id);
+      if (granted.length) await this.sync(granted);
+    }
     if (role === "agent" && department.trainingCourseId) await this.repo.enrollAgents(department.id, department.trainingCourseId, userId, user.id);
     await this.rosterChanged();
     return this.department(department.id);
@@ -228,6 +233,7 @@ export class CallCenterAdminService {
       userId: body.userId === undefined ? current.user_id : await this.assignee(department, body.userId),
       label: body.label === undefined ? undefined : text(body, "label", 80, { optional: true }),
       active,
+      canCallOut: body.canCallOut === undefined ? undefined : bool(body, "canCallOut", false),
     });
     if (active) await this.sync([current.id]);
     else await this.unpublish(current.number).then(() => this.pushGroups());
@@ -290,6 +296,7 @@ export class CallCenterAdminService {
           secret: row.sip_secret,
           transport: row.transport,
           callerName: row.display_name ?? (row.label || row.number),
+          canCallOut: row.can_call_out,
         });
         synced.push(row.id);
       } catch (error) {

@@ -83,17 +83,18 @@
   --fs-badge: 11.5px;        /* Nhãn trạng thái (Badge, Tag, Pill, đếm số thông báo) */
 
   /* ==========================================================================
-     PHẦN 2: HỆ THỐNG DESIGN TOKENS TOÀN CỤC (TDTU Clean Enterprise Portal)
+     PHẦN 2: HỆ THỐNG DESIGN TOKENS TOÀN CỤC (Technical Cloud · Emerald Vibe)
      ========================================================================== */
-  --bg-canvas: #F4F6F9;
+  --bg-canvas: #EEF2F6;
   --bg-surface: #FFFFFF;
-  --bg-subtle: #EDF1F6;
+  --bg-subtle: #E4EAF1;
+  --dot-grid-color: #CBD5E1;
 
-  /* TDTU navy and red: navy for actions and selection, red only for live calls and meetings. */
-  --brand-primary: #002D62;
-  --brand-primary-hover: #0A3F80;
-  --brand-active-bg: #E3EBF5;
-  --brand-active-text: #002D62;
+  /* Emerald Green primary aesthetic + Technical Cloud slate */
+  --brand-primary: #059669;
+  --brand-primary-hover: #047857;
+  --brand-active-bg: #D1FAE5;
+  --brand-active-text: #065F46;
   --live: #C8102E;
   --live-soft: #FBE7EA;
   --live-text: #A50D26;
@@ -105,7 +106,7 @@
   --badge-green-bg: #DCFCE7;
   --badge-green-text: #16A34A;
 
-  --border-color: #D9E0EA;
+  --border-color: #D5DEE8;
   --radius-card: 8px;
   --radius-button: 6px;
   --radius-pill: 9999px;
@@ -116,9 +117,9 @@
   --surface: var(--bg-surface);
   --surface-raised: var(--bg-surface);
   --surface-soft: var(--bg-canvas);
-  --text: #0E1A2B;
-  --text-secondary: #3D4B5E;
-  --text-muted: #4F5D70;
+  --text: #111827;
+  --text-secondary: #374151;
+  --text-muted: #4B5563;
   --border: var(--border-color);
   --border-strong: #CBD5E1;
 
@@ -128,9 +129,10 @@
   --primary-text: var(--brand-active-text);
   --focus: var(--brand-primary);
 
-  --sidebar-width: 220px;
-  --sidebar-collapsed-width: 58px;
-  --header-height: 44px;
+  --header-height: 60px;
+  --header-bg: #F8F9FB;
+  --shell-gutter: clamp(12px, 2.4vw, 32px);
+  --text-strong: #1F2328;
 
   --card-bg: var(--bg-surface);
   --card-border: var(--border-color);
@@ -234,20 +236,20 @@ code, kbd, samp, pre {
 h1 {
   font-family: var(--font-sans);
   font-size: var(--fs-page-title);
-  font-weight: 700;
-  line-height: 1.3;
-  color: var(--text);
-  letter-spacing: -0.015em;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--text-strong);
+  letter-spacing: -0.03em;
   margin: 0 0 4px;
 }
 
 h2 {
   font-family: var(--font-sans);
   font-size: var(--fs-section);
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.35;
-  color: var(--text);
-  letter-spacing: -0.01em;
+  color: var(--text-strong);
+  letter-spacing: -0.02em;
   margin: 0 0 6px;
 }
 
@@ -318,93 +320,325 @@ img, svg {
 }
 
 /* ==========================================================================
-   TDTU Application Shell Layout
+   TDTU Application Shell · top navigation (portal)
+   Header: logo, section tabs, "Quản lý" menu, search, bell, account.
+   Phones: the tabs become a bottom bar; "Thêm" opens the remaining entries.
    ========================================================================== */
 .app-shell {
   display: flex;
   flex-direction: column;
-  width: 100vw;
+  width: 100%;
   height: 100vh;
-  min-height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: var(--bg);
 }
 
-/* 44px Top Header */
-.editorial-master-topbar,
 .tdtu-header {
   height: var(--header-height);
-  min-height: var(--header-height);
-  max-height: var(--header-height);
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 10px;
-  background: var(--surface);
+  gap: 24px;
+  padding: 0 var(--shell-gutter);
+  background: var(--header-bg);
   border-bottom: 1px solid var(--border);
   position: relative;
   z-index: 50;
-  flex-shrink: 0;
-}
-
-
-.tdtu-header__left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
 }
 
 .tdtu-header__brand-btn {
-  background: transparent;
-  border: none;
-  padding: 2px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
+  margin-left: -6px;
+  padding: 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
   cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.tdtu-header__brand-btn:hover {
+  opacity: 0.82;
 }
 
-.tdtu-header__search {
-  position: relative;
+/* Section tabs: full header height, a green bar under the current one. */
+.tdtu-nav {
+  flex: 1 1 auto;
+  min-width: 0;
+  align-self: stretch;
   display: flex;
+  align-items: stretch;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tdtu-nav::-webkit-scrollbar {
+  display: none;
+}
+.tdtu-nav__item {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
   align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  outline-offset: -3px;
+  transition: color 0.16s ease;
 }
-.tdtu-header__search-icon {
+.tdtu-nav__item::after {
+  content: "";
   position: absolute;
-  left: 8px;
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--primary);
+  transform: scaleX(0);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.16s ease;
+}
+.tdtu-nav__item svg {
+  flex-shrink: 0;
   color: var(--text-muted);
-  pointer-events: none;
+  transition: color 0.16s ease;
 }
-.tdtu-header__search-input {
-  width: 260px;
-  height: 28px;
-  border-radius: 6px;
-  background: var(--bg-subtle);
-  border: 1px solid transparent;
-  padding: 0 10px 0 28px;
-  font-size: 11.5px;
-  color: var(--text);
-  outline: none;
-  transition: all 0.2s ease;
+/* Mouse only: a tap would leave the hover bar stuck on touch screens. */
+@media (hover: hover) {
+  .tdtu-nav__item:hover {
+    color: var(--text-strong);
+  }
+  .tdtu-nav__item:hover:not(.is-active)::after {
+    background: var(--border-strong);
+    transform: scaleX(1);
+  }
 }
-.tdtu-header__search-input::placeholder {
-  color: var(--text-muted);
+.tdtu-nav__item.is-active {
+  color: var(--primary-text);
 }
-.tdtu-header__search-input:focus {
-  background: var(--surface);
-  border-color: var(--primary);
+.tdtu-nav__item.is-active svg {
+  color: var(--primary);
+}
+.tdtu-nav__item.is-active::after {
+  transform: scaleX(1);
+}
+/* Desktop: administration lives in the "Quản lý" menu, "Thêm" is the phone sheet. */
+.tdtu-nav__item.is-manage,
+.tdtu-nav__more {
+  display: none;
+}
+.tdtu-nav__badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9999px;
+  background: var(--live);
+  color: #FFFFFF;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-grid;
+  place-items: center;
+  font-variant-numeric: tabular-nums;
+}
+.tdtu-nav__live {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: var(--live);
+  flex-shrink: 0;
+  animation: liveBreathe 2s infinite ease-out;
+}
+@keyframes liveBreathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(200, 16, 46, 0.45); }
+  50% { box-shadow: 0 0 0 4px rgba(200, 16, 46, 0); }
 }
 
 .tdtu-header__right {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
-/* Topbar Icon Button */
-.tdtu-icon-btn {
-  width: 28px;
-  height: 28px;
+/* "Quản lý" dropdown */
+.tdtu-menu {
+  position: relative;
+}
+.tdtu-menu__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+.tdtu-menu__trigger:hover,
+.tdtu-menu__trigger[aria-expanded="true"] {
+  background: var(--bg-subtle);
+  color: var(--text-strong);
+}
+.tdtu-menu__trigger.is-active {
+  background: var(--primary-soft);
+  color: var(--primary-text);
+}
+.tdtu-menu__chevron {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.tdtu-menu__trigger[aria-expanded="true"] .tdtu-menu__chevron {
+  transform: rotate(180deg);
+}
+
+/* Header popovers (Quản lý, account) */
+@keyframes popoverSlideIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.tdtu-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 100;
+  min-width: 232px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 16px 36px -10px rgba(15, 23, 42, 0.22), 0 2px 6px rgba(15, 23, 42, 0.06);
+  transform-origin: top right;
+  animation: popoverSlideIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.tdtu-popover > button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 0;
   border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.14s ease, color 0.14s ease;
+}
+.tdtu-popover > button svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+.tdtu-popover > button > span:not(.tdtu-nav__badge) {
+  flex: 1;
+}
+.tdtu-popover > button:hover {
+  background: var(--bg-subtle);
+}
+.tdtu-popover > button.is-active {
+  background: var(--primary-soft);
+  color: var(--primary-text);
+  font-weight: 600;
+}
+.tdtu-popover > button.is-active svg {
+  color: var(--primary);
+}
+.tdtu-popover > button.is-logout,
+.tdtu-popover > button.is-logout svg {
+  color: #B91C1C;
+}
+.tdtu-popover > button.is-logout:hover {
+  background: #FEF2F2;
+}
+.tdtu-popover hr {
+  margin: 6px 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+.tdtu-account-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  min-width: 0;
+}
+.tdtu-account-header > div {
+  min-width: 0;
+}
+.tdtu-account-header strong,
+.tdtu-account-header small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tdtu-account-header strong {
+  font-size: 13.5px;
+  color: var(--text-strong);
+}
+.tdtu-account-header small {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.tdtu-account-popover {
+  width: 264px;
+}
+
+/* Search opens the Ctrl+K palette. */
+.tdtu-search-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 7px 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease;
+}
+.tdtu-search-btn:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.07);
+  color: var(--text);
+}
+.tdtu-search-btn__label {
+  min-width: 96px;
+  text-align: left;
+}
+.tdtu-search-btn__kbd {
+  padding: 1px 6px;
+  border: 1px solid #CBD5E1;
+  border-radius: 5px;
+  background: #FFFFFF;
+  box-shadow: 0 1.5px 0 #CBD5E1;
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.tdtu-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
   display: grid;
@@ -412,76 +646,34 @@ img, svg {
   color: var(--text-secondary);
   position: relative;
   cursor: pointer;
-  transition: background-color 0.16s var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
-              color 0.16s var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
-              transform 0.14s var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
-              box-shadow 0.16s ease;
+  transition: background-color 0.16s ease, color 0.16s ease;
 }
 .tdtu-icon-btn:hover {
   background: var(--bg-subtle);
-  color: var(--text);
-  transform: translateY(-0.5px);
-}
-.tdtu-icon-btn:active {
-  transform: translateY(0.5px) scale(0.92);
-}
-.tdtu-icon-btn svg {
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.tdtu-icon-btn:hover svg {
-  transform: scale(1.1);
-}
-
-.tdtu-header__brand-btn {
-  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
-}
-.tdtu-header__brand-btn:hover {
-  transform: scale(1.02);
-  opacity: 0.92;
-}
-.tdtu-header__brand-btn:active {
-  transform: scale(0.96);
-}
-
-.tdtu-header__search {
-  transition: border-color 0.18s var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
-              box-shadow 0.18s var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
-              background-color 0.18s var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
-              transform 0.15s var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
-}
-.tdtu-header__search:hover {
-  border-color: var(--border-strong, #cbd5e1);
-  background: var(--surface, #ffffff);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-  transform: translateY(-0.5px);
-}
-.tdtu-header__search:active {
-  transform: translateY(0) scale(0.99);
+  color: var(--text-strong);
 }
 
 @keyframes badgePopAnim {
   0% { transform: scale(0.5); opacity: 0; }
-  70% { transform: scale(1.22); opacity: 1; }
+  70% { transform: scale(1.2); opacity: 1; }
   100% { transform: scale(1); }
 }
-
 .tdtu-badge-num {
   position: absolute;
-  top: -2px;
-  right: -2px;
-  min-width: 14px;
-  height: 14px;
+  top: 2px;
+  right: 1px;
+  min-width: 16px;
+  height: 16px;
   border-radius: 9999px;
   background: var(--live);
   color: #FFFFFF;
-  font-size: 8.5px;
+  font-size: 9.5px;
   font-weight: 700;
   display: grid;
   place-items: center;
-  padding: 0 3px;
-  border: 1.5px solid var(--surface);
+  padding: 0 4px;
+  border: 1.5px solid var(--header-bg);
   animation: badgePopAnim 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-  transition: transform 0.15s ease;
 }
 
 .tdtu-avatar-wrap {
@@ -490,37 +682,36 @@ img, svg {
   align-items: center;
 }
 .tdtu-avatar-btn {
-  background: transparent;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
   position: relative;
-  border-radius: 50%;
   display: block;
-  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.tdtu-avatar-btn:hover {
-  transform: scale(1.06);
-}
-.tdtu-avatar-btn:active {
-  transform: scale(0.94);
+  padding: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
 }
 .tdtu-avatar-img {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   object-fit: cover;
-  border: 0;
   background: var(--primary-soft);
   color: var(--primary-text);
   display: grid;
   place-items: center;
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 700;
+  flex-shrink: 0;
   transition: box-shadow 0.18s ease;
 }
-.tdtu-avatar-btn:hover .tdtu-avatar-img {
-  box-shadow: 0 0 0 2px var(--primary-soft, #eff6ff);
+.tdtu-avatar-img.is-lg {
+  width: 40px;
+  height: 40px;
+  font-size: 15px;
+}
+.tdtu-avatar-btn:hover .tdtu-avatar-img,
+.tdtu-avatar-btn[aria-expanded="true"] .tdtu-avatar-img {
+  box-shadow: 0 0 0 2px var(--header-bg), 0 0 0 4px var(--primary-soft);
 }
 @keyframes onlineBreathe {
   0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
@@ -528,13 +719,13 @@ img, svg {
 }
 .tdtu-online-dot {
   position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 6px;
-  height: 6px;
+  bottom: 2px;
+  right: 2px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: #10B981;
-  border: 1.5px solid var(--surface);
+  border: 2px solid var(--header-bg);
   transition: background-color 0.25s ease;
 }
 .tdtu-online-dot.is-online {
@@ -547,323 +738,78 @@ img, svg {
   background: var(--text-muted);
 }
 
-/* User Account Popover */
-@keyframes popoverSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-6px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-.tdtu-account-popover {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 100;
-  width: 230px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  box-shadow: var(--shadow-lg);
-  padding: 6px;
-  animation: popoverSlideIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  transform-origin: top right;
-}
-.tdtu-account-header {
-  display: flex;
+/* The agent's queue state, coloured like the badges. */
+.tdtu-agent-pill {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px;
-}
-.tdtu-account-header strong {
-  display: block;
-  font-size: 12.5px;
-  color: var(--text);
-}
-.tdtu-account-header small {
-  display: block;
-  font-size: 11px;
-  color: var(--text-muted);
-}
-.tdtu-account-popover hr {
-  margin: 4px 0;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
   border: 0;
-  border-top: 1px solid var(--border);
-}
-.tdtu-account-popover button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 6px 8px;
-  border-radius: 5px;
-  border: none;
-  background: transparent;
-  font-size: 12px;
-  color: var(--text);
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 0.14s ease, color 0.14s ease, transform 0.12s ease;
-}
-.tdtu-account-popover button:hover {
-  background: var(--bg-subtle);
-  transform: translateX(2px);
-}
-.tdtu-account-popover button:active {
-  transform: translateX(1px) scale(0.98);
-}
-.tdtu-account-popover button.is-logout {
-  color: #DC2626;
-}
-.tdtu-account-popover button.is-logout:hover {
-  background: #FEF2F2;
-}
-
-/* Main Workspace Body */
-.editorial-workspace-body,
-.tdtu-body {
-  display: flex;
-  flex: 1 1 0;
-  min-height: 0;
-  height: calc(100vh - var(--header-height));
-  overflow: hidden;
-  position: relative;
-}
-
-/* Labelled sidebar; collapses to icons (.is-collapsed) and becomes a bottom bar on phones. */
-.editorial-dock,
-.tdtu-sidebar {
-  width: var(--sidebar-width);
-  min-width: var(--sidebar-width);
-  max-width: var(--sidebar-width);
-  height: 100%;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  overflow-y: auto;
-  padding: 8px 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  flex-shrink: 0;
-  transition: width 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-              min-width 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-              max-width 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.tdtu-sidebar.is-collapsed {
-  width: var(--sidebar-collapsed-width);
-  min-width: var(--sidebar-collapsed-width);
-  max-width: var(--sidebar-collapsed-width);
-}
-
-.tdtu-sidebar__item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 35px;
-  padding: 0 10px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-muted);
-  background: transparent;
-  border: none;
-  text-align: left;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
-              color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.tdtu-sidebar__item svg {
-  flex-shrink: 0;
-  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), color 0.18s ease;
-}
-.tdtu-sidebar__label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.tdtu-sidebar__item:hover:not(.is-active) {
-  background: var(--bg-subtle);
-  color: var(--text);
-  transform: translateX(2px);
-}
-.tdtu-sidebar__item:hover:not(.is-active) svg {
-  transform: scale(1.08);
-}
-.tdtu-sidebar__item:active {
-  transform: translateX(1px) scale(0.98);
-}
-.tdtu-sidebar__item.is-active {
-  background: var(--primary-soft);
-  color: var(--primary-text);
-  font-weight: 600;
-}
-.tdtu-sidebar__item.is-active svg {
-  color: var(--primary);
-  transform: scale(1.04);
-}
-.tdtu-sidebar__item-badge {
-  min-width: 17px;
-  height: 17px;
   border-radius: 9999px;
-  background: var(--live);
-  color: #FFFFFF;
-  font-size: 10px;
-  font-weight: 700;
-  display: grid;
-  place-items: center;
-  padding: 0 5px;
-  transition: transform 0.15s ease;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
 }
-.tdtu-sidebar__item:hover .tdtu-sidebar__item-badge {
-  transform: scale(1.1);
-}
-.tdtu-sidebar__live {
+.tdtu-agent-pill__dot {
   width: 7px;
   height: 7px;
   border-radius: 9999px;
-  background: var(--live);
+  background: currentColor;
+}
+.tdtu-agent-pill.tone-green { background: var(--tint-green-bg); color: var(--tint-green-fg); }
+.tdtu-agent-pill.tone-amber { background: var(--tint-amber-bg); color: var(--tint-amber-fg); }
+.tdtu-agent-pill.tone-blue { background: var(--primary-soft); color: var(--primary-text); }
+.tdtu-agent-pill.tone-red { background: var(--live-soft); color: var(--live-text); }
+
+/* Sub-pages of the current section (Tổng đài) as a segmented row under the header. */
+.tdtu-subnav {
   flex-shrink: 0;
-  animation: onlineBreathe 2s infinite ease-out;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border);
 }
-.tdtu-sidebar__divider {
-  width: calc(100% - 8px);
-  margin: 6px 4px;
-  border: 0;
-  border-top: 1px solid var(--border);
+.tdtu-subnav__inner {
+  display: flex;
+  gap: 4px;
+  padding: 6px var(--shell-gutter);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
-/* The switchboard renders its tabs here (see SidebarSlot). */
-.tdtu-sidebar__sub {
-  display: grid;
-  gap: 2px;
-  margin: 2px 0 6px;
+.tdtu-subnav__inner::-webkit-scrollbar {
+  display: none;
 }
-
-/* Expandable Submenu styles */
-.tdtu-sidebar__chevron {
-  margin-left: auto;
-  color: var(--text-muted);
-  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s ease;
+.tdtu-subnav__item {
   flex-shrink: 0;
-}
-
-.tdtu-sidebar__chevron.is-expanded {
-  transform: rotate(90deg);
-  color: var(--primary, #2563eb);
-}
-
-@keyframes submenuSlideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.tdtu-sidebar__submenu {
-  animation: submenuSlideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding-left: 14px;
-  margin: 2px 0 4px 14px;
-  border-left: 2px solid var(--border, #e2e8f0);
-}
-
-.tdtu-sidebar__subitem {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 32px;
-  padding: 0 10px;
-  border-radius: 6px;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--text-muted);
+  gap: 7px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
   background: transparent;
-  border: none;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 0.16s cubic-bezier(0.16, 1, 0.3, 1),
-              color 0.16s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.16s ease;
-}
-
-.tdtu-sidebar__subitem svg {
-  transition: transform 0.15s ease;
-}
-
-.tdtu-sidebar__subitem:hover:not(.is-active) {
-  background: var(--bg-subtle, #f8fafc);
-  color: var(--text);
-  transform: translateX(3px);
-}
-
-.tdtu-sidebar__subitem:hover:not(.is-active) svg {
-  transform: scale(1.08);
-}
-
-.tdtu-sidebar__subitem:active {
-  transform: translateX(2px) scale(0.98);
-}
-
-.tdtu-sidebar__subitem.is-active {
-  background: var(--primary-soft, #eff6ff);
-  color: var(--primary-text, #2563eb);
+  color: var(--text-muted);
+  font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
 }
-
-.tdtu-sidebar__subitem.is-active svg {
-  color: var(--primary, #2563eb);
+.tdtu-subnav__item:hover:not(.is-active) {
+  background: var(--bg-subtle);
+  color: var(--text-strong);
 }
-.tdtu-sidebar__sub:empty {
-  display: none;
+.tdtu-subnav__item.is-active {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--primary-text);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
-.tdtu-sidebar__more,
-.tdtu-sidebar__short {
-  display: none;
-}
-.tdtu-sidebar__collapse {
-  margin-top: auto;
-}
-
-/* Icon-only: labels stay for screen readers and the title tooltip. */
-.tdtu-sidebar.is-collapsed .tdtu-sidebar__item {
-  justify-content: center;
-  padding: 0;
-}
-.tdtu-sidebar.is-collapsed .tdtu-sidebar__label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-}
-.tdtu-sidebar.is-collapsed .tdtu-sidebar__item-badge,
-.tdtu-sidebar.is-collapsed .tdtu-sidebar__live {
-  position: absolute;
-  top: 3px;
-  right: 5px;
-}
-.tdtu-sidebar.is-collapsed .tdtu-sidebar__item-badge {
-  min-width: 14px;
-  height: 14px;
-  font-size: 9px;
-  padding: 0 3px;
+.tdtu-subnav__item.is-active svg {
+  color: var(--primary);
 }
 
 /* Calls and meetings in progress: a red strip under the header. */
@@ -872,7 +818,7 @@ img, svg {
   flex-wrap: wrap;
   gap: 6px 18px;
   align-items: center;
-  padding: 6px 14px;
+  padding: 6px var(--shell-gutter);
   background: var(--live-soft);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -915,9 +861,6 @@ img, svg {
 @keyframes live-strip-ring {
   50% { box-shadow: 0 0 0 5px var(--live-soft), 0 0 0 6px var(--live); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .live-strip__item.is-incoming .live-strip__dot { animation: none; }
-}
 .live-strip__chip {
   padding: 1px 7px;
   border-radius: 9999px;
@@ -956,189 +899,32 @@ img, svg {
   color: var(--primary-text);
 }
 
-/* Header: the agent's queue state, coloured like the badges. */
-.tdtu-agent-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 28px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 9999px;
-  font-size: 11.5px;
-  font-weight: 600;
-  cursor: pointer;
-  background: var(--bg-subtle);
-  color: var(--text-secondary);
-}
-.tdtu-agent-pill__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 9999px;
-  background: currentColor;
-}
-.tdtu-agent-pill.tone-green { background: var(--tint-green-bg); color: var(--tint-green-fg); }
-.tdtu-agent-pill.tone-amber { background: var(--tint-amber-bg); color: var(--tint-amber-fg); }
-.tdtu-agent-pill.tone-blue { background: var(--primary-soft); color: var(--primary-text); }
-.tdtu-agent-pill.tone-red { background: var(--live-soft); color: var(--live-text); }
-.tdtu-avatar-name {
-  margin-left: 8px;
-  max-width: 150px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12px;
-  font-weight: 600;
-}
-.tdtu-header__search-kbd {
-  position: absolute;
-  right: 10px;
-  padding: 1px 6px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text-muted);
-  font: inherit;
-  font-size: 11px;
-  pointer-events: none;
-}
-@media (max-width: 1024px) {
-  .tdtu-avatar-name,
-  .tdtu-header__search-kbd {
-    display: none;
-  }
-}
-
-/* Phones: a bottom bar with the four services and "Thêm"; "Thêm" lifts the other entries
-   into rows above it (grid order -1), so the bar itself stays at the bottom. */
-@media (max-width: 768px) {
-  .tdtu-body {
-    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-  }
-  .editorial-dock,
-  .tdtu-sidebar,
-  .tdtu-sidebar.is-collapsed {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 60;
-    width: 100%;
-    min-width: 0;
-    max-width: none;
-    height: auto;
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 0;
-    padding: 0 0 env(safe-area-inset-bottom, 0px);
-    border-right: 0;
-    border-top: 1px solid var(--border);
-    overflow: visible;
-  }
-  .tdtu-sidebar.is-more-open {
-    box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.18);
-  }
-  .tdtu-sidebar__item,
-  .tdtu-sidebar.is-collapsed .tdtu-sidebar__item {
-    flex-direction: column;
+/* Each step below keeps every tab visible (checked with the admin + agent header, the widest). */
+@media (max-width: 1520px) {
+  .tdtu-search-btn {
+    width: 36px;
+    padding: 0;
     justify-content: center;
-    gap: 2px;
-    min-height: 64px;
-    padding: 6px 2px;
-    border-radius: 0;
-    font-size: 11px;
-    text-align: center;
   }
-  .tdtu-sidebar__label,
-  .tdtu-sidebar.is-collapsed .tdtu-sidebar__label {
-    position: static;
-    width: auto;
-    height: auto;
-    clip: auto;
-    flex: none;
-    max-width: 100%;
-  }
-  .tdtu-sidebar__item.is-active {
-    background: transparent;
-  }
-  .tdtu-sidebar__item.is-secondary {
+  .tdtu-search-btn__label,
+  .tdtu-search-btn__kbd {
     display: none;
-  }
-  /* "Thêm" opens the other entries as a full-width list above the bar. */
-  .tdtu-sidebar.is-more-open .tdtu-sidebar__item.is-secondary {
-    display: flex;
-    order: -1;
-    grid-column: 1 / -1;
-    flex-direction: row;
-    justify-content: flex-start;
-    gap: 14px;
-    min-height: 48px;
-    padding: 0 20px;
-    font-size: 14px;
-    text-align: left;
-  }
-  .tdtu-sidebar.is-more-open .tdtu-sidebar__item.is-secondary .tdtu-sidebar__item-badge {
-    position: static;
-    margin-left: auto;
-  }
-  .tdtu-sidebar__item-badge,
-  .tdtu-sidebar__live,
-  .tdtu-sidebar.is-collapsed .tdtu-sidebar__item-badge,
-  .tdtu-sidebar.is-collapsed .tdtu-sidebar__live {
-    position: absolute;
-    top: 6px;
-    right: calc(50% - 20px);
-  }
-  .tdtu-sidebar.is-more-open .tdtu-sidebar__item:not(.is-secondary) {
-    border-top: 1px solid var(--border);
-  }
-  .tdtu-sidebar__more {
-    display: flex;
-  }
-  .tdtu-sidebar__label.has-short {
-    display: none;
-  }
-  .tdtu-sidebar__short {
-    display: block;
-  }
-  .tdtu-sidebar__collapse,
-  .tdtu-sidebar__divider,
-  .tdtu-sidebar__sub {
-    display: none;
-  }
-  .tdtu-header__search-input,
-  .tdtu-header__search-input:focus {
-    width: 140px;
-  }
-  .live-strip {
-    padding: 8px 12px;
   }
 }
 
-/* Phones: the search box takes whatever width is left. */
-@media (max-width: 480px) {
+/* Laptops: tabs drop their icons; the agent state shows as its coloured dot (the title keeps the words). */
+@media (max-width: 1360px) {
   .tdtu-header {
-    gap: 8px;
-    padding-inline: 10px;
+    gap: 14px;
   }
-  .tdtu-header__left {
-    flex: 1;
-    min-width: 0;
-    gap: 8px;
+  .tdtu-nav__item {
+    padding: 0 10px;
   }
-  .tdtu-header__search {
-    flex: 1;
-    min-width: 0;
+  .tdtu-nav__item svg {
+    display: none;
   }
-  .tdtu-header__search-input,
-  .tdtu-header__search-input:focus {
-    width: 100%;
-  }
-  .tdtu-header__right {
-    gap: 6px;
-  }
-  /* Only the coloured dot: the desk shows the state in words. */
   .tdtu-agent-pill {
-    width: 34px;
+    width: 32px;
     padding: 0;
     justify-content: center;
   }
@@ -1152,15 +938,158 @@ img, svg {
   }
 }
 
+/* Tablets: the TDT mark alone and an icon-only "Quản lý", so every tab still fits. */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .tdtu-header {
+    gap: 10px;
+  }
+  .tdtu-header .t-workspace-logo__text,
+  .tdtu-menu__label {
+    display: none;
+  }
+  .tdtu-nav__item {
+    padding: 0 8px;
+  }
+}
+
+/* Phones: a bottom bar with the four services and "Thêm"; "Thêm" lifts the other entries
+   into rows above it (grid order -1), so the bar itself stays at the bottom. */
+@media (max-width: 768px) {
+  :root {
+    --header-height: 56px;
+  }
+  .tdtu-header {
+    gap: 10px;
+  }
+  .tdtu-header__right {
+    margin-left: auto;
+    gap: 6px;
+  }
+  .tdtu-menu {
+    display: none;
+  }
+  .tdtu-body {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+  .tdtu-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0;
+    padding: 0 0 env(safe-area-inset-bottom, 0px);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    overflow: visible;
+  }
+  .tdtu-nav.is-more-open {
+    box-shadow: 0 -12px 32px rgba(15, 23, 42, 0.18);
+  }
+  .tdtu-nav__item {
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    min-height: 64px;
+    padding: 6px 2px;
+    font-size: 11px;
+    text-align: center;
+  }
+  .tdtu-nav__item svg {
+    display: block;
+  }
+  .tdtu-nav__item::after {
+    left: 28%;
+    right: 28%;
+    top: 0;
+    bottom: auto;
+    border-radius: 0 0 3px 3px;
+  }
+  .tdtu-nav__label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tdtu-nav__item.is-secondary {
+    display: none;
+  }
+  .tdtu-nav__more {
+    display: flex;
+  }
+  .tdtu-nav__badge,
+  .tdtu-nav__live {
+    position: absolute;
+    top: 7px;
+    right: calc(50% - 22px);
+  }
+  /* "Thêm" opens the other entries as a full-width list above the bar. */
+  .tdtu-nav.is-more-open .tdtu-nav__item.is-secondary {
+    display: flex;
+    order: -1;
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 14px;
+    min-height: 50px;
+    padding: 0 20px;
+    font-size: 14px;
+    text-align: left;
+  }
+  .tdtu-nav.is-more-open .tdtu-nav__item.is-secondary::after {
+    display: none;
+  }
+  .tdtu-nav.is-more-open .tdtu-nav__item.is-secondary .tdtu-nav__label {
+    flex: 1;
+  }
+  .tdtu-nav.is-more-open .tdtu-nav__item.is-secondary .tdtu-nav__badge,
+  .tdtu-nav.is-more-open .tdtu-nav__item.is-secondary .tdtu-nav__live {
+    position: static;
+  }
+  .tdtu-nav.is-more-open .tdtu-nav__item:not(.is-secondary) {
+    border-top: 1px solid var(--border);
+  }
+  .live-strip {
+    padding: 8px 12px;
+  }
+}
+
+/* Small phones: the TDT mark alone. */
+@media (max-width: 480px) {
+  .tdtu-header .t-workspace-logo__text {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tdtu-nav__live,
+  .tdtu-online-dot.is-online,
+  .live-strip__item.is-incoming .live-strip__dot {
+    animation: none;
+  }
+}
+
+/* Main Workspace Body */
+.tdtu-body {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
 /* Main Viewport Stage */
-.editorial-stage-viewport,
 .tdtu-stage {
   flex: 1 1 0;
   min-width: 0;
   min-height: 0;
   height: 100%;
   overflow-y: auto;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--dot-grid-color, #CBD5E1) 1px, transparent 1px);
+  background-size: 16px 16px;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -1270,10 +1199,10 @@ img, svg {
 }
 .button--primary:hover:not(:disabled) {
   background: var(--primary-hover);
-  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.32), 0 1px 3px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 3px 10px rgba(5, 150, 105, 0.28), 0 1px 3px rgba(5, 150, 105, 0.18);
 }
 .button--primary:active:not(:disabled) {
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 1px 3px rgba(5, 150, 105, 0.2);
 }
 .button--secondary {
   background: var(--surface);

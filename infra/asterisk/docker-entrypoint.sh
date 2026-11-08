@@ -55,7 +55,69 @@ EOF
   printf '\n[1101](aor-single)\n'
 } > /etc/asterisk/pjsip_spike.conf
 
+# SIP trunk for the hotline number (CC-4), only when the provider account is set. It has its own
+# transport without external addresses: the provider sits outside our NAT and answers to where
+# packets come from (rport), and the short registration keeps that NAT binding open.
+: > /etc/asterisk/pjsip_trunk.conf
+if [ -n "${TRUNK_USERNAME:-}" ]; then
+  : "${TRUNK_PASSWORD:?TRUNK_PASSWORD is required with TRUNK_USERNAME}"
+  : "${TRUNK_SERVER:?TRUNK_SERVER (host:port) is required with TRUNK_USERNAME}"
+  : "${TRUNK_NUMBER:?TRUNK_NUMBER (the hotline number) is required with TRUNK_USERNAME}"
+  TRUNK_HOST="${TRUNK_SERVER%%:*}"
+  cat > /etc/asterisk/pjsip_trunk.conf <<EOF
+[transport-trunk]
+type = transport
+protocol = udp
+bind = 0.0.0.0:5070
+
+[trunk-auth]
+type = auth
+auth_type = userpass
+username = ${TRUNK_USERNAME}
+password = ${TRUNK_PASSWORD}
+
+[trunk]
+type = registration
+transport = transport-trunk
+outbound_auth = trunk-auth
+server_uri = sip:${TRUNK_SERVER}
+client_uri = sip:${TRUNK_USERNAME}@${TRUNK_SERVER}
+contact_user = ${TRUNK_USERNAME}
+expiration = 120
+retry_interval = 30
+forbidden_retry_interval = 300
+line = yes
+endpoint = trunk
+
+[trunk]
+type = aor
+contact = sip:${TRUNK_SERVER}
+qualify_frequency = 30
+
+[trunk]
+type = endpoint
+transport = transport-trunk
+context = from-trunk
+disallow = all
+allow = alaw,ulaw
+outbound_auth = trunk-auth
+aors = trunk
+from_user = ${TRUNK_USERNAME}
+from_domain = ${TRUNK_HOST}
+direct_media = no
+rtp_symmetric = yes
+force_rport = yes
+rewrite_contact = yes
+
+; Only the provider may send calls to this endpoint.
+[trunk]
+type = identify
+endpoint = trunk
+match = ${TRUNK_HOST}
+EOF
+fi
+
 chown -R asterisk:asterisk /etc/asterisk
-chmod 600 /etc/asterisk/ari.conf /etc/asterisk/pjsip_spike.conf
+chmod 600 /etc/asterisk/ari.conf /etc/asterisk/pjsip_spike.conf /etc/asterisk/pjsip_trunk.conf
 
 exec /usr/sbin/asterisk -f -U asterisk -G asterisk -vvv

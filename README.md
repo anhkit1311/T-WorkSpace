@@ -12,7 +12,7 @@ Kiến trúc modular monolith: React/TypeScript + Node.js/Socket.IO + PostgreSQL
 | --- | --- |
 | Họp trực tuyến | Chạy được đủ luồng (chi tiết bên dưới); đang tập trung hoàn thiện |
 | E-learning | Chạy được đủ luồng có backend (chi tiết bên dưới); đang tập trung hoàn thiện |
-| Call center (VoIP) | Đã có ACD, IVR, softphone trình duyệt, ghi âm, phiếu, giám sát, chấm chất lượng (`infra/asterisk`, schema `025`, `037`–`039`). **Tạm dừng** cho tới khi có số điện thoại để thử VoIP thật |
+| Call center (VoIP) | Đã có ACD, IVR, softphone trình duyệt, ghi âm, phiếu, giám sát, chấm chất lượng, chép lời và tóm tắt cuộc gọi bằng AI, hẹn gọi lại khi đang chờ (`infra/asterisk`, schema `025`, `037`–`039`, `046`, `055`, `056`). SIP trunk Pitel đã đăng ký (đầu số hotline); còn thử cuộc gọi thật vào/ra, đo Wireshark và SIPp |
 
 ### Họp trực tuyến
 
@@ -84,19 +84,19 @@ Web localhost:5173; API localhost:3001. Vite dùng polling watcher trong develop
 
 Dev server dùng cổng của `WEB_ORIGIN` trong `.env` (mẫu mặc định 5173), báo lỗi nếu cổng bận.
 
-### Tổng đài (Asterisk 22, đang tạm dừng)
+### Tổng đài (Asterisk 22)
 
 Điền `ASTERISK_ARI_PASSWORD` và `ASTERISK_SPIKE_SIP_PASSWORD` (≥ 12 ký tự) trong `.env`, rồi:
 
 ```powershell
-npm run callcenter:up        # build Asterisk 22 từ mã nguồn (lần đầu vài phút), mở 5060/udp, 8088, 10000-10099/udp
+npm run callcenter:up        # build Asterisk 22 từ mã nguồn (lần đầu vài phút), mở 5060/udp, 8088, 10000-10499/udp
 npm run callcenter:ari-spike # in StasisStart khi có cuộc gọi vào ứng dụng ARI "nexo"
-npm run callcenter:seed -- giaovu@demo.nexo.test gv.ha@demo.nexo.test  # 2 phòng ban, hotline 19001234 (IVR phím 1/2), máy lẻ cho từng email
+npm run callcenter:seed -- giaovu@demo.nexo.test gv.ha@demo.nexo.test  # 2 phòng ban, hotline ASTERISK_TRUNK_NUMBER (mặc định 19001234; IVR phím 1/2), máy lẻ cho từng email
 ```
 
 - Máy lẻ thử: 1001, 1002 (Zoiper/Linphone, UDP 127.0.0.1:5060) và 1101 (trình duyệt), cùng mật khẩu `ASTERISK_SPIKE_SIP_PASSWORD`.
 - Số thử: 1001/1002/1101 gọi nhau; 8000 echo kiểm tra tiếng; 9000 chuyển vào ARI.
-- Không có SIP trunk: tổng đài chỉ dùng nội bộ TDTU. Máy lẻ của các phòng ban gọi nhau, sinh viên gọi hotline từ trình duyệt (đã đăng nhập). Số ngoài (0…, 00…, +…) bị từ chối.
+- SIP trunk (CC-4): điền `ASTERISK_TRUNK_USERNAME/PASSWORD/SERVER/NUMBER` trong `.env` rồi `npm run callcenter:up`; Asterisk đăng ký qua cổng 5070/udp (`pjsip show registrations`). Cuộc gọi vào đầu số đi vào IVR của hotline có số bằng `ASTERISK_TRUNK_NUMBER`. Máy lẻ được quyền "Gọi ra ngoài" (BR-20, tổng đài viên bật sẵn) gọi số di động/cố định trong nước (0 + 9–10 số); tối đa 4 cuộc gọi ra cùng lúc, 30 phút mỗi cuộc. Số quốc tế (00…, +…) luôn bị chặn. Để trống `ASTERISK_TRUNK_USERNAME` thì tổng đài chỉ dùng nội bộ.
 - Máy khác trong LAN: đặt `ASTERISK_EXTERNAL_IP` là IP LAN của máy chạy Docker.
 
 ## Kiểm tra
@@ -110,7 +110,7 @@ npm run test:e2e
 npm run build
 ```
 
-`test:e2e` (Playwright, dùng Chrome đã cài) chạy trên `npm run dev` và DB local: đăng nhập, trang Quản trị hệ thống, hai người họp video với camera giả và tự vào lại phòng sau khi mất mạng, mở trang Khóa học và Tổng đài, menu theo chức năng, tài khoản chưa có nhóm, gửi tin trong kênh, tạo việc từ "Công việc", tải tệp từ "Tài liệu", lên lịch rồi vào phòng từ lịch tuần. Tài khoản test tạo trong `e2e/global-setup.mjs` và bị xoá khi chạy xong.
+`test:e2e` (Playwright, dùng Chrome đã cài) chạy trên `npm run dev` và DB local: đăng nhập, trang Quản trị hệ thống, hai người họp video với camera giả và tự vào lại phòng sau khi mất mạng, mở trang Khóa học và Tổng đài, menu theo chức năng, tài khoản chưa có nhóm, gửi tin trong kênh, tải tệp từ "Tài liệu", lên lịch rồi vào phòng từ danh sách lịch họp. Tài khoản test tạo trong `e2e/global-setup.mjs` và bị xoá khi chạy xong.
 
 `npm test` chạy unit test của web và API; các test cần PostgreSQL chỉ chạy khi đặt `RUN_DB_TESTS=1` (gồm luồng e-learning đầy đủ, phiên họp, biên bản, ghi hình, QoS). `test:sfu` chạy riêng các test có PostgreSQL và mediasoup. Kiểm signaling/worker không chứng minh RTP đa mạng.
 
@@ -122,7 +122,9 @@ npm run verify:restore
 
 Dữ liệu demo khoa CNTT: tạo quản trị hệ thống trước (`node scripts/ops/create-user.mjs admin@tdtu.edu.vn "Quản trị hệ thống" --admin`), đặt `SEED_ACADEMIC_PASSWORD` trong `.env` rồi chạy `npm run seed:academic` (thêm `-- --reset` để tạo lại). `giaovu@demo.nexo.test` là giáo vụ khoa, `truongkhoa@…` là lãnh đạo khoa, `gv.*@…` là giảng viên, `sv01…sv30@…` là sinh viên.
 
-Benchmark local50/100/200 socket,2 API process,4tin/giây,30s ×2/mức:732tin,0lỗi/trùng trong kịch bản. Kết quả đo tải (k6, chat, ACD, SIPp, Mesh/SFU), dữ liệu gốc và giới hạn ở [docs/benchmarks](docs/benchmarks/README.md). Restore dùng hai DB QA mới, kiểm20 migration/dữ liệu Unicode và dọn đúng fixtures.
+Dữ liệu cho buổi bảo vệ: `npm run demo:seed` (cần Asterisk và FFmpeg đang chạy: `npm run callcenter:up`, `docker compose -f infra/docker-compose.yml --profile recording up -d ffmpeg`). Ngoài khoa CNTT, tổng đài và khóa CC-101, `scripts/database/seed-showcase.mjs` tạo nhóm "Giáo vụ Khoa CNTT" với lịch họp tuần này, một hội đồng bảo vệ (3 tiêu chí, 3 người bảo vệ), một cuộc họp đã qua có bản ghi + chép lời + tóm tắt AI + 3 việc, khóa CC-201 đủ 4 loại bài (tài liệu, kiểm tra, lớp live đã chốt điểm danh, video xem lại), `gv.ha` hoàn thành CC-201 (mã chứng nhận in ra để mở `/verify/<mã>`). Muốn có lịch sử tổng đài như một ca trực thật, chạy trước `node scripts/callcenter/simulate-shift.mjs giaovu@demo.nexo.test gv.ha@demo.nexo.test gv.lan@demo.nexo.test` (khoảng 30 phút; 28 cuộc gọi qua ACD thật với PBX giả lập), rồi seed sẽ gắn chép lời, tóm tắt AI, ghi âm và điểm QA cho một cuộc của `gv.ha`. Bản ghi hình là ảnh thử của FFmpeg, ghi âm là lời nhắc của Asterisk, chép lời/tóm tắt là văn bản soạn sẵn.
+
+Benchmark local50/100/200 socket,2 API process,4tin/giây,30s ×2/mức:732tin,0lỗi/trùng trong kịch bản. Kết quả đo tải (k6, chat, ACD và SIPp tới 200 cuộc đồng thời, MOS theo E-model, KPI ca trực mô phỏng, Mesh/SFU, họp qua TURN), dữ liệu gốc và giới hạn ở [docs/benchmarks](docs/benchmarks/README.md). Restore dùng hai DB QA mới, kiểm20 migration/dữ liệu Unicode và dọn đúng fixtures.
 
 ## API và vận hành
 

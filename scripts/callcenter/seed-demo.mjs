@@ -33,7 +33,7 @@ try {
 
   if (!(await repo.hotlines()).length)
     await admin.saveHotline(adminId, null, {
-      number: "19001234",
+      number: process.env.ASTERISK_TRUNK_NUMBER || "19001234", // the SIP trunk number when there is one
       name: "Tổng đài TDTU",
       fallbackDepartmentId: admissions.id,
       options: [
@@ -64,7 +64,7 @@ try {
     email: (await pool.query(`SELECT email FROM users WHERE id=$1`, [adminId])).rows[0].email,
     role: "supervisor",
   });
-  console.log("Đã seed tổng đài demo: phòng Tuyển sinh (1200-1229), Đại học (1230-1259), hotline 19001234.");
+  console.log(`Đã seed tổng đài demo: phòng Tuyển sinh (1200-1229), Đại học (1230-1259), hotline ${process.env.ASTERISK_TRUNK_NUMBER || "19001234"}.`);
 } finally {
   await pool.end();
 }

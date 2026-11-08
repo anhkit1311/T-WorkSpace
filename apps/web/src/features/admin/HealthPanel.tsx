@@ -46,7 +46,7 @@ export function HealthPanel({ token }: { token: string }) {
     };
   }, [token]);
 
-  if (!health) return <section><h2>Sức khoẻ hệ thống</h2><p className="admin-note" role="status">{failed ? "Không tải được trạng thái máy chủ." : "Đang kiểm tra…"}</p></section>;
+  if (!health) return <section><h2>Sức khỏe hệ thống</h2><p className="admin-note" role="status">{failed ? "Không tải được trạng thái máy chủ." : "Đang kiểm tra…"}</p></section>;
   const { api, db, media, jobs, callCenter } = health;
   const loss = media.qos.packetLoss?.avg ?? 0;
   const cards = [
@@ -85,7 +85,7 @@ export function HealthPanel({ token }: { token: string }) {
   return (
     <section>
       <div className="admin-section-head">
-        <h2>Sức khoẻ hệ thống</h2>
+        <h2>Sức khỏe hệ thống</h2>
         <span className="admin-note">{failed ? "Mất kết nối, đang thử lại…" : `Cập nhật ${new Date(health.checkedAt).toLocaleTimeString("vi-VN")}`}</span>
       </div>
       <div className="admin-health-grid">

@@ -51,7 +51,16 @@ async function caller(index) {
   const channel = await ari("POST", `/channels?${params}`);
   try {
     await sleep(1500); // let the IVR prompt start
-    await ari("POST", `/channels/${channel.id}/dtmf?dtmf=${digit}`);
+    // Under load the channel can enter Stasis after those 1.5 s (409); retry rather than count a generator miss.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await ari("POST", `/channels/${channel.id}/dtmf?dtmf=${digit}`);
+        break;
+      } catch (error) {
+        if (attempt === 5 || !error.message.endsWith("409")) throw error;
+        await sleep(500);
+      }
+    }
     await sleep(holdMs);
   } finally {
     await ari("DELETE", `/channels/${channel.id}`).catch(() => {});
@@ -82,7 +91,7 @@ const outcomes = rows.reduce((all, row) => ({ ...all, [row.outcome ?? "open"]: (
 
 console.log(JSON.stringify({
   calls, concurrency, holdSeconds: holdMs / 1000, wallSeconds: Number(wallSeconds.toFixed(1)),
-  recorded: rows.length, failedToOriginate: errors.length, errors: [...new Set(errors)].slice(0, 5),
+  recorded: rows.length, queued: queued.length, generatorErrors: errors.length, errors: [...new Set(errors)].slice(0, 5),
   setupMs: { p50: percentile(setup, 50), p95: percentile(setup, 95), max: percentile(setup, 100) },
   ivrToQueueMs: { p50: percentile(queued, 50), p95: percentile(queued, 95), max: percentile(queued, 100) },
   outcomes,

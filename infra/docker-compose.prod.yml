@@ -128,12 +128,19 @@ services:
       SPIKE_SIP_PASSWORD: ${ASTERISK_SPIKE_SIP_PASSWORD:?}
       EXTERNAL_IP: ${ASTERISK_EXTERNAL_IP:?}
       ARI_ALLOWED_ORIGINS: https://${APP_DOMAIN:?}
+      TRUNK_USERNAME: ${ASTERISK_TRUNK_USERNAME:-}
+      TRUNK_PASSWORD: ${ASTERISK_TRUNK_PASSWORD:-}
+      TRUNK_SERVER: ${ASTERISK_TRUNK_SERVER:-}
+      TRUNK_NUMBER: ${ASTERISK_TRUNK_NUMBER:-}
     volumes:
       - ./asterisk/config:/opt/nexo-asterisk:ro
       - ${ASTERISK_LOG_DIR:-./asterisk/logs}:/var/log/asterisk
+      # Call recordings and voicemails (ARI stored recordings): kept when the container is rebuilt.
+      - asterisk_spool_prod:/var/spool/asterisk
     ports:
       - "5060:5060/udp"
-      - "10000-10099:10000-10099/udp"
+      - "5070:5070/udp" # SIP trunk (CC-4)
+      - "10000-10499:10000-10499/udp"
 
   # STUN/TURN for clients behind symmetric NAT or networks that block UDP (e.g. some 4G
   # carriers). Host networking so the relay ports are exposed on the public IP directly.
@@ -168,4 +175,5 @@ services:
 
 volumes:
   postgres_prod:
+  asterisk_spool_prod:
   media_prod:

@@ -1,0 +1,18 @@
+[
+  {
+    "level": 1,
+    "rate": 1,
+    "holdSeconds": 30,
+    "totalCalls": 2,
+    "sippExitCode": 0,
+    "netem": "delay 20ms 5ms distribution normal",
+    "ccCallsRecorded": 2,
+    "outcomes": {
+      "abandoned": 2
+    },
+    "peakCpuPercent": {
+      "asterisk": 2.17,
+      "postgres": 4.39
+    }
+  }
+]

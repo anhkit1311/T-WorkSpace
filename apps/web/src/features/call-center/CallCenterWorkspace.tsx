@@ -11,9 +11,10 @@ import type {
 } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import { appRouteUrl } from "../../app/navigation";
+import type { ViewId } from "../../app/types";
 import { useSocket } from "../../app/providers/SocketContext";
-import { Badge, Button, Field, FilterPills, KpiStatCard } from "../../shared/ui/Primitives";
-import { Icon } from "../../shared/ui/Icon";
+import { Badge, Button, Field } from "../../shared/ui/Primitives";
+import { Icon, type IconName } from "../../shared/ui/Icon";
 import { ApiError } from "../auth/api";
 import { callCenterApi, recordingUrl } from "./api";
 import { KpiPanel } from "./KpiPanel";
@@ -23,6 +24,7 @@ import { TransferPanel } from "./TransferPanel";
 import { VoicemailInbox } from "./VoicemailInbox";
 import { ContactCenter } from "./ContactCenter";
 import { CallerProfile } from "./CallerProfile";
+import { DeskDialer } from "./DeskDialer";
 import { type PhoneStatus } from "./useSoftphone";
 import { useGlobalSoftphone } from "../../app/providers/SoftphoneContext";
 import { STATE_LABEL, STATE_TONE } from "./agent-state";
@@ -44,8 +46,25 @@ const OUTCOME_LABEL: Record<string, string> = {
   failed: "Lỗi",
   transferred: "Đã chuyển",
 };
+const OUTCOME_TONE: Record<string, string> = {
+  answered: "green",
+  transferred: "green",
+  abandoned: "amber",
+  busy: "amber",
+  missed: "red",
+  failed: "red",
+  voicemail: "blue",
+  callback: "blue",
+};
+const DIRECTION: Record<CcCallRecord["direction"], [string, string]> = {
+  inbound: ["↙", "Gọi đến"],
+  outbound: ["↗", "Gọi đi"],
+  internal: ["⇄", "Nội bộ"],
+};
 
-type Tab = "desk" | "tickets" | "live" | "history" | "quality" | "admin" | "contact";
+type Tab = "desk" | "history" | "tickets" | "quality" | "live" | "admin" | "contact";
+/** Tabs with their own address; the others switch inside the page. */
+const TAB_VIEW: Partial<Record<Tab, ViewId>> = { desk: "call-center", history: "call-directory", live: "call-monitoring" };
 const seconds = (from: string, to: string | null) => Math.max(0, Math.round((Date.parse(to ?? new Date().toISOString()) - Date.parse(from)) / 1000));
 /** Browser calls ("Liên hệ phòng ban") carry no phone number; the caller is known by account. */
 const numberLabel = (number: string) => (number === "web" ? "Gọi từ trình duyệt" : number);
@@ -53,6 +72,8 @@ const dialable = (number: string) => /^[0-9*#]{3,15}$/.test(number);
 const pad = (value: number) => String(value).padStart(2, "0");
 const clock = (total: number) =>
   total >= 3600 ? `${Math.floor(total / 3600)}:${pad(Math.floor(total / 60) % 60)}:${pad(total % 60)}` : `${pad(Math.floor(total / 60))}:${pad(total % 60)}`;
+/** Queue thresholds of the wallboard: under 30 s fine, under 60 s watch, then late. */
+const waitTone = (waited: number) => (waited >= 60 ? "red" : waited >= 30 ? "amber" : "green");
 
 export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab }) {
   const { accessToken, notify, route, navigate } = useApp();
@@ -60,6 +81,8 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
   const [me, setMe] = useState<CcAgentProfile | null>(null);
   const [loadError, setLoadError] = useState("");
   const [tab, setTab] = useState<Tab>(initialTab);
+  // Back/forward between the routed tabs arrives as a new initialTab.
+  useEffect(() => setTab(initialTab), [initialTab]);
   const [dialRequest, setDialRequest] = useState<{ number: string } | null>(null);
   const [phoneStatus, setPhoneStatus] = useState<PhoneStatus>("off");
   const [autoAnswerUntil, setAutoAnswerUntil] = useState(0);
@@ -99,17 +122,34 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
   const isAgent = Boolean(me?.departments.some((department) => department.role === "agent"));
   // Supervisors with an extension get the softphone too: CC-11 monitoring rings it.
   const hasDesk = isAgent || Boolean(me?.extension);
-  const tabs = [
-    ...(hasDesk ? [{ key: "desk", label: "Bàn làm việc" }] : []),
+  const member = Boolean(me?.departments.length);
+  const canMonitor = Boolean(supervised.length || me?.isAdmin);
+  const tabs: { key: Tab; label: string; icon: IconName }[] = [
+    ...(hasDesk ? [{ key: "desk" as const, label: "Bàn làm việc", icon: "headset" as const }] : []),
+    ...(member || me?.isAdmin ? [{ key: "history" as const, label: "Lịch sử cuộc gọi", icon: "phone-call" as const }] : []),
     // Tickets are content: a system admin sees them only with a role in a department.
-    ...(me?.departments.length ? [{ key: "tickets", label: "Phiếu yêu cầu" }] : []),
-    ...(supervised.length || me?.isAdmin ? [{ key: "live", label: "Giám sát" }] : []),
-    ...(me?.departments.length || me?.isAdmin ? [{ key: "history", label: "Lịch sử cuộc gọi" }] : []),
-    ...(me?.departments.length || me?.isAdmin ? [{ key: "quality", label: "Chất lượng" }] : []),
-    ...(me?.isAdmin ? [{ key: "admin", label: "Cấu hình tổng đài" }] : []),
-    { key: "contact", label: "Hỗ trợ của tôi" },
+    ...(member ? [{ key: "tickets" as const, label: "Phiếu yêu cầu", icon: "clipboard" as const }] : []),
+    ...(member || me?.isAdmin ? [{ key: "quality" as const, label: "Chất lượng", icon: "star" as const }] : []),
+    ...(canMonitor ? [{ key: "live" as const, label: "Giám sát", icon: "activity" as const }] : []),
+    ...(me?.isAdmin ? [{ key: "admin" as const, label: "Cấu hình", icon: "settings" as const }] : []),
+    { key: "contact", label: "Hỗ trợ của tôi", icon: "help-circle" },
   ];
-  const activeTab = tabs.some((item) => item.key === tab) ? tab : (tabs[0].key as Tab);
+  const activeTab = tabs.some((item) => item.key === tab) ? tab : tabs[0].key;
+  const subnav = useRef<HTMLElement>(null);
+  const openTab = (key: Tab) => {
+    setTab(key);
+    subnav.current?.scrollIntoView({ block: "start" });
+    const view = TAB_VIEW[key];
+    if (view && view !== route.view) navigate({ view });
+  };
+  const onMonitor = me?.extension
+    ? (callId: string, mode: MonitorMode) =>
+        api(`live-calls/${callId}/monitor`, "POST", { mode }).then(() => {
+          // The supervisor's own extension rings for this; it is answered automatically.
+          setAutoAnswerUntil(Date.now() + 20_000);
+          notify("Giám sát cuộc gọi", `Máy lẻ ${me.extension!.number} đang kết nối vào cuộc gọi…`, "info");
+        }, fail)
+    : null;
 
   if (loadError)
     return (
@@ -131,56 +171,8 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
     );
   if (!me) return <div className="callcenter-page"><div className="callcenter-panel">Đang tải tổng đài…</div></div>;
 
-  // Dedicated view for "Danh sách cuộc gọi"
-  if (initialTab === "history") {
-    return (
-      <div className="callcenter-page">
-        <div className="callcenter-header">
-          <div>
-            <h1 className="callcenter-header__title">Danh sách cuộc gọi</h1>
-            <p className="callcenter-header__subtitle">
-              Xem toàn bộ nhật ký cuộc gọi, nghe lại bản ghi âm và thông tin chi tiết cuộc gọi.
-            </p>
-          </div>
-        </div>
-        <CallHistory me={me} api={api} fail={fail} token={accessToken!} />
-      </div>
-    );
-  }
-
-  // Dedicated view for "Giám sát"
-  if (initialTab === "live") {
-    return (
-      <div className="callcenter-page">
-        <div className="callcenter-header">
-          <div>
-            <h1 className="callcenter-header__title">Giám sát tổng đài</h1>
-            <p className="callcenter-header__subtitle">
-              Theo dõi cuộc gọi trực tiếp, trạng thái điện thoại viên và hàng đợi cuộc gọi thời gian thực.
-            </p>
-          </div>
-        </div>
-        <LiveBoard
-          departments={me.isAdmin ? null : supervised}
-          api={api}
-          fail={fail}
-          token={accessToken!}
-          onMonitor={
-            me.extension
-              ? (callId, mode) =>
-                  api(`live-calls/${callId}/monitor`, "POST", { mode }).then(() => {
-                    setAutoAnswerUntil(Date.now() + 20_000);
-                    notify("Giám sát cuộc gọi", `Máy lẻ ${me.extension!.number} đang kết nối vào cuộc gọi…`, "info");
-                  }, fail)
-              : null
-          }
-        />
-      </div>
-    );
-  }
-
   // Everyone else (students, lecturers without a desk): contact a department and follow their requests.
-  if (!me.departments.length && !me.isAdmin && !me.extension)
+  if (!member && !me.isAdmin && !me.extension)
     return (
       <div className="callcenter-page">
         <div className="callcenter-header">
@@ -194,74 +186,72 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
     );
 
   return (
-    <div className="callcenter-page">
-      <div className="callcenter-header">
-        <div>
-          <h1 className="callcenter-header__title">Tổng đài TDTU</h1>
-          <p className="callcenter-header__subtitle">
-            {me.departments.map((department) => department.name).filter((name, index, all) => all.indexOf(name) === index).join(" · ") || "Quản trị hệ thống"}
-          </p>
+    <>
+      <nav ref={subnav} className="tdtu-subnav cc-subnav" aria-label="Tổng đài">
+        <div className="tdtu-subnav__inner">
+          {tabs.map((item) => {
+            const active = item.key === activeTab;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                className={`tdtu-subnav__item ${active ? "is-active" : ""}`}
+                aria-current={active ? "page" : undefined}
+                onClick={() => openTab(item.key)}
+              >
+                <Icon name={item.icon} size={15} strokeWidth={active ? 2.1 : 1.8} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
         </div>
-      </div>
-      <FilterPills options={tabs} activeKey={activeTab} onChange={(key) => setTab(key as Tab)} className="desk-tabs" />
-      {/* Always mounted: the softphone registration and an unfinished wrap-up survive tab switches. */}
-      {hasDesk && (
-        <div hidden={activeTab !== "desk"}>
-          <AgentDesk
-            me={me}
-            isAgent={isAgent}
+      </nav>
+      <div className="callcenter-page">
+        {/* Always mounted: the softphone registration and an unfinished wrap-up survive tab switches. */}
+        {hasDesk && (
+          <div hidden={activeTab !== "desk"}>
+            <AgentDesk
+              me={me}
+              isAgent={isAgent}
+              canMonitor={canMonitor}
+              api={api}
+              fail={fail}
+              onChange={setMe}
+              dialRequest={dialRequest}
+              onPhoneStatus={setPhoneStatus}
+              autoAnswerUntil={autoAnswerUntil}
+              token={accessToken!}
+            />
+          </div>
+        )}
+        {activeTab === "tickets" && (
+          <TicketsPanel
             api={api}
             fail={fail}
-            onChange={setMe}
-            dialRequest={dialRequest}
-            onPhoneStatus={setPhoneStatus}
-            autoAnswerUntil={autoAnswerUntil}
             token={accessToken!}
+            canCall={phoneStatus === "registered"}
+            onCallBack={(number) => {
+              setDialRequest({ number });
+              openTab("desk");
+            }}
           />
+        )}
+        {activeTab === "live" && (
+          <LiveBoard departments={me.isAdmin ? null : supervised} api={api} fail={fail} token={accessToken!} onMonitor={onMonitor} />
+        )}
+        {/* Kept mounted like the desk: a browser call to a department survives switching tabs. */}
+        <div hidden={activeTab !== "contact"}>
+          <ContactCenter />
         </div>
-      )}
-      {activeTab === "tickets" && (
-        <TicketsPanel
-          api={api}
-          fail={fail}
-          token={accessToken!}
-          canCall={phoneStatus === "registered"}
-          onCallBack={(number) => {
-            setDialRequest({ number });
-            setTab("desk");
-          }}
-        />
-      )}
-      {activeTab === "live" && (
-        <LiveBoard
-          departments={me.isAdmin ? null : supervised}
-          api={api}
-          fail={fail}
-          token={accessToken!}
-          onMonitor={
-            me.extension
-              ? (callId, mode) =>
-                  api(`live-calls/${callId}/monitor`, "POST", { mode }).then(() => {
-                    // The supervisor's own extension rings for this; it is answered automatically.
-                    setAutoAnswerUntil(Date.now() + 20_000);
-                    notify("Giám sát cuộc gọi", `Máy lẻ ${me.extension!.number} đang kết nối vào cuộc gọi…`, "info");
-                  }, fail)
-              : null
-          }
-        />
-      )}
-      {/* Kept mounted like the desk: a browser call to a department survives switching tabs. */}
-      <div hidden={activeTab !== "contact"}>
-        <ContactCenter />
+        {activeTab === "history" && <CallHistory me={me} api={api} fail={fail} token={accessToken!} />}
+        {activeTab === "quality" && <QaPanel me={me} api={api} fail={fail} />}
+        {activeTab === "admin" && (
+          <Suspense fallback={<div className="callcenter-panel">Đang tải…</div>}>
+            <CallCenterAdmin api={api} fail={fail} notify={notify} onChanged={loadMe} />
+          </Suspense>
+        )}
       </div>
-      {activeTab === "history" && <CallHistory me={me} api={api} fail={fail} token={accessToken!} />}
-      {activeTab === "quality" && <QaPanel me={me} api={api} fail={fail} />}
-      {activeTab === "admin" && (
-        <Suspense fallback={<div className="callcenter-panel">Đang tải…</div>}>
-          <CallCenterAdmin api={api} fail={fail} notify={notify} onChanged={loadMe} />
-        </Suspense>
-      )}
-    </div>
+    </>
   );
 }
 
@@ -270,6 +260,7 @@ type Api = <T>(path: string, method?: string, body?: object) => Promise<T>;
 function AgentDesk({
   me,
   isAgent,
+  canMonitor,
   api,
   fail,
   onChange,
@@ -281,6 +272,7 @@ function AgentDesk({
   token: string;
   me: CcAgentProfile;
   isAgent: boolean;
+  canMonitor: boolean;
   autoAnswerUntil: number;
   api: Api;
   fail: (error: unknown) => void;
@@ -292,7 +284,6 @@ function AgentDesk({
   const [wrapUp, setWrapUp] = useState<CcCallOffer | null>(null);
   const [notes, setNotes] = useState("");
   const [dispositionId, setDispositionId] = useState("");
-  const [dial, setDial] = useState("");
   const [busy, setBusy] = useState(false);
   const [mine, setMine] = useState<CcCallRecord[] | null>(null);
   const [, tick] = useState(0);
@@ -330,12 +321,8 @@ function AgentDesk({
   }, []);
 
   const [pausing, setPausing] = useState(false);
-  const [keypadOpen, setKeypadOpen] = useState(false);
   const [callSince, setCallSince] = useState<number | null>(null);
-  useEffect(() => {
-    setCallSince(phone.phase === "active" ? Date.now() : null);
-    if (phone.phase === "none") setKeypadOpen(false);
-  }, [phone.phase]);
+  useEffect(() => setCallSince(phone.phase === "active" ? Date.now() : null), [phone.phase]);
   const choose = (state: AgentState, reason?: string) => {
     setBusy(true);
     setPausing(false);
@@ -395,252 +382,259 @@ function AgentDesk({
     setHolding(true);
     api<CcAgentProfile>("me/hold", "POST", { on: !held }).then(onChange, fail).finally(() => setHolding(false));
   };
-  const press = (key: string) => (phone.phase === "active" ? phone.sendDigit(key) : setDial((value) => (value + key).slice(0, 15)));
   const phoneLabel = { off: "Chưa kết nối", registering: "Đang đăng ký…", registered: "Đã đăng ký", failed: "Đăng ký thất bại" }[phone.status];
+  const phoneTone = { off: "neutral", registering: "amber", registered: "green", failed: "red" }[phone.status];
+  const departments = me.departments.map((department) => department.name).filter((name, index, all) => all.indexOf(name) === index).join(" · ");
 
   const callerName = offer?.caller.displayName ?? (phone.peer || offer?.caller.number || "Số chưa xác định");
-  const initials = callerName.split(/\s+/).filter(Boolean).slice(-2).map((word) => word[0]).join("").toUpperCase();
+  const callerNumber = offer ? numberLabel(offer.caller.number) : phone.peer;
   const idleTitle = !isAgent
-    ? "Máy lẻ dùng để giám sát và gọi nội bộ"
+    ? "Máy lẻ dùng để gọi nội bộ"
     : me.state === "ready"
       ? "Bạn đang sẵn sàng nhận cuộc gọi"
       : me.state === "not_ready"
         ? "Bạn đang tạm nghỉ"
         : "Bạn đang ngoại tuyến";
   const idleText = !isAgent
-    ? "Cuộc gọi giám sát bạn chọn ở tab Giám sát sẽ đổ chuông tại đây."
+    ? canMonitor
+      ? "Cuộc gọi giám sát bạn chọn ở tab Giám sát sẽ đổ chuông tại đây. Gọi nội bộ bằng khung Gọi nhanh."
+      : "Gọi máy lẻ nội bộ bằng khung Gọi nhanh hoặc danh bạ; cuộc gọi đến đổ chuông tại đây."
     : me.state === "ready"
-      ? "Cuộc gọi tiếp theo trong hàng đợi sẽ đổ chuông ngay tại đây, kèm hồ sơ người gọi ở cột bên phải."
+      ? "Cuộc gọi tiếp theo trong hàng đợi sẽ đổ chuông ngay tại đây, kèm hồ sơ người gọi."
       : me.state === "not_ready"
         ? "Hàng đợi chuyển cuộc gọi cho người khác trong phòng ban cho tới khi bạn sẵn sàng lại."
         : "Chọn “Sẵn sàng” để nhận cuộc gọi từ hàng đợi.";
-  const keypad = (
-    <div className="softphone-keypad-grid" role="group" aria-label={phone.phase === "active" ? "Bàn phím DTMF" : "Bàn phím số"}>
-      {KEYPAD.map(([key, sub]) => (
-        <button key={key} type="button" className="softphone-key-btn" onClick={() => press(key)} aria-label={key}>
-          <span className="softphone-key-num">{key}</span>
-          {sub && <span className="softphone-key-sub">{sub}</span>}
-        </button>
-      ))}
-      {phone.phase === "none" && dial && (
-        <button type="button" className="softphone-key-btn softphone-key-btn--wide" onClick={() => setDial((value) => value.slice(0, -1))} aria-label="Xóa một số">
-          <Icon name="chevron-left" size={16} />
-        </button>
-      )}
-    </div>
-  );
 
   return (
-    <div className="desk-layout">
-      {/* Left: the agent's own day, recent calls and voicemail. */}
-      <div className="desk-col desk-col--mine">
+    <div className="cc-console">
+      <section className="cc-statebar" aria-label="Trạng thái nhận cuộc gọi">
         {isAgent && (
-          <section className="callcenter-panel">
-            <div className="callcenter-panel__head">
-              <h2 className="callcenter-panel__title"><Icon name="calendar" size={18} /><span>Hôm nay của tôi</span></h2>
-            </div>
-            <div className="desk-today">
-              <div><strong>{talked.length}</strong><span>cuộc đã nghe</span></div>
-              <div><strong>{clock(talkSeconds)}</strong><span>tổng đàm thoại</span></div>
-              <div><strong>{talked.length ? clock(Math.round(talkSeconds / talked.length)) : "—"}</strong><span>trung bình</span></div>
-            </div>
-            {mine === null ? (
-              <p className="desk-muted">Đang tải cuộc gọi gần đây…</p>
-            ) : !mine.length ? (
-              <p className="desk-muted">Bạn chưa nhận cuộc gọi nào.</p>
-            ) : (
-              <ul className="desk-recent" aria-label="Cuộc gọi gần đây của tôi">
-                {mine.slice(0, 6).map((call) => (
-                  <li key={call.id}>
-                    <div className="desk-recent__who">
-                      <strong>{call.callerName ?? call.callerNumber}</strong>
-                      <span>{new Date(call.startedAt).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })} · {call.departmentName ?? "—"}{call.answeredAt ? ` · ${clock(seconds(call.answeredAt, call.endedAt))}` : ""}</span>
-                    </div>
-                    {call.outcome ? <Badge tone={call.outcome === "answered" ? "green" : "amber"}>{OUTCOME_LABEL[call.outcome]}</Badge> : <Badge tone="red">Đang diễn ra</Badge>}
-                    <Button size="sm" variant="ghost" icon="phone" disabled={!canDial || !dialable(call.callerNumber)} title={!dialable(call.callerNumber) ? "Người gọi từ trình duyệt, không có số để gọi lại" : canDial ? `Gọi lại ${call.callerNumber}` : "Máy lẻ chưa sẵn sàng để gọi"} onClick={() => phone.call(call.callerNumber)}>
-                      <span className="sr-only">Gọi lại</span>
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        )}
-        {me.extension && <VoicemailInbox api={api} token={token} fail={fail} onCall={canDial ? (number) => phone.call(number) : null} />}
-      </div>
-
-      {/* Centre: one card that follows the call — idle, ringing, talking, filing. */}
-      <section className="callcenter-panel desk-call" aria-label="Cuộc gọi hiện tại">
-        <div className="desk-call__bar">
-          <span className="desk-muted">Máy lẻ {me.extension?.number ?? "—"} · {phoneLabel}</span>
-          {isAgent && (
-            <div className="desk-states" role="group" aria-label="Trạng thái trực">
-              {(["ready", "not_ready", "offline"] as const).map((state) => (
-                <button
-                  key={state}
-                  type="button"
-                  className={`desk-state ${me.state === state ? "is-active" : ""}`}
-                  aria-pressed={me.state === state}
-                  disabled={busy || inCall || !me.extension || (state === "ready" && me.training.length > 0)}
-                  aria-expanded={state === "not_ready" ? pausing : undefined}
-                  onClick={() => (state === "not_ready" ? setPausing((open) => !open) : choose(state))}
-                >
-                  {STATE_LABEL[state]}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        {pausing && (
-          <div className="desk-pause" role="group" aria-label="Lý do tạm nghỉ">
-            <span className="desk-muted">Lý do:</span>
-            {PAUSE_REASONS.map((reason) => (
-              <button key={reason} type="button" className="desk-monitor" disabled={busy} onClick={() => choose("not_ready", reason)}>
-                {reason}
+          <div className="cc-states" role="group" aria-label="Trạng thái trực">
+            {(["ready", "not_ready", "offline"] as const).map((state) => (
+              <button
+                key={state}
+                type="button"
+                className={`cc-state tone-${STATE_TONE[state]} ${me.state === state ? "is-active" : ""}`}
+                aria-pressed={me.state === state}
+                disabled={busy || inCall || !me.extension || (state === "ready" && me.training.length > 0)}
+                aria-expanded={state === "not_ready" ? pausing : undefined}
+                onClick={() => (state === "not_ready" ? setPausing((open) => !open) : choose(state))}
+              >
+                <span className="cc-led" aria-hidden="true" />
+                {STATE_LABEL[state]}
               </button>
             ))}
           </div>
         )}
-        {!me.extension && <p className="desk-warning">Bạn chưa được cấp máy lẻ, chưa thể nhận cuộc gọi.</p>}
-        {isAgent && me.training.length > 0 && <TrainingRequired training={me.training} />}
+        <p className="cc-statebar__ext">
+          <span>Máy lẻ <b>{me.extension?.number ?? "—"}</b></span>
+          <span className={`tone-${phoneTone}`}><span className="cc-led" aria-hidden="true" />{phoneLabel}</span>
+          {departments && <span className="cc-statebar__units">{departments}</span>}
+        </p>
+        {isAgent && (
+          <dl className="cc-statebar__stats">
+            <div><dt>Đã nghe hôm nay</dt><dd>{mine === null ? "—" : talked.length}</dd></div>
+            <div><dt>Đàm thoại TB</dt><dd>{talked.length ? clock(Math.round(talkSeconds / talked.length)) : "—"}</dd></div>
+            <div><dt>{STATE_LABEL[me.state]}</dt><dd className={`tone-${STATE_TONE[me.state]}`}>{me.stateSince ? clock(seconds(me.stateSince, null)) : "—"}</dd></div>
+          </dl>
+        )}
+      </section>
+      {pausing && (
+        <div className="desk-pause" role="group" aria-label="Lý do tạm nghỉ">
+          <span className="desk-muted">Lý do tạm nghỉ:</span>
+          {PAUSE_REASONS.map((reason) => (
+            <button key={reason} type="button" className="desk-monitor" disabled={busy} onClick={() => choose("not_ready", reason)}>
+              {reason}
+            </button>
+          ))}
+        </div>
+      )}
+      {!me.extension && <p className="desk-warning">Bạn chưa được cấp máy lẻ, chưa thể nhận cuộc gọi.</p>}
+      {isAgent && me.training.length > 0 && <TrainingRequired training={me.training} />}
 
-        {phone.phase !== "none" ? (
-          <div className={`desk-call__live is-${phone.phase}`}>
-            <div className="desk-call__status">
-              <Badge tone="red" dot>{phone.phase === "incoming" ? "Cuộc gọi đến" : phone.phase === "outgoing" ? "Đang gọi" : "Đang đàm thoại"}</Badge>
-              {callSince !== null && <strong className="desk-call__timer">{clock(Math.floor((Date.now() - callSince) / 1000))}</strong>}
-              {held && <Badge tone="amber">Đang giữ máy · người gọi nghe nhạc chờ</Badge>}
-              {offer && <span className="desk-muted desk-call__queue">{offer.departmentName} · đã chờ {offer.waitedSeconds}s</span>}
-            </div>
-            <div className="desk-call__who">
-              <span className={`desk-call__avatar ${phone.phase === "incoming" ? "is-ringing" : ""}`} aria-hidden="true">{initials || "?"}</span>
-              <div>
-                <h2 className="desk-call__name">{callerName}</h2>
-                <span className="desk-muted">{offer ? numberLabel(offer.caller.number) : phone.peer}</span>
+      <div className="cc-console__grid">
+        {/* Left: the agent's own recent calls and voicemail. */}
+        <div className="cc-console__col cc-console__col--mine">
+          {isAgent && (
+            <section className="callcenter-panel">
+              <div className="callcenter-panel__head">
+                <h2 className="callcenter-panel__title">Cuộc gọi gần đây</h2>
+                {talked.length > 0 && <span className="cc-count">Hôm nay {clock(talkSeconds)}</span>}
               </div>
-            </div>
-            {phone.phase === "incoming" ? (
-              <div className="desk-call__actions">
-                <button type="button" className="desk-call__answer" onClick={phone.answer} title="Alt+A">
-                  <Icon name="phone" size={18} /> Trả lời
-                </button>
-                <Button variant="secondary" onClick={phone.hangup}>Từ chối</Button>
+              {mine === null ? (
+                <p className="desk-muted">Đang tải cuộc gọi gần đây…</p>
+              ) : !mine.length ? (
+                <p className="desk-muted">Bạn chưa nhận cuộc gọi nào.</p>
+              ) : (
+                <ul className="desk-recent" aria-label="Cuộc gọi gần đây của tôi">
+                  {mine.slice(0, 6).map((call) => (
+                    <li key={call.id}>
+                      <div className="desk-recent__who">
+                        <strong>{call.callerName ?? call.callerNumber}</strong>
+                        <span>{new Date(call.startedAt).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })} · {call.departmentName ?? "—"}{call.answeredAt ? ` · ${clock(seconds(call.answeredAt, call.endedAt))}` : ""}</span>
+                      </div>
+                      {call.outcome ? <Badge tone={call.outcome === "answered" ? "green" : "amber"}>{OUTCOME_LABEL[call.outcome]}</Badge> : <Badge tone="red">Đang diễn ra</Badge>}
+                      <Button size="sm" variant="ghost" icon="phone" disabled={!canDial || !dialable(call.callerNumber)} title={!dialable(call.callerNumber) ? "Người gọi từ trình duyệt, không có số để gọi lại" : canDial ? `Gọi lại ${call.callerNumber}` : "Máy lẻ chưa sẵn sàng để gọi"} onClick={() => phone.call(call.callerNumber)}>
+                        <span className="sr-only">Gọi lại</span>
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
+          {me.extension && <VoicemailInbox api={api} token={token} fail={fail} onCall={canDial ? (number) => phone.call(number) : null} />}
+        </div>
+
+        {/* Centre: the call itself on the dark panel, then filing it and who is calling. */}
+        <div className="cc-console__col cc-console__col--call">
+          <section className={`cc-call is-${phone.phase}`} aria-label="Cuộc gọi hiện tại">
+            {phone.phase !== "none" ? (
+              <>
+                <div className="cc-call__top">
+                  <div className="cc-call__id">
+                    <div className="cc-call__chips">
+                      <span className="cc-chip tone-red"><span className="cc-led" aria-hidden="true" />{phone.phase === "incoming" ? "Cuộc gọi đến" : phone.phase === "outgoing" ? "Đang gọi" : "Đang đàm thoại"}</span>
+                      {offer && <span className="cc-chip">{offer.departmentName} · đã chờ {offer.waitedSeconds}s</span>}
+                      {held && <span className="cc-chip tone-amber">Đang giữ máy · người gọi nghe nhạc chờ</span>}
+                    </div>
+                    <h2 className="cc-call__name">{callerName}</h2>
+                    {callerNumber && callerNumber !== callerName && <p className="cc-call__number">{callerNumber}</p>}
+                  </div>
+                  {callSince !== null && (
+                    <div className="cc-call__timer">
+                      <small>Thời lượng</small>
+                      <strong>{clock(Math.floor((Date.now() - callSince) / 1000))}</strong>
+                    </div>
+                  )}
+                </div>
+                {phone.phase === "incoming" ? (
+                  <div className="cc-call__controls">
+                    <button type="button" className="cc-ctl is-answer" onClick={phone.answer} title="Alt+A">
+                      <Icon name="phone" size={20} />Trả lời
+                    </button>
+                    <button type="button" className="cc-ctl" onClick={phone.hangup}>
+                      <Icon name="phone-off" size={20} />Từ chối
+                    </button>
+                  </div>
+                ) : (
+                  <div className="cc-call__controls">
+                    <button type="button" className={`cc-ctl ${phone.muted ? "is-alert" : ""}`} aria-pressed={phone.muted} onClick={phone.toggleMute} title="Alt+M">
+                      <Icon name={phone.muted ? "mic-off" : "mic"} size={20} />{phone.muted ? "Bật micro" : "Tắt micro"}
+                    </button>
+                    {phone.phase === "active" && (
+                      <button type="button" className={`cc-ctl ${held ? "is-warn" : ""}`} aria-pressed={held} disabled={holding || Boolean(offer?.transfer)} onClick={toggleHold}>
+                        <Icon name={held ? "play" : "pause"} size={20} />{held ? "Tiếp tục" : "Giữ máy"}
+                      </button>
+                    )}
+                    <button type="button" className="cc-ctl is-end" onClick={phone.hangup} title="Alt+H">
+                      <Icon name="phone-off" size={20} />Kết thúc
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : wrapUp && !inCall ? (
+              <div className="cc-call__idle">
+                <span className="cc-call__icon tone-blue" aria-hidden="true"><Icon name="clipboard" size={24} /></span>
+                <div>
+                  <h2>Lưu kết quả trước khi nhận cuộc gọi mới</h2>
+                  <p>Cuộc gọi với {wrapUp.caller.displayName ?? wrapUp.caller.number} đã kết thúc. Chọn kết quả và ghi chú ở bên dưới.</p>
+                </div>
               </div>
             ) : (
-              <div className="desk-call__controls">
-                <button type="button" className={`desk-ctl ${phone.muted ? "is-alert" : ""}`} aria-pressed={phone.muted} onClick={phone.toggleMute} title="Alt+M">
-                  <Icon name={phone.muted ? "mic-off" : "mic"} size={20} />{phone.muted ? "Bật micro" : "Tắt micro"}
-                </button>
-                {phone.phase === "active" && (
-                  <button type="button" className={`desk-ctl ${held ? "is-warn" : ""}`} aria-pressed={held} disabled={holding || Boolean(offer?.transfer)} onClick={toggleHold}>
-                    <Icon name={held ? "play" : "pause"} size={20} />{held ? "Tiếp tục" : "Giữ máy"}
-                  </button>
-                )}
-                {phone.phase === "active" && (
-                  <button type="button" className={`desk-ctl ${keypadOpen ? "is-on" : ""}`} aria-pressed={keypadOpen} onClick={() => setKeypadOpen((open) => !open)}>
-                    <Icon name="grid" size={20} />Bàn phím
-                  </button>
-                )}
-                <button type="button" className="desk-ctl is-end" onClick={phone.hangup} title="Alt+H">
-                  <Icon name="phone" size={20} />Gác máy
-                </button>
+              <div className="cc-call__idle">
+                <span className={`cc-call__icon tone-${isAgent ? STATE_TONE[me.state] : "blue"}`} aria-hidden="true">
+                  <Icon name={isAgent && me.state === "not_ready" ? "pause" : "headset"} size={24} />
+                </span>
+                <div>
+                  <h2>{idleTitle}</h2>
+                  <p>{idleText}</p>
+                  {me.stateReason && <p>{me.stateReason}</p>}
+                </div>
               </div>
             )}
-            {keypadOpen && phone.phase === "active" && keypad}
-            {offer && me.state === "on_call" && <TransferPanel offer={offer} api={api} fail={fail} onChange={onChange} />}
-          </div>
-        ) : wrapUp && !inCall ? (
-          <div className="desk-call__wrap">
-            <Badge tone="blue">Hoàn tất cuộc gọi · {wrapUp.caller.displayName ?? wrapUp.caller.number}</Badge>
-            <h2 className="desk-call__heading">Lưu kết quả trước khi nhận cuộc gọi mới</h2>
-            <div className="desk-form">
-              <Field label="Kết quả cuộc gọi">
-                <select aria-label="Kết quả cuộc gọi" value={dispositionId} onChange={(event) => setDispositionId(event.target.value)}>
-                  <option value="">— Chọn kết quả —</option>
-                  {dispositions
-                    .filter((item) => !item.departmentId || item.departmentId === wrapUp.departmentId)
-                    .map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-                </select>
-              </Field>
-              <Field label="Ghi chú">
-                <textarea aria-label="Ghi chú" rows={4} maxLength={4000} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Nội dung người gọi trình bày, việc cần làm tiếp…" />
-              </Field>
-              <div className="desk-actions">
-                {wrapUp.caller.userId && <VideoInviteButton callId={wrapUp.callId} api={api} fail={fail} />}
-                {/* BR-07: a hotline call is always filed with a result code. */}
-                {!dispositionId && <span className="desk-muted">Chọn kết quả cuộc gọi để lưu.</span>}
-                <Button variant="secondary" disabled={!dispositionId} onClick={() => void saveWrapUp(true)} icon="clipboard">Lưu và tạo phiếu</Button>
-                <Button disabled={!dispositionId} onClick={() => void saveWrapUp(false)} icon="check">Lưu ghi nhận</Button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="desk-call__idle">
-            <span className={`desk-call__idle-icon tone-${isAgent ? STATE_TONE[me.state] : "blue"}`} aria-hidden="true">
-              <Icon name={isAgent && me.state === "not_ready" ? "pause" : "headset"} size={28} />
-            </span>
-            <h2 className="desk-call__heading">{idleTitle}</h2>
-            <p className="desk-muted">{idleText}</p>
-            {me.stateReason && <p className="desk-muted">{me.stateReason}</p>}
-            {phone.status === "registered" && !inCall && (
-              <form
-                className="softphone-input-row desk-dial"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  if (/^[0-9*#]{3,15}$/.test(dial)) phone.call(dial);
-                }}
-              >
-                <input className="softphone-dial-input" aria-label="Số cần gọi" value={dial} onChange={(event) => setDial(event.target.value.replace(/[^0-9*#]/g, "").slice(0, 15))} placeholder="Gọi số máy lẻ" inputMode="tel" />
-                <Button size="sm" type="button" variant="ghost" icon="grid" aria-pressed={keypadOpen} onClick={() => setKeypadOpen((open) => !open)}>
-                  <span className="sr-only">Bàn phím số</span>
-                </Button>
-                <Button size="sm" type="submit" icon="phone" disabled={!dial}>Gọi</Button>
-              </form>
-            )}
-            {keypadOpen && phone.status === "registered" && !inCall && keypad}
-          </div>
-        )}
-        <p className="desk-shortcuts">
-          Phím tắt: <kbd>Alt</kbd>+<kbd>A</kbd> trả lời · <kbd>Alt</kbd>+<kbd>H</kbd> kết thúc · <kbd>Alt</kbd>+<kbd>M</kbd> micro
-          {isAgent && <> · <kbd>Alt</kbd>+<kbd>R</kbd> sẵn sàng · <kbd>Alt</kbd>+<kbd>P</kbd> tạm nghỉ</>}
-        </p>
-      </section>
+          </section>
 
-      {/* Right: who is calling — profile, history, help for the call. */}
-      <aside className="callcenter-panel desk-col desk-col--caller" aria-label="Người gọi">
-        <div className="callcenter-panel__head">
-          <h2 className="callcenter-panel__title"><Icon name="profile" size={18} /><span>Người gọi</span></h2>
+          {offer && me.state === "on_call" && <TransferPanel offer={offer} api={api} fail={fail} onChange={onChange} />}
+
+          {wrapUp && !inCall && (
+            <section className="callcenter-panel" aria-label="Ghi chú sau cuộc gọi">
+              <div className="callcenter-panel__head">
+                <h2 className="callcenter-panel__title">Ghi chú sau cuộc gọi</h2>
+                <Badge tone="blue">{wrapUp.caller.displayName ?? wrapUp.caller.number}</Badge>
+              </div>
+              <div className="desk-form">
+                <Field label="Kết quả cuộc gọi">
+                  <select aria-label="Kết quả cuộc gọi" value={dispositionId} onChange={(event) => setDispositionId(event.target.value)}>
+                    <option value="">— Chọn kết quả —</option>
+                    {dispositions
+                      .filter((item) => !item.departmentId || item.departmentId === wrapUp.departmentId)
+                      .map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+                  </select>
+                </Field>
+                <Field label="Ghi chú">
+                  <textarea aria-label="Ghi chú" rows={4} maxLength={4000} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Nội dung người gọi trình bày, việc cần làm tiếp…" />
+                </Field>
+                <div className="desk-actions">
+                  {wrapUp.caller.userId && <VideoInviteButton callId={wrapUp.callId} api={api} fail={fail} />}
+                  {/* BR-07: a hotline call is always filed with a result code. */}
+                  {!dispositionId && <span className="desk-muted">Chọn kết quả cuộc gọi để lưu.</span>}
+                  <Button variant="secondary" disabled={!dispositionId} onClick={() => void saveWrapUp(true)} icon="clipboard">Lưu và tạo phiếu</Button>
+                  <Button disabled={!dispositionId} onClick={() => void saveWrapUp(false)} icon="check">Lưu ghi nhận</Button>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {offer && (
+            <section className="callcenter-panel" aria-label="Người gọi">
+              <div className="callcenter-panel__head">
+                <h2 className="callcenter-panel__title">Người gọi</h2>
+                <Badge tone="blue">{offer.departmentName}</Badge>
+              </div>
+              <div className="desk-caller">
+                <div className="desk-caller__name">{offer.caller.displayName ?? "Số chưa xác định"}</div>
+                <div className="desk-caller__meta">
+                  <span>{numberLabel(offer.caller.number)}</span>
+                  {offer.caller.email && <span>{offer.caller.email}</span>}
+                </div>
+                <div className="desk-caller__facts">
+                  <span>{offer.caller.recentCalls} cuộc gọi trong 30 ngày</span>
+                  {!offer.caller.userId && <span>Chưa liên kết tài khoản</span>}
+                </div>
+                {offer.context && <p className="desk-context"><Icon name="book" size={14} /> {offer.context}</p>}
+                <CallerProfile api={api} callId={offer.callId} outcomeLabel={OUTCOME_LABEL} />
+                {me.state === "on_call" && offer.caller.userId && <VideoInviteButton callId={offer.callId} api={api} fail={fail} />}
+              </div>
+            </section>
+          )}
+
+          <p className="desk-shortcuts">
+            Phím tắt: <kbd>Alt</kbd>+<kbd>A</kbd> trả lời · <kbd>Alt</kbd>+<kbd>H</kbd> kết thúc · <kbd>Alt</kbd>+<kbd>M</kbd> micro
+            {isAgent && <> · <kbd>Alt</kbd>+<kbd>R</kbd> sẵn sàng · <kbd>Alt</kbd>+<kbd>P</kbd> tạm nghỉ</>}
+          </p>
         </div>
-        {offer ? (
-          <div className="desk-caller">
-            <div className="desk-caller__name">{offer.caller.displayName ?? "Số chưa xác định"}</div>
-            <div className="desk-caller__meta">
-              <span>{numberLabel(offer.caller.number)}</span>
-              {offer.caller.email && <span>{offer.caller.email}</span>}
-              <Badge tone="blue">{offer.departmentName}</Badge>
-            </div>
-            <div className="desk-caller__facts">
-              <span>{offer.caller.recentCalls} cuộc gọi trong 30 ngày</span>
-              {!offer.caller.userId && <span>Chưa liên kết tài khoản</span>}
-            </div>
-            {offer.context && <p className="desk-context"><Icon name="book" size={14} /> {offer.context}</p>}
-            <CallerProfile api={api} callId={offer.callId} outcomeLabel={OUTCOME_LABEL} />
-            {me.state === "on_call" && offer.caller.userId && <VideoInviteButton callId={offer.callId} api={api} fail={fail} />}
-          </div>
-        ) : (
-          <p className="desk-muted">Hồ sơ người gọi, các lần liên hệ trước và phiếu liên quan hiện ở đây khi có cuộc gọi từ hàng đợi.</p>
-        )}
-      </aside>
+
+        {/* Right: dial an extension, the school's directory with busy lamps. */}
+        <div className="cc-console__col cc-console__col--dial">
+          <DeskDialer hotlineCall={hotlineCall} />
+        </div>
+      </div>
     </div>
   );
 }
-
-const KEYPAD = [["1", ""], ["2", "ABC"], ["3", "DEF"], ["4", "GHI"], ["5", "JKL"], ["6", "MNO"], ["7", "PQRS"], ["8", "TUV"], ["9", "WXYZ"], ["*", ""], ["0", "+"], ["#", ""]] as const;
 
 const MONITOR: { mode: MonitorMode; label: string; title: string }[] = [
   { mode: "listen", label: "Nghe", title: "Nghe cuộc gọi, hai bên không nghe thấy bạn" },
   { mode: "whisper", label: "Nhắc", title: "Chỉ tổng đài viên nghe thấy bạn" },
   { mode: "barge", label: "Tham gia", title: "Tham gia cuộc gọi ba bên" },
+];
+const LEGEND: [string, string][] = [
+  ["green", "Sẵn sàng"],
+  ["red", "Đổ chuông / đàm thoại"],
+  ["amber", "Tạm nghỉ"],
+  ["blue", "Hoàn tất cuộc gọi"],
+  ["neutral", "Ngoại tuyến"],
 ];
 
 function LiveBoard({
@@ -690,81 +684,123 @@ function LiveBoard({
     };
   }, [departmentId, load, socket]);
 
-  const count = (state: AgentState) => live?.agents.filter((agent) => agent.state === state).length ?? 0;
-  const longestWait = Math.max(0, ...(live?.waiting.map((call) => seconds(call.waitingSince, null)) ?? []));
+  // A snapshot of another department (just switched) is not shown as this one's.
+  const snapshot = live?.departmentId === departmentId ? live : null;
+  const agents = snapshot?.agents ?? [];
+  const waiting = snapshot?.waiting ?? [];
+  const count = (...states: AgentState[]) => agents.filter((agent) => states.includes(agent.state)).length;
+  const longestWait = Math.max(0, ...waiting.map((call) => seconds(call.waitingSince, null)));
+  const queueTone = waiting.length ? waitTone(longestWait) : "";
+  const kpis: { label: string; value: string | number; note?: string; tone?: string }[] = [
+    { label: "Đang chờ", value: waiting.length, note: waiting.length ? `${waiting.filter((call) => seconds(call.waitingSince, null) >= 60).length} cuộc quá 60 giây` : "hàng đợi trống", tone: queueTone },
+    { label: "Chờ lâu nhất", value: clock(longestWait), note: "ngưỡng 30 / 60 giây", tone: queueTone },
+    { label: "Đổ chuông / đàm thoại", value: count("ringing", "on_call"), note: `trên ${agents.length} tổng đài viên` },
+    { label: "Sẵn sàng", value: count("ready"), tone: count("ready") ? "green" : waiting.length ? "red" : "" },
+    { label: "Tạm nghỉ · hoàn tất", value: count("not_ready", "wrap_up") },
+    { label: "Ngoại tuyến", value: count("offline") },
+  ];
+  const department = options.find((item) => item.id === departmentId)?.name ?? "";
   return (
-    <div ref={board} className="desk-wallboard">
-      <div className="desk-toolbar">
-        {options.length > 1 ? (
-          <FilterPills options={options.map((item) => ({ key: item.id, label: item.name }))} activeKey={departmentId} onChange={setDepartmentId} />
-        ) : <span />}
-        <time className="desk-wallboard__clock">{new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</time>
+    <div ref={board} className="cc-wall">
+      <div className="cc-pagehead">
+        <div>
+          <p className="cc-eyebrow"><span className="cc-led tone-red is-pulse" aria-hidden="true" />Trực tiếp · {new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</p>
+          <h1 className="cc-pagehead__title">Giám sát tổng đài</h1>
+        </div>
+        {options.length > 1 && (
+          <select className="cc-select" aria-label="Phòng ban" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
+            {options.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </select>
+        )}
         <Button
-          size="sm"
-          variant="ghost"
-          icon="monitor"
+          variant="secondary"
+          icon="maximize"
           onClick={() => (document.fullscreenElement ? document.exitFullscreen() : board.current?.requestFullscreen())?.catch(() => undefined)}
         >
           Wallboard toàn màn hình
         </Button>
       </div>
-      <div className="callcenter-kpi-grid">
-        <KpiStatCard icon="clock" tone="amber" value={live?.waiting.length ?? 0} label="Cuộc gọi đang chờ" />
-        <KpiStatCard icon="users" tone="green" value={count("ready")} label="Tổng đài viên sẵn sàng" />
-        <KpiStatCard icon="headset" tone="purple" value={count("on_call") + count("ringing")} label="Đang đổ chuông / đàm thoại" />
-        <KpiStatCard
-          icon="clock"
-          tone={longestWait >= 60 ? "red" : "blue"}
-          value={clock(longestWait)}
-          label="Chờ lâu nhất"
-          className={longestWait >= 60 ? "is-late" : ""}
-        />
-      </div>
-      <div className="callcenter-main-grid desk-live-grid">
-        <div className="callcenter-panel">
-          <div className="callcenter-panel__head">
-            <h2 className="callcenter-panel__title"><Icon name="clock" size={18} /><span>Hàng đợi</span></h2>
+      {!departmentId ? (
+        <p className="callcenter-panel desk-muted">Chưa có phòng ban nào để giám sát.</p>
+      ) : (
+        <>
+          <section className="cc-kpis" aria-label="Chỉ số trực tiếp">
+            {kpis.map((item) => (
+              <div key={item.label} className={`cc-kpi ${item.tone ? `tone-${item.tone}` : ""}`}>
+                <small>{item.label}</small>
+                <strong>{item.value}</strong>
+                {item.note && <span>{item.note}</span>}
+              </div>
+            ))}
+          </section>
+          <div className="cc-wall__grid">
+            <section className="cc-rack" aria-label="Tổng đài viên">
+              <div className="cc-rack__head">
+                <h2>Tổng đài viên</h2>
+                <ul className="cc-legend" aria-label="Chú thích trạng thái">
+                  {LEGEND.map(([tone, label]) => (
+                    <li key={tone} className={`tone-${tone}`}><span className="cc-led" aria-hidden="true" />{label}</li>
+                  ))}
+                </ul>
+              </div>
+              <p className="cc-rack__group">{department} · {agents.length} người · {waiting.length} đang chờ</p>
+              {!snapshot ? (
+                <p className="cc-rack__empty">Đang tải…</p>
+              ) : !agents.length ? (
+                <p className="cc-rack__empty">Phòng ban chưa có tổng đài viên.</p>
+              ) : (
+                <ul className="cc-units">
+                  {agents.map((agent) => (
+                    <li key={agent.userId} className={`cc-unit tone-${STATE_TONE[agent.state]}`}>
+                      <span className="cc-led" aria-hidden="true" />
+                      <div className="cc-unit__who">
+                        <strong>{agent.displayName}</strong>
+                        <span>{agent.extension ?? "—"} · {STATE_LABEL[agent.state]}{agent.reason ? ` · ${agent.reason}` : ""}</span>
+                      </div>
+                      {agent.since && <time className="cc-unit__time">{clock(seconds(agent.since, null))}</time>}
+                      {agent.state === "on_call" && agent.callId && onMonitor && (
+                        <div className="cc-unit__monitor" role="group" aria-label={`Giám sát cuộc gọi của ${agent.displayName}`}>
+                          {MONITOR.map((item) => (
+                            <button key={item.mode} type="button" title={item.title} onClick={() => onMonitor(agent.callId!, item.mode)}>
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+            <section className="callcenter-panel cc-queue" aria-label="Hàng đợi">
+              <div className="callcenter-panel__head">
+                <h2 className="callcenter-panel__title">Hàng đợi</h2>
+                <span className={`cc-count ${queueTone ? `tone-${queueTone}` : ""}`}>{waiting.length} đang chờ</span>
+              </div>
+              {!waiting.length ? (
+                <p className="desk-muted">Không có cuộc gọi nào đang chờ.</p>
+              ) : (
+                <ul className="cc-queue__list">
+                  {waiting.map((call) => {
+                    const waited = seconds(call.waitingSince, null);
+                    return (
+                      <li key={call.callId} className={`tone-${waitTone(waited)}`}>
+                        <span className="cc-led" aria-hidden="true" />
+                        <div>
+                          <strong>{call.callerName ?? numberLabel(call.callerNumber)}</strong>
+                          {call.callerName && <span>{numberLabel(call.callerNumber)}</span>}
+                        </div>
+                        <time>{clock(waited)}</time>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
           </div>
-          {!live?.waiting.length ? <p className="desk-muted">Không có cuộc gọi nào đang chờ.</p> : live.waiting.map((call) => (
-            <div key={call.callId} className="call-item-card">
-              <div className="call-item-info">
-                <div className="call-item-caller">{call.callerName ?? call.callerNumber}</div>
-                <div className="call-item-meta"><span>{numberLabel(call.callerNumber)}</span><span>·</span><span className="desk-wait">Chờ {clock(seconds(call.waitingSince, null))}</span></div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="callcenter-panel">
-          <div className="callcenter-panel__head">
-            <h2 className="callcenter-panel__title"><Icon name="users" size={18} /><span>Tổng đài viên</span></h2>
-          </div>
-          {!live?.agents.length ? <p className="desk-muted">Phòng ban chưa có tổng đài viên.</p> : live.agents.map((agent) => (
-            <div key={agent.userId} className="call-item-card">
-              <div className="call-item-info">
-                <div className="call-item-caller">{agent.displayName}</div>
-                <div className="call-item-meta">
-                  <span>Máy lẻ {agent.extension ?? "—"}</span>
-                  {agent.reason && <><span>·</span><span>{agent.reason}</span></>}
-                </div>
-              </div>
-              <div className="desk-agent-state">
-                <Badge tone={STATE_TONE[agent.state]} dot>{STATE_LABEL[agent.state]}</Badge>
-                {agent.since && <span className="desk-muted">{clock(seconds(agent.since, null))}</span>}
-                {agent.state === "on_call" && agent.callId && onMonitor && (
-                  <div className="call-supervisor-actions">
-                    {MONITOR.map((item) => (
-                      <button key={item.mode} type="button" className="desk-monitor" title={item.title} onClick={() => onMonitor(agent.callId!, item.mode)}>
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      {departmentId && <KpiPanel departmentId={departmentId} api={api} fail={fail} token={token} refreshKey={refreshKey} />}
+          <KpiPanel departmentId={departmentId} api={api} fail={fail} token={token} refreshKey={refreshKey} />
+        </>
+      )}
     </div>
   );
 }
@@ -814,7 +850,26 @@ function TrainingRequired({ training }: { training: CcAgentProfile["training"] }
   );
 }
 
+const PERIODS = [
+  { key: "today", label: "Hôm nay", days: 1 },
+  { key: "7d", label: "7 ngày", days: 7 },
+  { key: "30d", label: "30 ngày", days: 30 },
+  { key: "all", label: "Tất cả", days: 0 },
+] as const;
+const OUTCOME_FILTERS = ["answered", "abandoned", "missed", "voicemail", "open"] as const;
+const DAY = 86_400_000;
+const dayLabel = (iso: string) => {
+  const date = new Date(iso);
+  const start = new Date(iso).setHours(0, 0, 0, 0);
+  const today = new Date().setHours(0, 0, 0, 0);
+  const short = date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+  if (start === today) return `Hôm nay · ${short}`;
+  if (start === today - DAY) return `Hôm qua · ${short}`;
+  return date.toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
+};
+
 function CallHistory({ me, api, fail, token }: { me: CcAgentProfile; api: Api; fail: (error: unknown) => void; token: string }) {
+  const phone = useGlobalSoftphone();
   const [calls, setCalls] = useState<CcCallRecord[] | null>(null);
   const [dispositions, setDispositions] = useState<CcDisposition[]>([]);
   const [playing, setPlaying] = useState<{ id: string; url: string } | null>(null);
@@ -824,9 +879,13 @@ function CallHistory({ me, api, fail, token }: { me: CcAgentProfile; api: Api; f
   const [reading, setReading] = useState<CcCallRecord | null>(null);
   const [query, setQuery] = useState("");
   const [outcome, setOutcome] = useState("");
+  const [period, setPeriod] = useState<(typeof PERIODS)[number]["key"]>("all");
+  const [departmentId, setDepartmentId] = useState("");
+  const [recorded, setRecorded] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
-    api<CcCallRecord[]>("calls?limit=100").then(setCalls, fail);
+    api<CcCallRecord[]>("calls?limit=200").then(setCalls, fail);
     api<CcDisposition[]>("dispositions").then(setDispositions, fail);
     api<CcQaReview[]>("qa-reviews").then((list) => setReviews(new Map(list.map((review) => [review.callId, review]))), fail);
   }, [api, fail]);
@@ -838,62 +897,184 @@ function CallHistory({ me, api, fail, token }: { me: CcAgentProfile; api: Api; f
     me.isAdmin || me.departments.some((department) => department.id === call.departmentId && department.role === "supervisor");
   useEffect(() => () => void (playing && URL.revokeObjectURL(playing.url)), [playing]);
 
-  const play = (call: CcCallRecord) => recordingUrl(token, call.id).then((url) => setPlaying({ id: call.id, url }), fail);
+  const play = (call: CcCallRecord) => {
+    setSelectedId(call.id);
+    if (playing?.id !== call.id) recordingUrl(token, call.id).then((url) => setPlaying({ id: call.id, url }), fail);
+  };
   const labelOf = (id: string | null) => dispositions.find((item) => item.id === id)?.label ?? "";
+  const days = PERIODS.find((item) => item.key === period)!.days;
+  const since = days ? new Date().setHours(0, 0, 0, 0) - (days - 1) * DAY : 0;
+  // Counts follow the period and department; the outcome, recording and text filters only narrow the list.
+  const scoped = calls?.filter((call) => Date.parse(call.startedAt) >= since && (!departmentId || call.departmentId === departmentId)) ?? [];
+  const countOf = (key: string) => scoped.filter((call) => (key === "open" ? !call.outcome : call.outcome === key)).length;
   const needle = query.trim().toLowerCase();
-  const shown = calls?.filter(
+  const shown = scoped.filter(
     (call) =>
       (!outcome || (outcome === "open" ? !call.outcome : call.outcome === outcome)) &&
+      (!recorded || call.hasRecording) &&
       (!needle || [call.callerName, call.callerNumber, call.agentName, call.departmentName, call.notes].some((value) => value?.toLowerCase().includes(needle))),
   );
+  const departments = [...new Map((calls ?? []).filter((call) => call.departmentId).map((call) => [call.departmentId!, call.departmentName ?? "—"])).entries()];
+  const groups: { label: string; calls: CcCallRecord[] }[] = [];
+  for (const call of shown) {
+    const label = dayLabel(call.startedAt);
+    const last = groups[groups.length - 1];
+    if (last?.label === label) last.calls.push(call);
+    else groups.push({ label, calls: [call] });
+  }
+  const selected = calls?.find((call) => call.id === selectedId) ?? null;
+  const review = selected ? reviews.get(selected.id) : undefined;
+  const canCall = phone.status === "registered" && phone.phase === "none";
+
   return (
-    <div className="cdr-table-card">
-      <div className="cdr-toolbar">
-        <input type="search" aria-label="Tìm cuộc gọi" placeholder="Tìm theo người gọi, số, tổng đài viên, ghi chú…" value={query} onChange={(event) => setQuery(event.target.value)} />
-        <select aria-label="Lọc theo kết quả" value={outcome} onChange={(event) => setOutcome(event.target.value)}>
-          <option value="">Mọi kết quả</option>
-          <option value="open">Đang diễn ra</option>
-          {Object.entries(OUTCOME_LABEL).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-        </select>
-        <span className="desk-muted">{shown ? `${shown.length}/${calls!.length} cuộc gọi` : "Đang tải…"}</span>
+    <div className="cc-history">
+      <div className="cc-pagehead">
+        <div>
+          <h1 className="cc-pagehead__title">Lịch sử cuộc gọi</h1>
+          <p className="cc-summary">
+            {calls === null ? (
+              "Đang tải…"
+            ) : (
+              <>
+                {scoped.length} cuộc · <b className="tone-green">{countOf("answered")} đã nghe</b> · <b className="tone-amber">{countOf("abandoned")} bỏ máy</b> ·{" "}
+                <b className="tone-red">{countOf("missed")} nhỡ</b> · <b className="tone-blue">{countOf("voicemail")} thư thoại</b>
+              </>
+            )}
+          </p>
+        </div>
+        <label className="cc-search cc-search--wide">
+          <Icon name="search" size={15} />
+          <input type="search" aria-label="Tìm cuộc gọi" placeholder="Tìm người gọi, số, tổng đài viên, ghi chú…" value={query} onChange={(event) => setQuery(event.target.value)} />
+        </label>
       </div>
-      <div className="cdr-table-wrapper">
-        <table className="cdr-table">
-          <thead>
-            <tr><th>Thời điểm</th><th>Người gọi</th><th>Phòng ban</th><th>Tổng đài viên</th><th>Kết quả</th><th>Thời lượng</th><th>Ghi nhận</th><th>Ghi âm</th><th>Chất lượng</th></tr>
-          </thead>
-          <tbody>
-            {shown?.map((call) => (
-              <tr key={call.id}>
-                <td>{new Date(call.startedAt).toLocaleString("vi-VN")}</td>
-                <td>{call.callerName ?? call.callerNumber}{call.callerName && <div className="desk-muted">{numberLabel(call.callerNumber)}</div>}</td>
-                <td>{call.departmentName ?? "—"}</td>
-                <td>{call.agentName ?? "—"}</td>
-                <td>{call.outcome ? <Badge tone={call.outcome === "answered" ? "green" : call.outcome === "voicemail" ? "blue" : "amber"}>{OUTCOME_LABEL[call.outcome]}</Badge> : <Badge tone="violet">Đang diễn ra</Badge>}</td>
-                <td>{call.answeredAt ? clock(seconds(call.answeredAt, call.endedAt)) : "—"}</td>
-                <td>{labelOf(call.dispositionId)}{call.notes && <div className="desk-muted desk-notes">{call.notes}</div>}</td>
-                <td>
-                  {playing?.id === call.id ? <audio src={playing.url} controls autoPlay /> : call.hasRecording ? (
-                    <Button size="sm" variant="ghost" icon="play" onClick={() => play(call)}>Nghe</Button>
-                  ) : "—"}
-                  {call.transcriptStatus === "ready" && <Button size="sm" variant="ghost" icon="file" onClick={() => setReading(call)}>Lời thoại</Button>}
-                  {call.transcriptStatus === "processing" && <div className="desk-muted">Đang chép lời…</div>}
-                </td>
-                <td className="cdr-actions">
-                  {reviews.get(call.id) && <Badge tone={qaTone(reviews.get(call.id)!.percent)}>{reviews.get(call.id)!.percent}%</Badge>}
-                  {canScore(call) && (
-                    <Button size="sm" variant="ghost" icon="star" onClick={() => setScoring(call)}>{reviews.has(call.id) ? "Chấm lại" : "Chấm điểm"}</Button>
-                  )}
-                  {call.hasRecording && call.endedAt && supervises(call) && (
-                    <Button size="sm" variant="ghost" icon="book" onClick={() => setTeaching(call)}>Làm bài học</Button>
-                  )}
-                  {!reviews.has(call.id) && !canScore(call) && !(call.hasRecording && call.endedAt && supervises(call)) && "—"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {shown && !shown.length && <p className="desk-muted desk-empty-row">{calls!.length ? "Không có cuộc gọi khớp bộ lọc." : "Chưa có cuộc gọi nào."}</p>}
+
+      <div className="cc-chips" role="toolbar" aria-label="Bộ lọc cuộc gọi">
+        {PERIODS.map((item) => (
+          <button key={item.key} type="button" className="cc-chip-btn" aria-pressed={period === item.key} onClick={() => setPeriod(item.key)}>
+            {item.label}
+          </button>
+        ))}
+        <span className="cc-chips__sep" aria-hidden="true" />
+        {OUTCOME_FILTERS.map((key) => (
+          <button key={key} type="button" className="cc-chip-btn" aria-pressed={outcome === key} onClick={() => setOutcome(outcome === key ? "" : key)}>
+            <span className={`cc-led tone-${key === "open" ? "red" : OUTCOME_TONE[key]}`} aria-hidden="true" />
+            {key === "open" ? "Đang diễn ra" : OUTCOME_LABEL[key]}
+            <small>{countOf(key)}</small>
+          </button>
+        ))}
+        <span className="cc-chips__sep" aria-hidden="true" />
+        <button type="button" className="cc-chip-btn" aria-pressed={recorded} onClick={() => setRecorded(!recorded)}>
+          <Icon name="play" size={12} />Có ghi âm
+        </button>
+        {departments.length > 1 && (
+          <select className="cc-select" aria-label="Lọc theo phòng ban" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
+            <option value="">Mọi phòng ban</option>
+            {departments.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+          </select>
+        )}
+      </div>
+
+      <div className={`cc-history__grid ${selected ? "has-drawer" : ""}`}>
+        <section className="cc-calls" aria-label="Danh sách cuộc gọi">
+          {calls === null ? (
+            <p className="desk-muted cc-calls__empty">Đang tải cuộc gọi…</p>
+          ) : !shown.length ? (
+            <p className="desk-muted cc-calls__empty">{calls.length ? "Không có cuộc gọi khớp bộ lọc." : "Chưa có cuộc gọi nào."}</p>
+          ) : (
+            groups.map((group) => (
+              <div key={group.label} className="cc-day">
+                <h3 className="cc-day__head"><span>{group.label}</span><span>{group.calls.length} cuộc</span></h3>
+                <ul>
+                  {group.calls.map((call) => {
+                    const [arrow, way] = DIRECTION[call.direction];
+                    const result = call.outcome ? OUTCOME_LABEL[call.outcome] : "Đang diễn ra";
+                    return (
+                      <li key={call.id} className={`cc-row ${call.id === selectedId ? "is-selected" : ""}`}>
+                        <button type="button" className="cc-row__main" aria-pressed={call.id === selectedId} onClick={() => setSelectedId(call.id === selectedId ? null : call.id)}>
+                          <span className={`cc-led tone-${call.outcome ? OUTCOME_TONE[call.outcome] : "red"}`} role="img" aria-label={result} title={result} />
+                          <time className="cc-row__time">{new Date(call.startedAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</time>
+                          <span className="cc-row__dir" role="img" aria-label={way} title={way}>{arrow}</span>
+                          <span className={`cc-row__caller ${call.callerName ? "" : "is-number"}`}>{call.callerName ?? numberLabel(call.callerNumber)}</span>
+                          <span className="cc-row__agent">
+                            {call.agentName ?? "—"}
+                            {call.departmentName && <small> · {call.departmentName}</small>}
+                          </span>
+                          <span className="cc-row__cat">{labelOf(call.dispositionId) || call.notes || result}</span>
+                          <span className="cc-row__dur">{call.answeredAt ? clock(seconds(call.answeredAt, call.endedAt)) : "—"}</span>
+                        </button>
+                        {call.hasRecording ? (
+                          <button type="button" className={`cc-round ${playing?.id === call.id ? "is-on" : ""}`} aria-label={`Nghe ghi âm cuộc gọi lúc ${new Date(call.startedAt).toLocaleString("vi-VN")}`} onClick={() => play(call)}>
+                            <Icon name="play" size={12} />
+                          </button>
+                        ) : (
+                          <span />
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))
+          )}
+        </section>
+
+        {selected && (
+          <aside className="cc-drawer" aria-label="Chi tiết cuộc gọi">
+            <div className="cc-drawer__head">
+              <div className="cc-drawer__id">
+                <span className={`cc-chip tone-${selected.outcome ? OUTCOME_TONE[selected.outcome] : "red"}`}>
+                  <span className="cc-led" aria-hidden="true" />
+                  {selected.outcome ? OUTCOME_LABEL[selected.outcome] : "Đang diễn ra"} · {DIRECTION[selected.direction][1]}
+                </span>
+                <h2>{selected.callerName ?? numberLabel(selected.callerNumber)}</h2>
+                <p>
+                  {[selected.callerName && numberLabel(selected.callerNumber), selected.agentName, selected.departmentName, new Date(selected.startedAt).toLocaleString("vi-VN")]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              </div>
+              <button type="button" className="cc-icon-btn" aria-label="Đóng chi tiết cuộc gọi" onClick={() => setSelectedId(null)}>
+                <Icon name="x" size={16} />
+              </button>
+            </div>
+            <div className="cc-drawer__audio">
+              {playing?.id === selected.id ? (
+                <audio src={playing.url} controls autoPlay />
+              ) : selected.hasRecording ? (
+                <Button size="sm" variant="secondary" icon="play" onClick={() => play(selected)}>Nghe ghi âm</Button>
+              ) : (
+                <span>Không có ghi âm</span>
+              )}
+              <strong>{selected.answeredAt ? clock(seconds(selected.answeredAt, selected.endedAt)) : "—"}</strong>
+            </div>
+            <dl className="cc-drawer__facts">
+              <div><dt>Kết quả ghi nhận</dt><dd>{labelOf(selected.dispositionId) || "Chưa ghi nhận"}</dd></div>
+              <div><dt>Ghi chú</dt><dd className="cc-drawer__notes">{selected.notes || "Không có ghi chú."}</dd></div>
+              {selected.queuedAt && <div><dt>Chờ trong hàng đợi</dt><dd>{clock(seconds(selected.queuedAt, selected.answeredAt ?? selected.endedAt))}</dd></div>}
+              {review && (
+                <div>
+                  <dt>Chất lượng</dt>
+                  <dd><Badge tone={qaTone(review.percent)}>{review.percent}%</Badge>{review.reviewerName && ` · ${review.reviewerName}`}</dd>
+                </div>
+              )}
+              {selected.transcriptStatus === "processing" && <div><dt>Lời thoại</dt><dd>Đang chép lời…</dd></div>}
+            </dl>
+            <div className="cc-drawer__actions">
+              {dialable(selected.callerNumber) && (
+                <Button icon="phone" disabled={!canCall} title={canCall ? `Gọi lại ${selected.callerNumber}` : "Máy lẻ chưa sẵn sàng để gọi"} onClick={() => phone.call(selected.callerNumber)}>
+                  Gọi lại
+                </Button>
+              )}
+              {selected.transcriptStatus === "ready" && <Button variant="secondary" icon="file" onClick={() => setReading(selected)}>Lời thoại</Button>}
+              {canScore(selected) && (
+                <Button variant="secondary" icon="star" onClick={() => setScoring(selected)}>{reviews.has(selected.id) ? "Chấm lại" : "Chấm điểm"}</Button>
+              )}
+              {selected.hasRecording && selected.endedAt && supervises(selected) && (
+                <Button variant="secondary" icon="book" className="cc-drawer__lesson" onClick={() => setTeaching(selected)}>Làm bài học từ cuộc gọi này</Button>
+              )}
+            </div>
+          </aside>
+        )}
       </div>
       {reading && (
         <CallTranscriptDialog

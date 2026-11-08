@@ -57,10 +57,22 @@ const pages: { id: ViewId; title: string; desc: string; icon: IconName }[] = [
     icon: "phone-call",
   },
   {
+    id: "call-monitoring",
+    title: "Giám sát tổng đài",
+    desc: "Bảng điều hành thời gian thực, trạng thái tổng đài viên, hàng đợi & cấu hình",
+    icon: "activity",
+  },
+  {
     id: "elearning",
     title: "Khóa học",
     desc: "E-learning: bài video, tài liệu, bài kiểm tra, chứng nhận",
     icon: "graduation-cap",
+  },
+  {
+    id: "staff",
+    title: "Danh sách nhân sự",
+    desc: "Danh bạ giảng viên, chuyên viên, khoa phòng ban & liên hệ nội bộ",
+    icon: "users",
   },
   {
     id: "chat",
@@ -99,6 +111,22 @@ const pages: { id: ViewId; title: string; desc: string; icon: IconName }[] = [
     icon: "profile",
   },
 ];
+
+function highlightQuery(text: string, term: string) {
+  const clean = term.trim();
+  if (clean.length < 2) return text;
+  const escaped = clean.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escaped})`, "gi"));
+  return parts.map((part, idx) =>
+    part.toLowerCase() === clean.toLowerCase() ? (
+      <mark key={idx} className="notion-search-highlight">
+        {part}
+      </mark>
+    ) : (
+      part
+    ),
+  );
+}
 
 export function NotionSearchModal({
   isOpen,
@@ -573,7 +601,9 @@ export function NotionSearchModal({
                               </time>
                             </div>
                           </div>
-                          <div className="notion-search-message-content">{message.content}</div>
+                          <div className="notion-search-message-content">
+                            {highlightQuery(message.content, term)}
+                          </div>
                         </button>
                       );
                     })}

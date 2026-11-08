@@ -145,8 +145,8 @@
 }
 
 .editorial-input-wrap:focus-within {
-  border-color: var(--brand-primary, #2563EB);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  border-color: var(--brand-primary, #059669);
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.14);
 }
 
 .editorial-input-icon {
@@ -309,8 +309,8 @@
 .editorial-otp-input:focus,
 .editorial-otp-input:focus-visible {
   outline: none !important;
-  border-color: var(--brand-primary, #2563EB) !important;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+  border-color: var(--brand-primary, #059669) !important;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.14) !important;
 }
 
 /* Inline Scoped Styles */

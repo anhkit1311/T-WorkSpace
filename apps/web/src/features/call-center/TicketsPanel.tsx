@@ -226,8 +226,8 @@ function TicketDetail({
         </Field>
       </div>
       <div className="desk-actions desk-actions--start">
-        {/* Internal only (no trunk): an extension can be called back; a student who called from the web is answered in the ticket. */}
-        {ticket.callerNumber && /^1\d{3,4}$/.test(ticket.callerNumber) && (
+        {/* An extension, or an outside number through the SIP trunk (needs the call-out permission, BR-20); web callers are answered in the ticket. */}
+        {ticket.callerNumber && /^(1\d{3,4}|0[1-9]\d{8,9})$/.test(ticket.callerNumber) && (
           <Button size="sm" icon="phone" onClick={onCallBack} disabled={!canCall} title={canCall ? undefined : "Cần đăng ký softphone trước"}>
             Gọi lại {ticket.callerNumber}
           </Button>

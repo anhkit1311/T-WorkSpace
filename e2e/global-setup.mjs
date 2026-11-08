@@ -1,6 +1,7 @@
 // Creates throw-away accounts and a group with a video room for the E2E run; global-teardown deletes them.
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import { fixturesFile } from "./fixtures.mjs";
 
 export default async function globalSetup() {
@@ -25,6 +26,7 @@ export default async function globalSetup() {
     const workspace = await createWorkspace(users.alice.id, `E2E ${Date.now()}`);
     await addWorkspaceMember(workspace.id, users.bob.id);
     const room = (await getWorkspaceChannels(users.alice.id, workspace.id)).find((channel) => channel.type === "video");
+    await mkdir(dirname(fixturesFile), { recursive: true });
     await writeFile(fixturesFile, JSON.stringify({ password, users, workspaceId: workspace.id, roomId: room.id }));
   }
 }

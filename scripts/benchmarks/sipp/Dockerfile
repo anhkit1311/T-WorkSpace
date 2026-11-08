@@ -1,3 +1,5 @@
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y --no-install-recommends sip-tester && rm -rf /var/lib/apt/lists/*
+# tcpdump/tshark/iproute2: voice-quality runs (run-sipp.mjs --pcap/--netem) capture RTP and shape the caller's link.
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends sip-tester tcpdump tshark iproute2 \
+  && rm -rf /var/lib/apt/lists/*
 ENTRYPOINT ["sipp"]

@@ -45,6 +45,7 @@ export function KpiPanel({ departmentId, api, fail, token, refreshKey }: { depar
         <KpiStatCard icon="warning" tone="red" value={percent(report?.abandonRate ?? null)} label="Tỉ lệ bỏ máy" />
         <KpiStatCard icon="check" tone="green" value={percent(report?.serviceLevel ?? null)} label={`Service level (nghe trong ${report?.serviceLevelSeconds ?? 20}s)`} />
         <KpiStatCard icon="message" tone="blue" value={report?.voicemail ?? "—"} label="Thư thoại" />
+        <KpiStatCard icon="phone" tone="amber" value={report?.callback ?? "—"} label="Hẹn gọi lại (không tính bỏ máy)" />
       </div>
       {report && report.hourly.length > 0 && (
         <div className="desk-hourly" aria-label="Cuộc gọi theo giờ">

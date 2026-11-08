@@ -249,20 +249,23 @@ test("CC-9 KPI: ASA, AHT, abandon rate and service level", () => {
     { agentUserId: "a", agentName: "An", startedAt: at(0), queuedAt: at(0), answeredAt: at(30), endedAt: at(150), outcome: "answered" },
     { agentUserId: null, agentName: null, startedAt: at(0), queuedAt: at(0), answeredAt: null, endedAt: at(40), outcome: "abandoned" },
     { agentUserId: null, agentName: null, startedAt: at(0), queuedAt: at(0), answeredAt: null, endedAt: at(300), outcome: "voicemail" },
+    // pressed * to be called back: offered, but neither abandoned nor in the service level
+    { agentUserId: null, agentName: null, startedAt: at(0), queuedAt: at(0), answeredAt: null, endedAt: at(25), outcome: "callback" },
     // never reached the queue (hung up in the IVR): not offered
     { agentUserId: null, agentName: null, startedAt: at(0), queuedAt: null, answeredAt: null, endedAt: at(3), outcome: "abandoned" },
   ];
   const report = kpiSummary(calls, [10, 20], 20);
-  assert.equal(report.offered, 4);
+  assert.equal(report.offered, 5);
   assert.equal(report.answered, 2);
   assert.equal(report.abandoned, 1);
   assert.equal(report.voicemail, 1);
+  assert.equal(report.callback, 1);
   assert.equal(report.asa, 20); // (10 + 30) / 2
   assert.equal(report.aht, 105); // (60 + 120) / 2 + (10 + 20) / 2
-  assert.equal(report.abandonRate, 0.25);
+  assert.equal(report.abandonRate, 0.2);
   assert.equal(report.serviceLevel, 0.3333); // 1 fast answer / (2 answered + 1 abandoned)
   assert.deepEqual(report.agents, [{ userId: "a", displayName: "An", answered: 2, talkSeconds: 180, averageTalk: 90 }]);
-  assert.deepEqual(report.hourly, [{ hour: 9, offered: 4, answered: 2 }]);
+  assert.deepEqual(report.hourly, [{ hour: 9, offered: 5, answered: 2 }]);
   assert.equal(kpiSummary([], [], 20).serviceLevel, null);
 
   const { start, end } = periodBounds("2026-10-19", "2026-10-20");

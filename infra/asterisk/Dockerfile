@@ -38,9 +38,10 @@ COPY --from=opus /opus/codec_opus.so /usr/lib/asterisk/modules/
 COPY --from=opus /opus/codec_opus_config-en_US.xml /var/lib/asterisk/documentation/thirdparty/
 COPY config/ /opt/nexo-asterisk/
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
+# A Windows checkout (core.autocrlf) gives CRLF, which breaks sh and leaks \r into generated config.
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/bin/docker-entrypoint.sh \
   && mkdir -p /etc/asterisk /var/run/asterisk /var/log/asterisk /var/spool/asterisk \
   && chown -R asterisk:asterisk /etc/asterisk /var/lib/asterisk /var/run/asterisk /var/log/asterisk /var/spool/asterisk
-# 5060/udp SIP · 8088/tcp HTTP (ARI + SIP over WebSocket) · 10000-10099/udp RTP
-EXPOSE 5060/udp 8088/tcp 10000-10099/udp
+# 5060/udp SIP · 8088/tcp HTTP (ARI + SIP over WebSocket) · 10000-10499/udp RTP
+EXPOSE 5060/udp 8088/tcp 10000-10499/udp
 ENTRYPOINT ["docker-entrypoint.sh"]
