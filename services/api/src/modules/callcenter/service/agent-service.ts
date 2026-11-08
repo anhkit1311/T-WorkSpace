@@ -126,9 +126,10 @@ export class CallCenterAgentService {
   }
 
   /** The agent's own SIP account for the browser softphone. Only ever sent to its owner. */
-  async sipAccount(userId: string): Promise<CcSipAccount> {
+  /** Null (not 404) for users without an extension: every page asks, so a miss is not an error. */
+  async sipAccount(userId: string): Promise<CcSipAccount | null> {
     const extension = await this.repo.ownExtension(userId);
-    if (!extension) throw notFound("Bạn chưa được cấp máy lẻ.");
+    if (!extension) return null;
     return {
       number: extension.number,
       secret: extension.sip_secret,

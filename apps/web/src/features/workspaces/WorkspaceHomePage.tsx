@@ -150,6 +150,7 @@ export function WorkspaceHomePage() {
 
   return (
     <div className="tdtu-home-container">
+      <h1 className="sr-only">Trang chủ</h1>
       {/* Khu vực nội dung chính chia 2 cột Bento (Tỷ lệ 2.15fr : 1fr) */}
       <section className="tdtu-home-main-grid">
         {/* Cột trái: Bảng tin + Việc của bạn */}

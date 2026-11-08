@@ -17,7 +17,7 @@ const SoftphoneContext = createContext<Softphone | null>(null);
 
 /**
  * UI-1: one softphone for the whole app, so a call survives moving between pages. Users without
- * an extension never register (me/sip answers 404 and the phone stays off).
+ * an extension never register (me/sip answers null and the phone stays off).
  */
 export function SoftphoneProvider({ children }: { children: ReactNode }) {
   const { accessToken, notify } = useApp();
@@ -29,8 +29,14 @@ export function SoftphoneProvider({ children }: { children: ReactNode }) {
   const signedIn = Boolean(accessToken);
   const refresh = useCallback(() => {
     if (!token.current) return setAccount(null);
-    callCenterApi<CcSipAccount>(token.current, "me/sip").then(
-      (next) => setAccount((current) => (current && current.number === next.number && current.secret === next.secret ? current : next)),
+    // No extension: the router turns the null into { ok: true }, so only a numbered account counts.
+    callCenterApi<Partial<CcSipAccount>>(token.current, "me/sip").then(
+      (data) => {
+        const next = data.number ? (data as CcSipAccount) : null;
+        setAccount((current) =>
+          next && current && current.number === next.number && current.secret === next.secret ? current : next,
+        );
+      },
       () => setAccount(null),
     );
   }, []);

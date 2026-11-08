@@ -55,18 +55,21 @@ test("đăng nhập sai mật khẩu báo lỗi, đúng mật khẩu vào trang 
   await expect(page.getByRole("alert").first()).toBeVisible();
   await expect(page).toHaveURL(/\/login/);
   await signIn(page, users.alice);
-  await expect(page.getByText(`Xin chào, ${users.alice.name}`)).toBeVisible();
+  await expect(page.getByRole("button", { name: `Tài khoản: ${users.alice.name}` })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bảng tin nội bộ" })).toBeVisible();
 });
 
 test("chỉ quản trị hệ thống thấy trang Quản trị và sức khoẻ hệ thống", async ({ browser }) => {
   const { users } = fixtures();
   const member = await signedIn(browser, users.alice);
   await expect(member.getByText("Trang chủ").first()).toBeVisible();
-  await expect(member.getByRole("button", { name: "Quản trị hệ thống" })).toHaveCount(0);
+  await expect(member.getByRole("button", { name: "Quản lý" })).toHaveCount(0);
 
+  // Administration lives in the "Quản lý" menu of the top bar.
   const admin = await signedIn(browser, users.admin);
-  await expect(admin.getByRole("button", { name: "Quản trị hệ thống" })).toBeVisible();
-  await admin.goto("/app/access");
+  await admin.getByRole("button", { name: "Quản lý" }).click();
+  await admin.getByRole("menuitem", { name: "Quản trị hệ thống" }).click();
+  await expect(admin).toHaveURL(/\/app\/access/);
   const tabs = admin.getByRole("navigation", { name: "Phân hệ quản trị" });
   await expect(admin.getByRole("heading", { name: "Danh sách khoa / phòng ban" })).toBeVisible();
   await tabs.getByRole("button", { name: "Phân quyền" }).click();
@@ -107,11 +110,11 @@ test("trang Khóa học và Tổng đài mở được", async ({ browser }) => 
 
 test("menu theo chức năng", async ({ browser }) => {
   const page = await signedIn(browser, fixtures().users.alice);
-  const menu = page.locator(".tdtu-sidebar");
+  const menu = page.getByRole("navigation", { name: "Menu chức năng chính" });
   // A menu button's name ends with its unread badge, if any.
   const item = (name: string) => menu.getByRole("button", { name: new RegExp(`^${name}( \\d+)?$`) });
-  for (const name of ["Trang chủ", "Tổng đài", "Tin nhắn", "Họp", "Khóa học"]) await expect(item(name).first()).toBeVisible();
-  for (const name of ["Quản trị hệ thống", "Quản lý thông báo"]) await expect(item(name)).toHaveCount(0);
+  for (const name of ["Trang chủ", "Tổng đài", "Tin nhắn", "Họp", "Khóa học", "Nhân sự"]) await expect(item(name).first()).toBeVisible();
+  for (const name of ["Quản trị hệ thống", "Quản lý thông báo", "Báo cáo đơn vị"]) await expect(item(name)).toHaveCount(0);
   // Groups left the menu; an old link still opens the group list.
   await page.goto("/app/groups");
   const group = page.locator("main").getByRole("listitem").filter({ hasText: /^E2E \d+/ });
@@ -180,7 +183,7 @@ test("Họp: lên lịch rồi thấy trên lịch tuần, vào được phòng"
   await dialog.getByRole("button", { name: "Tạo lịch họp" }).click();
   await expect(dialog).toHaveCount(0);
   // The agenda lists it (created an hour from now); "Vào họp" opens the device check.
-  const row = page.locator(".meeting-agenda-item").filter({ hasText: title });
+  const row = page.locator(".mt-ev").filter({ hasText: title });
   const enter = async () => {
     await row.getByRole("button", { name: "Vào họp" }).click();
     await page.locator("main").getByRole("button", { name: "Vào phòng" }).last().click();
@@ -196,7 +199,7 @@ test("Họp: lên lịch rồi thấy trên lịch tuần, vào được phòng"
   // The room covers the app; "Thu nhỏ" goes back to the app with the call still running,
   // and the "Họp" item brings the room back.
   await page.getByRole("button", { name: "Thu nhỏ cuộc họp" }).click();
-  await page.locator(".tdtu-sidebar").getByRole("button", { name: /^Họp( |$)/ }).click();
+  await page.getByRole("navigation", { name: "Menu chức năng chính" }).getByRole("button", { name: /^Họp( |$)/ }).click();
   await expect.poll(() => playingVideos(page), { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
   await expect(row).toHaveCount(0);
 });

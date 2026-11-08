@@ -72,7 +72,8 @@ export function CoursesWorkspace() {
         )}
       </header>
       <div className="courses-filters" role="tablist" aria-label="Lọc khóa học">
-        {FILTERS.map(([id, label]) => (
+        {/* Learners never manage a course: "Tôi phụ trách" is only for staff who can. */}
+        {FILTERS.filter(([id]) => id !== "managing" || units.length > 0 || courses?.some((course) => course.canManage)).map(([id, label]) => (
           <button key={id} type="button" role="tab" aria-selected={filter === id} className={filter === id ? "is-active" : ""} onClick={() => setFilter(id)}>
             {label}
           </button>

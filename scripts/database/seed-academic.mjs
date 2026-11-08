@@ -95,6 +95,9 @@ async function main() {
   // The mã số (GV…) comes from the unit's code range, like "Tạo tài khoản" in the admin page.
   for (const [handle, , rank, department] of lecturers)
     await org.enrollAccount(as, unit.id, { email: people[handle].email, kind: "lecturer", rank, departmentId: departments[department] });
+  // Students get an MSSV (khóa 23): attendance and caller profiles show it, and the staff list leaves them out.
+  for (let i = 1; i <= 30; i++)
+    await org.enrollAccount(as, unit.id, { email: people[`sv${String(i).padStart(2, "0")}`].email, kind: "student", cohort: "23" });
 
   console.log(`Seeded faculty CNTT: ${Object.keys(people).length} accounts @${DOMAIN}.`);
   console.log("Accounts: giaovu (giáo vụ CNTT), truongkhoa (lãnh đạo khoa), gv.* (lecturers), sv01–sv30 (students).");

@@ -80,13 +80,13 @@ test(
       const me = await agents.me(agentId);
       assert.deepEqual(me.departments, [{ id: departmentId, name: `Phòng tuyển sinh ${tag}`, role: "agent" }]);
       assert.deepEqual(me.extension, { number: String(from), transport: "webrtc" });
-      await assert.rejects(agents.sipAccount(outsiderId), (error) => error.code === "NOT_FOUND");
+      assert.equal(await agents.sipAccount(outsiderId), null);
       await assert.rejects(agents.setState(agentId, { state: "ready" }), (error) => error.code === "CALL_CENTER_OFFLINE");
       await assert.rejects(admin.listExtensions(agentId), (error) => error.code === "FORBIDDEN", "agents see no extension list");
 
       const reset = await admin.resetSecret(adminId, extension.id);
       assert.notEqual(reset.secret, secret);
-      assert.equal((await agents.sipAccount(agentId)).secret, reset.secret);
+      assert.equal((await agents.sipAccount(agentId))?.secret, reset.secret);
       await admin.updateExtension(adminId, extension.id, { active: false });
       assert.deepEqual(removed, [String(from)]);
 

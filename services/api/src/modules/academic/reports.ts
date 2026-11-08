@@ -53,8 +53,8 @@ export async function unitReport(userId: string, params: URLSearchParams) {
        CROSS JOIN LATERAL (
          SELECT count(*)::int AS sessions,
            COALESCE(sum(extract(epoch FROM least(COALESCE(s.ended_at, now()), span.until) - s.started_at)), 0)::float8 AS seconds
-         FROM meeting_sessions s JOIN academic_staff st ON st.user_id=s.host_id AND st.unit_id=u.id
-         WHERE s.started_at>=span.since AND s.started_at<span.until) m
+         FROM meeting_sessions s JOIN users hu ON hu.id=s.host_id LEFT JOIN academic_staff st ON st.user_id=s.host_id
+         WHERE (hu.unit_id=u.id OR st.unit_id=u.id) AND s.started_at>=span.since AND s.started_at<span.until) m
        CROSS JOIN LATERAL (SELECT count(*)::int AS published FROM courses WHERE unit_id=u.id AND status='published') k
        CROSS JOIN LATERAL (
          SELECT count(*) FILTER (WHERE e.enrolled_at>=span.since AND e.enrolled_at<span.until)::int AS enrolled,
