@@ -24,8 +24,8 @@ test("entering the app resyncs the route from the current URL", () => {
   assert.deepEqual(plain(appEntryRoute(at("/register"))), { view: "overview" });
   assert.deepEqual(plain(appEntryRoute(at("/"))), { view: "overview" });
   assert.deepEqual(plain(appEntryRoute(at("/unknown"))), { view: "overview" });
-  assert.deepEqual(plain(appEntryRoute(at(`/app/tasks?workspace=${workspaceId}`))), {
-    view: "tasks",
+  assert.deepEqual(plain(appEntryRoute(at(`/app/files?workspace=${workspaceId}`))), {
+    view: "files",
     workspaceId,
   });
   assert.equal(appEntryRoute(at("/app/xyz")).invalid, true);
@@ -40,12 +40,6 @@ test("old workspace links open the function pages", () => {
     workspaceId,
     channelId,
     messageId: otherId,
-  });
-  assert.deepEqual(plain(readAppRoute(at(`/app/tasks?workspace=${workspaceId}&channel=${channelId}&task=${otherId}`))), {
-    view: "tasks",
-    workspaceId,
-    channelId,
-    taskId: otherId,
   });
   assert.deepEqual(plain(readAppRoute(at(`/app/meetings?workspace=${workspaceId}&channel=${channelId}&schedule=${otherId}`))), {
     view: "meetings",

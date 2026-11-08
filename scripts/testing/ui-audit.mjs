@@ -49,7 +49,6 @@ const routes = [
   ["workspace", `/app/workspace?workspace=${workspace.id}`],
   ["chat", `/app/chat?workspace=${workspace.id}&channel=${text.id}`],
   ["meetings", `/app/meetings?workspace=${workspace.id}&channel=${video?.id ?? text.id}`],
-  ["tasks", `/app/tasks?workspace=${workspace.id}`],
   ["notifications", "/app/notifications"],
   ["profile", "/app/profile"],
   ["admin", `/app/admin?workspace=${workspace.id}`],

@@ -90,7 +90,7 @@ Chạy lại với `--calls 100 --concurrency 50`, `--calls 200 --concurrency 10
 | 150 | 300 | 300 | 300 | 1.170 / 2.237 / 2.363 | 1.733 / 2.046 | 467% / 798% | 21% | 93 MiB |
 | 200 | 400 | 400 | 400 | 1.372 / 2.815 / 3.068 | 3.252 / 4.435 | 823% / 1.046% | 24% | 93 MiB |
 
-Mọi mức đều 100% cuộc được ghi nhận và vào đúng hàng đợi, không có cuộc `failed` (lượt đo 2026-10-19 với `sessionlimit = 100`: 147/199 cuộc `failed` ở mức 100). Điểm bão hòa nằm quanh **150–200 cuộc đồng thời**: ở mức 200, thời gian IVR→hàng đợi tăng gần gấp đôi (p50 1,7 s → 3,3 s) vì hàng đợi sự kiện Stasis của ứng dụng ARI đầy (log Asterisk: `Taskprocessor 'stasis/m:ari:application/nexo' queue reached 500 scheduled tasks`), và Asterisk dùng khoảng 8 lõi cho 200 kênh Local (mỗi kênh Local là hai kênh, cộng phát IVR và nhạc chờ). PostgreSQL không phải nút cổ chai (≤ 24% một lõi).
+Mọi mức đều 100% cuộc được ghi nhận và vào đúng hàng đợi, không có cuộc `failed` (lượt đo 2026-10-19 với `sessionlimit = 100`: 147/199 cuộc `failed` ở mức 100). Điểm bão hòa nằm quanh **150–200 cuộc đồng thời**: ở mức 200, thời gian IVR→hàng đợi tăng gần gấp đôi (p50 1,7 s → 3,3 s) vì hàng đợi sự kiện Stasis của ứng dụng ARI đầy (log Asterisk: `Taskprocessor 'stasis/m:ari:application/tworkspace' queue reached 500 scheduled tasks`), và Asterisk dùng khoảng 8 lõi cho 200 kênh Local (mỗi kênh Local là hai kênh, cộng phát IVR và nhạc chờ). PostgreSQL không phải nút cổ chai (≤ 24% một lõi).
 
 Bên tạo tải đã được sửa để gửi lại phím DTMF khi Asterisk trả `409` (dưới tải, kênh có thể vào Stasis sau 1,5 s chờ của script), và in thêm số cuộc "vào hàng đợi" (`queued`). Số liệu gốc: [raw/callcenter-load.txt](raw/callcenter-load.txt), CPU/RAM: `raw/callcenter-load-stats-<mức>.csv`.
 
@@ -120,7 +120,7 @@ node scripts/benchmarks/sipp/run-sipp.mjs --levels 10,25,50,75,100,150,200
 
 - Đến 200 cuộc đồng thời: 100% thành công, INVITE→200 p50 giữ 12 ms, Asterisk dùng khoảng 60% một lõi và 147 MiB. Lượt 2026-10-19 (dải 10000–10099) dừng ở 50 cuộc với `488 Not Acceptable Here` vì hết cổng RTP.
 - Ở tầng SIP/RTP, trần mới là **dải cổng**: 500 cổng RTP (RTP + RTCP) cho khoảng 250 cuộc. Chưa thấy dấu hiệu bão hòa CPU tới 200 cuộc. Nút cổ chai khi tải cao nằm ở tầng ARI/ACD (mục 3a: hàng đợi sự kiện Stasis đầy ở 200 kênh Local), không phải ở SIP/RTP.
-- Mức 150 được đo lại: lượt đầu bị gián đoạn vì server API dev (`tsx --watch`) tự khởi động lại khi sửa mã nguồn giữa lượt đo, ARI WebSocket đóng (log Asterisk 17:12:18 `Web socket closed abruptly`, `Stasis app 'nexo' doesn't exist`) và ACD đóng các cuộc dở dang khi kết nối lại (146 cuộc nhận `603`). Lượt đo lại: 300/300. Một cuộc có INVITE→200 3,2 s (p95 vẫn 28 ms).
+- Mức 150 được đo lại: lượt đầu bị gián đoạn vì server API dev (`tsx --watch`) tự khởi động lại khi sửa mã nguồn giữa lượt đo, ARI WebSocket đóng (log Asterisk 17:12:18 `Web socket closed abruptly`, `Stasis app 'tworkspace' doesn't exist`) và ACD đóng các cuộc dở dang khi kết nối lại (146 cuộc nhận `603`). Lượt đo lại: 300/300. Một cuộc có INVITE→200 3,2 s (p95 vẫn 28 ms).
 
 Số liệu gốc: [raw/sipp/](raw/sipp/) (log màn hình, CSV thống kê, CSV `rtt`, mẫu `docker stats`) và [raw/sipp-run.log](raw/sipp-run.log).
 

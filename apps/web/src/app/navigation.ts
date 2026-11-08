@@ -6,10 +6,7 @@ export interface AppRoute {
   channelId?: string;
   messageId?: string;
   threadId?: string;
-  taskId?: string;
   scheduleId?: string;
-  termId?: string;
-  projectId?: string;
   query?: string;
   invitationToken?: string;
   invalid?: boolean;
@@ -25,7 +22,6 @@ const views = new Set([
   "admin",
   "invitation",
   "notifications",
-  "tasks",
   "call-center",
   "call-directory",
   "call-monitoring",
@@ -51,10 +47,7 @@ export function readAppRoute(url: URL): AppRoute {
     ["channelId", "channel"],
     ["messageId", "message"],
     ["threadId", "thread"],
-    ["taskId", "task"],
     ["scheduleId", "schedule"],
-    ["termId", "term"],
-    ["projectId", "project"],
   ] as const) {
     const value = url.searchParams.get(param);
     if (value) {
@@ -84,10 +77,7 @@ export function appRouteUrl(route: AppRoute): string {
   if (route.channelId) params.set("channel", route.channelId);
   if (route.messageId) params.set("message", route.messageId);
   if (route.threadId) params.set("thread", route.threadId);
-  if (route.taskId) params.set("task", route.taskId);
   if (route.scheduleId) params.set("schedule", route.scheduleId);
-  if (route.termId) params.set("term", route.termId);
-  if (route.projectId) params.set("project", route.projectId);
   if (route.query) params.set("q", route.query);
   return `/app/${route.view}${params.size ? `?${params}` : ""}${route.invitationToken ? `#token=${encodeURIComponent(route.invitationToken)}` : ""}`;
 }

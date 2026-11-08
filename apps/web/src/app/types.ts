@@ -5,7 +5,6 @@ export type ViewId =
   | "workspace"
   | "chat"
   | "meetings"
-  | "tasks"
   | "files"
   | "profile"
   | "admin"

@@ -1657,32 +1657,6 @@ button.tws-list-item:hover:not(:disabled) {
   cursor: pointer;
 }
 
-/* Phones: home KPI cards as three compact tiles instead of a full screen of stacked rows.
-   KpiStatCard sets its layout inline, hence !important. */
-@media (max-width: 480px) {
-  .tdtu-home-kpi-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 8px !important;
-  }
-  .tdtu-home-kpi-grid .kpi-stat-card {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 6px !important;
-    padding: 10px !important;
-  }
-  .tdtu-home-kpi-grid .kpi-stat-card__icon {
-    width: 28px !important;
-    height: 28px !important;
-  }
-  .tdtu-home-kpi-grid .kpi-stat-card * {
-    font-size: 12px;
-    line-height: 1.3;
-  }
-  .tdtu-home-kpi-grid .kpi-stat-card__number {
-    font-size: 20px !important;
-  }
-}
-
 /* TDTU navy letters; on dark surfaces they turn light so the mark stays readable (the red accents stay). */
 .tdtu-logo {
   color: #002D62;
