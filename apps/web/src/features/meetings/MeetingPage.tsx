@@ -421,7 +421,7 @@ export function MeetingPage() {
 
   const [layerPolicy, setLayerPolicy] = useState<LayerPolicy>(() => {
     try {
-      const saved = localStorage.getItem("nexo:layerPolicy");
+      const saved = localStorage.getItem("tws:layerPolicy");
       return isLayerPolicy(saved) ? saved : "combined";
     } catch {
       return "combined";
@@ -430,7 +430,7 @@ export function MeetingPage() {
   const changeLayerPolicy = (next: LayerPolicy) => {
     setLayerPolicy(next);
     try {
-      localStorage.setItem("nexo:layerPolicy", next);
+      localStorage.setItem("tws:layerPolicy", next);
     } catch {
       // Storage may be blocked; the choice still applies to this call.
     }

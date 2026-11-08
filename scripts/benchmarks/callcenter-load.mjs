@@ -25,7 +25,7 @@ const keep = process.argv.includes("--keep");
 if (!process.env.ASTERISK_ARI_PASSWORD) throw new Error("ASTERISK_ARI_PASSWORD is required");
 
 const base = `${(process.env.ASTERISK_ARI_URL ?? "http://localhost:8088").replace(/\/$/, "")}/ari`;
-const auth = `Basic ${Buffer.from(`${process.env.ASTERISK_ARI_USER ?? "nexo"}:${process.env.ASTERISK_ARI_PASSWORD}`).toString("base64")}`;
+const auth = `Basic ${Buffer.from(`${process.env.ASTERISK_ARI_USER ?? "tworkspace"}:${process.env.ASTERISK_ARI_PASSWORD}`).toString("base64")}`;
 const ari = async (method, path) => {
   const response = await fetch(base + path, { method, headers: { Authorization: auth }, signal: AbortSignal.timeout(5000) });
   if (!response.ok) throw new Error(`${method} ${path.split("?")[0]} → ${response.status}`);
@@ -47,7 +47,7 @@ let next = 0;
 async function caller(index) {
   const callerNumber = `0999${run}${String(index).padStart(3, "0")}`; // 10 digits, unique in this run
   originated.set(callerNumber, Date.now());
-  const params = new URLSearchParams({ endpoint: "Local/9000@from-internal", app: "nexo", appArgs: "loadtest", callerId: callerNumber });
+  const params = new URLSearchParams({ endpoint: "Local/9000@from-internal", app: "tworkspace", appArgs: "loadtest", callerId: callerNumber });
   const channel = await ari("POST", `/channels?${params}`);
   try {
     await sleep(1500); // let the IVR prompt start

@@ -208,7 +208,7 @@ export class RoomRecorder {
 }
 
 export function sdp(streams: { consumer: Consumer; port: number }[]) {
-  const lines = ["v=0", "o=- 0 0 IN IP4 127.0.0.1", "s=nexo-recording", "c=IN IP4 127.0.0.1", "t=0 0"];
+  const lines = ["v=0", "o=- 0 0 IN IP4 127.0.0.1", "s=tws-recording", "c=IN IP4 127.0.0.1", "t=0 0"];
   for (const { consumer, port } of streams) {
     const codec = consumer.rtpParameters.codecs[0];
     const [, name] = codec.mimeType.split("/");

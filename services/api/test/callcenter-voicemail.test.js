@@ -67,7 +67,7 @@ test("ARI adapter: a media list goes out as one comma-separated value (repeated 
   let url = "";
   globalThis.fetch = async (input) => ((url = String(input)), new Response(JSON.stringify({ id: "pb-1" }), { status: 201 }));
   try {
-    const pbx = new AriPbx({ url: "http://ari.test:8088/", user: "u", password: "p", app: "nexo" });
+    const pbx = new AriPbx({ url: "http://ari.test:8088/", user: "u", password: "p", app: "tworkspace" });
     assert.equal(await pbx.play("ch-1", ["sound:vm-theperson", "digits:1201", "sound:vm-intro"]), "pb-1");
     assert.equal(new URL(url).searchParams.getAll("media").join("|"), "sound:vm-theperson,digits:1201,sound:vm-intro");
   } finally {

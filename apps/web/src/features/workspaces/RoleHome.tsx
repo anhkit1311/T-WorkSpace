@@ -50,20 +50,6 @@ export function useRoleData(): RoleData | null {
   return data;
 }
 
-/** One line under the greeting: the user's roles in the three subsystems. */
-export function roleSubtitle(data: RoleData | null) {
-  if (!data) return "Đang tải vai trò…";
-  const roles: string[] = [];
-  const cc = data.callCenter;
-  if (cc?.isAdmin) roles.push("Quản trị tổng đài");
-  if (cc?.departments.some((item) => item.role === "supervisor")) roles.push("Giám sát tổng đài");
-  if (cc?.departments.some((item) => item.role === "agent")) roles.push("Tổng đài viên");
-  const learning = data.courses.filter((item) => item.enrolled).length;
-  if (data.courses.some((item) => item.canManage)) roles.push("Giảng viên e-learning");
-  if (learning) roles.push(`Học viên ${learning} khóa`);
-  return roles.length ? roles.join(" · ") : "Thành viên TDTU";
-}
-
 /** "Việc của bạn hôm nay": one card per subsystem the user takes part in. */
 export function RoleHome({ data }: { data: RoleData | null }) {
   const { navigate } = useApp();

@@ -276,7 +276,7 @@
   gap: 0;
 }
 
-.profile-meta-list > .nexo-list-item + .nexo-list-item::before {
+.profile-meta-list > .tws-list-item + .tws-list-item::before {
   content: "";
   position: absolute;
   top: 0;

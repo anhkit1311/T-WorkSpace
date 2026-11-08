@@ -4,7 +4,7 @@
 // agents pick up after a few seconds of ringing (one lets it ring out), talk, then file a disposition.
 // The KPI and the CDR export come from the same report service the "Tổng đài → KPI" page uses and are
 // written to docs/benchmarks/raw/callcenter-shift/.
-// Usage: npm run build --workspace @doan/api && node scripts/callcenter/simulate-shift.mjs [--peak] giaovu@demo.nexo.test gv.ha@demo.nexo.test gv.lan@demo.nexo.test
+// Usage: npm run build --workspace @doan/api && node scripts/callcenter/simulate-shift.mjs [--peak] giaovu@demo.tworkspace.test gv.ha@demo.tworkspace.test gv.lan@demo.tworkspace.test
 // Default: a normal shift; --peak: two bursts of long calls that keep every agent busy, and one agent
 // who lets a call ring out. Results go to callcenter-shift/ or callcenter-shift-peak/. Takes about 30 minutes. The agents must be members of the hotline's "1" department (seed-demo.mjs does it)
 // and should not be signed in to the web softphone meanwhile: this ACD keeps its own view of their state.

@@ -12,7 +12,7 @@ import { pool } from "../../dist/api/infrastructure/database/db.js";
 import { hashPassword } from "../../dist/api/modules/auth/password.js";
 import * as org from "../../dist/api/modules/academic/organization.js";
 
-const DOMAIN = "demo.nexo.test";
+const DOMAIN = "demo.tworkspace.test";
 const sql = (text, values = []) => pool.query(text, values);
 
 const lecturers = [

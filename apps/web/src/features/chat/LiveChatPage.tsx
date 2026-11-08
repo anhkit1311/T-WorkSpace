@@ -46,12 +46,17 @@ import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
 import "./chat.css";
 import { AttachmentView } from "./ChatAttachment";
-import type { ChannelMember } from "./ThreadPanel";
 import { useUserAvatars } from "./useUserAvatars";
 import { governanceApi } from "../workspaces/api";
 import { callCenterApi } from "../call-center/api";
 import { isAtLatest, jumpToLatestLabel } from "./jump-latest";
 import { MeetingSummaryCard } from "../meetings/MeetingSummaryCard";
+
+interface ChannelMember {
+  userId: string;
+  displayName: string;
+  role: string;
+}
 
 const stickers = [
   { id: "cheer", emoji: "🎉", label: "Ăn mừng" },

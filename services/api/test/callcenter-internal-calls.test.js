@@ -50,7 +50,7 @@ test("Internal calls: a unit group number is logged once, answered by whoever pi
 test("Internal calls: offline callee gets its status from the voicemail hand-off", async () => {
   const { log, saved } = harness();
   log.handle(dialplan("a", "10102", "Dial", "PJSIP/10102,25"));
-  log.handle(dialplan("a", "10102", "Stasis", "nexo,voicemail,10102,CHANUNAVAIL"));
+  log.handle(dialplan("a", "10102", "Stasis", "tworkspace,voicemail,10102,CHANUNAVAIL"));
   await log.handle({ type: "channel_ended", channelId: "a" });
   assert.equal(saved[0].outcome, "missed");
   assert.equal(saved[0].answeredAt, null);
@@ -73,7 +73,7 @@ test("Internal calls: a blind transfer ends the first leg and links the next one
 test("Internal calls: hotline, echo test and other contexts are not logged", () => {
   const { log } = harness();
   assert.equal(log.handle(dialplan("a", "8000", "Echo", "")), null);
-  assert.equal(log.handle(dialplan("b", "hotline", "Stasis", "nexo,web,x", { context: "from-web" })), null);
+  assert.equal(log.handle(dialplan("b", "hotline", "Stasis", "tworkspace,web,x", { context: "from-web" })), null);
   assert.equal(log.handle({ type: "channel_ended", channelId: "a" }), null);
   assert.equal(log.handle({ type: "dial", callerChannelId: "z", status: "ANSWER" }), null);
 });

@@ -34,7 +34,7 @@ Tầng SIP/RTP (đăng ký, xác thực, RTP thật) được đo bằng SIPp v�
 
 - Một Asterisk 22 xử lý vài trăm cuộc gọi G.711 đồng thời (không chuyển mã). Ghi âm, IVR, mixing
   bridge làm con số này giảm.
-- ARI app `nexo` nối vào **một** Asterisk; ACD là leader duy nhất nên hàng đợi nhất quán.
+- ARI app `tworkspace` nối vào **một** Asterisk; ACD là leader duy nhất nên hàng đợi nhất quán.
 - Dải RTP hiện mở 10000–10099 (50 cuộc gọi có media qua NAT Docker); trên máy thật mở rộng dải
   này là bước đầu tiên.
 

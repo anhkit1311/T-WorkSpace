@@ -75,7 +75,7 @@ export class InternalCallLog {
         });
         return previous;
       }
-      // Stasis(nexo,voicemail,<exten>,<DIALSTATUS>): the status of a dial that never rang (offline).
+      // Stasis(tworkspace,voicemail,<exten>,<DIALSTATUS>): the status of a dial that never rang (offline).
       if (leg && event.app === "Stasis" && event.appData.includes(",voicemail,")) leg.status ||= event.appData.split(",")[3] ?? "";
       return null;
     }

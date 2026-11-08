@@ -35,7 +35,7 @@ services:
       TRUNK_NUMBER: ${ASTERISK_TRUNK_NUMBER:-}
     volumes:
       # Edit config without rebuilding; restart the container to apply.
-      - ./asterisk/config:/opt/nexo-asterisk:ro
+      - ./asterisk/config:/opt/tws-asterisk:ro
       # CC-12: security/messages logs on the host for fail2ban (see infra/asterisk/fail2ban).
       - ${ASTERISK_LOG_DIR:-./asterisk/logs}:/var/log/asterisk
       # Call recordings and voicemails (ARI stored recordings): kept when the container is rebuilt.
@@ -49,12 +49,12 @@ services:
 
   # Dev only: FFmpeg next to an API that runs on the host. Start with:
   #   docker compose -f infra/docker-compose.yml --profile recording up -d ffmpeg
-  # and set FFMPEG_COMMAND="docker exec -i -w /work nexo-ffmpeg ffmpeg" for the API.
+  # and set FFMPEG_COMMAND="docker exec -i -w /work tws-ffmpeg ffmpeg" for the API.
   # The SFU sends recording RTP to 127.0.0.1:<RECORDING_RTP_*_PORT>, published below.
   ffmpeg:
     profiles: ["recording"]
     build: ./ffmpeg
-    container_name: nexo-ffmpeg
+    container_name: tws-ffmpeg
     volumes:
       - ../services/api/data/media:/work
     ports:
@@ -63,7 +63,7 @@ services:
 
   # Q5 monitoring (opt-in): docker compose -f infra/docker-compose.yml --profile monitoring up -d
   # Put OPERATIONS_TOKEN (same as the API's) in infra/monitoring/operations_token first.
-  # Prometheus: http://localhost:9090 · Grafana: http://localhost:3000 (dashboard "nexo").
+  # Prometheus: http://localhost:9090 · Grafana: http://localhost:3000 (dashboard "T-Workspace").
   prometheus:
     profiles: ["monitoring"]
     image: prom/prometheus:v2.53.2
@@ -93,14 +93,14 @@ services:
 
   # Q2 object storage (opt-in): docker compose -f infra/docker-compose.yml --profile storage up -d minio
   # Then in .env: FILE_STORAGE_PROVIDER=s3, MEDIA_STORAGE=s3, S3_ENDPOINT=http://localhost:9000,
-  # S3_FORCE_PATH_STYLE=true, S3_BUCKET=nexo, AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY = the MinIO user.
+  # S3_FORCE_PATH_STYLE=true, S3_BUCKET=tworkspace, AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY = the MinIO user.
   # Create the bucket once in the console (http://localhost:9001).
   minio:
     profiles: ["storage"]
     image: minio/minio:RELEASE.2024-08-17T01-24-54Z
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-nexo}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-tworkspace}
       # MinIO refuses to start with a password under 8 characters; set a real one in .env.
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-}
     volumes:

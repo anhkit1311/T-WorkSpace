@@ -13,7 +13,7 @@ if [ "${#SPIKE_SIP_PASSWORD}" -lt 12 ]; then
   exit 1
 fi
 
-cp /opt/nexo-asterisk/*.conf /etc/asterisk/
+cp /opt/tws-asterisk/*.conf /etc/asterisk/
 
 cat > /etc/asterisk/ari.conf <<EOF
 [general]
@@ -21,7 +21,7 @@ enabled = yes
 pretty = no
 allowed_origins = ${ARI_ORIGINS}
 
-[nexo]
+[tworkspace]
 type = user
 read_only = no
 password = ${ARI_PASSWORD}

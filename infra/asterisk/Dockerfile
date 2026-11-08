@@ -36,7 +36,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=build /out/ /
 COPY --from=opus /opus/codec_opus.so /usr/lib/asterisk/modules/
 COPY --from=opus /opus/codec_opus_config-en_US.xml /var/lib/asterisk/documentation/thirdparty/
-COPY config/ /opt/nexo-asterisk/
+COPY config/ /opt/tws-asterisk/
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 # A Windows checkout (core.autocrlf) gives CRLF, which breaks sh and leaks \r into generated config.
 RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/bin/docker-entrypoint.sh \

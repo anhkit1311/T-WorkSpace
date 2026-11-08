@@ -38,7 +38,7 @@ Client, API, SFU, Asterisk và PostgreSQL chạy chung một máy. Vì vậy s�
 docker run --rm -i -e BASE=http://host.docker.internal:3001 -e TOKEN grafana/k6:0.53.0 run --summary-export /out/k6-summary.json - < scripts/benchmarks/k6-api.js
 ```
 
-`TOKEN` là access token của `giaovu@demo.nexo.test`, tạo bằng `createAccessToken` trong `dist/api/modules/auth/tokens.js` với `JWT_SECRET` của `.env`. API là server dev đang chạy trên cổng 3001. Kịch bản tăng dần lên 50 VU trong 30 s, giữ 1 phút rồi giảm trong 15 s. Mỗi vòng lặp gọi 4 đường đọc chính (`/api/callcenter/me`, `/api/elearning/courses`, `/api/meetings/schedules`, `/api/workspaces`) rồi nghỉ 1 s.
+`TOKEN` là access token của `giaovu@demo.tworkspace.test`, tạo bằng `createAccessToken` trong `dist/api/modules/auth/tokens.js` với `JWT_SECRET` của `.env`. API là server dev đang chạy trên cổng 3001. Kịch bản tăng dần lên 50 VU trong 30 s, giữ 1 phút rồi giảm trong 15 s. Mỗi vòng lặp gọi 4 đường đọc chính (`/api/callcenter/me`, `/api/elearning/courses`, `/api/meetings/schedules`, `/api/workspaces`) rồi nghỉ 1 s.
 
 | Request | Thông lượng | Trung bình | p50 | p90 | p95 | max | Lỗi |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -97,7 +97,7 @@ Bên tạo tải đã được sửa để gửi lại phím DTMF khi Asterisk t
 ### 3b. SIPp (tầng SIP/RTP) vào hotline
 
 ```bash
-docker build -t nexo-sipp scripts/benchmarks/sipp
+docker build -t tws-sipp scripts/benchmarks/sipp
 ```
 
 ```bash
@@ -165,11 +165,11 @@ Số liệu gốc: [raw/voice-quality/](raw/voice-quality/) (`capture.pcap`, `ca
 ### 3d. KPI của ca trực mô phỏng
 
 ```bash
-node scripts/callcenter/simulate-shift.mjs giaovu@demo.nexo.test gv.ha@demo.nexo.test gv.lan@demo.nexo.test
+node scripts/callcenter/simulate-shift.mjs giaovu@demo.tworkspace.test gv.ha@demo.tworkspace.test gv.lan@demo.tworkspace.test
 ```
 
 ```bash
-node scripts/callcenter/simulate-shift.mjs --peak giaovu@demo.nexo.test gv.ha@demo.nexo.test gv.lan@demo.nexo.test
+node scripts/callcenter/simulate-shift.mjs --peak giaovu@demo.tworkspace.test gv.ha@demo.tworkspace.test gv.lan@demo.tworkspace.test
 ```
 
 Script chạy `AcdService` và repository PostgreSQL thật trong tiến trình của nó; chỉ Asterisk được thay bằng PBX giả lập (phát lời chào xong sau vài giây, đổ chuông máy lẻ, nhấc máy, gác máy). Ca chạy theo thời gian thực vì cơ sở dữ liệu đóng dấu thời gian bằng `now()`. Ba tổng đài viên của phòng Tuyển sinh Sẵn sàng; 28 người gọi vào hotline, bấm phím 1, chờ; tổng đài viên nhấc máy sau 3–9 s đổ chuông, đàm thoại, rồi điền mã kết quả và ghi chú (như ở màn hình hoàn tất cuộc gọi). Một số người gọi được kịch bản cho bấm `*` (hẹn gọi lại) hoặc gác máy nếu chờ quá N giây mà chưa có người nghe. KPI tính bằng `kpiSummary` (cùng hàm của trang KPI) trên khoảng thời gian của ca; CDR xuất bằng `CallCenterReportService.exportCsv` ra `.csv` và `.xlsx`.
@@ -234,7 +234,7 @@ Toàn bộ bảng (băng thông lên/xuống, CPU, RTT, jitter, mất gói, FPS,
 Đo ngày 2026-11-02. Một coturn chạy tạm trong Docker (cùng tham số xác thực `--use-auth-secret` như profile `turn` của `docker-compose.prod.yml`, không TLS), API cấp thông tin TURN bằng `TURN_SHARED_SECRET`, và media lab ép `iceTransportPolicy = "relay"` nên trình duyệt chỉ được đi qua TURN:
 
 ```bash
-docker run -d --name nexo-coturn-lab -p 3478:3478/udp -p 3478:3478/tcp -p 49160-49200:49160-49200/udp coturn/coturn:latest -n -v --log-file=stdout --listening-port=3478 --min-port=49160 --max-port=49200 --use-auth-secret --static-auth-secret=<bí mật> --realm=lab.local --fingerprint --no-tls
+docker run -d --name tws-coturn-lab -p 3478:3478/udp -p 3478:3478/tcp -p 49160-49200:49160-49200/udp coturn/coturn:latest -n -v --log-file=stdout --listening-port=3478 --min-port=49160 --max-port=49200 --use-auth-secret --static-auth-secret=<bí mật> --realm=lab.local --fingerprint --no-tls
 ```
 
 ```bash
@@ -271,7 +271,7 @@ Lượt đo này không bật profile `monitoring`. Prometheus cần tệp `infr
 
 - Cấu hình: `infra/asterisk/config/http.conf` thêm `sessionlimit = 500`; `rtp.conf` `rtpend = 10499`; publish `10000-10499/udp` trong cả hai tệp compose (Docker Desktop trên Windows chạy bình thường với 500 cổng).
 - `scripts/benchmarks/callcenter-load.mjs`: gửi lại DTMF khi gặp `409`, in thêm `queued` và đổi `failedToOriginate` thành `generatorErrors` (đếm lỗi của bên tạo tải, không phải lỗi originate).
-- `scripts/benchmarks/sipp/run-sipp.mjs`: thêm `--out`, `--netem`, `--pcap`; image `nexo-sipp` có thêm `tcpdump`, `tshark`, `iproute2`.
+- `scripts/benchmarks/sipp/run-sipp.mjs`: thêm `--out`, `--netem`, `--pcap`; image `tws-sipp` có thêm `tcpdump`, `tshark`, `iproute2`.
 - Mới: `experiments/packet-capture/voice-quality.mjs` (RTT/mất gói/jitter từ luồng echo và E-model, có test); `analyze.mjs` nhận đồng hồ 8 kHz của G.711.
 - Mới: `scripts/callcenter/simulate-shift.mjs` (ca trực mô phỏng, mục 3d).
 - Mã ứng dụng: báo cáo KPI có thêm trường `callback` (số cuộc hẹn gọi lại) và thẻ "Hẹn gọi lại" trên trang KPI.

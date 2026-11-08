@@ -40,8 +40,8 @@ const ccRepo = new CallCenterRepository();
 const qa = new CallCenterQaService(ccRepo, new QaRepository());
 
 const user = async (handle) => {
-  const row = (await sql(`SELECT id FROM users WHERE email=$1`, [`${handle}@demo.nexo.test`])).rows[0];
-  if (!row) throw new Error(`Thiếu tài khoản ${handle}@demo.nexo.test: chạy seed-academic trước.`);
+  const row = (await sql(`SELECT id FROM users WHERE email=$1`, [`${handle}@demo.tworkspace.test`])).rows[0];
+  if (!row) throw new Error(`Thiếu tài khoản ${handle}@demo.tworkspace.test: chạy seed-academic trước.`);
   return row.id;
 };
 /** Local (Asia/Ho_Chi_Minh) time `days` from this week's Monday. */
@@ -216,7 +216,7 @@ try {
       "Buổi học trực tuyến · CC-201 Kỹ năng xử lý tình huống tổng đài");
     const liveLesson = await repo.createLesson({ courseId: course.id, chapterId, title: "Lớp live: Xử lý tình huống khó", kind: "live", scheduleId: classSchedule, status: "published" });
     await courses.update(admin, course.id, { status: "published" });
-    await courses.assign(admin, course.id, { emails: ["gv.ha@demo.nexo.test", "gv.lan@demo.nexo.test", "sv01@demo.nexo.test"] });
+    await courses.assign(admin, course.id, { emails: ["gv.ha@demo.tworkspace.test", "gv.lan@demo.tworkspace.test", "sv01@demo.tworkspace.test"] });
     const liveClass = await heldMeeting({
       roomId: room.id, scheduleId: classSchedule, host: giaovu, startedAt: classStart, endedAt: minutes(classStart, 60),
       // Hà stays the whole class (≥ 70%: attended), Lan leaves after 25 minutes (not attended).

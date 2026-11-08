@@ -2,7 +2,7 @@
 # Q5: nightly PostgreSQL backup with rotation. Custom format (pg_restore can pick tables), one file per run.
 #   scripts/ops/backup-db.sh                 # dev: pg_dump inside the infra-postgres-1 container
 #   POSTGRES_CONTAINER= DATABASE_URL=... scripts/ops/backup-db.sh   # host pg_dump against a URL
-# Cron (02:30 every night):  30 2 * * * cd /srv/nexo && scripts/ops/backup-db.sh >> backups/backup.log 2>&1
+# Cron (02:30 every night):  30 2 * * * cd /srv/t-workspace && scripts/ops/backup-db.sh >> backups/backup.log 2>&1
 # Check a dump restores: npm run verify:restore. Media files (MEDIA_DIR) are backed up separately (rsync/S3).
 set -eu
 

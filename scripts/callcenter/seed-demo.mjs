@@ -12,9 +12,9 @@ const repo = new CallCenterRepository();
 const pbx = process.env.ASTERISK_ARI_PASSWORD
   ? new AriPbx({
       url: process.env.ASTERISK_ARI_URL ?? "http://localhost:8088",
-      user: process.env.ASTERISK_ARI_USER ?? "nexo",
+      user: process.env.ASTERISK_ARI_USER ?? "tworkspace",
       password: process.env.ASTERISK_ARI_PASSWORD,
-      app: "nexo",
+      app: "tworkspace",
     })
   : null;
 const admin = new CallCenterAdminService(repo, () => pbx, async () => {}, (event, details) => console.warn(event, details));

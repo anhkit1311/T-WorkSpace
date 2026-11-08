@@ -145,33 +145,33 @@ async function handleRequest(
     const gauge = (name: string, help: string, samples: Metric["samples"]): Metric => ({ name, help, type: "gauge", samples });
     const one = (value: number) => [{ value }];
     const body = renderMetrics([
-      { name: "nexo_http_requests_total", help: "HTTP requests served.", type: "counter", samples: one(metrics.requests) },
-      { name: "nexo_http_errors_total", help: "HTTP responses with status 5xx.", type: "counter", samples: one(metrics.errors) },
-      { name: "nexo_http_request_duration_ms_total", help: "Sum of request durations in ms.", type: "counter", samples: one(metrics.totalDurationMs) },
-      gauge("nexo_db_pool_connections", "PostgreSQL pool connections.", [
+      { name: "tws_http_requests_total", help: "HTTP requests served.", type: "counter", samples: one(metrics.requests) },
+      { name: "tws_http_errors_total", help: "HTTP responses with status 5xx.", type: "counter", samples: one(metrics.errors) },
+      { name: "tws_http_request_duration_ms_total", help: "Sum of request durations in ms.", type: "counter", samples: one(metrics.totalDurationMs) },
+      gauge("tws_db_pool_connections", "PostgreSQL pool connections.", [
         { labels: { state: "total" }, value: pool.totalCount },
         { labels: { state: "idle" }, value: pool.idleCount },
         { labels: { state: "waiting" }, value: pool.waitingCount },
       ]),
-      gauge("nexo_socket_clients", "Connected Socket.IO clients.", one(io.engine.clientsCount)),
-      gauge("nexo_media_workers", "mediasoup workers.", one(media.workers)),
-      gauge("nexo_media_rooms", "Meeting rooms with a router.", one(media.rooms)),
-      gauge("nexo_media_peers", "Peers in meeting rooms (phone callers included).", one(media.peers)),
-      gauge("nexo_media_qos_reporting_peers", "Meeting peers with a QoS report in the last 30 s.", one(qos.peers)),
-      gauge("nexo_media_qos_rtt_ms", "Client-measured round-trip time.", spread(qos.rtt)),
-      gauge("nexo_media_qos_jitter_ms", "Client-measured inbound jitter.", spread(qos.jitter)),
-      gauge("nexo_media_qos_packet_loss_percent", "Client-measured inbound packet loss.", spread(qos.packetLoss)),
-      gauge("nexo_media_jobs", "Media jobs in the PostgreSQL queue.", ["queued", "running", "failed"].map((status) => ({
+      gauge("tws_socket_clients", "Connected Socket.IO clients.", one(io.engine.clientsCount)),
+      gauge("tws_media_workers", "mediasoup workers.", one(media.workers)),
+      gauge("tws_media_rooms", "Meeting rooms with a router.", one(media.rooms)),
+      gauge("tws_media_peers", "Peers in meeting rooms (phone callers included).", one(media.peers)),
+      gauge("tws_media_qos_reporting_peers", "Meeting peers with a QoS report in the last 30 s.", one(qos.peers)),
+      gauge("tws_media_qos_rtt_ms", "Client-measured round-trip time.", spread(qos.rtt)),
+      gauge("tws_media_qos_jitter_ms", "Client-measured inbound jitter.", spread(qos.jitter)),
+      gauge("tws_media_qos_packet_loss_percent", "Client-measured inbound packet loss.", spread(qos.packetLoss)),
+      gauge("tws_media_jobs", "Media jobs in the PostgreSQL queue.", ["queued", "running", "failed"].map((status) => ({
         labels: { status },
         value: jobs.rows.find((row) => row.status === status)?.count ?? 0,
       }))),
-      gauge("nexo_acd_leader", "1 on the instance running the ACD.", one(acd ? 1 : 0)),
+      gauge("tws_acd_leader", "1 on the instance running the ACD.", one(acd ? 1 : 0)),
       ...(acd
         ? [
-            gauge("nexo_callcenter_active_calls", "Calls the ACD is handling.", one(acd.activeCalls)),
-            gauge("nexo_callcenter_waiting_calls", "Calls waiting in a department queue.", acd.queues.map((queue) => ({ labels: { department: queue.departmentId }, value: queue.waiting }))),
-            gauge("nexo_callcenter_longest_wait_seconds", "Longest current wait per department.", acd.queues.map((queue) => ({ labels: { department: queue.departmentId }, value: Math.round(queue.longestMs / 1000) }))),
-            gauge("nexo_callcenter_agents", "Agents by state.", Object.entries(acd.agents).map(([state, value]) => ({ labels: { state }, value }))),
+            gauge("tws_callcenter_active_calls", "Calls the ACD is handling.", one(acd.activeCalls)),
+            gauge("tws_callcenter_waiting_calls", "Calls waiting in a department queue.", acd.queues.map((queue) => ({ labels: { department: queue.departmentId }, value: queue.waiting }))),
+            gauge("tws_callcenter_longest_wait_seconds", "Longest current wait per department.", acd.queues.map((queue) => ({ labels: { department: queue.departmentId }, value: Math.round(queue.longestMs / 1000) }))),
+            gauge("tws_callcenter_agents", "Agents by state.", Object.entries(acd.agents).map(([state, value]) => ({ labels: { state }, value }))),
           ]
         : []),
       gauge("process_resident_memory_bytes", "Resident memory.", one(process.memoryUsage().rss)),

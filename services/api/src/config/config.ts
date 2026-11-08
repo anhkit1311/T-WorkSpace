@@ -35,7 +35,7 @@ export const config = {
   otpResendCooldownSeconds: readPositiveInteger("OTP_RESEND_COOLDOWN_SECONDS", 60),
   otpMaxResends: readPositiveInteger("OTP_MAX_RESENDS", 5),
   // MT-1 / EL-3: FFmpeg for recordings and video lessons. FFMPEG_COMMAND may be a prefix such as
-  // "docker exec -i -w /work nexo-ffmpeg ffmpeg"; FFmpeg always runs with cwd = mediaDir and
+  // "docker exec -i -w /work tws-ffmpeg ffmpeg"; FFmpeg always runs with cwd = mediaDir and
   // relative paths, so the same arguments work inside a container that mounts mediaDir at /work.
   ffmpegCommand: process.env.FFMPEG_COMMAND ?? "ffmpeg",
   mediaDir: process.env.MEDIA_DIR ?? "data/media",

@@ -2,7 +2,7 @@
 // several concurrency levels, samples Asterisk/PostgreSQL container CPU+RAM while each level runs,
 // and writes everything to docs/benchmarks/raw/sipp/. A throwaway UDP extension (default 1290) is
 // pushed to Asterisk over ARI for the run and removed afterwards; its cc_calls rows are deleted too.
-// Usage: docker build -t nexo-sipp scripts/benchmarks/sipp && node scripts/benchmarks/sipp/run-sipp.mjs --levels 10,25,50,75,100
+// Usage: docker build -t tws-sipp scripts/benchmarks/sipp && node scripts/benchmarks/sipp/run-sipp.mjs --levels 10,25,50,75,100
 // Options: --rate 10 (calls/s), --hold 20 (s), --ext 1290, --network infra_default, --host asterisk:5060,
 //   --out docs/benchmarks/raw/sipp, --netem "delay 50ms 10ms loss 1%" (tc netem on SIPp's egress, i.e. the
 //   caller→PBX leg), --pcap (tcpdump RTP in Asterisk's network namespace → capture.pcap + capture.csv
@@ -29,12 +29,12 @@ const target = arg("host", "asterisk:5060");
 const outRoot = resolve(arg("out", "docs/benchmarks/raw/sipp"));
 const netem = arg("netem", "");
 const pcap = process.argv.includes("--pcap");
-const holder = "nexo-sipp-net";
-const capturer = "nexo-sipp-cap";
+const holder = "tws-sipp-net";
+const capturer = "tws-sipp-cap";
 if (!process.env.ASTERISK_ARI_PASSWORD) throw new Error("ASTERISK_ARI_PASSWORD is required");
 
 const base = `${(process.env.ASTERISK_ARI_URL ?? "http://localhost:8088").replace(/\/$/, "")}/ari`;
-const auth = `Basic ${Buffer.from(`${process.env.ASTERISK_ARI_USER ?? "nexo"}:${process.env.ASTERISK_ARI_PASSWORD}`).toString("base64")}`;
+const auth = `Basic ${Buffer.from(`${process.env.ASTERISK_ARI_USER ?? "tworkspace"}:${process.env.ASTERISK_ARI_PASSWORD}`).toString("base64")}`;
 const ari = async (method, path, body) => {
   const response = await fetch(base + path, {
     method,
@@ -74,14 +74,14 @@ try {
     const docker = (...args) => execFileSync("docker", args, { encoding: "utf8" });
     if (netem) {
       // SIPp joins this container's network namespace, so the netem qdisc shapes everything SIPp sends.
-      docker("run", "-d", "--name", holder, "--network", network, "--cap-add", "NET_ADMIN", "--entrypoint", "sleep", "nexo-sipp", "infinity");
+      docker("run", "-d", "--name", holder, "--network", network, "--cap-add", "NET_ADMIN", "--entrypoint", "sleep", "tws-sipp", "infinity");
       docker("exec", holder, "tc", "qdisc", "add", "dev", "eth0", "root", "netem", ...netem.split(" "));
     }
     if (pcap)
       docker("run", "-d", "--name", capturer, "--network", "container:infra-asterisk-1", "--cap-add", "NET_RAW", "--cap-add", "NET_ADMIN",
-        "-v", `${out}:/out`, "--entrypoint", "tcpdump", "nexo-sipp", "-i", "eth0", "-U", "-w", "/out/capture.pcap", "udp portrange 10000-10499");
+        "-v", `${out}:/out`, "--entrypoint", "tcpdump", "tws-sipp", "-i", "eth0", "-U", "-w", "/out/capture.pcap", "udp portrange 10000-10499");
     const args = [
-      "run", "--rm", "--network", netem ? `container:${holder}` : network, "-v", `${out}:/out`, "-v", `${resolve("scripts/benchmarks/sipp")}:/scen:ro`, "-w", "/out", "nexo-sipp",
+      "run", "--rm", "--network", netem ? `container:${holder}` : network, "-v", `${out}:/out`, "-v", `${resolve("scripts/benchmarks/sipp")}:/scen:ro`, "-w", "/out", "tws-sipp",
       "-sf", "/scen/uac-hotline.xml", "-s", "9000", "-au", ext, "-ap", secret, "-key", "auth_user", ext,
       "-r", String(rate), "-l", String(level), "-m", String(total), "-d", String(holdMs), "-rtp_echo",
       "-recv_timeout", "30000", "-timeout", `${Math.ceil(total / rate + holdMs / 1000 + 90)}s`, "-nostdin",
@@ -101,7 +101,7 @@ try {
     if (pcap) {
       docker("stop", capturer);
       docker("rm", capturer);
-      const csv = docker("run", "--rm", "-v", `${out}:/out`, "--entrypoint", "tshark", "nexo-sipp", "-r", "/out/capture.pcap",
+      const csv = docker("run", "--rm", "-v", `${out}:/out`, "--entrypoint", "tshark", "tws-sipp", "-r", "/out/capture.pcap",
         "-d", "udp.port==10000-10499,rtp", "-Y", "rtp", "-T", "fields", "-E", "header=y", "-E", "separator=,", "-E", "occurrence=f",
         ...FIELDS.flatMap((field) => ["-e", field]));
       await writeFile(`${out}/capture.csv`, csv);

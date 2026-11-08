@@ -76,7 +76,7 @@ export class PhoneLeg {
     const upSdp = `${DIR}/${this.name}-up.sdp`;
     await writeFile(
       path.join(config.mediaDir, upSdp),
-      ["v=0", "o=- 0 0 IN IP4 127.0.0.1", "s=nexo-phone", `c=IN IP4 ${asterisk.address}`, "t=0 0", `m=audio ${this.listenPort} RTP/AVP 0`, "a=rtpmap:0 PCMU/8000", "a=recvonly", ""].join("\r\n"),
+      ["v=0", "o=- 0 0 IN IP4 127.0.0.1", "s=tws-phone", `c=IN IP4 ${asterisk.address}`, "t=0 0", `m=audio ${this.listenPort} RTP/AVP 0`, "a=rtpmap:0 PCMU/8000", "a=recvonly", ""].join("\r\n"),
     );
     this.uplink = spawnLogged(
       [

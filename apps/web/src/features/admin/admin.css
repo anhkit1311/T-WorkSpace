@@ -1,4 +1,4 @@
-/* "Quản trị hệ thống" page. Builds on .workspace-admin surfaces and the shared nexo tokens. */
+/* "Quản trị hệ thống" page. Builds on .workspace-admin surfaces and the shared T-Workspace tokens. */
 /* .workspace-admin styles every <li> as a settings row; the page's lists opt out of that. */
 .admin-page li {
   display: list-item;
@@ -55,7 +55,7 @@
 
 .admin-page .admin-note {
   font-size: 13px;
-  color: var(--nexo-text-muted);
+  color: var(--tws-text-muted);
 }
 
 .admin-page .admin-table {
@@ -66,8 +66,8 @@
 
 .admin-page .admin-table th {
   padding: 10px 12px;
-  border-bottom: 1px solid var(--nexo-border-beige);
-  color: var(--nexo-text-muted);
+  border-bottom: 1px solid var(--tws-border-beige);
+  color: var(--tws-text-muted);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -77,7 +77,7 @@
 
 .admin-page .admin-table td {
   padding: 10px 12px;
-  border-bottom: 1px solid var(--nexo-border-beige);
+  border-bottom: 1px solid var(--tws-border-beige);
   vertical-align: top;
 }
 
@@ -124,7 +124,7 @@
   display: grid;
   gap: 10px;
   padding: 14px 16px;
-  border: 1px solid var(--nexo-border-beige);
+  border: 1px solid var(--tws-border-beige);
   border-radius: 12px;
 }
 
@@ -154,7 +154,7 @@
 }
 
 .admin-page .admin-health-card dt {
-  color: var(--nexo-text-muted);
+  color: var(--tws-text-muted);
 }
 
 .admin-page .admin-health-card dd {
@@ -167,7 +167,7 @@
 .admin-tabs {
   display: flex;
   gap: 8px;
-  border-bottom: 1px solid var(--nexo-border-beige, #e2e8f0);
+  border-bottom: 1px solid var(--tws-border-beige, #e2e8f0);
   padding-bottom: 12px;
   margin-bottom: 20px;
   overflow-x: auto;
@@ -180,7 +180,7 @@
   font-weight: 500;
   border: 1px solid transparent;
   background: transparent;
-  color: var(--nexo-text-muted, #64748b);
+  color: var(--tws-text-muted, #64748b);
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -199,7 +199,7 @@
 /* Danh sách khoa / phòng ban */
 .dept-panel {
   background: var(--surface, #ffffff);
-  border: 1px solid var(--nexo-border-beige, #e2e8f0);
+  border: 1px solid var(--tws-border-beige, #e2e8f0);
   border-radius: 14px;
   padding: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -241,7 +241,7 @@
 .dept-table-wrapper {
   overflow-x: auto;
   border-radius: 10px;
-  border: 1px solid var(--nexo-border-beige, #f1f5f9);
+  border: 1px solid var(--tws-border-beige, #f1f5f9);
 }
 
 .dept-table {
@@ -257,12 +257,12 @@
   font-size: 13px;
   font-weight: 500;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--nexo-border-beige, #e2e8f0);
+  border-bottom: 1px solid var(--tws-border-beige, #e2e8f0);
 }
 
 .dept-table td {
   padding: 14px 16px;
-  border-bottom: 1px solid var(--nexo-border-beige, #f1f5f9);
+  border-bottom: 1px solid var(--tws-border-beige, #f1f5f9);
   color: var(--text, #1e293b);
   vertical-align: middle;
 }
@@ -355,7 +355,7 @@
 .dept-form-group input,
 .dept-form-group select {
   width: 100% !important;
-  border: 1px solid var(--nexo-border-beige, #cbd5e1);
+  border: 1px solid var(--tws-border-beige, #cbd5e1);
   border-radius: 8px;
   padding: 9px 12px;
   font-size: 14px;
@@ -383,7 +383,7 @@
   padding: 24px;
   background: var(--surface, #ffffff);
   border-radius: 14px;
-  border: 1px solid var(--nexo-border-beige, #e2e8f0);
+  border: 1px solid var(--tws-border-beige, #e2e8f0);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
@@ -395,7 +395,7 @@
   gap: 12px;
   margin-bottom: 20px;
   padding-bottom: 16px;
-  border-bottom: 1px solid var(--nexo-border-beige, #f1f5f9);
+  border-bottom: 1px solid var(--tws-border-beige, #f1f5f9);
 }
 
 .staff-panel-title-group {
@@ -432,7 +432,7 @@
 .staff-panel-sub {
   margin: 0;
   font-size: 13px;
-  color: var(--nexo-text-muted, #64748b);
+  color: var(--tws-text-muted, #64748b);
 }
 
 .staff-panel-meta {
@@ -457,7 +457,7 @@
 .staff-table-wrapper {
   overflow-x: auto;
   border-radius: 10px;
-  border: 1px solid var(--nexo-border-beige, #e2e8f0);
+  border: 1px solid var(--tws-border-beige, #e2e8f0);
   background: #ffffff;
   margin-bottom: 24px;
 }
@@ -477,12 +477,12 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--nexo-border-beige, #e2e8f0);
+  border-bottom: 1px solid var(--tws-border-beige, #e2e8f0);
 }
 
 .staff-table td {
   padding: 13px 16px;
-  border-bottom: 1px solid var(--nexo-border-beige, #f1f5f9);
+  border-bottom: 1px solid var(--tws-border-beige, #f1f5f9);
   color: var(--text, #1e293b);
   vertical-align: middle;
 }
@@ -502,7 +502,7 @@
   justify-content: center;
   padding: 40px 20px;
   text-align: center;
-  color: var(--nexo-text-muted, #64748b);
+  color: var(--tws-text-muted, #64748b);
 }
 
 .staff-empty-icon {
@@ -541,7 +541,7 @@
 .staff-form-card {
   padding: 24px;
   background: #ffffff;
-  border: 1px solid var(--nexo-border-beige, #e2e8f0);
+  border: 1px solid var(--tws-border-beige, #e2e8f0);
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }

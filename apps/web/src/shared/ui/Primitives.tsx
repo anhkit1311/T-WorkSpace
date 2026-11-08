@@ -14,7 +14,6 @@ import {
 import { motion, AnimatePresence, useIsPresent } from "motion/react";
 import { useApp } from "../../app/providers/AppContext";
 import { Icon, type IconName } from "./Icon";
-import { TWorkSpaceLogo } from "./TWorkSpaceLogo";
 import { isSelectPickerEvent } from "../lib/select-picker";
 import { toastDuration } from "../lib/interaction";
 import "./interaction.css";
@@ -23,32 +22,6 @@ import { useControlTooltip } from "../motion/ControlTooltip";
 import { useMotionSafe } from "../motion/MotionProvider";
 import { DURATION, EASE } from "../motion/tokens";
 import { useAnimate } from "motion/react";
-
-export function Brand({ className = "", onClick }: { className?: string; onClick?: () => void }) {
-  return (
-    <div
-      className={`brand ${className} ${onClick ? "is-clickable" : ""}`}
-      aria-label="T-WorkSpace"
-      onClick={onClick}
-      onKeyDown={
-        onClick
-          ? (event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                onClick();
-              }
-            }
-          : undefined
-      }
-      role={onClick ? "button" : undefined}
-      tabIndex={onClick ? 0 : undefined}
-    >
-      <span className="brand-name">
-        <TWorkSpaceLogo />
-      </span>
-    </div>
-  );
-}
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "text" | "icon" | "ghost" | "danger" | "soft";
@@ -143,7 +116,7 @@ export function Chip({
   children: ReactNode;
 }) {
   return (
-    <span className={`nexo-chip ${className}`.trim()} {...props}>
+    <span className={`tws-chip ${className}`.trim()} {...props}>
       {icon && <Icon name={icon} size={14} />}
       <span>{children}</span>
     </span>
@@ -171,18 +144,18 @@ export function ListItem({
   const control = useControlMotion(Boolean(disabled));
   const body = (
     <>
-      <span className="nexo-list-item__icon" aria-hidden="true">
+      <span className="tws-list-item__icon" aria-hidden="true">
         <Icon name={icon} size={18} />
       </span>
-      <span className="nexo-list-item__body">
-        <span className="nexo-list-item__content">
-          <strong className="nexo-list-item__title">{title}</strong>
-          {subtitle && <span className="nexo-list-item__subtitle">{subtitle}</span>}
+      <span className="tws-list-item__body">
+        <span className="tws-list-item__content">
+          <strong className="tws-list-item__title">{title}</strong>
+          {subtitle && <span className="tws-list-item__subtitle">{subtitle}</span>}
         </span>
         {(metaPrimary || metaSecondary) && (
-          <span className="nexo-list-item__meta">
-            {metaPrimary && <strong className="nexo-list-item__meta-primary">{metaPrimary}</strong>}
-            {metaSecondary && <span className="nexo-list-item__meta-secondary">{metaSecondary}</span>}
+          <span className="tws-list-item__meta">
+            {metaPrimary && <strong className="tws-list-item__meta-primary">{metaPrimary}</strong>}
+            {metaSecondary && <span className="tws-list-item__meta-secondary">{metaSecondary}</span>}
           </span>
         )}
       </span>
@@ -191,7 +164,7 @@ export function ListItem({
   // Rows without an action are information, not controls.
   if (!props.onClick) {
     return (
-      <div role={props.role} className={`nexo-list-item is-static ${className}`.trim()}>
+      <div role={props.role} className={`tws-list-item is-static ${className}`.trim()}>
         {body}
       </div>
     );
@@ -200,7 +173,7 @@ export function ListItem({
     <button
       type="button"
       disabled={disabled}
-      className={`nexo-list-item ${className}`.trim()}
+      className={`tws-list-item ${className}`.trim()}
       {...props}
       data-motion-control
       ref={control.setRef}
@@ -537,30 +510,6 @@ export function ConfirmDialog({title,description,confirmLabel,onConfirm,onClose,
     footer={<><Button variant="ghost" data-cancel disabled={loading} onClick={onClose}>Hủy</Button><Button variant="danger" loading={loading} onClick={onConfirm}>{confirmLabel}</Button></>}>
     <p>{description}</p>
   </Modal>;
-}
-
-export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: ReactNode;
-  className?: string;
-}
-
-export function Card({ children, className = "", style, ...props }: CardProps) {
-  return (
-    <div
-      className={`card ${className}`.trim()}
-      style={{
-        background: "var(--bg-surface, #FFFFFF)",
-        border: "1px solid var(--border-color, #E2E8F0)",
-        borderRadius: "var(--radius-card, 14px)",
-        padding: "20px",
-        boxShadow: "var(--shadow-card, 0 1px 2px rgba(15, 23, 42, 0.04))",
-        ...style,
-      }}
-      {...props}
-    >
-      {children}
-    </div>
-  );
 }
 
 export interface FilterPillOption {

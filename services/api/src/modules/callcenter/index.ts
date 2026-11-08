@@ -34,9 +34,9 @@ const repo = new CallCenterRepository();
 const pbx = process.env.ASTERISK_ARI_PASSWORD
   ? new AriPbx({
       url: process.env.ASTERISK_ARI_URL ?? "http://localhost:8088",
-      user: process.env.ASTERISK_ARI_USER ?? "nexo",
+      user: process.env.ASTERISK_ARI_USER ?? "tworkspace",
       password: process.env.ASTERISK_ARI_PASSWORD,
-      app: process.env.ASTERISK_ARI_APP ?? "nexo",
+      app: process.env.ASTERISK_ARI_APP ?? "tworkspace",
     })
   : null;
 let acd: AcdService | null = null;
@@ -143,7 +143,7 @@ export function startCallCenter(io: Io): () => void {
   const attempt = async () => {
     const client = await pool.connect().catch(() => null);
     const locked = await client
-      ?.query<{ ok: boolean }>(`SELECT pg_try_advisory_lock(hashtext('nexo:callcenter-acd')) AS ok`)
+      ?.query<{ ok: boolean }>(`SELECT pg_try_advisory_lock(hashtext('tws:callcenter-acd')) AS ok`)
       .then((result) => result.rows[0].ok)
       .catch(() => false);
     if (!client || !locked) {

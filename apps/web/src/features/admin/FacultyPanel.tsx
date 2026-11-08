@@ -170,14 +170,14 @@ export function FacultyPanel({ token, run, onUnitCreated }: Props) {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={6} style={{ textAlign: "center", padding: 24, color: "var(--nexo-text-muted)" }}>
+                <td colSpan={6} style={{ textAlign: "center", padding: 24, color: "var(--tws-text-muted)" }}>
                   Đang tải danh sách khoa và phòng ban…
                 </td>
               </tr>
             )}
             {!loading && departments.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ textAlign: "center", padding: 24, color: "var(--nexo-text-muted)" }}>
+                <td colSpan={6} style={{ textAlign: "center", padding: 24, color: "var(--tws-text-muted)" }}>
                   Chưa có khoa hoặc phòng ban nào được tạo.
                 </td>
               </tr>

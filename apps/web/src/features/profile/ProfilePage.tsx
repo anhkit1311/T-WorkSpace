@@ -390,7 +390,7 @@ export function ProfilePage() {
         <h3 className="profile-section-title">
           <Icon name="lock" size={16} /> Thông tin tài khoản hệ thống
         </h3>
-        <div className="nexo-list-group profile-meta-list" role="list">
+        <div className="tws-list-group profile-meta-list" role="list">
           <ListItem
             role="listitem"
             icon="profile"
@@ -413,7 +413,7 @@ export function ProfilePage() {
       {/* Danger Zone */}
       <section className="profile-card profile-danger-zone">
         <h3 className="profile-section-title">Đăng xuất tài khoản</h3>
-        <p style={{ fontSize: "14px", color: "var(--nexo-text-muted, #8A8780)", margin: "0 0 16px" }}>
+        <p style={{ fontSize: "14px", color: "var(--tws-text-muted, #8A8780)", margin: "0 0 16px" }}>
           Đăng xuất sẽ kết thúc phiên làm việc hiện tại trên trình duyệt này.
         </p>
         <Button variant="secondary" icon="logout" onClick={() => setLogoutConfirmOpen(true)}>

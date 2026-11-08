@@ -6,7 +6,7 @@
      sipp -sf scripts/benchmarks/sipp/uac-hotline.xml -s 9000 -au 1290 -ap <secret> -key auth_user 1290 -r 5 -l 50 -m 500 \
           -rtp_echo -d 20000 <asterisk-ip>:5060
      -r calls/s, -l max concurrent, -m total, -d hold time (ms). Watch Grafana while it runs. -->
-<scenario name="nexo hotline UAC">
+<scenario name="T-Workspace hotline UAC">
   <send retrans="500">
     <![CDATA[
       INVITE sip:[service]@[remote_ip]:[remote_port] SIP/2.0

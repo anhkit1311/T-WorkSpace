@@ -27,7 +27,7 @@ Kiến trúc modular monolith: React/TypeScript + Node.js/Socket.IO + PostgreSQL
 - Lời mời và nhắc họp (NV-MT1): tạo, sửa, hủy lịch họp gửi thông báo (toast realtime) và email cho thành viên phòng; 15 phút trước giờ họp hệ thống nhắc một lần, đổi giờ bắt đầu thì nhắc lại (`048_meeting_reminders`). Lời mời và lời nhắc cũng vào chuông thông báo, bấm "Xem" mở thẳng phòng họp (`051_system_notifications`).
 - Mời theo danh sách: lịch họp có thể chỉ mời một số người, cả một nhóm/lớp khác hoặc cả một đơn vị (tối đa 500 người); người ngoài nhóm được thêm vào nhóm của phòng. Cấu hình phòng theo lịch: bật phòng chờ (người được mời vào thẳng, người khác chờ duyệt), tự ghi hình khi chủ trì vào, tắt micro khi vào lần đầu (`052_meeting_room_settings`).
 - Điểm danh từ máy chủ: giờ vào, giờ rời, thời gian có mặt (gộp nhiều tab/kết nối lại), xuất CSV có MSSV; chỉ chủ trì và đồng chủ trì xem.
-- Ghi hình phía máy chủ (FFmpeg, không giải mã khi đang họp), xem lại và chia sẻ bản ghi. Cần container FFmpeg: `docker compose -f infra/docker-compose.yml --profile recording up -d ffmpeg` và `FFMPEG_COMMAND="docker exec -i -w /work nexo-ffmpeg ffmpeg"`.
+- Ghi hình phía máy chủ (FFmpeg, không giải mã khi đang họp), xem lại và chia sẻ bản ghi. Cần container FFmpeg: `docker compose -f infra/docker-compose.yml --profile recording up -d ffmpeg` và `FFMPEG_COMMAND="docker exec -i -w /work tws-ffmpeg ffmpeg"`.
 - Chép lời bản ghi (Whisper hoặc faster-whisper qua `TRANSCRIBE_URL`); chưa đặt biến này thì nút chép lời không chạy.
 - Tóm tắt bằng AI (`055_ai_summaries`): khi chép lời xong, bản chép lời được gửi tới `SUMMARY_URL` (endpoint `/v1/chat/completions` dạng OpenAI, ví dụ Ollama tự host để dữ liệu không rời trường; mô hình `SUMMARY_MODEL`). Bản ghi họp có đoạn tóm tắt và danh sách việc cần làm, chủ trì bấm "Thêm vào việc cần làm" để đưa từng việc sang Kanban. Chỉ gửi văn bản chép lời, không gửi âm thanh; kết quả chỉ là gợi ý, người dùng vẫn tự viết biên bản.
 - Chưa có: làm mờ/thay nền; chưa kiểm RTP qua nhiều mạng với TURN thật. Gọi vào phòng họp từ máy lẻ (dial-in) đi qua Asterisk nên tạm dừng cùng tổng đài.
@@ -90,8 +90,8 @@ Dev server dùng cổng của `WEB_ORIGIN` trong `.env` (mẫu mặc định 517
 
 ```powershell
 npm run callcenter:up        # build Asterisk 22 từ mã nguồn (lần đầu vài phút), mở 5060/udp, 8088, 10000-10499/udp
-npm run callcenter:ari-spike # in StasisStart khi có cuộc gọi vào ứng dụng ARI "nexo"
-npm run callcenter:seed -- giaovu@demo.nexo.test gv.ha@demo.nexo.test  # 2 phòng ban, hotline ASTERISK_TRUNK_NUMBER (mặc định 19001234; IVR phím 1/2), máy lẻ cho từng email
+npm run callcenter:ari-spike # in StasisStart khi có cuộc gọi vào ứng dụng ARI "tworkspace"
+npm run callcenter:seed -- giaovu@demo.tworkspace.test gv.ha@demo.tworkspace.test  # 2 phòng ban, hotline ASTERISK_TRUNK_NUMBER (mặc định 19001234; IVR phím 1/2), máy lẻ cho từng email
 ```
 
 - Máy lẻ thử: 1001, 1002 (Zoiper/Linphone, UDP 127.0.0.1:5060) và 1101 (trình duyệt), cùng mật khẩu `ASTERISK_SPIKE_SIP_PASSWORD`.
@@ -120,9 +120,9 @@ node scripts/benchmarks/summarize-chat-load.mjs
 npm run verify:restore
 ```
 
-Dữ liệu demo khoa CNTT: tạo quản trị hệ thống trước (`node scripts/ops/create-user.mjs admin@tdtu.edu.vn "Quản trị hệ thống" --admin`), đặt `SEED_ACADEMIC_PASSWORD` trong `.env` rồi chạy `npm run seed:academic` (thêm `-- --reset` để tạo lại). `giaovu@demo.nexo.test` là giáo vụ khoa, `truongkhoa@…` là lãnh đạo khoa, `gv.*@…` là giảng viên, `sv01…sv30@…` là sinh viên.
+Dữ liệu demo khoa CNTT: tạo quản trị hệ thống trước (`node scripts/ops/create-user.mjs admin@tdtu.edu.vn "Quản trị hệ thống" --admin`), đặt `SEED_ACADEMIC_PASSWORD` trong `.env` rồi chạy `npm run seed:academic` (thêm `-- --reset` để tạo lại). `giaovu@demo.tworkspace.test` là giáo vụ khoa, `truongkhoa@…` là lãnh đạo khoa, `gv.*@…` là giảng viên, `sv01…sv30@…` là sinh viên.
 
-Dữ liệu cho buổi bảo vệ: `npm run demo:seed` (cần Asterisk và FFmpeg đang chạy: `npm run callcenter:up`, `docker compose -f infra/docker-compose.yml --profile recording up -d ffmpeg`). Ngoài khoa CNTT, tổng đài và khóa CC-101, `scripts/database/seed-showcase.mjs` tạo nhóm "Giáo vụ Khoa CNTT" với lịch họp tuần này, một hội đồng bảo vệ (3 tiêu chí, 3 người bảo vệ), một cuộc họp đã qua có bản ghi + chép lời + tóm tắt AI + 3 việc, khóa CC-201 đủ 4 loại bài (tài liệu, kiểm tra, lớp live đã chốt điểm danh, video xem lại), `gv.ha` hoàn thành CC-201 (mã chứng nhận in ra để mở `/verify/<mã>`). Muốn có lịch sử tổng đài như một ca trực thật, chạy trước `node scripts/callcenter/simulate-shift.mjs giaovu@demo.nexo.test gv.ha@demo.nexo.test gv.lan@demo.nexo.test` (khoảng 30 phút; 28 cuộc gọi qua ACD thật với PBX giả lập), rồi seed sẽ gắn chép lời, tóm tắt AI, ghi âm và điểm QA cho một cuộc của `gv.ha`. Bản ghi hình là ảnh thử của FFmpeg, ghi âm là lời nhắc của Asterisk, chép lời/tóm tắt là văn bản soạn sẵn.
+Dữ liệu cho buổi bảo vệ: `npm run demo:seed` (cần Asterisk và FFmpeg đang chạy: `npm run callcenter:up`, `docker compose -f infra/docker-compose.yml --profile recording up -d ffmpeg`). Ngoài khoa CNTT, tổng đài và khóa CC-101, `scripts/database/seed-showcase.mjs` tạo nhóm "Giáo vụ Khoa CNTT" với lịch họp tuần này, một hội đồng bảo vệ (3 tiêu chí, 3 người bảo vệ), một cuộc họp đã qua có bản ghi + chép lời + tóm tắt AI + 3 việc, khóa CC-201 đủ 4 loại bài (tài liệu, kiểm tra, lớp live đã chốt điểm danh, video xem lại), `gv.ha` hoàn thành CC-201 (mã chứng nhận in ra để mở `/verify/<mã>`). Muốn có lịch sử tổng đài như một ca trực thật, chạy trước `node scripts/callcenter/simulate-shift.mjs giaovu@demo.tworkspace.test gv.ha@demo.tworkspace.test gv.lan@demo.tworkspace.test` (khoảng 30 phút; 28 cuộc gọi qua ACD thật với PBX giả lập), rồi seed sẽ gắn chép lời, tóm tắt AI, ghi âm và điểm QA cho một cuộc của `gv.ha`. Bản ghi hình là ảnh thử của FFmpeg, ghi âm là lời nhắc của Asterisk, chép lời/tóm tắt là văn bản soạn sẵn.
 
 Benchmark local50/100/200 socket,2 API process,4tin/giây,30s ×2/mức:732tin,0lỗi/trùng trong kịch bản. Kết quả đo tải (k6, chat, ACD và SIPp tới 200 cuộc đồng thời, MOS theo E-model, KPI ca trực mô phỏng, Mesh/SFU, họp qua TURN), dữ liệu gốc và giới hạn ở [docs/benchmarks](docs/benchmarks/README.md). Restore dùng hai DB QA mới, kiểm20 migration/dữ liệu Unicode và dọn đúng fixtures.
 

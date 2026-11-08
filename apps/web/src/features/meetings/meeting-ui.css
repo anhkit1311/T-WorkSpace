@@ -29,13 +29,13 @@
   display: grid;
   gap: 6px;
   font-size: 13px;
-  color: var(--nexo-text-muted, #8A8780);
+  color: var(--tws-text-muted, #8A8780);
 }
 
 .mic-level__track {
   height: 6px;
-  border-radius: var(--nexo-radius-pill, 9999px);
-  background: var(--nexo-bg-subtle, #EEECE7);
+  border-radius: var(--tws-radius-pill, 9999px);
+  background: var(--tws-bg-subtle, #EEECE7);
   overflow: hidden;
 }
 

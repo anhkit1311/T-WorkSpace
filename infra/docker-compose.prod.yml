@@ -73,7 +73,7 @@ services:
       SUMMARY_MODEL: ${SUMMARY_MODEL:-qwen2.5:7b-instruct}
       # Call center: ARI over the Docker network, browsers reach SIP over WSS through Nginx.
       ASTERISK_ARI_URL: http://asterisk:8088
-      ASTERISK_ARI_USER: nexo
+      ASTERISK_ARI_USER: tworkspace
       ASTERISK_ARI_PASSWORD: ${ASTERISK_ARI_PASSWORD:?}
       VITE_SIP_WS_URL: wss://${APP_DOMAIN:?}/ws
     volumes:
@@ -133,7 +133,7 @@ services:
       TRUNK_SERVER: ${ASTERISK_TRUNK_SERVER:-}
       TRUNK_NUMBER: ${ASTERISK_TRUNK_NUMBER:-}
     volumes:
-      - ./asterisk/config:/opt/nexo-asterisk:ro
+      - ./asterisk/config:/opt/tws-asterisk:ro
       - ${ASTERISK_LOG_DIR:-./asterisk/logs}:/var/log/asterisk
       # Call recordings and voicemails (ARI stored recordings): kept when the container is rebuilt.
       - asterisk_spool_prod:/var/spool/asterisk

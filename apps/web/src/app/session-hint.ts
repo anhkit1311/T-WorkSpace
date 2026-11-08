@@ -1,5 +1,5 @@
 /** Remembers that this browser had a session, so public pages skip a refresh that can only 401. */
-const SESSION_HINT_KEY = "nexo:hadSession";
+const SESSION_HINT_KEY = "tws:hadSession";
 
 type HintStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 

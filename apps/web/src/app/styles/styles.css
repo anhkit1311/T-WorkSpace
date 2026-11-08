@@ -144,22 +144,22 @@
   --backdrop: rgba(15, 23, 42, 0.45);
 
   /* Legacy Editorial Fallbacks mapped to TDTU Flat Minimal */
-  --nexo-border-beige: var(--border-color);
-  --nexo-text-primary: var(--text);
-  --nexo-text-secondary: var(--text-secondary);
-  --nexo-text-muted: var(--text-muted);
-  --nexo-bg-warm: var(--bg-canvas);
-  --nexo-surface: var(--bg-surface);
-  --nexo-surface-card: var(--bg-surface);
-  --nexo-primary: var(--brand-primary);
-  --nexo-primary-hover: var(--brand-primary-hover);
+  --tws-border-beige: var(--border-color);
+  --tws-text-primary: var(--text);
+  --tws-text-secondary: var(--text-secondary);
+  --tws-text-muted: var(--text-muted);
+  --tws-bg-warm: var(--bg-canvas);
+  --tws-surface: var(--bg-surface);
+  --tws-surface-card: var(--bg-surface);
+  --tws-primary: var(--brand-primary);
+  --tws-primary-hover: var(--brand-primary-hover);
 
   /* Tokens of the removed editorial stylesheets, still read by older pages: map them onto the flat style. */
   --font-display: var(--font-sans);
   --font-body: var(--font-sans);
-  --nexo-bg-subtle: var(--bg-subtle);
-  --nexo-bg-ivory: var(--surface);
-  --nexo-card-surface: var(--surface);
+  --tws-bg-subtle: var(--bg-subtle);
+  --tws-bg-ivory: var(--surface);
+  --tws-card-surface: var(--surface);
   --editorial-surface-card: var(--surface);
   --bg-card: var(--surface);
   --editorial-blur: none;
@@ -167,21 +167,21 @@
   --editorial-text: var(--text);
   --editorial-text-secondary: var(--text-secondary);
   --editorial-text-muted: var(--text-muted);
-  --nexo-radius-pill: var(--radius-button);
-  --nexo-btn-radius-pill: var(--radius-button);
-  --nexo-radius-primary: var(--radius-button);
-  --nexo-pill-hover-bg: var(--bg-subtle);
-  --nexo-btn-primary-hover: var(--primary-hover);
-  --nexo-shadow-primary: none;
-  --nexo-touch-min: 32px;
-  --nexo-btn-height: 32px;
-  --nexo-chip-height: 24px;
-  --nexo-chip-px: 8px;
-  --nexo-fs-desc: 13px;
-  --nexo-fs-col: 12px;
-  --nexo-fs-col-title: 13px;
-  --nexo-fs-section: 15px;
-  --nexo-fs-big-num: 20px;
+  --tws-radius-pill: var(--radius-button);
+  --tws-btn-radius-pill: var(--radius-button);
+  --tws-radius-primary: var(--radius-button);
+  --tws-pill-hover-bg: var(--bg-subtle);
+  --tws-btn-primary-hover: var(--primary-hover);
+  --tws-shadow-primary: none;
+  --tws-touch-min: 32px;
+  --tws-btn-height: 32px;
+  --tws-chip-height: 24px;
+  --tws-chip-px: 8px;
+  --tws-fs-desc: 13px;
+  --tws-fs-col: 12px;
+  --tws-fs-col-title: 13px;
+  --tws-fs-section: 15px;
+  --tws-fs-big-num: 20px;
 
   /* Tinted accents (icon squares, status chips): a pale fill with a strong foreground. */
   --tint-blue-bg: #EFF6FF;
@@ -1344,7 +1344,7 @@ img, svg {
 .badge--violet { background: var(--tint-violet-bg); color: var(--tint-violet-fg); }
 
 .chip,
-.nexo-chip {
+.tws-chip {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -1417,7 +1417,7 @@ img, svg {
 }
 
 /* ListItem primitive (Primitives.tsx): one dense row with icon, text and right-aligned meta. */
-.nexo-list-item {
+.tws-list-item {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1430,10 +1430,10 @@ img, svg {
   font-size: var(--fs-body);
   text-align: left;
 }
-button.nexo-list-item:hover:not(:disabled) {
+button.tws-list-item:hover:not(:disabled) {
   background: var(--bg-subtle);
 }
-.nexo-list-item__icon {
+.tws-list-item__icon {
   flex: none;
   width: 26px;
   height: 26px;
@@ -1443,7 +1443,7 @@ button.nexo-list-item:hover:not(:disabled) {
   background: var(--bg-subtle);
   color: var(--text-secondary);
 }
-.nexo-list-item__body {
+.tws-list-item__body {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
@@ -1451,27 +1451,27 @@ button.nexo-list-item:hover:not(:disabled) {
   justify-content: space-between;
   gap: 10px;
 }
-.nexo-list-item__content {
+.tws-list-item__content {
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
-.nexo-list-item__title,
-.nexo-list-item__subtitle {
+.tws-list-item__title,
+.tws-list-item__subtitle {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.nexo-list-item__title {
+.tws-list-item__title {
   font-weight: 500;
   font-size: var(--fs-body);
 }
-.nexo-list-item__subtitle {
+.tws-list-item__subtitle {
   color: var(--text-secondary);
   font-size: var(--fs-subtext);
 }
-.nexo-list-item__meta {
+.tws-list-item__meta {
   flex: none;
   display: flex;
   flex-direction: column;
@@ -1480,16 +1480,16 @@ button.nexo-list-item:hover:not(:disabled) {
   font-size: var(--fs-subtext);
   color: var(--text-muted);
 }
-.nexo-list-item__meta-primary {
+.tws-list-item__meta-primary {
   font-weight: 500;
   color: var(--text-secondary);
 }
 /* Phones: the meta column moves under the title instead of pushing past the edge. */
 @media (max-width: 480px) {
-  .nexo-list-item {
+  .tws-list-item {
     flex-wrap: wrap;
   }
-  .nexo-list-item__meta {
+  .tws-list-item__meta {
     flex: 1 1 100%;
     align-items: flex-start;
   }

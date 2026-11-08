@@ -1,5 +1,5 @@
 // Week-1 spike (plan CC-5): proves the API can drive calls through ARI.
-// Dial 9000 from any extension (or call the hotline): the call enters Stasis(nexo), this script
+// Dial 9000 from any extension (or call the hotline): the call enters Stasis(tworkspace), this script
 // prints StasisStart, answers, plays a greeting and hangs up.
 //
 //   npm run callcenter:up
@@ -11,13 +11,13 @@ try {
 }
 
 const base = (process.env.ASTERISK_ARI_URL ?? "http://localhost:8088").replace(/\/$/, "");
-const user = process.env.ASTERISK_ARI_USER ?? "nexo";
+const user = process.env.ASTERISK_ARI_USER ?? "tworkspace";
 const password = process.env.ASTERISK_ARI_PASSWORD;
 if (!password) {
   console.error("Set ASTERISK_ARI_PASSWORD in .env (same value the Asterisk container uses).");
   process.exit(1);
 }
-const app = "nexo";
+const app = "tworkspace";
 const auth = `Basic ${Buffer.from(`${user}:${password}`).toString("base64")}`;
 
 async function ari(method, path) {

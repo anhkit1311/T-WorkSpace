@@ -1,6 +1,6 @@
 {
-  "uid": "nexo-overview",
-  "title": "nexo · Tổng đài, họp, e-learning",
+  "uid": "tws-overview",
+  "title": "T-Workspace · Tổng đài, họp, e-learning",
   "schemaVersion": 39,
   "version": 1,
   "time": {
@@ -9,7 +9,7 @@
   },
   "refresh": "15s",
   "tags": [
-    "nexo"
+    "tworkspace"
   ],
   "panels": [
     {
@@ -45,7 +45,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(nexo_callcenter_waiting_calls)",
+          "expr": "sum(tws_callcenter_waiting_calls)",
           "legendFormat": "chờ"
         }
       ]
@@ -85,7 +85,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max(nexo_callcenter_longest_wait_seconds)",
+          "expr": "max(tws_callcenter_longest_wait_seconds)",
           "legendFormat": "giây"
         }
       ]
@@ -123,7 +123,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(nexo_callcenter_active_calls)",
+          "expr": "sum(tws_callcenter_active_calls)",
           "legendFormat": "cuộc gọi"
         }
       ]
@@ -161,7 +161,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(nexo_acd_leader)",
+          "expr": "sum(tws_acd_leader)",
           "legendFormat": "leader"
         }
       ]
@@ -192,7 +192,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (state) (nexo_callcenter_agents)",
+          "expr": "sum by (state) (tws_callcenter_agents)",
           "legendFormat": "{{state}}"
         }
       ]
@@ -223,7 +223,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "nexo_callcenter_waiting_calls",
+          "expr": "tws_callcenter_waiting_calls",
           "legendFormat": "{{department}}"
         }
       ]
@@ -256,7 +256,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(nexo_http_requests_total[5m]))",
+          "expr": "sum(rate(tws_http_requests_total[5m]))",
           "legendFormat": "yêu cầu"
         },
         {
@@ -265,7 +265,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(nexo_http_errors_total[5m]))",
+          "expr": "sum(rate(tws_http_errors_total[5m]))",
           "legendFormat": "lỗi 5xx"
         }
       ]
@@ -298,7 +298,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(nexo_http_request_duration_ms_total[5m])) / sum(rate(nexo_http_requests_total[5m]))",
+          "expr": "sum(rate(tws_http_request_duration_ms_total[5m])) / sum(rate(tws_http_requests_total[5m]))",
           "legendFormat": "ms"
         }
       ]
@@ -329,7 +329,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (state) (nexo_db_pool_connections)",
+          "expr": "sum by (state) (tws_db_pool_connections)",
           "legendFormat": "{{state}}"
         }
       ]
@@ -360,7 +360,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(nexo_media_rooms)",
+          "expr": "sum(tws_media_rooms)",
           "legendFormat": "phòng"
         },
         {
@@ -369,7 +369,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(nexo_media_peers)",
+          "expr": "sum(tws_media_peers)",
           "legendFormat": "người tham gia"
         },
         {
@@ -378,7 +378,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(nexo_socket_clients)",
+          "expr": "sum(tws_socket_clients)",
           "legendFormat": "socket"
         }
       ]
@@ -409,7 +409,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (status) (nexo_media_jobs)",
+          "expr": "sum by (status) (tws_media_jobs)",
           "legendFormat": "{{status}}"
         }
       ]
@@ -473,7 +473,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max(nexo_media_qos_rtt_ms{stat=\"avg\"})",
+          "expr": "max(tws_media_qos_rtt_ms{stat=\"avg\"})",
           "legendFormat": "RTT (ms)"
         },
         {
@@ -482,7 +482,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max(nexo_media_qos_jitter_ms{stat=\"avg\"})",
+          "expr": "max(tws_media_qos_jitter_ms{stat=\"avg\"})",
           "legendFormat": "Jitter (ms)"
         },
         {
@@ -491,7 +491,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max(nexo_media_qos_packet_loss_percent{stat=\"avg\"})",
+          "expr": "max(tws_media_qos_packet_loss_percent{stat=\"avg\"})",
           "legendFormat": "Mất gói (%)"
         },
         {
@@ -500,7 +500,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(nexo_media_qos_reporting_peers)",
+          "expr": "sum(tws_media_qos_reporting_peers)",
           "legendFormat": "Người báo cáo"
         }
       ]

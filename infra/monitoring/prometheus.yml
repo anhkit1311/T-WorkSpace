@@ -7,12 +7,12 @@ rule_files:
   - /etc/prometheus/alerts.yml
 
 scrape_configs:
-  - job_name: nexo-api
+  - job_name: tws-api
     metrics_path: /metrics
     authorization:
       type: Bearer
       credentials_file: /etc/prometheus/operations_token
     # Dev: the API runs on the host. Production (docker-compose.prod.yml): use api:3001, and list
-    # every API instance here; nexo_acd_leader tells which one runs the ACD.
+    # every API instance here; tws_acd_leader tells which one runs the ACD.
     static_configs:
       - targets: ["host.docker.internal:3001"]

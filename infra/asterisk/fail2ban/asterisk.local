@@ -5,8 +5,8 @@
 [asterisk]
 enabled  = true
 filter   = asterisk
-logpath  = /srv/nexo/asterisk-logs/security
-           /srv/nexo/asterisk-logs/messages
+logpath  = /srv/t-workspace/asterisk-logs/security
+           /srv/t-workspace/asterisk-logs/messages
 maxretry = 5
 findtime = 600
 bantime  = 3600
