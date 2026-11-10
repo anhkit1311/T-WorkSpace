@@ -38,12 +38,19 @@ export class LiveClassService {
         })
       ).id;
     }
-    const lessonId = await this.repo.createLesson({ courseId: chapter.courseId, chapterId: chapter.id, title, kind: "live", scheduleId }).catch(
-      (error: { code?: string }) => {
-        if (error.code === "23505") throw conflict("SCHEDULE_IN_USE", "Lịch họp này đã gắn với một buổi live khác.");
+    const lessonId = await this.repo
+      .createLesson({
+        courseId: chapter.courseId,
+        chapterId: chapter.id,
+        title,
+        kind: "live",
+        scheduleId,
+      })
+      .catch((error: { code?: string }) => {
+        if (error.code === "23505")
+          throw conflict("SCHEDULE_IN_USE", "Lịch họp này đã gắn với một buổi live khác.");
         throw error;
-      },
-    );
+      });
     return { id: lessonId };
   }
 
@@ -56,11 +63,16 @@ export class LiveClassService {
   /** LT-2 by hand: the lecturer closes the class without waiting for the automatic pass. */
   async close(userId: string, lessonId: string) {
     const { lesson } = await this.courses.lessonCourse(userId, lessonId, "manage");
-    if (lesson.kind !== "live" || !lesson.scheduleId) throw invalid("Bài này không phải buổi live.");
+    if (lesson.kind !== "live" || !lesson.scheduleId)
+      throw invalid("Bài này không phải buổi live.");
     if (lesson.attendanceClosedAt) throw conflict("ALREADY_CLOSED", "Buổi live đã chốt điểm danh.");
-    const sessions = await query<{ open: boolean }>(`SELECT ended_at IS NULL AS open FROM meeting_sessions WHERE schedule_id=$1`, [lesson.scheduleId]);
+    const sessions = await query<{ open: boolean }>(
+      `SELECT ended_at IS NULL AS open FROM meeting_sessions WHERE schedule_id=$1`,
+      [lesson.scheduleId],
+    );
     if (!sessions.rowCount) throw conflict("NOT_HELD", "Lớp chưa diễn ra.");
-    if (sessions.rows.some((row) => row.open)) throw conflict("STILL_RUNNING", "Lớp vẫn đang diễn ra; kết thúc phòng họp trước khi chốt.");
+    if (sessions.rows.some((row) => row.open))
+      throw conflict("STILL_RUNNING", "Lớp vẫn đang diễn ra; kết thúc phòng họp trước khi chốt.");
     return this.repo.closeLiveClass(lesson.id, liveAttendance);
   }
 

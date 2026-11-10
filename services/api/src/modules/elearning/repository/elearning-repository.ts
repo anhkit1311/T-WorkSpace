@@ -62,19 +62,32 @@ const LESSON = `SELECT id,course_id AS "courseId",chapter_id AS "chapterId",titl
 export class ElearningRepository {
   async access(userId: string): Promise<CourseAccess> {
     const [grants, staff] = await Promise.all([
-      query<{ role: string; unit_id: string | null }>(`SELECT role,unit_id FROM academic_role_grants WHERE user_id=$1`, [userId]),
-      query<{ unit_id: string }>(`SELECT unit_id FROM academic_staff WHERE user_id=$1 AND active`, [userId]),
+      query<{ role: string; unit_id: string | null }>(
+        `SELECT role,unit_id FROM academic_role_grants WHERE user_id=$1`,
+        [userId],
+      ),
+      query<{ unit_id: string }>(`SELECT unit_id FROM academic_staff WHERE user_id=$1 AND active`, [
+        userId,
+      ]),
     ]);
     return new CourseAccess(
       userId,
       grants.rows.some((grant) => grant.role === "system_admin"),
-      new Set(grants.rows.filter((grant) => grant.role === "unit_admin" && grant.unit_id).map((grant) => grant.unit_id!)),
+      new Set(
+        grants.rows
+          .filter((grant) => grant.role === "unit_admin" && grant.unit_id)
+          .map((grant) => grant.unit_id!),
+      ),
       new Set(staff.rows.map((row) => row.unit_id)),
     );
   }
 
   async units() {
-    return (await query<{ id: string; code: string; name: string }>(`SELECT id,code,name FROM academic_units ORDER BY name`)).rows;
+    return (
+      await query<{ id: string; code: string; name: string }>(
+        `SELECT id,code,name FROM academic_units ORDER BY name`,
+      )
+    ).rows;
   }
 
   async course(id: string): Promise<CourseRow | null> {
@@ -82,12 +95,29 @@ export class ElearningRepository {
   }
 
   async isEnrolled(courseId: string, userId: string) {
-    return Boolean((await query(`SELECT 1 FROM course_enrollments WHERE course_id=$1 AND user_id=$2`, [courseId, userId])).rowCount);
+    return Boolean(
+      (
+        await query(`SELECT 1 FROM course_enrollments WHERE course_id=$1 AND user_id=$2`, [
+          courseId,
+          userId,
+        ])
+      ).rowCount,
+    );
   }
 
   /** Every course the user may see, with their own progress where enrolled. */
-  async listCourses(userId: string): Promise<(CourseRow & Omit<CourseSummary, "canManage" | "canEnroll">)[]> {
-    const rows = await query<CourseRow & { lessonCount: number; learnerCount: number; enrolled: boolean; requested: boolean; done: number }>(
+  async listCourses(
+    userId: string,
+  ): Promise<(CourseRow & Omit<CourseSummary, "canManage" | "canEnroll">)[]> {
+    const rows = await query<
+      CourseRow & {
+        lessonCount: number;
+        learnerCount: number;
+        enrolled: boolean;
+        requested: boolean;
+        done: number;
+      }
+    >(
       `SELECT x.*,
          (SELECT count(*)::int FROM course_lessons l WHERE l.course_id=x.id AND l.status='published') AS "lessonCount",
          (SELECT count(*)::int FROM course_enrollments e WHERE e.course_id=x.id) AS "learnerCount",
@@ -102,19 +132,42 @@ export class ElearningRepository {
     );
     return rows.rows.map((row) => ({
       ...row,
-      progress: row.enrolled ? (row.lessonCount ? Math.round((Math.min(row.done, row.lessonCount) / row.lessonCount) * 100) : 0) : null,
+      progress: row.enrolled
+        ? row.lessonCount
+          ? Math.round((Math.min(row.done, row.lessonCount) / row.lessonCount) * 100)
+          : 0
+        : null,
     }));
   }
 
-  async createCourse(input: { unitId: string; ownerId: string; code: string; title: string; description: string; enrollment: string }) {
+  async createCourse(input: {
+    unitId: string;
+    ownerId: string;
+    code: string;
+    title: string;
+    description: string;
+    enrollment: string;
+  }) {
     const id = randomUUID();
-    await query(`INSERT INTO courses(id,unit_id,owner_id,code,title,description,enrollment) VALUES($1,$2,$3,$4,$5,$6,$7)`, [
-      id, input.unitId, input.ownerId, input.code, input.title, input.description, input.enrollment,
-    ]);
+    await query(
+      `INSERT INTO courses(id,unit_id,owner_id,code,title,description,enrollment) VALUES($1,$2,$3,$4,$5,$6,$7)`,
+      [
+        id,
+        input.unitId,
+        input.ownerId,
+        input.code,
+        input.title,
+        input.description,
+        input.enrollment,
+      ],
+    );
     return id;
   }
 
-  async updateCourse(id: string, change: { title: string; description: string; enrollment: string; status: CourseStatus }) {
+  async updateCourse(
+    id: string,
+    change: { title: string; description: string; enrollment: string; status: CourseStatus },
+  ) {
     await query(
       `UPDATE courses SET title=$2,description=$3,enrollment=$4,status=$5,updated_at=now(),
          published_at=CASE WHEN $5::varchar='published' THEN COALESCE(published_at,now()) ELSE published_at END WHERE id=$1`,
@@ -132,7 +185,10 @@ export class ElearningRepository {
   }
 
   async userByEmail(email: string) {
-    return (await query<{ id: string }>(`SELECT id FROM users WHERE lower(email)=lower($1)`, [email])).rows[0]?.id ?? null;
+    return (
+      (await query<{ id: string }>(`SELECT id FROM users WHERE lower(email)=lower($1)`, [email]))
+        .rows[0]?.id ?? null
+    );
   }
 
   async setInstructor(courseId: string, userId: string, present: boolean) {
@@ -159,7 +215,9 @@ export class ElearningRepository {
   }
 
   async hasSupportDepartment(unitId: string) {
-    return Boolean((await query(`SELECT 1 FROM cc_departments WHERE unit_id=$1`, [unitId])).rowCount);
+    return Boolean(
+      (await query(`SELECT 1 FROM cc_departments WHERE unit_id=$1`, [unitId])).rowCount,
+    );
   }
 
   // ---- chapters and lessons ---------------------------------------------------------------
@@ -174,7 +232,14 @@ export class ElearningRepository {
   }
 
   async chapter(id: string) {
-    return (await query<{ id: string; courseId: string; title: string }>(`SELECT id,course_id AS "courseId",title FROM course_chapters WHERE id=$1`, [id])).rows[0] ?? null;
+    return (
+      (
+        await query<{ id: string; courseId: string; title: string }>(
+          `SELECT id,course_id AS "courseId",title FROM course_chapters WHERE id=$1`,
+          [id],
+        )
+      ).rows[0] ?? null
+    );
   }
 
   async createChapter(courseId: string, title: string) {
@@ -187,7 +252,11 @@ export class ElearningRepository {
   }
 
   async updateChapter(id: string, title: string, position: number | null) {
-    await query(`UPDATE course_chapters SET title=$2,position=COALESCE($3,position) WHERE id=$1`, [id, title, position]);
+    await query(`UPDATE course_chapters SET title=$2,position=COALESCE($3,position) WHERE id=$1`, [
+      id,
+      title,
+      position,
+    ]);
   }
 
   async deleteChapter(id: string) {
@@ -212,23 +281,62 @@ export class ElearningRepository {
     return (await query<LessonRow>(`${LESSON} WHERE id=$1`, [id])).rows[0] ?? null;
   }
 
-  async createLesson(input: { courseId: string; chapterId: string; title: string; kind: LessonKind; scheduleId?: string | null; recordingId?: string | null; status?: string; position?: number }) {
+  async createLesson(input: {
+    courseId: string;
+    chapterId: string;
+    title: string;
+    kind: LessonKind;
+    scheduleId?: string | null;
+    recordingId?: string | null;
+    status?: string;
+    position?: number;
+  }) {
     const id = randomUUID();
     await query(
       `INSERT INTO course_lessons(id,course_id,chapter_id,title,kind,schedule_id,recording_id,status,media_status,position)
        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,COALESCE($10,(SELECT COALESCE(max(position)+1,0) FROM course_lessons WHERE chapter_id=$3)))`,
       [
-        id, input.courseId, input.chapterId, input.title, input.kind, input.scheduleId ?? null, input.recordingId ?? null,
-        input.status ?? "draft", input.recordingId ? "ready" : "none", input.position ?? null,
+        id,
+        input.courseId,
+        input.chapterId,
+        input.title,
+        input.kind,
+        input.scheduleId ?? null,
+        input.recordingId ?? null,
+        input.status ?? "draft",
+        input.recordingId ? "ready" : "none",
+        input.position ?? null,
       ],
     );
     return id;
   }
 
-  async updateLesson(id: string, change: Partial<{ title: string; status: string; body: string; position: number; chapterId: string; timeLimitSeconds: number | null; passPercent: number; drawCount: number | null; maxAttempts: number | null; shuffle: boolean }>) {
+  async updateLesson(
+    id: string,
+    change: Partial<{
+      title: string;
+      status: string;
+      body: string;
+      position: number;
+      chapterId: string;
+      timeLimitSeconds: number | null;
+      passPercent: number;
+      drawCount: number | null;
+      maxAttempts: number | null;
+      shuffle: boolean;
+    }>,
+  ) {
     const columns: Record<string, string> = {
-      title: "title", status: "status", body: "body", position: "position", chapterId: "chapter_id",
-      timeLimitSeconds: "time_limit_seconds", passPercent: "pass_percent", drawCount: "draw_count", maxAttempts: "max_attempts", shuffle: "shuffle",
+      title: "title",
+      status: "status",
+      body: "body",
+      position: "position",
+      chapterId: "chapter_id",
+      timeLimitSeconds: "time_limit_seconds",
+      passPercent: "pass_percent",
+      drawCount: "draw_count",
+      maxAttempts: "max_attempts",
+      shuffle: "shuffle",
     };
     const keys = Object.keys(change).filter((key) => key in columns);
     if (!keys.length) return;
@@ -246,19 +354,38 @@ export class ElearningRepository {
     await query(`UPDATE course_lessons SET transcript_status=$2 WHERE id=$1`, [id, status]);
   }
 
-  async setMedia(id: string, change: { status: LessonMediaStatus; name?: string | null; error?: string | null; durationSeconds?: number | null }) {
+  async setMedia(
+    id: string,
+    change: {
+      status: LessonMediaStatus;
+      name?: string | null;
+      error?: string | null;
+      durationSeconds?: number | null;
+    },
+  ) {
     await query(
       `UPDATE course_lessons SET media_status=$2,media_name=COALESCE($3,media_name),media_error=$4,
          duration_seconds=COALESCE($5,duration_seconds),updated_at=now(),
          transcript_status=CASE WHEN $2::varchar='processing' THEN NULL ELSE transcript_status END WHERE id=$1`,
-      [id, change.status, change.name ?? null, change.error ?? null, change.durationSeconds ?? null],
+      [
+        id,
+        change.status,
+        change.name ?? null,
+        change.error ?? null,
+        change.durationSeconds ?? null,
+      ],
     );
   }
 
   // ---- enrollment (EL-2) ----------------------------------------------------------------------
 
   /** Adds learners who are not enrolled yet; returns the ones added. */
-  async enroll(courseId: string, userIds: string[], source: "self" | "assigned", by: string | null) {
+  async enroll(
+    courseId: string,
+    userIds: string[],
+    source: "self" | "assigned",
+    by: string | null,
+  ) {
     if (!userIds.length) return [];
     const result = await query<{ user_id: string }>(
       `INSERT INTO course_enrollments(course_id,user_id,source,assigned_by) SELECT $1,u,$3,$4 FROM unnest($2::uuid[]) u
@@ -269,20 +396,40 @@ export class ElearningRepository {
   }
 
   async hasRequest(courseId: string, userId: string) {
-    return Boolean((await query(`SELECT 1 FROM course_enrollment_requests WHERE course_id=$1 AND user_id=$2`, [courseId, userId])).rowCount);
+    return Boolean(
+      (
+        await query(`SELECT 1 FROM course_enrollment_requests WHERE course_id=$1 AND user_id=$2`, [
+          courseId,
+          userId,
+        ])
+      ).rowCount,
+    );
   }
 
   async requestEnrollment(courseId: string, userId: string) {
-    await query(`INSERT INTO course_enrollment_requests(course_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, [courseId, userId]);
+    await query(
+      `INSERT INTO course_enrollment_requests(course_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
+      [courseId, userId],
+    );
   }
 
   /** Removes a pending request; false when there was none. */
   async dropRequest(courseId: string, userId: string) {
-    return Boolean((await query(`DELETE FROM course_enrollment_requests WHERE course_id=$1 AND user_id=$2`, [courseId, userId])).rowCount);
+    return Boolean(
+      (
+        await query(`DELETE FROM course_enrollment_requests WHERE course_id=$1 AND user_id=$2`, [
+          courseId,
+          userId,
+        ])
+      ).rowCount,
+    );
   }
 
   async unenroll(courseId: string, userId: string) {
-    await query(`DELETE FROM course_enrollments WHERE course_id=$1 AND user_id=$2`, [courseId, userId]);
+    await query(`DELETE FROM course_enrollments WHERE course_id=$1 AND user_id=$2`, [
+      courseId,
+      userId,
+    ]);
     // EL-7: leaving the course leaves its discussion workspace too (never its owner).
     await query(
       `DELETE FROM memberships m USING courses c, workspaces w
@@ -295,7 +442,14 @@ export class ElearningRepository {
   // ---- EL-8 certificates ------------------------------------------------------------------------
 
   async completedAt(courseId: string, userId: string): Promise<Date | null> {
-    return (await query<{ completed_at: Date | null }>(`SELECT completed_at FROM course_enrollments WHERE course_id=$1 AND user_id=$2`, [courseId, userId])).rows[0]?.completed_at ?? null;
+    return (
+      (
+        await query<{ completed_at: Date | null }>(
+          `SELECT completed_at FROM course_enrollments WHERE course_id=$1 AND user_id=$2`,
+          [courseId, userId],
+        )
+      ).rows[0]?.completed_at ?? null
+    );
   }
 
   /** Issues once per learner and course; a second call returns the first code. */
@@ -304,13 +458,28 @@ export class ElearningRepository {
       `INSERT INTO course_certificates(id,course_id,user_id,code) VALUES($1,$2,$3,$4) ON CONFLICT (course_id,user_id) DO NOTHING`,
       [randomUUID(), courseId, userId, code],
     );
-    return (await query<{ code: string }>(`SELECT code FROM course_certificates WHERE course_id=$1 AND user_id=$2`, [courseId, userId])).rows[0].code;
+    return (
+      await query<{ code: string }>(
+        `SELECT code FROM course_certificates WHERE course_id=$1 AND user_id=$2`,
+        [courseId, userId],
+      )
+    ).rows[0].code;
   }
 
   async certificateByCode(code: string) {
     return (
-      await query<{ code: string; learnerName: string; courseCode: string; courseTitle: string; unitName: string; instructors: string[]; lessonCount: number; issuedAt: Date }>(
-        `SELECT x.code,u.display_name AS "learnerName",c.code AS "courseCode",c.title AS "courseTitle",au.name AS "unitName",
+      (
+        await query<{
+          code: string;
+          learnerName: string;
+          courseCode: string;
+          courseTitle: string;
+          unitName: string;
+          instructors: string[];
+          lessonCount: number;
+          issuedAt: Date;
+        }>(
+          `SELECT x.code,u.display_name AS "learnerName",c.code AS "courseCode",c.title AS "courseTitle",au.name AS "unitName",
            COALESCE((SELECT array_agg(iu.display_name ORDER BY iu.display_name) FROM course_instructors i JOIN users iu ON iu.id=i.user_id WHERE i.course_id=c.id),
              ARRAY[o.display_name]) AS instructors,
            (SELECT count(*)::int FROM course_lessons l WHERE l.course_id=c.id AND l.status='published') AS "lessonCount",
@@ -318,15 +487,23 @@ export class ElearningRepository {
          FROM course_certificates x JOIN users u ON u.id=x.user_id JOIN courses c ON c.id=x.course_id
          JOIN academic_units au ON au.id=c.unit_id JOIN users o ON o.id=c.owner_id
          WHERE x.code=$1`,
-        [code],
-      )
-    ).rows[0] ?? null;
+          [code],
+        )
+      ).rows[0] ?? null
+    );
   }
 
   // ---- EL-7 discussion workspace ----------------------------------------------------------------
 
   async courseWorkspace(courseId: string): Promise<string | null> {
-    return (await query<{ workspace_id: string | null }>(`SELECT workspace_id FROM courses WHERE id=$1`, [courseId])).rows[0]?.workspace_id ?? null;
+    return (
+      (
+        await query<{ workspace_id: string | null }>(
+          `SELECT workspace_id FROM courses WHERE id=$1`,
+          [courseId],
+        )
+      ).rows[0]?.workspace_id ?? null
+    );
   }
 
   async setCourseWorkspace(courseId: string, workspaceId: string) {
@@ -347,7 +524,12 @@ export class ElearningRepository {
   }
 
   async usersByEmails(emails: string[]) {
-    return (await query<{ id: string; email: string }>(`SELECT id,lower(email) AS email FROM users WHERE lower(email)=ANY($1)`, [emails.map((e) => e.toLowerCase())])).rows;
+    return (
+      await query<{ id: string; email: string }>(
+        `SELECT id,lower(email) AS email FROM users WHERE lower(email)=ANY($1)`,
+        [emails.map((e) => e.toLowerCase())],
+      )
+    ).rows;
   }
 
   /** "Lớp": the members of a workspace the assigning user belongs to. */
@@ -382,18 +564,43 @@ export class ElearningRepository {
   }
 
   async question(id: string) {
-    return (await query<CourseQuestion & { courseId: string }>(
-      `SELECT id,course_id AS "courseId",kind,prompt,options,answer,explanation,points FROM course_questions WHERE id=$1`, [id],
-    )).rows[0] ?? null;
+    return (
+      (
+        await query<CourseQuestion & { courseId: string }>(
+          `SELECT id,course_id AS "courseId",kind,prompt,options,answer,explanation,points FROM course_questions WHERE id=$1`,
+          [id],
+        )
+      ).rows[0] ?? null
+    );
   }
 
-  async saveQuestion(id: string | null, courseId: string, input: { kind: QuestionKind; prompt: string; options: unknown; answer: unknown; explanation: string; points: number }) {
+  async saveQuestion(
+    id: string | null,
+    courseId: string,
+    input: {
+      kind: QuestionKind;
+      prompt: string;
+      options: unknown;
+      answer: unknown;
+      explanation: string;
+      points: number;
+    },
+  ) {
     const questionId = id ?? randomUUID();
     await query(
       id
         ? `UPDATE course_questions SET kind=$3,prompt=$4,options=$5,answer=$6,explanation=$7,points=$8 WHERE id=$1 AND course_id=$2`
         : `INSERT INTO course_questions(id,course_id,kind,prompt,options,answer,explanation,points) VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,
-      [questionId, courseId, input.kind, input.prompt, JSON.stringify(input.options), JSON.stringify(input.answer), input.explanation, input.points],
+      [
+        questionId,
+        courseId,
+        input.kind,
+        input.prompt,
+        JSON.stringify(input.options),
+        JSON.stringify(input.answer),
+        input.explanation,
+        input.points,
+      ],
     );
     return questionId;
   }
@@ -403,14 +610,22 @@ export class ElearningRepository {
   }
 
   async quizQuestionIds(lessonId: string) {
-    return (await query<{ question_id: string }>(`SELECT question_id FROM course_quiz_questions WHERE lesson_id=$1 ORDER BY position`, [lessonId])).rows.map((row) => row.question_id);
+    return (
+      await query<{ question_id: string }>(
+        `SELECT question_id FROM course_quiz_questions WHERE lesson_id=$1 ORDER BY position`,
+        [lessonId],
+      )
+    ).rows.map((row) => row.question_id);
   }
 
   async setQuizQuestions(lessonId: string, questionIds: string[]) {
     await withTransaction(async (client) => {
       await client.query(`DELETE FROM course_quiz_questions WHERE lesson_id=$1`, [lessonId]);
       for (const [position, questionId] of questionIds.entries())
-        await client.query(`INSERT INTO course_quiz_questions(lesson_id,question_id,position) VALUES($1,$2,$3)`, [lessonId, questionId, position]);
+        await client.query(
+          `INSERT INTO course_quiz_questions(lesson_id,question_id,position) VALUES($1,$2,$3)`,
+          [lessonId, questionId, position],
+        );
     });
   }
 
@@ -427,7 +642,10 @@ export class ElearningRepository {
   /** Questions of an attempt in the given order; a question deleted meanwhile is left out. */
   async questionsByIds(ids: string[]): Promise<CourseQuestion[]> {
     const rows = (
-      await query<CourseQuestion>(`SELECT id,kind,prompt,options,answer,explanation,points FROM course_questions WHERE id=ANY($1::uuid[])`, [ids])
+      await query<CourseQuestion>(
+        `SELECT id,kind,prompt,options,answer,explanation,points FROM course_questions WHERE id=ANY($1::uuid[])`,
+        [ids],
+      )
     ).rows;
     const byId = new Map(rows.map((row) => [row.id, row]));
     return ids.flatMap((questionId) => byId.get(questionId) ?? []);
@@ -435,19 +653,46 @@ export class ElearningRepository {
 
   async attempt(id: string) {
     return (
-      await query<{ id: string; lessonId: string; userId: string; startedAt: Date; deadlineAt: Date | null; submittedAt: Date | null; answers: Record<string, unknown> | null; score: string | null; maxScore: string | null; passed: boolean | null; questionIds: string[] | null; savedAt: Date | null }>(
-        `SELECT id,lesson_id AS "lessonId",user_id AS "userId",started_at AS "startedAt",deadline_at AS "deadlineAt",submitted_at AS "submittedAt",
+      (
+        await query<{
+          id: string;
+          lessonId: string;
+          userId: string;
+          startedAt: Date;
+          deadlineAt: Date | null;
+          submittedAt: Date | null;
+          answers: Record<string, unknown> | null;
+          score: string | null;
+          maxScore: string | null;
+          passed: boolean | null;
+          questionIds: string[] | null;
+          savedAt: Date | null;
+        }>(
+          `SELECT id,lesson_id AS "lessonId",user_id AS "userId",started_at AS "startedAt",deadline_at AS "deadlineAt",submitted_at AS "submittedAt",
            answers,score,max_score AS "maxScore",passed,question_ids AS "questionIds",saved_at AS "savedAt" FROM course_quiz_attempts WHERE id=$1`,
-        [id],
-      )
-    ).rows[0] ?? null;
+          [id],
+        )
+      ).rows[0] ?? null
+    );
   }
 
   async openAttempt(lessonId: string, userId: string) {
-    return (await query<{ id: string }>(`SELECT id FROM course_quiz_attempts WHERE lesson_id=$1 AND user_id=$2 AND submitted_at IS NULL`, [lessonId, userId])).rows[0]?.id ?? null;
+    return (
+      (
+        await query<{ id: string }>(
+          `SELECT id FROM course_quiz_attempts WHERE lesson_id=$1 AND user_id=$2 AND submitted_at IS NULL`,
+          [lessonId, userId],
+        )
+      ).rows[0]?.id ?? null
+    );
   }
 
-  async startAttempt(lessonId: string, userId: string, timeLimitSeconds: number | null, questionIds: string[]) {
+  async startAttempt(
+    lessonId: string,
+    userId: string,
+    timeLimitSeconds: number | null,
+    questionIds: string[],
+  ) {
     const id = randomUUID();
     await query(
       `INSERT INTO course_quiz_attempts(id,lesson_id,user_id,deadline_at,question_ids)
@@ -459,19 +704,26 @@ export class ElearningRepository {
 
   /** Autosave while the attempt is open; returns false once it was submitted. */
   async saveDraft(id: string, answers: Record<string, unknown>) {
-    const updated = await query(`UPDATE course_quiz_attempts SET answers=$2,saved_at=now() WHERE id=$1 AND submitted_at IS NULL`, [id, JSON.stringify(answers)]);
+    const updated = await query(
+      `UPDATE course_quiz_attempts SET answers=$2,saved_at=now() WHERE id=$1 AND submitted_at IS NULL`,
+      [id, JSON.stringify(answers)],
+    );
     return Boolean(updated.rowCount);
   }
 
   /** Grades once: a second submit of the same attempt finds it already submitted. */
-  async submitAttempt(id: string, result: { answers: Record<string, unknown>; score: number; maxScore: number; passed: boolean }) {
+  async submitAttempt(
+    id: string,
+    result: { answers: Record<string, unknown>; score: number; maxScore: number; passed: boolean },
+  ) {
     return withTransaction(async (client) => {
       const updated = await client.query<{ lesson_id: string; user_id: string }>(
         `UPDATE course_quiz_attempts SET submitted_at=now(),answers=$2,score=$3,max_score=$4,passed=$5 WHERE id=$1 AND submitted_at IS NULL RETURNING lesson_id,user_id`,
         [id, JSON.stringify(result.answers), result.score, result.maxScore, result.passed],
       );
       if (!updated.rowCount) return false;
-      if (result.passed) await this.complete(client, updated.rows[0].lesson_id, updated.rows[0].user_id);
+      if (result.passed)
+        await this.complete(client, updated.rows[0].lesson_id, updated.rows[0].user_id);
       return true;
     });
   }
@@ -490,7 +742,10 @@ export class ElearningRepository {
 
   async complete(client: PoolClient | null, lessonId: string, userId: string) {
     const run = client ? client.query.bind(client) : query;
-    await run(`INSERT INTO course_lesson_progress(lesson_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, [lessonId, userId]);
+    await run(
+      `INSERT INTO course_lesson_progress(lesson_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
+      [lessonId, userId],
+    );
     // The enrollment is complete once every published lesson is.
     await run(
       `UPDATE course_enrollments e SET completed_at=now() FROM course_lessons l
@@ -503,7 +758,13 @@ export class ElearningRepository {
 
   async progressReport(courseId: string) {
     const [learners, done, quizzes, requests] = await Promise.all([
-      query<{ userId: string; displayName: string; email: string; source: "self" | "assigned"; completedAt: Date | null }>(
+      query<{
+        userId: string;
+        displayName: string;
+        email: string;
+        source: "self" | "assigned";
+        completedAt: Date | null;
+      }>(
         `SELECT u.id AS "userId",u.display_name AS "displayName",u.email,e.source,e.completed_at AS "completedAt"
          FROM course_enrollments e JOIN users u ON u.id=e.user_id WHERE e.course_id=$1 ORDER BY u.display_name`,
         [courseId],
@@ -523,34 +784,56 @@ export class ElearningRepository {
         [courseId],
       ),
     ]);
-    return { learners: learners.rows, done: done.rows, quizzes: quizzes.rows, requests: requests.rows };
+    return {
+      learners: learners.rows,
+      done: done.rows,
+      quizzes: quizzes.rows,
+      requests: requests.rows,
+    };
   }
 
   // ---- live classes (EL-6, LT-2) ----------------------------------------------------------------
 
   async liveSchedule(scheduleId: string) {
     return (
-      await query<{ id: string; channelId: string; workspaceId: string; startsAt: Date; endsAt: Date }>(
-        `SELECT s.id,s.channel_id AS "channelId",c.workspace_id AS "workspaceId",s.starts_at AS "startsAt",s.ends_at AS "endsAt"
+      (
+        await query<{
+          id: string;
+          channelId: string;
+          workspaceId: string;
+          startsAt: Date;
+          endsAt: Date;
+        }>(
+          `SELECT s.id,s.channel_id AS "channelId",c.workspace_id AS "workspaceId",s.starts_at AS "startsAt",s.ends_at AS "endsAt"
          FROM meeting_schedules s JOIN channels c ON c.id=s.channel_id WHERE s.id=$1`,
-        [scheduleId],
-      )
-    ).rows[0] ?? null;
+          [scheduleId],
+        )
+      ).rows[0] ?? null
+    );
   }
 
   /** EL-5 video watch time; inside a transaction the row is locked so two tabs cannot lose each other's report. */
   async videoWatch(client: PoolClient | null, lessonId: string, userId: string) {
     const run = client ? client.query.bind(client) : query;
     return (
-      (await run(
-        `SELECT ranges,position_seconds AS "positionSeconds",updated_at AS "updatedAt" FROM course_video_watch
+      ((
+        await run(
+          `SELECT ranges,position_seconds AS "positionSeconds",updated_at AS "updatedAt" FROM course_video_watch
          WHERE lesson_id=$1 AND user_id=$2${client ? " FOR UPDATE" : ""}`,
-        [lessonId, userId],
-      )).rows[0] as { ranges: WatchRange[]; positionSeconds: number; updatedAt: Date } | undefined
-    ) ?? null;
+          [lessonId, userId],
+        )
+      ).rows[0] as
+        { ranges: WatchRange[]; positionSeconds: number; updatedAt: Date } | undefined) ?? null
+    );
   }
 
-  async saveVideoWatch(client: PoolClient, lessonId: string, userId: string, ranges: WatchRange[], positionSeconds: number) {
+  async saveVideoWatch(
+    client: PoolClient,
+    lessonId: string,
+    userId: string,
+    ranges: WatchRange[],
+    positionSeconds: number,
+  ) {
     await client.query(
       `INSERT INTO course_video_watch(lesson_id,user_id,ranges,position_seconds) VALUES($1,$2,$3,$4)
        ON CONFLICT (lesson_id,user_id) DO UPDATE SET ranges=EXCLUDED.ranges,position_seconds=EXCLUDED.position_seconds,updated_at=now()`,
@@ -559,12 +842,25 @@ export class ElearningRepository {
   }
 
   async liveAttendance(lessonId: string, userId: string) {
-    return (await query<{ attended: boolean; ratio: string }>(`SELECT attended,ratio FROM course_live_attendance WHERE lesson_id=$1 AND user_id=$2`, [lessonId, userId])).rows[0] ?? null;
+    return (
+      (
+        await query<{ attended: boolean; ratio: string }>(
+          `SELECT attended,ratio FROM course_live_attendance WHERE lesson_id=$1 AND user_id=$2`,
+          [lessonId, userId],
+        )
+      ).rows[0] ?? null
+    );
   }
 
   async liveAttendanceRows(lessonId: string) {
     return (
-      await query<{ userId: string; displayName: string; presentSeconds: number; ratio: number; attended: boolean }>(
+      await query<{
+        userId: string;
+        displayName: string;
+        presentSeconds: number;
+        ratio: number;
+        attended: boolean;
+      }>(
         `SELECT a.user_id AS "userId",u.display_name AS "displayName",a.present_seconds AS "presentSeconds",a.ratio::float8 AS ratio,a.attended
          FROM course_live_attendance a JOIN users u ON u.id=a.user_id WHERE a.lesson_id=$1 ORDER BY u.display_name`,
         [lessonId],
@@ -594,11 +890,22 @@ export class ElearningRepository {
    */
   async closeLiveClass(
     lessonId: string,
-    attendanceOf: (intervals: { from: number; to: number }[], start: number, end: number) => { presentSeconds: number; ratio: number; attended: boolean },
+    attendanceOf: (
+      intervals: { from: number; to: number }[],
+      start: number,
+      end: number,
+    ) => { presentSeconds: number; ratio: number; attended: boolean },
   ) {
     return withTransaction(async (client) => {
       const lesson = (
-        await client.query<{ course_id: string; chapter_id: string; title: string; position: number; schedule_id: string | null; closed: Date | null }>(
+        await client.query<{
+          course_id: string;
+          chapter_id: string;
+          title: string;
+          position: number;
+          schedule_id: string | null;
+          closed: Date | null;
+        }>(
           `SELECT course_id,chapter_id,title,position,schedule_id,attendance_closed_at AS closed FROM course_lessons WHERE id=$1 AND kind='live' FOR UPDATE`,
           [lessonId],
         )
@@ -618,8 +925,14 @@ export class ElearningRepository {
       );
       const byUser = new Map<string, { from: number; to: number }[]>();
       for (const visit of visits.rows)
-        byUser.set(visit.user_id, [...(byUser.get(visit.user_id) ?? []), { from: +visit.joined_at, to: +(visit.left_at ?? end) }]);
-      const learners = await client.query<{ user_id: string }>(`SELECT user_id FROM course_enrollments WHERE course_id=$1`, [lesson.course_id]);
+        byUser.set(visit.user_id, [
+          ...(byUser.get(visit.user_id) ?? []),
+          { from: +visit.joined_at, to: +(visit.left_at ?? end) },
+        ]);
+      const learners = await client.query<{ user_id: string }>(
+        `SELECT user_id FROM course_enrollments WHERE course_id=$1`,
+        [lesson.course_id],
+      );
       let attended = 0;
       for (const { user_id } of learners.rows) {
         const row = attendanceOf(byUser.get(user_id) ?? [], start, end);
@@ -639,20 +952,30 @@ export class ElearningRepository {
         [sessions.rows.map((row) => row.id)],
       );
       // Make room right after the live lesson for the replays.
-      await client.query(`UPDATE course_lessons SET position=position+$3 WHERE chapter_id=$1 AND position>$2`, [
-        lesson.chapter_id, lesson.position, recordings.rowCount ?? 0,
-      ]);
+      await client.query(
+        `UPDATE course_lessons SET position=position+$3 WHERE chapter_id=$1 AND position>$2`,
+        [lesson.chapter_id, lesson.position, recordings.rowCount ?? 0],
+      );
       for (const [index, recording] of recordings.rows.entries())
         await client.query(
           `INSERT INTO course_lessons(id,course_id,chapter_id,title,kind,status,media_status,recording_id,duration_seconds,position)
            VALUES($1,$2,$3,$4,'video','published','ready',$5,$6,$7)`,
           [
-            randomUUID(), lesson.course_id, lesson.chapter_id,
-            `Xem lại: ${lesson.title}${recordings.rows.length > 1 ? ` (phần ${index + 1})` : ""}`.slice(0, 160),
-            recording.id, recording.duration_seconds, lesson.position + index + 1,
+            randomUUID(),
+            lesson.course_id,
+            lesson.chapter_id,
+            `Xem lại: ${lesson.title}${recordings.rows.length > 1 ? ` (phần ${index + 1})` : ""}`.slice(
+              0,
+              160,
+            ),
+            recording.id,
+            recording.duration_seconds,
+            lesson.position + index + 1,
           ],
         );
-      await client.query(`UPDATE course_lessons SET attendance_closed_at=now() WHERE id=$1`, [lessonId]);
+      await client.query(`UPDATE course_lessons SET attendance_closed_at=now() WHERE id=$1`, [
+        lessonId,
+      ]);
       return { learners: learners.rowCount ?? 0, attended, replays: recordings.rowCount ?? 0 };
     });
   }

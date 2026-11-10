@@ -1,7 +1,27 @@
 import { randomInt } from "node:crypto";
-import type { CourseAssignmentResult, CourseCertificate, CourseDetail, CourseProgressReport, CourseQuestion, CourseSummary, LessonKind, QuestionKind } from "@doan/shared";
+import type {
+  CourseAssignmentResult,
+  CourseCertificate,
+  CourseDetail,
+  CourseProgressReport,
+  CourseQuestion,
+  CourseSummary,
+  LessonKind,
+  QuestionKind,
+} from "@doan/shared";
 import { createWorkspace, getWorkspaceChannels } from "../../workspaces/service.js";
-import { conflict, forbidden, id, integer, invalid, notFound, oneOf, optionalId, text, type Body } from "../../callcenter/service/input.js";
+import {
+  conflict,
+  forbidden,
+  id,
+  integer,
+  invalid,
+  notFound,
+  oneOf,
+  optionalId,
+  text,
+  type Body,
+} from "../../callcenter/service/input.js";
 import { questionProblem, type Answer, type QuestionOption } from "../domain/quiz.js";
 import { completionPercent } from "../domain/progress.js";
 import type { CourseRow, ElearningRepository } from "../repository/elearning-repository.js";
@@ -21,7 +41,8 @@ export class CourseService {
     const access = await this.repo.access(userId);
     const manages = access.manages(course);
     const enrolled = await this.repo.isEnrolled(course.id, userId);
-    if (need === "manage" ? !manages : !access.canSee(course, enrolled)) throw need === "manage" ? forbidden() : notFound("Không tìm thấy khóa học.");
+    if (need === "manage" ? !manages : !access.canSee(course, enrolled))
+      throw need === "manage" ? forbidden() : notFound("Không tìm thấy khóa học.");
     return { course, access, manages, enrolled };
   }
 
@@ -29,10 +50,23 @@ export class CourseService {
     const access = await this.repo.access(userId);
     return (await this.repo.listCourses(userId))
       .filter((row) => access.canSee(row, row.enrolled))
-      .map((row) => this.summary(row, access.manages(row), row.enrolled, access.canSelfEnroll(row), row));
+      .map((row) =>
+        this.summary(row, access.manages(row), row.enrolled, access.canSelfEnroll(row), row),
+      );
   }
 
-  private summary(course: CourseRow, manages: boolean, enrolled: boolean, canEnroll: boolean, counts: { lessonCount: number; learnerCount: number; progress: number | null; requested: boolean }): CourseSummary {
+  private summary(
+    course: CourseRow,
+    manages: boolean,
+    enrolled: boolean,
+    canEnroll: boolean,
+    counts: {
+      lessonCount: number;
+      learnerCount: number;
+      progress: number | null;
+      requested: boolean;
+    },
+  ): CourseSummary {
     return {
       id: course.id,
       code: course.code,
@@ -50,7 +84,11 @@ export class CourseService {
       progress: counts.progress,
       canManage: manages,
       // Staff of an approval course have nobody to ask but themselves.
-      canEnroll: canEnroll && !enrolled && !counts.requested && !(manages && course.enrollment === "approval"),
+      canEnroll:
+        canEnroll &&
+        !enrolled &&
+        !counts.requested &&
+        !(manages && course.enrollment === "approval"),
     };
   }
 
@@ -71,10 +109,18 @@ export class CourseService {
       ...this.summary(course, manages, enrolled, access.canSelfEnroll(course), {
         lessonCount: published.length,
         learnerCount: learners,
-        progress: enrolled ? completionPercent(published.length, published.filter((lesson) => lesson.completed).length) : null,
+        progress: enrolled
+          ? completionPercent(
+              published.length,
+              published.filter((lesson) => lesson.completed).length,
+            )
+          : null,
         requested,
       }),
-      chapters: chapters.map((chapter) => ({ ...chapter, lessons: visible.filter((lesson) => lesson.chapterId === chapter.id) })),
+      chapters: chapters.map((chapter) => ({
+        ...chapter,
+        lessons: visible.filter((lesson) => lesson.chapterId === chapter.id),
+      })),
       instructors,
       supportHotline: hotline,
     };
@@ -104,8 +150,16 @@ export class CourseService {
     const { course } = await this.load(userId, courseId, "manage");
     await this.repo.updateCourse(course.id, {
       title: body.title === undefined ? course.title : text(body, "title", 160),
-      description: body.description === undefined ? course.description : text(body, "description", 4000, { optional: true }),
-      enrollment: oneOf(body, "enrollment", ["open", "assigned", "approval"] as const, course.enrollment),
+      description:
+        body.description === undefined
+          ? course.description
+          : text(body, "description", 4000, { optional: true }),
+      enrollment: oneOf(
+        body,
+        "enrollment",
+        ["open", "assigned", "approval"] as const,
+        course.enrollment,
+      ),
       status: oneOf(body, "status", ["draft", "published", "archived"] as const, course.status),
     });
     return this.detail(userId, course.id);
@@ -113,7 +167,9 @@ export class CourseService {
 
   async setInstructor(userId: string, courseId: string, body: Body, present: boolean) {
     const { course } = await this.load(userId, courseId, "manage");
-    const target = present ? await this.repo.userByEmail(text(body, "email", 200)) : id(body.userId);
+    const target = present
+      ? await this.repo.userByEmail(text(body, "email", 200))
+      : id(body.userId);
     if (!target) throw notFound("Không tìm thấy người dùng với email này.");
     await this.repo.setInstructor(course.id, target, present);
     return this.detail(userId, course.id);
@@ -136,13 +192,18 @@ export class CourseService {
 
   async updateChapter(userId: string, chapterId: string, body: Body) {
     const chapter = await this.chapterCourse(userId, chapterId);
-    await this.repo.updateChapter(chapter.id, body.title === undefined ? chapter.title : text(body, "title", 160), body.position === undefined ? null : integer(body, "position", 0, 10000));
+    await this.repo.updateChapter(
+      chapter.id,
+      body.title === undefined ? chapter.title : text(body, "title", 160),
+      body.position === undefined ? null : integer(body, "position", 0, 10000),
+    );
     return this.detail(userId, chapter.courseId);
   }
 
   async deleteChapter(userId: string, chapterId: string) {
     const chapter = await this.chapterCourse(userId, chapterId);
-    if (!(await this.repo.deleteChapter(chapter.id))) throw conflict("CHAPTER_NOT_EMPTY", "Chương còn bài học; hãy xóa hoặc chuyển bài trước.");
+    if (!(await this.repo.deleteChapter(chapter.id)))
+      throw conflict("CHAPTER_NOT_EMPTY", "Chương còn bài học; hãy xóa hoặc chuyển bài trước.");
     return this.detail(userId, chapter.courseId);
   }
 
@@ -151,7 +212,12 @@ export class CourseService {
     const chapter = await this.chapterCourse(userId, chapterId);
     const kind = oneOf(body, "kind", KINDS);
     if (kind === "live") throw invalid("Buổi live được tạo kèm lịch họp.");
-    const lessonId = await this.repo.createLesson({ courseId: chapter.courseId, chapterId: chapter.id, title: text(body, "title", 160), kind });
+    const lessonId = await this.repo.createLesson({
+      courseId: chapter.courseId,
+      chapterId: chapter.id,
+      title: text(body, "title", 160),
+      kind,
+    });
     return { id: lessonId };
   }
 
@@ -169,9 +235,11 @@ export class CourseService {
     const { lesson } = await this.lessonCourse(userId, lessonId, "manage");
     const change: Parameters<ElearningRepository["updateLesson"]>[1] = {};
     if (body.title !== undefined) change.title = text(body, "title", 160);
-    if (body.status !== undefined) change.status = oneOf(body, "status", ["draft", "published"] as const);
+    if (body.status !== undefined)
+      change.status = oneOf(body, "status", ["draft", "published"] as const);
     if (body.body !== undefined) {
-      if (typeof body.body !== "string" || body.body.length > 50000) throw invalid("Nội dung tối đa 50.000 ký tự.");
+      if (typeof body.body !== "string" || body.body.length > 50000)
+        throw invalid("Nội dung tối đa 50.000 ký tự.");
       change.body = body.body;
     }
     if (body.position !== undefined) change.position = integer(body, "position", 0, 10000);
@@ -182,16 +250,24 @@ export class CourseService {
     }
     if (lesson.kind === "quiz") {
       if (body.timeLimitSeconds !== undefined)
-        change.timeLimitSeconds = body.timeLimitSeconds === null ? null : integer(body, "timeLimitSeconds", 60, 14400);
+        change.timeLimitSeconds =
+          body.timeLimitSeconds === null ? null : integer(body, "timeLimitSeconds", 60, 14400);
       if (body.passPercent !== undefined) change.passPercent = integer(body, "passPercent", 0, 100);
-      if (body.drawCount !== undefined) change.drawCount = body.drawCount === null ? null : integer(body, "drawCount", 1, 200);
-      if (body.maxAttempts !== undefined) change.maxAttempts = body.maxAttempts === null ? null : integer(body, "maxAttempts", 1, 100);
+      if (body.drawCount !== undefined)
+        change.drawCount = body.drawCount === null ? null : integer(body, "drawCount", 1, 200);
+      if (body.maxAttempts !== undefined)
+        change.maxAttempts =
+          body.maxAttempts === null ? null : integer(body, "maxAttempts", 1, 100);
       if (body.shuffle !== undefined) change.shuffle = body.shuffle === true;
       if (body.questionIds !== undefined) {
-        if (!Array.isArray(body.questionIds) || body.questionIds.length > 200) throw invalid("Danh sách câu hỏi không hợp lệ.");
+        if (!Array.isArray(body.questionIds) || body.questionIds.length > 200)
+          throw invalid("Danh sách câu hỏi không hợp lệ.");
         const ids = [...new Set(body.questionIds.map((value) => id(value)))];
-        const bank = new Set((await this.repo.questions(lesson.courseId)).map((question) => question.id));
-        if (ids.some((questionId) => !bank.has(questionId))) throw invalid("Câu hỏi không thuộc ngân hàng của khóa học.");
+        const bank = new Set(
+          (await this.repo.questions(lesson.courseId)).map((question) => question.id),
+        );
+        if (ids.some((questionId) => !bank.has(questionId)))
+          throw invalid("Câu hỏi không thuộc ngân hàng của khóa học.");
         await this.repo.setQuizQuestions(lesson.id, ids);
       }
     }
@@ -202,16 +278,27 @@ export class CourseService {
   }
 
   /** A lesson is published only when a learner can actually use it. */
-  private async requireReady(lesson: { id: string; kind: LessonKind; mediaStatus: string; body: string; scheduleId: string | null }) {
-    if (lesson.kind === "video" && lesson.mediaStatus !== "ready") throw conflict("NOT_READY", "Video chưa tải lên hoặc chưa xử lý xong.");
-    if (lesson.kind === "document" && !lesson.body.trim() && lesson.mediaStatus !== "ready") throw conflict("NOT_READY", "Tài liệu chưa có nội dung hoặc tệp.");
-    if (lesson.kind === "quiz" && !(await this.repo.quizQuestionIds(lesson.id)).length) throw conflict("NOT_READY", "Bài kiểm tra chưa có câu hỏi.");
-    if (lesson.kind === "live" && !lesson.scheduleId) throw conflict("NOT_READY", "Buổi live chưa có lịch.");
+  private async requireReady(lesson: {
+    id: string;
+    kind: LessonKind;
+    mediaStatus: string;
+    body: string;
+    scheduleId: string | null;
+  }) {
+    if (lesson.kind === "video" && lesson.mediaStatus !== "ready")
+      throw conflict("NOT_READY", "Video chưa tải lên hoặc chưa xử lý xong.");
+    if (lesson.kind === "document" && !lesson.body.trim() && lesson.mediaStatus !== "ready")
+      throw conflict("NOT_READY", "Tài liệu chưa có nội dung hoặc tệp.");
+    if (lesson.kind === "quiz" && !(await this.repo.quizQuestionIds(lesson.id)).length)
+      throw conflict("NOT_READY", "Bài kiểm tra chưa có câu hỏi.");
+    if (lesson.kind === "live" && !lesson.scheduleId)
+      throw conflict("NOT_READY", "Buổi live chưa có lịch.");
   }
 
   async deleteLesson(userId: string, lessonId: string) {
     const { lesson } = await this.lessonCourse(userId, lessonId, "manage");
-    if (lesson.status === "published") throw conflict("LESSON_PUBLISHED", "Chuyển bài về nháp trước khi xóa.");
+    if (lesson.status === "published")
+      throw conflict("LESSON_PUBLISHED", "Chuyển bài về nháp trước khi xóa.");
     await this.repo.deleteLesson(lesson.id);
     return { ok: true };
   }
@@ -222,7 +309,8 @@ export class CourseService {
     const { course, access, enrolled } = await this.load(userId, courseId, "see");
     if (!enrolled && !access.canSelfEnroll(course)) throw forbidden();
     // NV-EL2: a course that needs approval only records the request.
-    if (!enrolled && course.enrollment === "approval") await this.repo.requestEnrollment(course.id, userId);
+    if (!enrolled && course.enrollment === "approval")
+      await this.repo.requestEnrollment(course.id, userId);
     else await this.repo.enroll(course.id, [userId], "self", null);
     return this.detail(userId, course.id);
   }
@@ -231,7 +319,8 @@ export class CourseService {
   async decideRequest(userId: string, courseId: string, learnerId: string, body: Body) {
     const { course } = await this.load(userId, courseId, "manage");
     if (typeof body.approve !== "boolean") throw invalid("approve phải là true hoặc false.");
-    if (!(await this.repo.dropRequest(course.id, id(learnerId)))) throw notFound("Không còn yêu cầu ghi danh này.");
+    if (!(await this.repo.dropRequest(course.id, id(learnerId))))
+      throw notFound("Không còn yêu cầu ghi danh này.");
     if (body.approve) await this.repo.enroll(course.id, [learnerId], "self", userId);
     await addNotices([learnerId], {
       kind: "course",
@@ -248,9 +337,17 @@ export class CourseService {
     const userIds: string[] = [];
     const missing: string[] = [];
     if (body.emails !== undefined) {
-      if (!Array.isArray(body.emails) || body.emails.length > 500 || body.emails.some((email) => typeof email !== "string"))
+      if (
+        !Array.isArray(body.emails) ||
+        body.emails.length > 500 ||
+        body.emails.some((email) => typeof email !== "string")
+      )
         throw invalid("emails phải là danh sách (tối đa 500).");
-      const emails = [...new Set((body.emails as string[]).map((email) => email.trim().toLowerCase()).filter(Boolean))];
+      const emails = [
+        ...new Set(
+          (body.emails as string[]).map((email) => email.trim().toLowerCase()).filter(Boolean),
+        ),
+      ];
       const found = await this.repo.usersByEmails(emails);
       userIds.push(...found.map((user) => user.id));
       missing.push(...emails.filter((email) => !found.some((user) => user.email === email)));
@@ -264,12 +361,22 @@ export class CourseService {
     }
     const unitId = optionalId(body.unitId);
     if (unitId) userIds.push(...(await this.repo.unitMembers(unitId)));
-    if (!workspaceId && !unitId && body.emails === undefined) throw invalid("Chọn danh sách email, lớp hoặc đơn vị.");
+    if (!workspaceId && !unitId && body.emails === undefined)
+      throw invalid("Chọn danh sách email, lớp hoặc đơn vị.");
     const unique = [...new Set(userIds)];
     const added = await this.repo.enroll(course.id, unique, "assigned", userId);
     // NV-EL2: learners are told when they are enrolled.
-    await addNotices(added, { kind: "course", title: "Đã được ghi danh", body: `${course.code} · ${course.title}`, link: { view: "elearning" } });
-    return { added: added.length, alreadyEnrolled: unique.length - added.length, notFound: missing };
+    await addNotices(added, {
+      kind: "course",
+      title: "Đã được ghi danh",
+      body: `${course.code} · ${course.title}`,
+      link: { view: "elearning" },
+    });
+    return {
+      added: added.length,
+      alreadyEnrolled: unique.length - added.length,
+      notFound: missing,
+    };
   }
 
   async unenroll(userId: string, courseId: string, learnerId: string) {
@@ -283,20 +390,25 @@ export class CourseService {
   /** Issued on the first request once the learner completed the course. */
   async certificate(userId: string, courseId: string): Promise<CourseCertificate> {
     const { course, enrolled } = await this.load(userId, courseId, "see");
-    if (!enrolled || !(await this.repo.completedAt(course.id, userId))) throw conflict("NOT_COMPLETED", "Hoàn thành tất cả bài học để nhận chứng nhận.");
+    if (!enrolled || !(await this.repo.completedAt(course.id, userId)))
+      throw conflict("NOT_COMPLETED", "Hoàn thành tất cả bài học để nhận chứng nhận.");
     let code = "";
     for (let attempt = 0; attempt < 5 && !code; attempt++)
-      code = await this.repo.issueCertificate(course.id, userId, certificateCode()).catch((error: { code?: string }) => {
-        if (error.code === "23505") return ""; // the random code collided; draw again
-        throw error;
-      });
+      code = await this.repo
+        .issueCertificate(course.id, userId, certificateCode())
+        .catch((error: { code?: string }) => {
+          if (error.code === "23505") return ""; // the random code collided; draw again
+          throw error;
+        });
     return this.verifyCertificate(code);
   }
 
   /** Public lookup behind the QR code: who completed what, and when. */
   async verifyCertificate(code: string): Promise<CourseCertificate> {
     const normalized = code.trim().toUpperCase();
-    const found = /^[A-Z0-9-]{8,16}$/.test(normalized) ? await this.repo.certificateByCode(normalized) : null;
+    const found = /^[A-Z0-9-]{8,16}$/.test(normalized)
+      ? await this.repo.certificateByCode(normalized)
+      : null;
     if (!found) throw notFound("Không tìm thấy chứng nhận với mã này.");
     return { ...found, issuedAt: found.issuedAt.toISOString() };
   }
@@ -310,7 +422,9 @@ export class CourseService {
     if (!manages && !enrolled) throw forbidden();
     let workspaceId = await this.repo.courseWorkspace(course.id);
     if (!workspaceId) {
-      workspaceId = (await createWorkspace(course.ownerId, `${course.code} · ${course.title}`.slice(0, 80))).id;
+      workspaceId = (
+        await createWorkspace(course.ownerId, `${course.code} · ${course.title}`.slice(0, 80))
+      ).id;
       await this.repo.setCourseWorkspace(course.id, workspaceId);
     }
     await this.repo.syncCourseMembers(course.id, workspaceId);
@@ -329,7 +443,12 @@ export class CourseService {
     return this.repo.questions(course.id);
   }
 
-  async saveQuestion(userId: string, courseId: string | null, questionId: string | null, body: Body) {
+  async saveQuestion(
+    userId: string,
+    courseId: string | null,
+    questionId: string | null,
+    body: Body,
+  ) {
     let targetCourse = courseId;
     if (questionId) {
       const existing = await this.repo.question(id(questionId));
@@ -339,7 +458,15 @@ export class CourseService {
     const { course } = await this.load(userId, targetCourse!, "manage");
     const kind = oneOf<QuestionKind>(body, "kind", ["single", "multiple", "true_false"]);
     const options = (kind === "true_false" ? [] : body.options) as QuestionOption[];
-    if (!Array.isArray(options) || options.some((option) => typeof option?.id !== "string" || typeof option?.text !== "string" || option.text.length > 500))
+    if (
+      !Array.isArray(options) ||
+      options.some(
+        (option) =>
+          typeof option?.id !== "string" ||
+          typeof option?.text !== "string" ||
+          option.text.length > 500,
+      )
+    )
       throw invalid("Phương án không hợp lệ.");
     const answer = body.answer as Answer;
     if (!Array.isArray(answer)) throw invalid("Đáp án không hợp lệ.");
@@ -361,7 +488,8 @@ export class CourseService {
     if (!existing) throw notFound("Không tìm thấy câu hỏi.");
     await this.load(userId, existing.courseId, "manage");
     await this.repo.deleteQuestion(existing.id).catch((error: { code?: string }) => {
-      if (error.code === "23503") throw conflict("QUESTION_IN_USE", "Câu hỏi đang dùng trong một bài kiểm tra.");
+      if (error.code === "23503")
+        throw conflict("QUESTION_IN_USE", "Câu hỏi đang dùng trong một bài kiểm tra.");
       throw error;
     });
     return { ok: true };
@@ -371,12 +499,16 @@ export class CourseService {
 
   async progress(userId: string, courseId: string): Promise<CourseProgressReport> {
     const { course } = await this.load(userId, courseId, "manage");
-    const lessons = (await this.repo.lessons(course.id, userId)).filter((lesson) => lesson.status === "published");
+    const lessons = (await this.repo.lessons(course.id, userId)).filter(
+      (lesson) => lesson.status === "published",
+    );
     const report = await this.repo.progressReport(course.id);
     return {
       lessons: lessons.map(({ id, title, kind }) => ({ id, title, kind })),
       learners: report.learners.map((learner) => {
-        const completed = report.done.filter((row) => row.user_id === learner.userId).map((row) => row.lesson_id);
+        const completed = report.done
+          .filter((row) => row.user_id === learner.userId)
+          .map((row) => row.lesson_id);
         return {
           userId: learner.userId,
           displayName: learner.displayName,
@@ -385,12 +517,17 @@ export class CourseService {
           percent: completionPercent(lessons.length, completed.length),
           completedLessonIds: completed,
           quizPercents: Object.fromEntries(
-            report.quizzes.filter((row) => row.user_id === learner.userId).map((row) => [row.lesson_id, Math.round(row.best * 100) / 100]),
+            report.quizzes
+              .filter((row) => row.user_id === learner.userId)
+              .map((row) => [row.lesson_id, Math.round(row.best * 100) / 100]),
           ),
           completedAt: learner.completedAt?.toISOString() ?? null,
         };
       }),
-      requests: report.requests.map((request) => ({ ...request, requestedAt: request.requestedAt.toISOString() })),
+      requests: report.requests.map((request) => ({
+        ...request,
+        requestedAt: request.requestedAt.toISOString(),
+      })),
     };
   }
 
@@ -404,7 +541,9 @@ export class CourseService {
         learner.displayName,
         learner.email,
         String(learner.percent),
-        ...quizzes.map((quiz) => (learner.quizPercents[quiz.id] === undefined ? "" : String(learner.quizPercents[quiz.id]))),
+        ...quizzes.map((quiz) =>
+          learner.quizPercents[quiz.id] === undefined ? "" : String(learner.quizPercents[quiz.id]),
+        ),
       ]),
     ];
     return { name: `tien-do-${courseId.slice(0, 8)}`, rows: lines };
@@ -413,4 +552,5 @@ export class CourseService {
 
 // No 0/O/1/I so a code read off paper is typed back right.
 const ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
-const certificateCode = () => `TDTU-${Array.from({ length: 8 }, (_, i) => (i === 4 ? "-" : "") + ALPHABET[randomInt(ALPHABET.length)]).join("")}`;
+const certificateCode = () =>
+  `TDTU-${Array.from({ length: 8 }, (_, i) => (i === 4 ? "-" : "") + ALPHABET[randomInt(ALPHABET.length)]).join("")}`;

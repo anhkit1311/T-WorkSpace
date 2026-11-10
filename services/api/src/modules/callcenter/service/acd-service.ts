@@ -131,7 +131,8 @@ export class AcdService {
     private readonly notifier: CallCenterNotifier,
     private readonly clock: Clock,
     private readonly log: (event: string, details?: Record<string, unknown>) => void = () => {},
-    private readonly webSession: (endpoint: string) => Promise<WebCallSession | null> = async () => null,
+    private readonly webSession: (endpoint: string) => Promise<WebCallSession | null> = async () =>
+      null,
   ) {}
 
   /** Runs `task` after everything queued before it; errors are logged, never thrown into the chain. */
@@ -182,14 +183,20 @@ export class AcdService {
       // Membership may have changed in another process (seed script, second API instance).
       if (!this.agents.has(userId)) await this.syncRoster();
       const agent = this.agents.get(userId);
-      if (!agent) throw new HttpError(403, "NOT_AGENT", "Bạn chưa là tổng đài viên của phòng ban nào.");
+      if (!agent)
+        throw new HttpError(403, "NOT_AGENT", "Bạn chưa là tổng đài viên của phòng ban nào.");
       if (to === "ready" && !agent.extension)
         throw new HttpError(409, "NO_EXTENSION", "Bạn chưa được cấp máy lẻ.");
       if (!canAgentChoose(agent.state, to))
-        throw new HttpError(409, "INVALID_AGENT_STATE", "Không thể đổi trạng thái khi đang có cuộc gọi.");
+        throw new HttpError(
+          409,
+          "INVALID_AGENT_STATE",
+          "Không thể đổi trạng thái khi đang có cuộc gọi.",
+        );
       this.clock.clearTimeout(agent.wrapTimer);
       await this.setAgentState(agent, to, to === "not_ready" ? reason : "");
-      if (to === "ready") for (const departmentId of agent.departments) await this.distribute(departmentId);
+      if (to === "ready")
+        for (const departmentId of agent.departments) await this.distribute(departmentId);
     });
   }
 
@@ -198,7 +205,10 @@ export class AcdService {
     return this.serial(async () => {
       const now = this.clock.now();
       for (const agent of this.agents.values()) {
-        const idle = (agent.state === "ready" || agent.state === "not_ready") && !agent.callId && agent.extension;
+        const idle =
+          (agent.state === "ready" || agent.state === "not_ready") &&
+          !agent.callId &&
+          agent.extension;
         // An ARI error says nothing about the phone: keep the agent rather than offline everyone.
         if (!idle || (await this.pbx.isExtensionOnline(agent.extension!).catch(() => true))) {
           agent.lostSince = 0;
@@ -212,7 +222,9 @@ export class AcdService {
     });
   }
 
-  agentView(userId: string): { state: AgentState; reason: string; since: string | null; offer: CcCallOffer | null } | null {
+  agentView(
+    userId: string,
+  ): { state: AgentState; reason: string; since: string | null; offer: CcCallOffer | null } | null {
     const agent = this.agents.get(userId);
     if (!agent) return null;
     const call = agent.callId ? this.calls.get(agent.callId) : undefined;
@@ -263,16 +275,27 @@ export class AcdService {
    * CC-10. To a department: blind, back through that department's queue. To an extension: blind
    * (the agent leaves at once) or attended (the agent talks to the receiver first, then completes).
    */
-  transfer(userId: string, target: { departmentId?: string; extension?: string }, attended: boolean): Promise<void> {
+  transfer(
+    userId: string,
+    target: { departmentId?: string; extension?: string },
+    attended: boolean,
+  ): Promise<void> {
     return this.serial(async () => {
       const { agent, call } = this.ownCall(userId);
-      if (call.consult) throw new HttpError(409, "TRANSFER_IN_PROGRESS", "Đang có một yêu cầu chuyển máy.");
+      if (call.consult)
+        throw new HttpError(409, "TRANSFER_IN_PROGRESS", "Đang có một yêu cầu chuyển máy.");
       const wasHeld = call.held;
       call.held = false; // a transfer keeps the caller on hold its own way
       if (target.departmentId) {
-        if (attended) throw new HttpError(400, "INVALID_INPUT", "Chuyển sang phòng ban là chuyển thẳng qua hàng đợi.");
+        if (attended)
+          throw new HttpError(
+            400,
+            "INVALID_INPUT",
+            "Chuyển sang phòng ban là chuyển thẳng qua hàng đợi.",
+          );
         const department = await this.store.department(target.departmentId);
-        if (!department?.active) throw new HttpError(404, "NOT_FOUND", "Phòng ban không nhận cuộc gọi.");
+        if (!department?.active)
+          throw new HttpError(404, "NOT_FOUND", "Phòng ban không nhận cuộc gọi.");
         await this.releaseAgent(call, agent, false, department.name);
         // The agent's recording ends with their part; the next agent's bridge starts a new one.
         if (call.bridgeId) await this.pbx.destroyBridge(call.bridgeId).catch(() => undefined);
@@ -283,14 +306,22 @@ export class AcdService {
         return this.requeue(call, false);
       }
       const extension = target.extension!;
-      if (extension === agent.extension) throw new HttpError(400, "INVALID_INPUT", "Không thể chuyển cho chính mình.");
+      if (extension === agent.extension)
+        throw new HttpError(400, "INVALID_INPUT", "Không thể chuyển cho chính mình.");
       const receiver = [...this.agents.values()].find((item) => item.extension === extension);
-      if (receiver && receiver.state !== "ready") throw new HttpError(409, "TARGET_BUSY", `${receiver.displayName} đang bận.`);
+      if (receiver && receiver.state !== "ready")
+        throw new HttpError(409, "TARGET_BUSY", `${receiver.displayName} đang bận.`);
       if (!(await this.pbx.isExtensionOnline(extension).catch(() => false)))
         throw new HttpError(409, "TARGET_OFFLINE", `Máy lẻ ${extension} chưa đăng ký.`);
       if (!wasHeld) await this.pbx.removeFromBridge(call.bridgeId!, call.channelId);
       await this.pbx.startMusicOnHold(call.channelId).catch(() => undefined);
-      call.consult = { channelId: null, extension, targetUserId: receiver?.userId ?? null, blind: !attended, up: false };
+      call.consult = {
+        channelId: null,
+        extension,
+        targetUserId: receiver?.userId ?? null,
+        blind: !attended,
+        up: false,
+      };
       if (receiver) {
         receiver.callId = call.id;
         await this.setAgentState(receiver, "ringing", "Nhận cuộc gọi chuyển");
@@ -298,14 +329,19 @@ export class AcdService {
       try {
         call.consult.channelId = await this.pbx.callExtension({
           extension,
-          callerId: attended ? `"${agent.displayName.replace(/"/g, "")}" <${agent.extension}>` : this.callerId(call),
+          callerId: attended
+            ? `"${agent.displayName.replace(/"/g, "")}" <${agent.extension}>`
+            : this.callerId(call),
           callId: call.id,
           timeoutSeconds: 30,
           purpose: "consult",
         });
         this.byChannel.set(call.consult.channelId, call.id);
       } catch (error) {
-        this.log("acd_transfer_failed", { callId: call.id, message: error instanceof Error ? error.message : String(error) });
+        this.log("acd_transfer_failed", {
+          callId: call.id,
+          message: error instanceof Error ? error.message : String(error),
+        });
         await this.onConsultEnded(call);
         throw new HttpError(502, "PBX_ERROR", `Không gọi được máy lẻ ${extension}.`);
       }
@@ -318,7 +354,12 @@ export class AcdService {
   hold(userId: string, on: boolean): Promise<void> {
     return this.serial(async () => {
       const { agent, call } = this.ownCall(userId);
-      if (call.consult) throw new HttpError(409, "TRANSFER_IN_PROGRESS", "Đang chuyển máy, người gọi đã được giữ máy.");
+      if (call.consult)
+        throw new HttpError(
+          409,
+          "TRANSFER_IN_PROGRESS",
+          "Đang chuyển máy, người gọi đã được giữ máy.",
+        );
       if (call.held === on) return;
       if (on) {
         await this.pbx.removeFromBridge(call.bridgeId!, call.channelId);
@@ -333,7 +374,8 @@ export class AcdService {
   completeTransfer(userId: string): Promise<void> {
     return this.serial(async () => {
       const { agent, call } = this.ownCall(userId);
-      if (!call.consult?.up || call.consult.blind) throw new HttpError(409, "NO_TRANSFER", "Người nhận chưa nghe máy.");
+      if (!call.consult?.up || call.consult.blind)
+        throw new HttpError(409, "NO_TRANSFER", "Người nhận chưa nghe máy.");
       await this.releaseAgent(call, agent, false, call.consult.extension);
       await this.connectTarget(call);
     });
@@ -343,7 +385,8 @@ export class AcdService {
   cancelTransfer(userId: string): Promise<void> {
     return this.serial(async () => {
       const { agent, call } = this.ownCall(userId);
-      if (!call.consult || call.consult.blind) throw new HttpError(409, "NO_TRANSFER", "Không có yêu cầu chuyển máy.");
+      if (!call.consult || call.consult.blind)
+        throw new HttpError(409, "NO_TRANSFER", "Không có yêu cầu chuyển máy.");
       await this.dropConsult(call, true);
       await this.resumeWithAgent(call);
       this.notifyAgent(agent);
@@ -356,12 +399,18 @@ export class AcdService {
   }
 
   /** CC-11: rings the supervisor's extension; once answered they listen, coach the agent or join in. */
-  monitor(supervisorId: string, extension: string, callKey: string, mode: MonitorMode): Promise<void> {
+  monitor(
+    supervisorId: string,
+    extension: string,
+    callKey: string,
+    mode: MonitorMode,
+  ): Promise<void> {
     return this.serial(async () => {
       const call = this.calls.get(callKey);
       if (!call || call.phase !== "connected" || !call.agentChannelId || call.consult)
         throw new HttpError(409, "NO_ACTIVE_CALL", "Cuộc gọi không còn ở trạng thái đàm thoại.");
-      if (call.agentUserId === supervisorId) throw new HttpError(409, "INVALID_INPUT", "Không thể giám sát cuộc gọi của chính mình.");
+      if (call.agentUserId === supervisorId)
+        throw new HttpError(409, "INVALID_INPUT", "Không thể giám sát cuộc gọi của chính mình.");
       if (call.monitors.some((item) => item.supervisorId === supervisorId))
         throw new HttpError(409, "ALREADY_MONITORING", "Bạn đang giám sát cuộc gọi này.");
       const self = this.agents.get(supervisorId);
@@ -391,7 +440,12 @@ export class AcdService {
    * The agent's part ends: their leg leaves, they wrap up, their CDR row closes as "transferred" and
    * the rest of the conversation is written to a new row linked to it.
    */
-  private async releaseAgent(call: ActiveCall, agent: LiveAgent, legGone: boolean, transferTarget: string) {
+  private async releaseAgent(
+    call: ActiveCall,
+    agent: LiveAgent,
+    legGone: boolean,
+    transferTarget: string,
+  ) {
     const leg = call.agentChannelId;
     call.agentChannelId = null;
     call.agentUserId = null;
@@ -402,7 +456,10 @@ export class AcdService {
     }
     if (agent.callId === call.id) agent.callId = null;
     await this.startWrapUp(agent, call.department!);
-    await this.store.updateCall(call.recordId, { endedAt: new Date(this.clock.now()), outcome: "transferred" });
+    await this.store.updateCall(call.recordId, {
+      endedAt: new Date(this.clock.now()),
+      outcome: "transferred",
+    });
     const previous = call.recordId;
     call.recordId = randomUUID();
     call.transfers++;
@@ -435,7 +492,10 @@ export class AcdService {
     const consult = call.consult!;
     call.consult = null;
     await this.pbx.stopMusicOnHold(call.channelId).catch(() => undefined);
-    await this.pbx.addToBridge(call.bridgeId!, consult.blind ? [call.channelId, consult.channelId!] : [call.channelId]);
+    await this.pbx.addToBridge(
+      call.bridgeId!,
+      consult.blind ? [call.channelId, consult.channelId!] : [call.channelId],
+    );
     call.agentChannelId = consult.channelId;
     call.agentUserId = consult.targetUserId;
     await this.store.updateCall(call.recordId, {
@@ -469,7 +529,12 @@ export class AcdService {
     if (receiver?.callId !== call.id) return;
     receiver.callId = null;
     if (consult.up) await this.startWrapUp(receiver, call.department!);
-    else await this.setAgentState(receiver, hangup ? "ready" : "not_ready", hangup ? "" : "Không nghe máy");
+    else
+      await this.setAgentState(
+        receiver,
+        hangup ? "ready" : "not_ready",
+        hangup ? "" : "Không nghe máy",
+      );
   }
 
   private async resumeWithAgent(call: ActiveCall): Promise<void> {
@@ -484,10 +549,16 @@ export class AcdService {
     const department = call.department!;
     call.phase = "queued";
     call.enqueuedAt = this.clock.now();
-    this.queues.enqueue({ callId: call.id, departmentId: department.id, enqueuedAt: call.enqueuedAt }, front);
+    this.queues.enqueue(
+      { callId: call.id, departmentId: department.id, enqueuedAt: call.enqueuedAt },
+      front,
+    );
     await this.store.updateCall(call.recordId, { queuedAt: new Date(call.enqueuedAt) });
     this.clock.clearTimeout(call.timer);
-    call.timer = this.clock.setTimeout(() => this.run(() => this.onMaxWait(call.id)), department.maxWaitSeconds * 1000);
+    call.timer = this.clock.setTimeout(
+      () => this.run(() => this.onMaxWait(call.id)),
+      department.maxWaitSeconds * 1000,
+    );
     this.notifier.live(department.id);
     await this.distribute(department.id);
   }
@@ -495,7 +566,10 @@ export class AcdService {
   private async onMonitorUp(call: ActiveCall, monitor: Monitor): Promise<void> {
     if (!call.agentChannelId || !call.bridgeId) return this.endMonitor(call, monitor, true);
     if (monitor.mode === "barge") return this.pbx.addToBridge(call.bridgeId, [monitor.channelId]);
-    monitor.snoopId = await this.pbx.snoop(call.agentChannelId, { whisper: monitor.mode === "whisper", callId: call.id });
+    monitor.snoopId = await this.pbx.snoop(call.agentChannelId, {
+      whisper: monitor.mode === "whisper",
+      callId: call.id,
+    });
     monitor.bridgeId = await this.pbx.bridge([monitor.snoopId, monitor.channelId]);
   }
 
@@ -509,13 +583,15 @@ export class AcdService {
 
   private notifyAgent(agent: LiveAgent): void {
     const call = agent.callId ? this.calls.get(agent.callId) : undefined;
-    this.notifier.agent(agent.userId, { state: agent.state, offer: call ? this.offer(call) : null });
+    this.notifier.agent(agent.userId, {
+      state: agent.state,
+      offer: call ? this.offer(call) : null,
+    });
   }
 
   private callerId(call: ActiveCall): string {
     return `"${(call.caller.displayName ?? call.caller.number).replace(/"/g, "")}" <${call.caller.number}>`;
   }
-
 
   // ---- events --------------------------------------------------------------------------------
 
@@ -524,7 +600,12 @@ export class AcdService {
       case "connected":
         return this.onConnected();
       case "call_started":
-        if (event.args[0] === "inbound" || event.args[0] === "internal-test" || event.args[0] === "web") return this.onInbound(event);
+        if (
+          event.args[0] === "inbound" ||
+          event.args[0] === "internal-test" ||
+          event.args[0] === "web"
+        )
+          return this.onInbound(event);
         return; // our own agent legs ("agent", callId) are tracked when created
       case "dtmf":
         return this.onDigit(event.channelId, event.digit);
@@ -552,7 +633,8 @@ export class AcdService {
     this.byChannel.clear();
     this.byPlayback.clear();
     for (const departmentId of this.queues.departments())
-      for (const queued of [...this.queues.waiting(departmentId)]) this.queues.remove(queued.callId);
+      for (const queued of [...this.queues.waiting(departmentId)])
+        this.queues.remove(queued.callId);
     this.agents.clear();
     for (const record of await this.store.agentRoster()) {
       const agent = this.toLive(record);
@@ -565,10 +647,18 @@ export class AcdService {
 
   private async onInbound(event: Extract<PbxEvent, { type: "call_started" }>): Promise<void> {
     // "Liên hệ phòng ban": a signed-in user calling from the browser; no IVR, straight to the department.
-    const web = event.args[0] === "web" ? await this.webSession(event.args[1] ?? "").catch(() => null) : null;
-    if (event.args[0] === "web" && !web) return void (await this.pbx.hangup(event.channelId).catch(() => undefined));
-    const hotline = web ? null : await this.store.hotline(event.args[0] === "inbound" ? (event.args[1] ?? event.exten) : null);
-    const callerNumber = web ? normalizePhone(web.phone ?? "") || "web" : normalizePhone(event.callerNumber || "") || "anonymous";
+    const web =
+      event.args[0] === "web" ? await this.webSession(event.args[1] ?? "").catch(() => null) : null;
+    if (event.args[0] === "web" && !web)
+      return void (await this.pbx.hangup(event.channelId).catch(() => undefined));
+    const hotline = web
+      ? null
+      : await this.store.hotline(
+          event.args[0] === "inbound" ? (event.args[1] ?? event.exten) : null,
+        );
+    const callerNumber = web
+      ? normalizePhone(web.phone ?? "") || "web"
+      : normalizePhone(event.callerNumber || "") || "anonymous";
     const caller = await this.store.caller(callerNumber);
     if (web) Object.assign(caller, { userId: web.userId, displayName: web.displayName });
     else if (!caller.displayName && event.callerName) caller.displayName = event.callerName;
@@ -634,7 +724,12 @@ export class AcdService {
 
   private async onDigit(channelId: string, digit: string): Promise<void> {
     const call = this.callOf(channelId);
-    if (call?.phase === "queued" && channelId === call.channelId && digit === CALLBACK_DIGIT && this.canCallBack(call))
+    if (
+      call?.phase === "queued" &&
+      channelId === call.channelId &&
+      digit === CALLBACK_DIGIT &&
+      this.canCallBack(call)
+    )
       return this.requestCallback(call);
     if (!call || call.phase !== "ivr" || channelId !== call.channelId) return;
     const option = call.hotline?.options.find((item) => item.digit === digit);
@@ -651,7 +746,10 @@ export class AcdService {
     if (!call || call.playbackId !== playbackId) return;
     call.playbackId = null;
     if (call.phase === "ivr") {
-      call.timer = this.clock.setTimeout(() => this.run(() => this.onIvrTimeout(call.id)), IVR_DIGIT_TIMEOUT_MS);
+      call.timer = this.clock.setTimeout(
+        () => this.run(() => this.onIvrTimeout(call.id)),
+        IVR_DIGIT_TIMEOUT_MS,
+      );
     } else if (call.phase === "queued") {
       await this.pbx.startMusicOnHold(call.channelId).catch(() => undefined);
     } else if (call.phase === "callback") {
@@ -667,7 +765,10 @@ export class AcdService {
     if (!call || call.phase !== "ivr") return;
     call.ivrTries++;
     if (call.ivrTries < IVR_MAX_TRIES) return this.playMenu(call);
-    await this.routeTo(call, call.hotline?.fallbackDepartmentId ?? call.hotline?.options[0]?.departmentId ?? null);
+    await this.routeTo(
+      call,
+      call.hotline?.fallbackDepartmentId ?? call.hotline?.options[0]?.departmentId ?? null,
+    );
   }
 
   private async routeTo(call: ActiveCall, departmentId: string | null): Promise<void> {
@@ -678,10 +779,20 @@ export class AcdService {
     if (!isOpen(department.hours, new Date(this.clock.now()))) return this.toVoicemail(call);
     call.phase = "queued";
     call.enqueuedAt = this.clock.now();
-    this.queues.enqueue({ callId: call.id, departmentId: department.id, enqueuedAt: call.enqueuedAt });
+    this.queues.enqueue({
+      callId: call.id,
+      departmentId: department.id,
+      enqueuedAt: call.enqueuedAt,
+    });
     await this.store.updateCall(call.recordId, { queuedAt: new Date(call.enqueuedAt) });
     // Single-department hotlines and browser calls skip the menu, so the notice goes here.
-    await this.playTo(call, this.withNotice(call, this.canCallBack(call) ? [...prompts.hold, ...prompts.callbackOffer] : prompts.hold));
+    await this.playTo(
+      call,
+      this.withNotice(
+        call,
+        this.canCallBack(call) ? [...prompts.hold, ...prompts.callbackOffer] : prompts.hold,
+      ),
+    );
     call.timer = this.clock.setTimeout(
       () => this.run(() => this.onMaxWait(call.id)),
       department.maxWaitSeconds * 1000,
@@ -736,10 +847,15 @@ export class AcdService {
         continue;
       }
       const candidates = [...this.agents.values()].filter(
-        (agent) => agent.state === "ready" && agent.extension && agent.departmentsSet.has(departmentId),
+        (agent) =>
+          agent.state === "ready" && agent.extension && agent.departmentsSet.has(departmentId),
       );
       const chosen = strategies[call.department.strategy].pick(
-        candidates.map((agent) => ({ userId: agent.userId, readySince: agent.sinceMs, lastOfferedAt: agent.lastOfferedAt })),
+        candidates.map((agent) => ({
+          userId: agent.userId,
+          readySince: agent.sinceMs,
+          lastOfferedAt: agent.lastOfferedAt,
+        })),
       );
       if (!chosen) return;
       await this.offerTo(call, this.agents.get(chosen.userId)!);
@@ -766,7 +882,10 @@ export class AcdService {
       });
       this.byChannel.set(call.agentChannelId, call.id);
     } catch (error) {
-      this.log("acd_offer_failed", { callId: call.id, message: error instanceof Error ? error.message : String(error) });
+      this.log("acd_offer_failed", {
+        callId: call.id,
+        message: error instanceof Error ? error.message : String(error),
+      });
       await this.declined(call, agent, "Không gọi được máy lẻ");
     }
     this.notifier.live(call.department!.id);
@@ -782,7 +901,11 @@ export class AcdService {
     if (call.callerGone) return;
     call.phase = "queued";
     this.queues.enqueue(
-      { callId: call.id, departmentId: call.department!.id, enqueuedAt: call.enqueuedAt ?? this.clock.now() },
+      {
+        callId: call.id,
+        departmentId: call.department!.id,
+        enqueuedAt: call.enqueuedAt ?? this.clock.now(),
+      },
       true,
     );
   }
@@ -800,7 +923,10 @@ export class AcdService {
     call.bridgeId = await this.pbx.bridge([call.channelId, channelId]);
     call.phase = "connected";
     await this.setAgentState(agent, "on_call", "");
-    await this.store.updateCall(call.recordId, { answeredAt: new Date(this.clock.now()), agentUserId: agent.userId });
+    await this.store.updateCall(call.recordId, {
+      answeredAt: new Date(this.clock.now()),
+      agentUserId: agent.userId,
+    });
     const recording = `call-${call.recordId}`;
     call.recording = recording;
     // CC-7: every hotline call is recorded; a failed recording must not drop the conversation.
@@ -808,7 +934,10 @@ export class AcdService {
       .recordBridge(call.bridgeId, recording)
       .then(() => this.store.updateCall(call.recordId, { recordingKey: recording }))
       .catch((error: unknown) =>
-        this.log("acd_record_failed", { callId: call.id, message: error instanceof Error ? error.message : String(error) }),
+        this.log("acd_record_failed", {
+          callId: call.id,
+          message: error instanceof Error ? error.message : String(error),
+        }),
       );
     this.notifier.live(call.department!.id);
   }
@@ -839,7 +968,8 @@ export class AcdService {
     if (channelId !== call.channelId) return;
     call.callerGone = true;
     // A blind transfer still ringing has no one on the line yet: the caller gave up waiting.
-    if (call.phase === "connected") return this.finish(call, call.agentChannelId ? "answered" : "abandoned", false);
+    if (call.phase === "connected")
+      return this.finish(call, call.agentChannelId ? "answered" : "abandoned", false);
     if (call.phase === "voicemail" && call.voicemailName) return; // RecordingFinished closes it
     return this.finish(call, call.phase === "callback" ? "callback" : "abandoned", false);
   }
@@ -861,7 +991,11 @@ export class AcdService {
 
   // ---- helpers -------------------------------------------------------------------------------
 
-  private async finish(call: ActiveCall, outcome: "answered" | "abandoned" | "voicemail" | "callback" | "failed", hangup: boolean) {
+  private async finish(
+    call: ActiveCall,
+    outcome: "answered" | "abandoned" | "voicemail" | "callback" | "failed",
+    hangup: boolean,
+  ) {
     if (call.phase === "ended") return;
     const wasOffering = call.phase === "offering";
     call.phase = "ended";
@@ -905,7 +1039,10 @@ export class AcdService {
       for (const departmentId of agent.departments) await this.distribute(departmentId);
     };
     if (department.wrapUpSeconds === 0) return toReady();
-    agent.wrapTimer = this.clock.setTimeout(() => this.run(toReady), department.wrapUpSeconds * 1000);
+    agent.wrapTimer = this.clock.setTimeout(
+      () => this.run(toReady),
+      department.wrapUpSeconds * 1000,
+    );
   }
 
   private async setAgentState(agent: LiveAgent, state: AgentState, reason: string): Promise<void> {
@@ -939,7 +1076,11 @@ export class AcdService {
       caller: call.caller,
       waitedSeconds: Math.round((this.clock.now() - (call.enqueuedAt ?? call.startedAt)) / 1000),
       transfer: call.consult
-        ? { target: call.consult.extension, attended: !call.consult.blind, answered: call.consult.up }
+        ? {
+            target: call.consult.extension,
+            attended: !call.consult.blind,
+            answered: call.consult.up,
+          }
         : null,
       held: call.held,
       context: call.context || null,

@@ -111,7 +111,13 @@ test(
       assert.equal((await listNotifications(outsider)).unreadCount, 0);
 
       // The contact panel lists the conversation's files; nobody else gets them.
-      const file = await uploadFile(bob, channelId, "ghi-chu.pdf", "application/pdf", Buffer.from("%PDF-1.4 ghi chu"));
+      const file = await uploadFile(
+        bob,
+        channelId,
+        "ghi-chu.pdf",
+        "application/pdf",
+        Buffer.from("%PDF-1.4 ghi chu"),
+      );
       const withFile = await saveMessage(bob, channelId, "Tài liệu", { attachmentId: file.id });
       assert.deepEqual(
         (await listDirectFiles(alice, channelId)).map((f) => [f.fileName, f.messageId]),

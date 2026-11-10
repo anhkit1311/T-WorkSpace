@@ -8,11 +8,22 @@ const [command, ...prefix] = config.ffmpegCommand.split(" ").filter(Boolean);
 
 /** `interactive` keeps stdin open so a live recording can be stopped cleanly with "q". */
 export function spawnFfmpeg(args: string[], interactive = false): ChildProcess {
-  return spawn(command, [...prefix, "-hide_banner", "-loglevel", "error", ...(interactive ? [] : ["-nostdin"]), ...args], {
-    cwd: config.mediaDir,
-    stdio: [interactive ? "pipe" : "ignore", "ignore", "pipe"],
-    windowsHide: true,
-  });
+  return spawn(
+    command,
+    [
+      ...prefix,
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      ...(interactive ? [] : ["-nostdin"]),
+      ...args,
+    ],
+    {
+      cwd: config.mediaDir,
+      stdio: [interactive ? "pipe" : "ignore", "ignore", "pipe"],
+      windowsHide: true,
+    },
+  );
 }
 
 /** Runs FFmpeg to completion; rejects with the tail of its error output. */
@@ -20,18 +31,40 @@ export function runFfmpeg(args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawnFfmpeg(args);
     let stderr = "";
-    child.stderr!.on("data", (chunk: Buffer) => (stderr = (stderr + chunk.toString()).slice(-2000)));
+    child.stderr!.on(
+      "data",
+      (chunk: Buffer) => (stderr = (stderr + chunk.toString()).slice(-2000)),
+    );
     child.on("error", reject);
     child.on("close", (code) =>
-      code === 0 ? resolve() : reject(new Error(`ffmpeg exited ${code}: ${stderr.trim().slice(-400)}`)),
+      code === 0
+        ? resolve()
+        : reject(new Error(`ffmpeg exited ${code}: ${stderr.trim().slice(-400)}`)),
     );
   });
 }
 
-const FRAME = "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=25";
+const FRAME =
+  "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=25";
 const ENCODE = [
-  "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p", "-g", "50",
-  "-c:a", "aac", "-b:a", "128k", "-ac", "2", "-ar", "48000",
+  "-c:v",
+  "libx264",
+  "-preset",
+  "veryfast",
+  "-crf",
+  "23",
+  "-pix_fmt",
+  "yuv420p",
+  "-g",
+  "50",
+  "-c:a",
+  "aac",
+  "-b:a",
+  "128k",
+  "-ac",
+  "2",
+  "-ar",
+  "48000",
 ];
 
 export type HlsSource = {
@@ -67,16 +100,32 @@ export function hlsArgs({ input, out, video, audio, duration }: HlsSource): stri
     // Gaps (a muted mic sends nothing) are filled with silence so the speakers stay in sync.
     const labels = Array.from({ length: audio }, (_, i) => `[a${i}]`);
     labels.forEach((label, i) => filters.push(`[0:a:${i}]aresample=async=1:first_pts=0${label}`));
-    filters.push(audio === 1 ? `[a0]anull[a]` : `${labels.join("")}amix=inputs=${audio}:duration=longest:normalize=0[a]`);
+    filters.push(
+      audio === 1
+        ? `[a0]anull[a]`
+        : `${labels.join("")}amix=inputs=${audio}:duration=longest:normalize=0[a]`,
+    );
     maps.push("-map", "[a]");
   }
   return [
-    "-y", ...inputs, "-filter_complex", filters.join(";"), ...maps, ...ENCODE,
+    "-y",
+    ...inputs,
+    "-filter_complex",
+    filters.join(";"),
+    ...maps,
+    ...ENCODE,
     ...(duration ? ["-t", duration.toFixed(3)] : []),
     // Generated black/silence inputs never end; the recorded input decides the length.
     ...(!video || audio === 0 ? ["-shortest"] : []),
-    "-f", "hls", "-hls_time", "6", "-hls_playlist_type", "vod",
-    "-hls_segment_filename", `${out}_%05d.ts`, `${out}.m3u8`,
+    "-f",
+    "hls",
+    "-hls_time",
+    "6",
+    "-hls_playlist_type",
+    "vod",
+    "-hls_segment_filename",
+    `${out}_%05d.ts`,
+    `${out}.m3u8`,
   ];
 }
 
@@ -100,15 +149,24 @@ export function joinPlaylists(playlists: string[]): string {
   const body: string[] = [];
   for (const playlist of playlists) {
     const lines = playlist.split(/\r?\n/).map((line) => line.trim());
-    const segments = lines.filter((line) => line.startsWith("#EXTINF") || (line && !line.startsWith("#")));
+    const segments = lines.filter(
+      (line) => line.startsWith("#EXTINF") || (line && !line.startsWith("#")),
+    );
     if (!segments.length) continue;
     for (const line of lines)
-      if (line.startsWith("#EXT-X-TARGETDURATION:")) target = Math.max(target, Number(line.split(":")[1]) || 0);
+      if (line.startsWith("#EXT-X-TARGETDURATION:"))
+        target = Math.max(target, Number(line.split(":")[1]) || 0);
     if (body.length) body.push("#EXT-X-DISCONTINUITY");
     body.push(...segments);
   }
   return [
-    "#EXTM3U", "#EXT-X-VERSION:3", `#EXT-X-TARGETDURATION:${target}`, "#EXT-X-MEDIA-SEQUENCE:0",
-    "#EXT-X-PLAYLIST-TYPE:VOD", ...body, "#EXT-X-ENDLIST", "",
+    "#EXTM3U",
+    "#EXT-X-VERSION:3",
+    `#EXT-X-TARGETDURATION:${target}`,
+    "#EXT-X-MEDIA-SEQUENCE:0",
+    "#EXT-X-PLAYLIST-TYPE:VOD",
+    ...body,
+    "#EXT-X-ENDLIST",
+    "",
   ].join("\n");
 }

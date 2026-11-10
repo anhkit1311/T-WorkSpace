@@ -1,10 +1,18 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { canAgentChoose, canTransition } from "../../../dist/api/modules/callcenter/domain/agent-state.js";
+import {
+  canAgentChoose,
+  canTransition,
+} from "../../../dist/api/modules/callcenter/domain/agent-state.js";
 import { isOpen } from "../../../dist/api/modules/callcenter/domain/business-hours.js";
 import { strategies } from "../../../dist/api/modules/callcenter/domain/distribution.js";
 import { CallCenterAccess } from "../../../dist/api/modules/callcenter/domain/access.js";
-import { groupNumber, inRange, nextExtensionNumber, normalizePhone } from "../../../dist/api/modules/callcenter/domain/extension.js";
+import {
+  groupNumber,
+  inRange,
+  nextExtensionNumber,
+  normalizePhone,
+} from "../../../dist/api/modules/callcenter/domain/extension.js";
 import { kpiSummary, periodBounds } from "../../../dist/api/modules/callcenter/domain/kpi.js";
 import { AcdService } from "../../../dist/api/modules/callcenter/service/acd-service.js";
 
@@ -46,7 +54,10 @@ test("Call center domain rules", () => {
   assert.equal(admin.supervises("d2"), true);
   assert.equal(admin.canReviewCall({ department_id: "d2", agent_user_id: "u2" }), false);
   assert.equal(admin.canReviewCall({ department_id: "d1", agent_user_id: "u2" }), true);
-  assert.deepEqual([admin.worksIn("d1"), admin.worksIn("d2"), admin.worksIn(null)], [true, false, false]);
+  assert.deepEqual(
+    [admin.worksIn("d1"), admin.worksIn("d2"), admin.worksIn(null)],
+    [true, false, false],
+  );
   assert.deepEqual(admin.workDepartments(), ["d1"]);
 });
 
@@ -66,14 +77,26 @@ function harness({ webSessions = {}, online = () => true } = {}) {
   let sequence = 0;
   const pbx = new Proxy(
     {
-      play: async (channelId, media) => (pbxCalls.push(["play", channelId, media]), `pb-${++sequence}`),
-      callExtension: async (input) => (pbxCalls.push(["callExtension", input.extension]), `agent-leg-${++sequence}`),
-      bridge: async (ids) => (pbxCalls.push(["bridge", ...ids]), ids[0] === "snoop-1" ? "monitor-bridge" : "bridge-1"),
+      play: async (channelId, media) => (
+        pbxCalls.push(["play", channelId, media]),
+        `pb-${++sequence}`
+      ),
+      callExtension: async (input) => (
+        pbxCalls.push(["callExtension", input.extension]),
+        `agent-leg-${++sequence}`
+      ),
+      bridge: async (ids) => (
+        pbxCalls.push(["bridge", ...ids]),
+        ids[0] === "snoop-1" ? "monitor-bridge" : "bridge-1"
+      ),
       isExtensionOnline: async (extension) => online(extension),
       linkedId: async (channelId) => `linked-${channelId}`,
       snoop: async () => "snoop-1",
     },
-    { get: (target, name) => target[name] ?? (async (...args) => void pbxCalls.push([name, ...args])) },
+    {
+      get: (target, name) =>
+        target[name] ?? (async (...args) => void pbxCalls.push([name, ...args])),
+    },
   );
   const calls = new Map();
   const states = [];
@@ -101,22 +124,51 @@ function harness({ webSessions = {}, online = () => true } = {}) {
       ],
     }),
     department: async (id) => department(id, 10),
-    caller: async (number) => ({ number, userId: null, displayName: null, email: null, recentCalls: 0 }),
+    caller: async (number) => ({
+      number,
+      userId: null,
+      displayName: null,
+      email: null,
+      recentCalls: 0,
+    }),
     createCall: async (input) => void calls.set(input.id, { ...input }),
     updateCall: async (id, patch) => void Object.assign(calls.get(id), patch),
     saveVoicemail: async (input) => void voicemails.push(input),
     missedCall: async (input) => void missed.push(input),
     callbackRequested: async (input) => void callbacks.push(input),
     agentRoster: async () => [
-      { userId: "alice", displayName: "Alice", departments: ["sales"], extension: "2101", state: "offline", reason: "", since: null },
-      { userId: "bob", displayName: "Bob", departments: ["sales"], extension: "2102", state: "offline", reason: "", since: null },
+      {
+        userId: "alice",
+        displayName: "Alice",
+        departments: ["sales"],
+        extension: "2101",
+        state: "offline",
+        reason: "",
+        since: null,
+      },
+      {
+        userId: "bob",
+        displayName: "Bob",
+        departments: ["sales"],
+        extension: "2102",
+        state: "offline",
+        reason: "",
+        since: null,
+      },
     ],
     recordAgentState: async (userId, state, reason) => void states.push([userId, state, reason]),
     closeDanglingCalls: async () => 0,
   };
   const notified = [];
   const notifier = { agent: (userId, data) => notified.push([userId, data.state]), live: () => {} };
-  const acd = new AcdService(pbx, store, notifier, clock, () => {}, async (endpoint) => webSessions[endpoint] ?? null);
+  const acd = new AcdService(
+    pbx,
+    store,
+    notifier,
+    clock,
+    () => {},
+    async (endpoint) => webSessions[endpoint] ?? null,
+  );
   const flush = () => acd.handle({ type: "dtmf", channelId: "none", digit: "0" });
   const advance = async (ms) => {
     now += ms;
@@ -130,7 +182,14 @@ function harness({ webSessions = {}, online = () => true } = {}) {
   return { acd, pbxCalls, calls, call, voicemails, missed, callbacks, agentState, advance, flush };
 }
 
-const inbound = { type: "call_started", channelId: "caller", args: ["inbound", "19001234"], callerNumber: "+84912345678", callerName: "", exten: "19001234" };
+const inbound = {
+  type: "call_started",
+  channelId: "caller",
+  args: ["inbound", "19001234"],
+  callerNumber: "+84912345678",
+  callerName: "",
+  exten: "19001234",
+};
 
 test("ACD: IVR → queue → longest idle agent → answered → wrap-up → ready", async () => {
   const { acd, pbxCalls, call, agentState, advance } = harness();
@@ -141,11 +200,18 @@ test("ACD: IVR → queue → longest idle agent → answered → wrap-up → rea
 
   await acd.handle(inbound);
   assert.equal(call().callerNumber, "0912345678");
-  assert.ok(pbxCalls.some(([name, , media]) => name === "play" && media.includes("sound:digits/2")), "menu played");
+  assert.ok(
+    pbxCalls.some(([name, , media]) => name === "play" && media.includes("sound:digits/2")),
+    "menu played",
+  );
 
   await acd.handle({ type: "dtmf", channelId: "caller", digit: "1" });
   assert.equal(call().departmentId, "sales");
-  assert.deepEqual(pbxCalls.find(([name]) => name === "callExtension"), ["callExtension", "2101"], "longest idle first");
+  assert.deepEqual(
+    pbxCalls.find(([name]) => name === "callExtension"),
+    ["callExtension", "2101"],
+    "longest idle first",
+  );
   assert.equal(agentState("alice"), "ringing");
   assert.equal(acd.agentView("alice").offer.caller.number, "0912345678");
 
@@ -174,7 +240,10 @@ test("ACD: unanswered offer requeues to the next agent; max wait sends the calle
   assert.equal(acd.snapshot("sales").waiting.length, 1, "call back in queue");
 
   await acd.requestState("bob", "ready");
-  assert.deepEqual(pbxCalls.slice(firstLeg).find(([name]) => name === "callExtension"), ["callExtension", "2102"]);
+  assert.deepEqual(
+    pbxCalls.slice(firstLeg).find(([name]) => name === "callExtension"),
+    ["callExtension", "2102"],
+  );
   await acd.handle({ type: "channel_ended", channelId: "agent-leg-4" });
 
   await advance(60_000);
@@ -192,11 +261,17 @@ test("ACD: unanswered offer requeues to the next agent; max wait sends the calle
 test("ACD: agents cannot pick a state mid-call and need an extension", async () => {
   const { acd } = harness();
   await acd.handle({ type: "connected" });
-  await assert.rejects(acd.requestState("stranger", "ready"), (error) => error.code === "NOT_AGENT");
+  await assert.rejects(
+    acd.requestState("stranger", "ready"),
+    (error) => error.code === "NOT_AGENT",
+  );
   await acd.requestState("alice", "ready");
   await acd.handle(inbound);
   await acd.handle({ type: "dtmf", channelId: "caller", digit: "1" });
-  await assert.rejects(acd.requestState("alice", "not_ready"), (error) => error.code === "INVALID_AGENT_STATE");
+  await assert.rejects(
+    acd.requestState("alice", "not_ready"),
+    (error) => error.code === "INVALID_AGENT_STATE",
+  );
 });
 
 test("ACD: a caller who hangs up in the queue opens a missed-call ticket; one who quits in the IVR does not", async () => {
@@ -212,7 +287,14 @@ test("ACD: a caller who hangs up in the queue opens a missed-call ticket; one wh
   await second.acd.handle(inbound);
   await second.acd.handle({ type: "dtmf", channelId: "caller", digit: "2" });
   await second.acd.handle({ type: "channel_ended", channelId: "caller" });
-  assert.deepEqual(second.missed, [{ callId: second.call().id, departmentId: "support", callerNumber: "0912345678", callerUserId: null }]);
+  assert.deepEqual(second.missed, [
+    {
+      callId: second.call().id,
+      departmentId: "support",
+      callerNumber: "0912345678",
+      callerUserId: null,
+    },
+  ]);
 });
 
 test("ACD 2.4: a waiting caller presses * to be called back; browser callers are not offered it", async () => {
@@ -224,7 +306,9 @@ test("ACD 2.4: a waiting caller presses * to be called back; browser callers are
   assert.ok(hold[2].includes("sound:digits/star"), "the hold prompt offers the callback key");
   await acd.handle({ type: "dtmf", channelId: "caller", digit: "*" });
   assert.equal(acd.snapshot("sales").waiting.length, 0, "left the queue");
-  assert.deepEqual(callbacks, [{ callId: call().id, departmentId: "sales", callerNumber: "0912345678", callerUserId: null }]);
+  assert.deepEqual(callbacks, [
+    { callId: call().id, departmentId: "sales", callerNumber: "0912345678", callerUserId: null },
+  ]);
   const thanks = pbxCalls.filter(([name]) => name === "play").at(-1);
   assert.deepEqual(thanks[2], ["sound:auth-thankyou"]);
   // Hanging up during the thank-you still counts as a callback, not an abandoned call.
@@ -244,15 +328,63 @@ test("CC-9 KPI: ASA, AHT, abandon rate and service level", () => {
   const at = (seconds) => new Date(Date.parse("2026-10-19T02:00:00Z") + seconds * 1000);
   const calls = [
     // answered after 10 s, talked 60 s
-    { agentUserId: "a", agentName: "An", startedAt: at(0), queuedAt: at(5), answeredAt: at(15), endedAt: at(75), outcome: "answered" },
+    {
+      agentUserId: "a",
+      agentName: "An",
+      startedAt: at(0),
+      queuedAt: at(5),
+      answeredAt: at(15),
+      endedAt: at(75),
+      outcome: "answered",
+    },
     // answered after 30 s (outside a 20 s service level), talked 120 s
-    { agentUserId: "a", agentName: "An", startedAt: at(0), queuedAt: at(0), answeredAt: at(30), endedAt: at(150), outcome: "answered" },
-    { agentUserId: null, agentName: null, startedAt: at(0), queuedAt: at(0), answeredAt: null, endedAt: at(40), outcome: "abandoned" },
-    { agentUserId: null, agentName: null, startedAt: at(0), queuedAt: at(0), answeredAt: null, endedAt: at(300), outcome: "voicemail" },
+    {
+      agentUserId: "a",
+      agentName: "An",
+      startedAt: at(0),
+      queuedAt: at(0),
+      answeredAt: at(30),
+      endedAt: at(150),
+      outcome: "answered",
+    },
+    {
+      agentUserId: null,
+      agentName: null,
+      startedAt: at(0),
+      queuedAt: at(0),
+      answeredAt: null,
+      endedAt: at(40),
+      outcome: "abandoned",
+    },
+    {
+      agentUserId: null,
+      agentName: null,
+      startedAt: at(0),
+      queuedAt: at(0),
+      answeredAt: null,
+      endedAt: at(300),
+      outcome: "voicemail",
+    },
     // pressed * to be called back: offered, but neither abandoned nor in the service level
-    { agentUserId: null, agentName: null, startedAt: at(0), queuedAt: at(0), answeredAt: null, endedAt: at(25), outcome: "callback" },
+    {
+      agentUserId: null,
+      agentName: null,
+      startedAt: at(0),
+      queuedAt: at(0),
+      answeredAt: null,
+      endedAt: at(25),
+      outcome: "callback",
+    },
     // never reached the queue (hung up in the IVR): not offered
-    { agentUserId: null, agentName: null, startedAt: at(0), queuedAt: null, answeredAt: null, endedAt: at(3), outcome: "abandoned" },
+    {
+      agentUserId: null,
+      agentName: null,
+      startedAt: at(0),
+      queuedAt: null,
+      answeredAt: null,
+      endedAt: at(3),
+      outcome: "abandoned",
+    },
   ];
   const report = kpiSummary(calls, [10, 20], 20);
   assert.equal(report.offered, 5);
@@ -264,7 +396,9 @@ test("CC-9 KPI: ASA, AHT, abandon rate and service level", () => {
   assert.equal(report.aht, 105); // (60 + 120) / 2 + (10 + 20) / 2
   assert.equal(report.abandonRate, 0.2);
   assert.equal(report.serviceLevel, 0.3333); // 1 fast answer / (2 answered + 1 abandoned)
-  assert.deepEqual(report.agents, [{ userId: "a", displayName: "An", answered: 2, talkSeconds: 180, averageTalk: 90 }]);
+  assert.deepEqual(report.agents, [
+    { userId: "a", displayName: "An", answered: 2, talkSeconds: 180, averageTalk: 90 },
+  ]);
   assert.deepEqual(report.hourly, [{ hour: 9, offered: 5, answered: 2 }]);
   assert.equal(kpiSummary([], [], 20).serviceLevel, null);
 
@@ -283,11 +417,18 @@ test("CC-10: attended transfer hands the caller to the receiver and splits the C
   await acd.requestState("bob", "ready");
 
   await acd.transfer("alice", { extension: "2102" }, true);
-  assert.ok(pbxCalls.some(([name, , channel]) => name === "removeFromBridge" && channel === "caller"), "caller on hold");
+  assert.ok(
+    pbxCalls.some(([name, , channel]) => name === "removeFromBridge" && channel === "caller"),
+    "caller on hold",
+  );
   assert.equal(agentState("bob"), "ringing");
   await acd.handle({ type: "channel_up", channelId: "agent-leg-4" });
   assert.equal(agentState("bob"), "on_call");
-  assert.deepEqual(acd.agentView("alice").offer.transfer, { target: "2102", attended: true, answered: true });
+  assert.deepEqual(acd.agentView("alice").offer.transfer, {
+    target: "2102",
+    attended: true,
+    answered: true,
+  });
 
   await acd.completeTransfer("alice");
   assert.equal(agentState("alice"), "wrap_up");
@@ -310,7 +451,10 @@ test("CC-10: blind transfer to a department requeues; an unanswered blind transf
   await acd.handle(inbound);
   await acd.handle({ type: "dtmf", channelId: "caller", digit: "1" });
   await acd.handle({ type: "channel_up", channelId: "agent-leg-3" });
-  await assert.rejects(acd.transfer("alice", { departmentId: "support" }, true), (error) => error.code === "INVALID_INPUT");
+  await assert.rejects(
+    acd.transfer("alice", { departmentId: "support" }, true),
+    (error) => error.code === "INVALID_INPUT",
+  );
   await acd.transfer("alice", { departmentId: "support" }, false);
   assert.equal(agentState("alice"), "wrap_up");
   assert.equal(acd.snapshot("support").waiting.length, 1);
@@ -343,10 +487,19 @@ test("CC-11: a supervisor listens through a snoop channel and leaves when the ca
   assert.equal(acd.departmentOfCall(key), "sales");
   await acd.monitor("boss", "2199", key, "whisper");
   await acd.handle({ type: "channel_up", channelId: "agent-leg-4" });
-  assert.ok(pbxCalls.some(([name, a, b]) => name === "bridge" && a === "snoop-1" && b === "agent-leg-4"), "snoop bridged to the supervisor");
-  await assert.rejects(acd.monitor("boss", "2199", key, "listen"), (error) => error.code === "ALREADY_MONITORING");
+  assert.ok(
+    pbxCalls.some(([name, a, b]) => name === "bridge" && a === "snoop-1" && b === "agent-leg-4"),
+    "snoop bridged to the supervisor",
+  );
+  await assert.rejects(
+    acd.monitor("boss", "2199", key, "listen"),
+    (error) => error.code === "ALREADY_MONITORING",
+  );
   await acd.handle({ type: "channel_ended", channelId: "caller" });
-  assert.ok(pbxCalls.some(([name, channel]) => name === "hangup" && channel === "agent-leg-4"), "supervisor leg hung up");
+  assert.ok(
+    pbxCalls.some(([name, channel]) => name === "hangup" && channel === "agent-leg-4"),
+    "supervisor leg hung up",
+  );
   assert.ok(pbxCalls.some(([name, channel]) => name === "hangup" && channel === "snoop-1"));
 });
 
@@ -362,10 +515,13 @@ test("ACD: hold takes the caller out of the bridge with music, resume brings the
 
   const before = pbxCalls.length;
   await acd.hold("alice", true);
-  assert.deepEqual(pbxCalls.slice(before).map(([name, ...args]) => [name, ...args]), [
-    ["removeFromBridge", "bridge-1", "caller"],
-    ["startMusicOnHold", "caller"],
-  ]);
+  assert.deepEqual(
+    pbxCalls.slice(before).map(([name, ...args]) => [name, ...args]),
+    [
+      ["removeFromBridge", "bridge-1", "caller"],
+      ["startMusicOnHold", "caller"],
+    ],
+  );
   assert.equal(acd.agentView("alice").offer.held, true);
   await acd.hold("alice", true); // already held: nothing more
   assert.equal(pbxCalls.length, before + 2);
@@ -388,23 +544,52 @@ test("ACD: a pause keeps its reason (NV-CC2); ready clears it", async () => {
 });
 
 test("ACD: a browser call skips the IVR, reaches its department and carries the caller's context", async () => {
-  const session = { userId: "student-1", departmentId: "sales", context: "CC-101 · Bài 2 · phiếu TK-000009", displayName: "Sinh viên A", phone: null };
+  const session = {
+    userId: "student-1",
+    departmentId: "sales",
+    context: "CC-101 · Bài 2 · phiếu TK-000009",
+    displayName: "Sinh viên A",
+    phone: null,
+  };
   const { acd, pbxCalls, call } = harness({ webSessions: { web0123456789ab: session } });
   await acd.handle({ type: "connected" });
   await acd.requestState("alice", "ready");
 
   // An endpoint without a live session (expired, or forged) is hung up and leaves no record.
-  await acd.handle({ type: "call_started", channelId: "stale", args: ["web", "webffffffffffff"], callerNumber: "", callerName: "", exten: "hotline" });
+  await acd.handle({
+    type: "call_started",
+    channelId: "stale",
+    args: ["web", "webffffffffffff"],
+    callerNumber: "",
+    callerName: "",
+    exten: "hotline",
+  });
   assert.deepEqual(pbxCalls.at(-1), ["hangup", "stale"]);
   assert.equal(call(), undefined);
 
-  await acd.handle({ type: "call_started", channelId: "browser", args: ["web", "web0123456789ab"], callerNumber: "web0123456789ab", callerName: "", exten: "hotline" });
+  await acd.handle({
+    type: "call_started",
+    channelId: "browser",
+    args: ["web", "web0123456789ab"],
+    callerNumber: "web0123456789ab",
+    callerName: "",
+    exten: "hotline",
+  });
   assert.equal(call().direction, "inbound");
   assert.equal(call().calleeNumber, "web");
   assert.equal(call().callerUserId, "student-1");
   assert.equal(call().departmentId, "sales");
-  assert.ok(!pbxCalls.some(([name, , media]) => name === "play" && media.some((item) => item.startsWith("sound:digits/"))), "no IVR menu");
-  assert.deepEqual(pbxCalls.find(([name]) => name === "callExtension"), ["callExtension", "2101"]);
+  assert.ok(
+    !pbxCalls.some(
+      ([name, , media]) =>
+        name === "play" && media.some((item) => item.startsWith("sound:digits/")),
+    ),
+    "no IVR menu",
+  );
+  assert.deepEqual(
+    pbxCalls.find(([name]) => name === "callExtension"),
+    ["callExtension", "2101"],
+  );
   const offer = acd.agentView("alice").offer;
   assert.equal(offer.caller.displayName, "Sinh viên A");
   assert.equal(offer.context, session.context);
@@ -412,7 +597,9 @@ test("ACD: a browser call skips the IVR, reaches its department and carries the 
 
 test("ACD: an idle agent whose softphone stays unregistered 30 s goes offline (BR-09)", async () => {
   const registered = new Set(["2101", "2102"]);
-  const { acd, agentState, advance } = harness({ online: (extension) => registered.has(extension) });
+  const { acd, agentState, advance } = harness({
+    online: (extension) => registered.has(extension),
+  });
   await acd.handle({ type: "connected" });
   await acd.requestState("alice", "ready");
   await acd.requestState("bob", "not_ready", "Họp");

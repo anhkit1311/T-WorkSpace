@@ -4,4 +4,6 @@ export function rememberChannelScroll(key: string, top: number) {
   positions.set(key, top);
   if (positions.size > 100) positions.delete(positions.keys().next().value!);
 }
-export function channelScroll(key: string) { return positions.get(key); }
+export function channelScroll(key: string) {
+  return positions.get(key);
+}

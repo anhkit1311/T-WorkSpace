@@ -28,7 +28,13 @@ import { roomByDialCode } from "../meetings/dial-in.js";
 
 type Io = RouteContext["io"];
 const log = (event: string, details: Record<string, unknown> = {}) =>
-  console.log(JSON.stringify({ level: event.endsWith("failed") || event.endsWith("error") ? "warn" : "info", event, ...details }));
+  console.log(
+    JSON.stringify({
+      level: event.endsWith("failed") || event.endsWith("error") ? "warn" : "info",
+      event,
+      ...details,
+    }),
+  );
 
 const repo = new CallCenterRepository();
 const pbx = process.env.ASTERISK_ARI_PASSWORD
@@ -41,18 +47,31 @@ const pbx = process.env.ASTERISK_ARI_PASSWORD
   : null;
 let acd: AcdService | null = null;
 
-const admin = new CallCenterAdminService(repo, () => pbx, () => acd?.refreshRoster() ?? Promise.resolve(), log);
+const admin = new CallCenterAdminService(
+  repo,
+  () => pbx,
+  () => acd?.refreshRoster() ?? Promise.resolve(),
+  log,
+);
 const recordings = () => (pbx ? (name: string) => pbx.recording(name) : null);
 let socketServer: Io | null = null;
-const agents = new CallCenterAgentService(repo, admin, () => acd, recordings, process.env.VITE_SIP_WS_URL ?? "ws://localhost:8088/ws", (userId, data) =>
-  socketServer?.to(`user:${userId}`).emit("meeting_invite", data),
+const agents = new CallCenterAgentService(
+  repo,
+  admin,
+  () => acd,
+  recordings,
+  process.env.VITE_SIP_WS_URL ?? "ws://localhost:8088/ws",
+  (userId, data) => socketServer?.to(`user:${userId}`).emit("meeting_invite", data),
 );
 const voipRepo = new VoipRepository();
 const sipWsUrl = process.env.VITE_SIP_WS_URL ?? "ws://localhost:8088/ws";
 /** Socket event to the user's room, plus an e-mail when one is given and mail is configured. */
 const userNotice: UserNotice = (userId, event, data, email) => {
   // The event names are declared in ServerToClientEvents; the payload is built by the caller.
-  (socketServer?.to(`user:${userId}`) as { emit(name: string, payload: unknown): boolean } | undefined)?.emit(event, data);
+  (
+    socketServer?.to(`user:${userId}`) as
+      { emit(name: string, payload: unknown): boolean } | undefined
+  )?.emit(event, data);
   if (!email) return;
   void voipRepo
     .ownerEmail(userId)
@@ -60,17 +79,24 @@ const userNotice: UserNotice = (userId, event, data, email) => {
     .catch((error: Error) => log("cc_notice_email_failed", { message: error.message }));
 };
 const voip = new CallCenterVoipService(voipRepo, repo, () => pbx, recordings, sipWsUrl, userNotice);
-const tickets = new CallCenterTicketService(repo, admin, recordings, (ticketId, status) => voip.statusChanged(ticketId, status));
+const tickets = new CallCenterTicketService(repo, admin, recordings, (ticketId, status) =>
+  voip.statusChanged(ticketId, status),
+);
 const reports = new CallCenterReportService(repo, admin);
 
 const qa = new CallCenterQaService(repo, new QaRepository());
 
 /** E2 port for the e-learning module: a call recording a supervisor turns into a lesson. */
-export const trainingRecording = (userId: string, callId: string) => agents.trainingRecording(userId, callId);
+export const trainingRecording = (userId: string, callId: string) =>
+  agents.trainingRecording(userId, callId);
 
 /** Port for the academic module: new accounts of a unit get a máy lẻ; staff also its switchboard membership. */
-export const provisionStaffPhones = (grantedBy: string, unitId: string, userIds: string[], asAgents = true) =>
-  admin.provisionStaff(grantedBy, unitId, userIds, asAgents);
+export const provisionStaffPhones = (
+  grantedBy: string,
+  unitId: string,
+  userIds: string[],
+  asAgents = true,
+) => admin.provisionStaff(grantedBy, unitId, userIds, asAgents);
 
 /** Port for the academic module: a deleted account's máy lẻ go back to their unit's range. */
 export const releasePhones = (extensionIds: string[]) => admin.releaseExtensions(extensionIds);
@@ -85,7 +111,8 @@ export const callcenterRoutes = callCenterRoutes(admin, agents, tickets, reports
 /** M1 adapter: the meetings module seen from the dial-in service. */
 const meetingDialIn = (io: Io): MeetingDialInPort => ({
   room: roomByDialCode,
-  open: ({ roomId, socketId, userId, displayName }) => new PhoneLeg(roomId, socketId, userId, displayName),
+  open: ({ roomId, socketId, userId, displayName }) =>
+    new PhoneLeg(roomId, socketId, userId, displayName),
   mediaHost: (port) => `${config.phoneMediaHost}:${port}`,
   announce: (roomId, event, data) => io.to(`meeting:${roomId}`).emit(event, data as never),
 });
@@ -100,7 +127,8 @@ function socketNotifier(io: Io): CallCenterNotifier {
     pending.clear();
     for (const departmentId of departments) {
       const audience = await repo.liveAudience(departmentId).catch(() => []);
-      if (audience.length) io.to(audience.map((userId) => `user:${userId}`)).emit("callcenter_live", { departmentId });
+      if (audience.length)
+        io.to(audience.map((userId) => `user:${userId}`)).emit("callcenter_live", { departmentId });
     }
   };
   return {
@@ -115,14 +143,20 @@ function socketNotifier(io: Io): CallCenterNotifier {
 /** BR-08 closes quiet resolved tickets, BR-17 drops recordings past retention, and expired browser endpoints go. */
 async function runHousekeeping() {
   try {
-    const closed = await voipRepo.closeQuietTickets(Number(process.env.TICKET_AUTO_CLOSE_DAYS ?? 3));
+    const closed = await voipRepo.closeQuietTickets(
+      Number(process.env.TICKET_AUTO_CLOSE_DAYS ?? 3),
+    );
     if (closed) log("cc_tickets_auto_closed", { closed });
-    const expired = await voipRepo.expireRecordings(Number(process.env.RECORDING_RETENTION_DAYS ?? 90));
+    const expired = await voipRepo.expireRecordings(
+      Number(process.env.RECORDING_RETENTION_DAYS ?? 90),
+    );
     for (const name of expired) await pbx?.deleteRecording(name).catch(() => undefined);
     if (expired.length) log("cc_recordings_expired", { count: expired.length });
     await voip.sweepWebCalls();
   } catch (error) {
-    log("cc_housekeeping_failed", { message: error instanceof Error ? error.message : String(error) });
+    log("cc_housekeeping_failed", {
+      message: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
@@ -181,22 +215,37 @@ export function startCallCenter(io: Io): () => void {
     stopHeartbeat = () => (clearInterval(heartbeat), clearInterval(connections));
     acd = new AcdService(pbx, repo, socketNotifier(io), systemClock, log, async (endpoint) => {
       const session = await voipRepo.webCall(endpoint);
-      return session && { userId: session.user_id, departmentId: session.department_id, context: session.context, displayName: session.display_name, phone: session.phone };
+      return (
+        session && {
+          userId: session.user_id,
+          departmentId: session.department_id,
+          context: session.context,
+          displayName: session.display_name,
+          phone: session.phone,
+        }
+      );
     });
     const dialIn = new MeetingDialInService(pbx, meetingDialIn(io), systemClock, log);
-    const voicemail = new PersonalVoicemailService(pbx, voipRepo, async (message) => {
-      const who = message.callerName ? `${message.callerName} (${message.callerNumber})` : message.callerNumber;
-      userNotice(
-        message.ownerId,
-        "callcenter_voicemail",
-        { voicemailId: message.voicemailId, from: who, durationSeconds: message.durationSeconds },
-        {
-          subject: `[TDTU] Thư thoại mới từ ${who}`,
-          text: `Bạn có thư thoại ${message.durationSeconds} giây từ ${who} gửi tới máy lẻ ${message.extension}.
+    const voicemail = new PersonalVoicemailService(
+      pbx,
+      voipRepo,
+      async (message) => {
+        const who = message.callerName
+          ? `${message.callerName} (${message.callerNumber})`
+          : message.callerNumber;
+        userNotice(
+          message.ownerId,
+          "callcenter_voicemail",
+          { voicemailId: message.voicemailId, from: who, durationSeconds: message.durationSeconds },
+          {
+            subject: `[TDTU] Thư thoại mới từ ${who}`,
+            text: `Bạn có thư thoại ${message.durationSeconds} giây từ ${who} gửi tới máy lẻ ${message.extension}.
 Nghe trong mục Tổng đài → Bàn làm việc → Hộp thư thoại.`,
-        },
-      );
-    }, log);
+          },
+        );
+      },
+      log,
+    );
     const transcripts = new CallTranscriptService(repo, (name) => pbx.recording(name), log);
     const internalCalls = new InternalCallLog(voipRepo, undefined, log);
     let chain: Promise<unknown> = Promise.resolve();

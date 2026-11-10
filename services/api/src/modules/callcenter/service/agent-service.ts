@@ -1,17 +1,40 @@
-import type { AgentState, CcAgentProfile, CcCallerProfile, CcSipAccount, CcTransferDirectory, MonitorMode } from "@doan/shared";
+import type {
+  AgentState,
+  CcAgentProfile,
+  CcCallerProfile,
+  CcSipAccount,
+  CcTransferDirectory,
+  MonitorMode,
+} from "@doan/shared";
 import { HttpError } from "../../../shared/http/http-error.js";
-import { addWorkspaceMember, createWorkspace, getWorkspaceChannels } from "../../workspaces/service.js";
+import {
+  addWorkspaceMember,
+  createWorkspace,
+  getWorkspaceChannels,
+} from "../../workspaces/service.js";
 import { getIceServers } from "../../meetings/media/ice.js";
 import { groupNumber } from "../domain/extension.js";
 import type { CallCenterRepository } from "../repository/callcenter-repository.js";
 import type { AcdService } from "./acd-service.js";
 import type { CallCenterAdminService } from "./admin-service.js";
-import { bool, forbidden, id, integer, invalid, notFound, oneOf, optionalId, text, type Body } from "./input.js";
+import {
+  bool,
+  forbidden,
+  id,
+  integer,
+  invalid,
+  notFound,
+  oneOf,
+  optionalId,
+  text,
+  type Body,
+} from "./input.js";
 
 /** NV-CC2: why an agent pauses. */
 export const PAUSE_REASONS = ["Ăn trưa", "Họp", "Khác"] as const;
 
-const offline = () => new HttpError(503, "CALL_CENTER_OFFLINE", "Tổng đài chưa kết nối, vui lòng thử lại sau.");
+const offline = () =>
+  new HttpError(503, "CALL_CENTER_OFFLINE", "Tổng đài chưa kết nối, vui lòng thử lại sau.");
 
 /** CC-6 / CC-7: the agent's desk (state, softphone account, wrap-up) and call history. */
 export class CallCenterAgentService {
@@ -21,19 +44,29 @@ export class CallCenterAgentService {
     private readonly acd: () => AcdService | null,
     private readonly recordings: () => ((name: string) => Promise<Response>) | null,
     private readonly sipWsUrl: string,
-    private readonly invite: (userId: string, data: { workspaceId: string; roomId: string; from: string }) => void = () => {},
+    private readonly invite: (
+      userId: string,
+      data: { workspaceId: string; roomId: string; from: string },
+    ) => void = () => {},
   ) {}
 
   async me(userId: string): Promise<CcAgentProfile> {
     const { isAdmin, roles } = await this.repo.access(userId);
     const departments = roles.size ? await this.repo.departments([...roles.keys()]) : [];
-    const [extension, training] = await Promise.all([this.repo.ownExtension(userId), this.repo.pendingTraining(userId)]);
+    const [extension, training] = await Promise.all([
+      this.repo.ownExtension(userId),
+      this.repo.pendingTraining(userId),
+    ]);
     const live = this.acd()?.agentView(userId) ?? null;
     return {
       userId,
       isAdmin,
       departments: departments.flatMap((department) =>
-        [...roles.get(department.id)!].map((role) => ({ id: department.id, name: department.name, role })),
+        [...roles.get(department.id)!].map((role) => ({
+          id: department.id,
+          name: department.name,
+          role,
+        })),
       ),
       state: live?.state ?? "offline",
       stateReason: live?.reason ?? "",
@@ -51,9 +84,16 @@ export class CallCenterAgentService {
     if (state === "ready") {
       const pending = await this.repo.pendingTraining(userId);
       if (pending.length)
-        throw new HttpError(409, "TRAINING_REQUIRED", `Hoàn thành khóa ${pending.map((course) => `${course.code} — ${course.title}`).join(", ")} trước khi nhận cuộc gọi.`);
+        throw new HttpError(
+          409,
+          "TRAINING_REQUIRED",
+          `Hoàn thành khóa ${pending.map((course) => `${course.code} — ${course.title}`).join(", ")} trước khi nhận cuộc gọi.`,
+        );
     }
-    const reason = state === "not_ready" && body.reason !== undefined ? oneOf(body, "reason", PAUSE_REASONS) : "";
+    const reason =
+      state === "not_ready" && body.reason !== undefined
+        ? oneOf(body, "reason", PAUSE_REASONS)
+        : "";
     await acd.requestState(userId, state, reason);
     return this.me(userId);
   }
@@ -71,9 +111,15 @@ export class CallCenterAgentService {
     const acd = this.acd();
     if (!acd) throw offline();
     const departmentId = optionalId(body.departmentId);
-    const extension = body.extension === undefined ? null : text(body, "extension", 6, { pattern: /^[0-9]{3,6}$/ });
-    if (!departmentId === !extension) throw invalid("Chọn một phòng ban hoặc một máy lẻ để chuyển.");
-    await acd.transfer(userId, departmentId ? { departmentId } : { extension: extension! }, bool(body, "attended", false));
+    const extension =
+      body.extension === undefined ? null : text(body, "extension", 6, { pattern: /^[0-9]{3,6}$/ });
+    if (!departmentId === !extension)
+      throw invalid("Chọn một phòng ban hoặc một máy lẻ để chuyển.");
+    await acd.transfer(
+      userId,
+      departmentId ? { departmentId } : { extension: extension! },
+      bool(body, "attended", false),
+    );
     return this.me(userId);
   }
 
@@ -97,7 +143,11 @@ export class CallCenterAgentService {
     return {
       departments: departments
         .filter((department) => department.active)
-        .map(({ id, name, extensionFrom }) => ({ id, name, groupNumber: groupNumber(extensionFrom) })),
+        .map(({ id, name, extensionFrom }) => ({
+          id,
+          name,
+          groupNumber: groupNumber(extensionFrom),
+        })),
       extensions: extensions
         .filter((extension) => extension.active && extension.userId !== userId)
         .map((extension) => ({
@@ -120,8 +170,14 @@ export class CallCenterAgentService {
     if (!departmentId) throw notFound("Cuộc gọi đã kết thúc.");
     if (!(await this.admin.access(userId)).supervises(departmentId)) throw forbidden();
     const extension = await this.repo.ownExtension(userId);
-    if (!extension) throw new HttpError(409, "NO_EXTENSION", "Bạn cần một máy lẻ để giám sát cuộc gọi.");
-    await acd.monitor(userId, extension.number, callKey, oneOf<MonitorMode>(body, "mode", ["listen", "whisper", "barge"]));
+    if (!extension)
+      throw new HttpError(409, "NO_EXTENSION", "Bạn cần một máy lẻ để giám sát cuộc gọi.");
+    await acd.monitor(
+      userId,
+      extension.number,
+      callKey,
+      oneOf<MonitorMode>(body, "mode", ["listen", "whisper", "barge"]),
+    );
     return { ok: true };
   }
 
@@ -169,11 +225,15 @@ export class CallCenterAgentService {
     const dispositionId = optionalId(body.dispositionId);
     if (dispositionId) {
       const disposition = await this.repo.disposition(dispositionId);
-      if (!disposition || (disposition.department_id && disposition.department_id !== call.department_id))
+      if (
+        !disposition ||
+        (disposition.department_id && disposition.department_id !== call.department_id)
+      )
         throw notFound("Kết quả cuộc gọi không áp dụng cho phòng ban này.");
     }
     const notes = body.notes === undefined ? "" : String(body.notes);
-    if (notes.length > 4000) throw new HttpError(400, "INVALID_INPUT", "Ghi chú tối đa 4000 ký tự.");
+    if (notes.length > 4000)
+      throw new HttpError(400, "INVALID_INPUT", "Ghi chú tối đa 4000 ký tự.");
     await this.repo.saveWrapUp(call.id, dispositionId, notes);
     return { ok: true };
   }
@@ -187,17 +247,32 @@ export class CallCenterAgentService {
     if (!call) throw notFound("Không tìm thấy cuộc gọi.");
     if (call.agent_user_id !== userId) throw forbidden();
     if (!call.caller_user_id)
-      throw new HttpError(409, "CALLER_UNKNOWN", "Người gọi chưa có tài khoản trong hệ thống nên chưa thể mời vào họp video.");
+      throw new HttpError(
+        409,
+        "CALLER_UNKNOWN",
+        "Người gọi chưa có tài khoản trong hệ thống nên chưa thể mời vào họp video.",
+      );
     let workspaceId = call.video_workspace_id;
     if (!workspaceId) {
-      workspaceId = (await createWorkspace(userId, `Hỗ trợ video · ${call.caller_name ?? call.caller_number}`.slice(0, 80))).id;
+      workspaceId = (
+        await createWorkspace(
+          userId,
+          `Hỗ trợ video · ${call.caller_name ?? call.caller_number}`.slice(0, 80),
+        )
+      ).id;
       await addWorkspaceMember(workspaceId, call.caller_user_id);
       await this.repo.setCallVideo(call.id, workspaceId);
     }
-    const roomId = (await getWorkspaceChannels(userId, workspaceId)).find((channel) => channel.type === "video")?.id;
+    const roomId = (await getWorkspaceChannels(userId, workspaceId)).find(
+      (channel) => channel.type === "video",
+    )?.id;
     if (!roomId) throw new HttpError(500, "NO_ROOM", "Không tạo được phòng họp.");
     const me = await this.me(userId);
-    this.invite(call.caller_user_id, { workspaceId, roomId, from: me.departments[0]?.name ?? "Tổng đài TDTU" });
+    this.invite(call.caller_user_id, {
+      workspaceId,
+      roomId,
+      from: me.departments[0]?.name ?? "Tổng đài TDTU",
+    });
     return { workspaceId, roomId };
   }
 

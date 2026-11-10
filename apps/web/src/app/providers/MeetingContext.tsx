@@ -18,7 +18,12 @@ import {
   publishSelectedTracks,
   type JoinMediaOptions,
 } from "../../features/meetings/webrtc/local-media";
-import { INITIAL_ADAPTIVE, adaptToQos, cappedLayer, type NetworkCap } from "../../features/meetings/webrtc/adaptive";
+import {
+  INITIAL_ADAPTIVE,
+  adaptToQos,
+  cappedLayer,
+  type NetworkCap,
+} from "../../features/meetings/webrtc/adaptive";
 import { useApp } from "./AppContext";
 import { callDropMessage } from "../../features/meetings/call-drop";
 import { useSocket } from "./SocketContext";
@@ -129,7 +134,9 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
   const roomIdRef = useRef("");
   const lastMeasuredRoomIdRef = useRef("");
   // Network drops rejoin on their own; a kick, logout or refresh does not.
-  const rejoinRef = useRef<{ roomId: string; devices: JoinMediaOptions; attempts: number } | null>(null);
+  const rejoinRef = useRef<{ roomId: string; devices: JoinMediaOptions; attempts: number } | null>(
+    null,
+  );
   const lastMediaRejoinRef = useRef(0);
   const deviceStateRef = useRef({ mic, camera });
   deviceStateRef.current = { mic, camera };
@@ -174,7 +181,11 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
         return;
       }
       const { mic: micEnabled, camera: cameraEnabled } = deviceStateRef.current;
-      rejoinRef.current = { roomId: lostRoomId, devices: { ...devicesRef.current, micEnabled, cameraEnabled }, attempts: 0 };
+      rejoinRef.current = {
+        roomId: lostRoomId,
+        devices: { ...devicesRef.current, micEnabled, cameraEnabled },
+        attempts: 0,
+      };
       notify("Mất kết nối cuộc họp", "Đang tự kết nối lại khi mạng ổn định…", "warning");
       scheduleRejoinRef.current(1500);
     };
@@ -274,7 +285,9 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
       const consumerId = ms.videoConsumerIdForTrack(peer.videoTrack.id);
       if (!consumerId) continue;
       const demand = videoDemand[peer.socketId];
-      const target = tabHidden ? null : cappedLayer(demand === undefined ? fallback(cameraCount) : demand, networkCap);
+      const target = tabHidden
+        ? null
+        : cappedLayer(demand === undefined ? fallback(cameraCount) : demand, networkCap);
       const previous = applied.has(consumerId) ? applied.get(consumerId) : 2;
       if (applied.has(consumerId) && previous === target) continue;
       applied.set(consumerId, target);
@@ -408,7 +421,8 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
         setQos(stats);
         setAdaptive((prev) => adaptToQos(prev, stats));
         // Every 4th sample (~10 s) feeds the server's Prometheus QoS gauges.
-        if (++qosReportRef.current % 4 === 0) socket?.emit("qos_report", { roomId: roomIdRef.current, ...stats });
+        if (++qosReportRef.current % 4 === 0)
+          socket?.emit("qos_report", { roomId: roomIdRef.current, ...stats });
         setQosHistory((prev) => {
           const point: QosHistoryPoint = { ...stats, timestamp: new Date().toISOString() };
           return [...prev, point].slice(-300);
@@ -502,7 +516,10 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
     const epoch = requestEpoch;
     let ms: MediasoupClientService;
     try {
-      const module = await mediaOperation(import("../../features/meetings/webrtc/mediasoup-service"), joinAbort.signal);
+      const module = await mediaOperation(
+        import("../../features/meetings/webrtc/mediasoup-service"),
+        joinAbort.signal,
+      );
       if (epoch !== joinEpochRef.current || !socket.connected)
         throw new Error("Tham gia đã bị hủy.");
       ms = new module.MediasoupClientService();
@@ -551,8 +568,17 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
           // Rejoin as for a dropped socket: now when online, when the network is back otherwise
           // (offline, ICE often fails before the socket notices).
           lastMediaRejoinRef.current = Date.now();
-          rejoinRef.current = { roomId: targetRoomId, devices: { ...devicesRef.current, micEnabled, cameraEnabled }, attempts: 0 };
-          if (!navigator.onLine) return notify("Mất kết nối cuộc họp", "Đang tự kết nối lại khi mạng ổn định…", "warning");
+          rejoinRef.current = {
+            roomId: targetRoomId,
+            devices: { ...devicesRef.current, micEnabled, cameraEnabled },
+            attempts: 0,
+          };
+          if (!navigator.onLine)
+            return notify(
+              "Mất kết nối cuộc họp",
+              "Đang tự kết nối lại khi mạng ổn định…",
+              "warning",
+            );
           notify("Media bị gián đoạn", "Đang tự vào lại phòng…", "warning");
           scheduleRejoinRef.current(1500);
         });

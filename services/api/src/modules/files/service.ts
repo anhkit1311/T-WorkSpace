@@ -48,7 +48,9 @@ export async function uploadFile(
       if (Number(usage.user_bytes) + data.length > config.userFileQuotaBytes)
         throw new HttpError(413, "USER_QUOTA_EXCEEDED", "Bạn đã đạt giới hạn tải tệp trong nhóm.");
       if (provider === "s3") {
-        key = scope.workspace_id ? `workspaces/${scope.workspace_id}/${id}` : `direct/${channelId}/${id}`;
+        key = scope.workspace_id
+          ? `workspaces/${scope.workspace_id}/${id}`
+          : `direct/${channelId}/${id}`;
         await putObject(key, data, mimeType);
       }
       await client.query(

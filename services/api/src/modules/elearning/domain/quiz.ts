@@ -14,16 +14,25 @@ export interface GradableQuestion {
 }
 
 /** Returns an error message, or null when the question is well formed. */
-export function questionProblem(kind: QuestionKind, options: QuestionOption[], answer: Answer): string | null {
+export function questionProblem(
+  kind: QuestionKind,
+  options: QuestionOption[],
+  answer: Answer,
+): string | null {
   if (kind === "true_false") {
     if (options.length) return "Câu đúng/sai không có phương án.";
-    return answer.length === 1 && typeof answer[0] === "boolean" ? null : "Câu đúng/sai cần đáp án true hoặc false.";
+    return answer.length === 1 && typeof answer[0] === "boolean"
+      ? null
+      : "Câu đúng/sai cần đáp án true hoặc false.";
   }
   if (options.length < 2 || options.length > 10) return "Cần từ 2 đến 10 phương án.";
   const ids = new Set(options.map((option) => option.id));
   if (ids.size !== options.length || options.some((option) => !option.id || !option.text.trim()))
     return "Phương án phải có mã riêng và nội dung.";
-  if (answer.some((item) => typeof item !== "string" || !ids.has(item)) || new Set(answer).size !== answer.length)
+  if (
+    answer.some((item) => typeof item !== "string" || !ids.has(item)) ||
+    new Set(answer).size !== answer.length
+  )
     return "Đáp án phải là mã của các phương án.";
   if (kind === "single" && answer.length !== 1) return "Câu một lựa chọn có đúng một đáp án.";
   if (kind === "multiple" && answer.length < 1) return "Câu nhiều lựa chọn cần ít nhất một đáp án.";
@@ -33,12 +42,21 @@ export function questionProblem(kind: QuestionKind, options: QuestionOption[], a
 /** All or nothing: a multiple-choice answer scores only when it picks exactly the right options. */
 export function isCorrect(question: GradableQuestion, response: unknown): boolean {
   if (!Array.isArray(response)) return false;
-  if (question.kind === "true_false") return response.length === 1 && response[0] === question.answer[0];
+  if (question.kind === "true_false")
+    return response.length === 1 && response[0] === question.answer[0];
   const picked = new Set(response);
-  return picked.size === response.length && picked.size === question.answer.length && question.answer.every((id) => picked.has(id));
+  return (
+    picked.size === response.length &&
+    picked.size === question.answer.length &&
+    question.answer.every((id) => picked.has(id))
+  );
 }
 
-export function gradeAttempt(questions: GradableQuestion[], answers: Record<string, unknown>, passPercent: number) {
+export function gradeAttempt(
+  questions: GradableQuestion[],
+  answers: Record<string, unknown>,
+  passPercent: number,
+) {
   let score = 0;
   let maxScore = 0;
   const results = questions.map((question) => {
@@ -53,13 +71,19 @@ export function gradeAttempt(questions: GradableQuestion[], answers: Record<stri
 
 /** A late submission (network, clock skew) is accepted within this grace; after it the attempt is graded empty. */
 export const SUBMIT_GRACE_MS = 30_000;
-export const isLate = (deadline: Date | null, now: Date) => deadline !== null && +now > +deadline + SUBMIT_GRACE_MS;
+export const isLate = (deadline: Date | null, now: Date) =>
+  deadline !== null && +now > +deadline + SUBMIT_GRACE_MS;
 
 /**
  * Questions of a new attempt: `count` of them drawn at random (all when null), in random order
  * when `shuffle` or when drawing, else in the quiz's order. `random` is injectable for tests.
  */
-export function drawQuestions<T>(ids: T[], count: number | null, shuffle: boolean, random: () => number = Math.random): T[] {
+export function drawQuestions<T>(
+  ids: T[],
+  count: number | null,
+  shuffle: boolean,
+  random: () => number = Math.random,
+): T[] {
   const pool = [...ids];
   if (!shuffle && (count === null || count >= pool.length)) return pool;
   for (let index = pool.length - 1; index > 0; index--) {
@@ -81,11 +105,18 @@ export function shuffledOptions<T extends { id: string }>(options: T[], seed: st
 
 /** Draft answers: only questions of the attempt, each an array of at most 10 short values. */
 export function draftProblem(answers: unknown, questionIds: string[]): string | null {
-  if (typeof answers !== "object" || answers === null || Array.isArray(answers)) return "answers phải là {questionId: đáp án}.";
+  if (typeof answers !== "object" || answers === null || Array.isArray(answers))
+    return "answers phải là {questionId: đáp án}.";
   const allowed = new Set(questionIds);
   for (const [key, value] of Object.entries(answers)) {
     if (!allowed.has(key)) return "Câu hỏi không thuộc lượt làm bài.";
-    if (!Array.isArray(value) || value.length > 10 || value.some((item) => typeof item === "string" ? item.length > 40 : typeof item !== "boolean"))
+    if (
+      !Array.isArray(value) ||
+      value.length > 10 ||
+      value.some((item) =>
+        typeof item === "string" ? item.length > 40 : typeof item !== "boolean",
+      )
+    )
       return "Đáp án không hợp lệ.";
   }
   return null;

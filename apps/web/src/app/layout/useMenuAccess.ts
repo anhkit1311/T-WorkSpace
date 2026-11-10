@@ -5,7 +5,12 @@ import { getWorkspacesApi } from "../../features/chat/api";
 import { academicApi, type AcademicProfile } from "../../features/admin/api";
 
 /** Sidebar entries that only some users can use. */
-export type MenuAccess = { callCenter: boolean; workspaceAdmin: boolean; systemAdmin: boolean; unitReports: boolean };
+export type MenuAccess = {
+  callCenter: boolean;
+  workspaceAdmin: boolean;
+  systemAdmin: boolean;
+  unitReports: boolean;
+};
 
 /**
  * What the signed-in user takes part in, from the APIs that enforce it. Until it is known (or if a
@@ -24,11 +29,16 @@ export function useMenuAccess(accessToken: string | null): MenuAccess | null {
     ]).then(([callCenter, workspaces, academic]) => {
       if (!alive) return;
       setAccess({
-        callCenter: Boolean(callCenter && (callCenter.isAdmin || callCenter.departments.length || callCenter.extension)),
+        callCenter: Boolean(
+          callCenter &&
+          (callCenter.isAdmin || callCenter.departments.length || callCenter.extension),
+        ),
         workspaceAdmin: workspaces.some((item) => item.role === "owner" || item.role === "admin"),
         systemAdmin: Boolean(academic?.systemAdmin),
         // Unit heads and unit admins read their unit's report; system admins read every unit's.
-        unitReports: Boolean(academic && (academic.systemAdmin || Object.keys(academic.unitRoles).length)),
+        unitReports: Boolean(
+          academic && (academic.systemAdmin || Object.keys(academic.unitRoles).length),
+        ),
       });
     });
     return () => {

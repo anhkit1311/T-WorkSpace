@@ -36,19 +36,26 @@ events.searchParams.set("api_key", `${user}:${password}`);
 const socket = new WebSocket(events);
 const playbacks = new Map(); // playback id → channel id
 
-socket.addEventListener("open", () => console.log(`Listening for Stasis(${app}). Dial 9000 from an extension.`));
+socket.addEventListener("open", () =>
+  console.log(`Listening for Stasis(${app}). Dial 9000 from an extension.`),
+);
 socket.addEventListener("close", (event) => {
   console.log(`Event socket closed (${event.code}).`);
   process.exit(event.code === 1000 ? 0 : 1);
 });
-socket.addEventListener("error", () => console.error("Event socket error; is Asterisk running on", base, "?"));
+socket.addEventListener("error", () =>
+  console.error("Event socket error; is Asterisk running on", base, "?"),
+);
 socket.addEventListener("message", async ({ data }) => {
   const event = JSON.parse(String(data));
   const channel = event.channel;
   try {
     if (event.type === "StasisStart") {
       // ARI's channel model has no linkedid; cc_calls keys on it, so read it as a channel variable.
-      const linked = await ari("GET", `/channels/${channel.id}/variable?variable=${encodeURIComponent("CHANNEL(linkedid)")}`);
+      const linked = await ari(
+        "GET",
+        `/channels/${channel.id}/variable?variable=${encodeURIComponent("CHANNEL(linkedid)")}`,
+      );
       console.log(
         `StasisStart  channel=${channel.id} caller=${channel.caller.number || "?"} ` +
           `exten=${channel.dialplan.exten} args=${JSON.stringify(event.args)} linkedid=${linked?.value ?? "?"}`,

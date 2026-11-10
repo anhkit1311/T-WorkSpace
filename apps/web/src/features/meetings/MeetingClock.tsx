@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 
 /** Time since a meeting started (m:ss, h:mm:ss after an hour), ticking every second. */
-export function MeetingClock({ since, className = "meeting-topbar__clock" }: { since: string; className?: string }) {
+export function MeetingClock({
+  since,
+  className = "meeting-topbar__clock",
+}: {
+  since: string;
+  className?: string;
+}) {
   const [, tick] = useState(0);
   useEffect(() => {
     const timer = window.setInterval(() => tick((value) => value + 1), 1000);

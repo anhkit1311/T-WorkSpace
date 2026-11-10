@@ -11,7 +11,8 @@ groups:
         expr: max(tws_acd_leader) < 1
         for: 2m
         labels: { severity: critical }
-        annotations: { summary: "Không instance nào chạy ACD: cuộc gọi tổng đài không được phân phối" }
+        annotations:
+          { summary: "Không instance nào chạy ACD: cuộc gọi tổng đài không được phân phối" }
       - alert: CallersWaitingLong
         expr: max(tws_callcenter_longest_wait_seconds) > 120
         for: 1m

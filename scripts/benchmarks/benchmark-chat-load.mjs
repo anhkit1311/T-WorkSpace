@@ -8,7 +8,10 @@ import os from "node:os";
 import { io } from "socket.io-client";
 import { pool } from "../../dist/api/infrastructure/database/db.js";
 import { createAccessToken } from "../../dist/api/modules/auth/tokens.js";
-import { createWorkspace, getWorkspaceChannels } from "../../dist/api/modules/workspaces/service.js";
+import {
+  createWorkspace,
+  getWorkspaceChannels,
+} from "../../dist/api/modules/workspaces/service.js";
 process.env.JWT_SECRET = "load-qa-only-secret-at-least-32-characters";
 const tiers = (process.env.BENCH_TIERS ?? "50,100,200").split(",").map(Number),
   seconds = Number(process.env.BENCH_SECONDS ?? 30),

@@ -2,7 +2,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
-  color: var(--text, #0F172A);
+  color: var(--text, #0f172a);
   vertical-align: middle;
   white-space: nowrap;
   line-height: 1;
@@ -26,11 +26,11 @@
 }
 
 .t-workspace-logo__prefix {
-  color: #15479C;
+  color: #15479c;
 }
 
 .t-workspace-logo__name {
-  color: var(--text-strong, #1F2328);
+  color: var(--text-strong, #1f2328);
 }
 
 .t-workspace-logo--sm .t-workspace-logo__text {

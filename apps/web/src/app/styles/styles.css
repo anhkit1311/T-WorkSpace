@@ -63,50 +63,52 @@
   --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
   --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
 
-  --font-sans: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Be Vietnam Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-ui: var(--font-sans);
   --font-body: var(--font-sans);
   --font-heading: var(--font-sans);
   --font-display: var(--font-sans);
-  --font-mono: 'JetBrains Mono', ui-monospace, "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
+  --font-mono:
+    "JetBrains Mono", ui-monospace, "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas,
+    monospace;
 
   /* ==========================================================================
      HỆ THỐNG PHÂN CẤP CỠ CHỮ CHUẨN ĐỒNG NHẤT (UNIFIED TYPE SCALE)
      ========================================================================== */
-  --fs-hero: 26px;           /* Tiêu đề hero / trang trọng */
-  --fs-page-title: 22px;     /* Tiêu đề trang chức năng chính (h1) */
-  --fs-section: 17px;        /* Tiêu đề phân nhóm, modal, panel header (h2) */
-  --fs-card-title: 15px;     /* Tiêu đề thẻ, tên bài học, tên phòng họp con (h3) */
-  --fs-body: 13.5px;         /* Văn bản nội dung thông thường, tin nhắn chat */
-  --fs-control: 13.5px;      /* Nút bấm (Button), Input, Select, Textarea */
-  --fs-subtext: 12.5px;      /* Mô tả phụ, sub-item, meta info, timestamp, số người */
-  --fs-badge: 11.5px;        /* Nhãn trạng thái (Badge, Tag, Pill, đếm số thông báo) */
+  --fs-hero: 26px; /* Tiêu đề hero / trang trọng */
+  --fs-page-title: 22px; /* Tiêu đề trang chức năng chính (h1) */
+  --fs-section: 17px; /* Tiêu đề phân nhóm, modal, panel header (h2) */
+  --fs-card-title: 15px; /* Tiêu đề thẻ, tên bài học, tên phòng họp con (h3) */
+  --fs-body: 13.5px; /* Văn bản nội dung thông thường, tin nhắn chat */
+  --fs-control: 13.5px; /* Nút bấm (Button), Input, Select, Textarea */
+  --fs-subtext: 12.5px; /* Mô tả phụ, sub-item, meta info, timestamp, số người */
+  --fs-badge: 11.5px; /* Nhãn trạng thái (Badge, Tag, Pill, đếm số thông báo) */
 
   /* ==========================================================================
      PHẦN 2: HỆ THỐNG DESIGN TOKENS TOÀN CỤC (Technical Cloud · Emerald Vibe)
      ========================================================================== */
-  --bg-canvas: #EEF2F6;
-  --bg-surface: #FFFFFF;
-  --bg-subtle: #E4EAF1;
-  --dot-grid-color: #CBD5E1;
+  --bg-canvas: #eef2f6;
+  --bg-surface: #ffffff;
+  --bg-subtle: #e4eaf1;
+  --dot-grid-color: #cbd5e1;
 
   /* Emerald Green primary aesthetic + Technical Cloud slate */
   --brand-primary: #059669;
   --brand-primary-hover: #047857;
-  --brand-active-bg: #D1FAE5;
-  --brand-active-text: #065F46;
-  --live: #C8102E;
-  --live-soft: #FBE7EA;
-  --live-text: #A50D26;
+  --brand-active-bg: #d1fae5;
+  --brand-active-text: #065f46;
+  --live: #c8102e;
+  --live-soft: #fbe7ea;
+  --live-text: #a50d26;
   --brand-gradient: var(--brand-primary);
-  --accent-red: #DC2626;
+  --accent-red: #dc2626;
 
-  --badge-purple-bg: #F3E8FF;
-  --badge-purple-text: #7C3AED;
-  --badge-green-bg: #DCFCE7;
-  --badge-green-text: #16A34A;
+  --badge-purple-bg: #f3e8ff;
+  --badge-purple-text: #7c3aed;
+  --badge-green-bg: #dcfce7;
+  --badge-green-text: #16a34a;
 
-  --border-color: #D5DEE8;
+  --border-color: #d5dee8;
   --radius-card: 8px;
   --radius-button: 6px;
   --radius-pill: 9999px;
@@ -119,9 +121,9 @@
   --surface-soft: var(--bg-canvas);
   --text: #111827;
   --text-secondary: #374151;
-  --text-muted: #4B5563;
+  --text-muted: #4b5563;
   --border: var(--border-color);
-  --border-strong: #CBD5E1;
+  --border-strong: #cbd5e1;
 
   --primary: var(--brand-primary);
   --primary-hover: var(--brand-primary-hover);
@@ -130,9 +132,9 @@
   --focus: var(--brand-primary);
 
   --header-height: 60px;
-  --header-bg: #F8F9FB;
+  --header-bg: #f8f9fb;
   --shell-gutter: clamp(12px, 2.4vw, 32px);
-  --text-strong: #1F2328;
+  --text-strong: #1f2328;
 
   --card-bg: var(--bg-surface);
   --card-border: var(--border-color);
@@ -184,29 +186,30 @@
   --tws-fs-big-num: 20px;
 
   /* Tinted accents (icon squares, status chips): a pale fill with a strong foreground. */
-  --tint-blue-bg: #EFF6FF;
-  --tint-blue-fg: #1D4ED8;
-  --tint-green-bg: #ECFDF5;
+  --tint-blue-bg: #eff6ff;
+  --tint-blue-fg: #1d4ed8;
+  --tint-green-bg: #ecfdf5;
   --tint-green-fg: #047857;
-  --tint-amber-bg: #FFFBEB;
-  --tint-amber-fg: #B45309;
-  --tint-red-bg: #FEF2F2;
-  --tint-red-fg: #B91C1C;
-  --tint-violet-bg: #F5F3FF;
-  --tint-violet-fg: #6D28D9;
+  --tint-amber-bg: #fffbeb;
+  --tint-amber-fg: #b45309;
+  --tint-red-bg: #fef2f2;
+  --tint-red-fg: #b91c1c;
+  --tint-violet-bg: #f5f3ff;
+  --tint-violet-fg: #6d28d9;
   /* Inverted chips (counters, selected filters): dark on light pages, light on dark ones. */
-  --inverse-bg: #0F172A;
-  --inverse-fg: #FFFFFF;
+  --inverse-bg: #0f172a;
+  --inverse-fg: #ffffff;
 
   color-scheme: light;
 }
-
 
 * {
   box-sizing: border-box;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -221,12 +224,19 @@ html, body, #root {
   -moz-osx-font-smoothing: grayscale;
 }
 
-button, input, textarea, select, optgroup {
+button,
+input,
+textarea,
+select,
+optgroup {
   font-family: var(--font-sans) !important;
   font-size: inherit;
 }
 
-code, kbd, samp, pre {
+code,
+kbd,
+samp,
+pre {
   font-family: var(--font-mono) !important;
 }
 
@@ -268,7 +278,8 @@ p {
   line-height: 1.55;
   color: var(--text);
 }
-button, a {
+button,
+a {
   -webkit-tap-highlight-color: transparent;
 }
 button {
@@ -282,12 +293,13 @@ a {
   color: inherit;
   text-decoration: none;
 }
-img, svg {
+img,
+svg {
   display: block;
 }
 ::selection {
-  background: #DBEAFE;
-  color: #1E3A8A;
+  background: #dbeafe;
+  color: #1e3a8a;
 }
 :focus-visible {
   outline: 2px solid var(--primary);
@@ -404,7 +416,9 @@ img, svg {
   border-radius: 3px 3px 0 0;
   background: var(--primary);
   transform: scaleX(0);
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.16s ease;
+  transition:
+    transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.16s ease;
 }
 .tdtu-nav__item svg {
   flex-shrink: 0;
@@ -441,7 +455,7 @@ img, svg {
   padding: 0 5px;
   border-radius: 9999px;
   background: var(--live);
-  color: #FFFFFF;
+  color: #ffffff;
   font-size: 10.5px;
   font-weight: 700;
   line-height: 1;
@@ -458,8 +472,13 @@ img, svg {
   animation: liveBreathe 2s infinite ease-out;
 }
 @keyframes liveBreathe {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(200, 16, 46, 0.45); }
-  50% { box-shadow: 0 0 0 4px rgba(200, 16, 46, 0); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(200, 16, 46, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(200, 16, 46, 0);
+  }
 }
 
 .tdtu-header__right {
@@ -487,7 +506,10 @@ img, svg {
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease;
 }
 .tdtu-menu__trigger:hover,
 .tdtu-menu__trigger[aria-expanded="true"] {
@@ -507,8 +529,14 @@ img, svg {
 
 /* Header popovers (Quản lý, account) */
 @keyframes popoverSlideIn {
-  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 .tdtu-popover {
   position: absolute;
@@ -520,7 +548,9 @@ img, svg {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 16px 36px -10px rgba(15, 23, 42, 0.22), 0 2px 6px rgba(15, 23, 42, 0.06);
+  box-shadow:
+    0 16px 36px -10px rgba(15, 23, 42, 0.22),
+    0 2px 6px rgba(15, 23, 42, 0.06);
   transform-origin: top right;
   animation: popoverSlideIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -539,7 +569,9 @@ img, svg {
   font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: background-color 0.14s ease, color 0.14s ease;
+  transition:
+    background-color 0.14s ease,
+    color 0.14s ease;
 }
 .tdtu-popover > button svg {
   flex-shrink: 0;
@@ -561,10 +593,10 @@ img, svg {
 }
 .tdtu-popover > button.is-logout,
 .tdtu-popover > button.is-logout svg {
-  color: #B91C1C;
+  color: #b91c1c;
 }
 .tdtu-popover > button.is-logout:hover {
-  background: #FEF2F2;
+  background: #fef2f2;
 }
 .tdtu-popover hr {
   margin: 6px 0;
@@ -613,7 +645,10 @@ img, svg {
   color: var(--text-muted);
   font-size: 13px;
   cursor: pointer;
-  transition: border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    color 0.16s ease;
 }
 .tdtu-search-btn:hover {
   border-color: var(--border-strong);
@@ -626,10 +661,10 @@ img, svg {
 }
 .tdtu-search-btn__kbd {
   padding: 1px 6px;
-  border: 1px solid #CBD5E1;
+  border: 1px solid #cbd5e1;
   border-radius: 5px;
-  background: #FFFFFF;
-  box-shadow: 0 1.5px 0 #CBD5E1;
+  background: #ffffff;
+  box-shadow: 0 1.5px 0 #cbd5e1;
   color: var(--text-secondary);
   font-size: 10.5px;
   font-weight: 600;
@@ -646,7 +681,9 @@ img, svg {
   color: var(--text-secondary);
   position: relative;
   cursor: pointer;
-  transition: background-color 0.16s ease, color 0.16s ease;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
 }
 .tdtu-icon-btn:hover {
   background: var(--bg-subtle);
@@ -654,9 +691,17 @@ img, svg {
 }
 
 @keyframes badgePopAnim {
-  0% { transform: scale(0.5); opacity: 0; }
-  70% { transform: scale(1.2); opacity: 1; }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 .tdtu-badge-num {
   position: absolute;
@@ -666,7 +711,7 @@ img, svg {
   height: 16px;
   border-radius: 9999px;
   background: var(--live);
-  color: #FFFFFF;
+  color: #ffffff;
   font-size: 9.5px;
   font-weight: 700;
   display: grid;
@@ -711,11 +756,18 @@ img, svg {
 }
 .tdtu-avatar-btn:hover .tdtu-avatar-img,
 .tdtu-avatar-btn[aria-expanded="true"] .tdtu-avatar-img {
-  box-shadow: 0 0 0 2px var(--header-bg), 0 0 0 4px var(--primary-soft);
+  box-shadow:
+    0 0 0 2px var(--header-bg),
+    0 0 0 4px var(--primary-soft);
 }
 @keyframes onlineBreathe {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
-  50% { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0);
+  }
 }
 .tdtu-online-dot {
   position: absolute;
@@ -724,7 +776,7 @@ img, svg {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #10B981;
+  background: #10b981;
   border: 2px solid var(--header-bg);
   transition: background-color 0.25s ease;
 }
@@ -732,7 +784,7 @@ img, svg {
   animation: onlineBreathe 2.5s infinite ease-out;
 }
 .tdtu-online-dot.is-connecting {
-  background: #F59E0B;
+  background: #f59e0b;
 }
 .tdtu-online-dot.is-offline {
   background: var(--text-muted);
@@ -760,10 +812,22 @@ img, svg {
   border-radius: 9999px;
   background: currentColor;
 }
-.tdtu-agent-pill.tone-green { background: var(--tint-green-bg); color: var(--tint-green-fg); }
-.tdtu-agent-pill.tone-amber { background: var(--tint-amber-bg); color: var(--tint-amber-fg); }
-.tdtu-agent-pill.tone-blue { background: var(--primary-soft); color: var(--primary-text); }
-.tdtu-agent-pill.tone-red { background: var(--live-soft); color: var(--live-text); }
+.tdtu-agent-pill.tone-green {
+  background: var(--tint-green-bg);
+  color: var(--tint-green-fg);
+}
+.tdtu-agent-pill.tone-amber {
+  background: var(--tint-amber-bg);
+  color: var(--tint-amber-fg);
+}
+.tdtu-agent-pill.tone-blue {
+  background: var(--primary-soft);
+  color: var(--primary-text);
+}
+.tdtu-agent-pill.tone-red {
+  background: var(--live-soft);
+  color: var(--live-text);
+}
 
 /* Sub-pages of the current section (Tổng đài) as a segmented row under the header. */
 .tdtu-subnav {
@@ -796,7 +860,10 @@ img, svg {
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease;
 }
 .tdtu-subnav__item:hover:not(.is-active) {
   background: var(--bg-subtle);
@@ -859,7 +926,11 @@ img, svg {
   animation: live-strip-ring 1.2s ease-in-out infinite;
 }
 @keyframes live-strip-ring {
-  50% { box-shadow: 0 0 0 5px var(--live-soft), 0 0 0 6px var(--live); }
+  50% {
+    box-shadow:
+      0 0 0 5px var(--live-soft),
+      0 0 0 6px var(--live);
+  }
 }
 .live-strip__chip {
   padding: 1px 7px;
@@ -886,12 +957,12 @@ img, svg {
 .live-strip__btn.is-answer {
   background: var(--primary);
   border-color: var(--primary);
-  color: #FFFFFF;
+  color: #ffffff;
 }
 .live-strip__btn.is-end {
   background: var(--live);
   border-color: var(--live);
-  color: #FFFFFF;
+  color: #ffffff;
 }
 .live-strip__btn.is-quiet {
   background: transparent;
@@ -1088,7 +1159,7 @@ img, svg {
   height: 100%;
   overflow-y: auto;
   background-color: var(--bg);
-  background-image: radial-gradient(var(--dot-grid-color, #CBD5E1) 1px, transparent 1px);
+  background-image: radial-gradient(var(--dot-grid-color, #cbd5e1) 1px, transparent 1px);
   background-size: 16px 16px;
   position: relative;
   display: flex;
@@ -1133,12 +1204,24 @@ img, svg {
   animation: 0.22s cubic-bezier(0.16, 1, 0.3, 1) both viewFadeIn;
 }
 @keyframes viewFadeOut {
-  from { opacity: 1; transform: scale(1); }
-  to { opacity: 0; transform: scale(0.995); }
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.995);
+  }
 }
 @keyframes viewFadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1152,14 +1235,16 @@ img, svg {
 /* ==========================================================================
    Generic Components (Button, Badge, Card, Field, Modal, Toast)
    ========================================================================== */
-.card, .panel {
+.card,
+.panel {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--card-radius);
   box-shadow: var(--card-shadow);
-  transition: box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .button {
@@ -1177,11 +1262,12 @@ img, svg {
   white-space: nowrap;
   user-select: none;
   cursor: pointer;
-  transition: background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
-              color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .button:hover:not(:disabled) {
   transform: translateY(-0.75px);
@@ -1191,15 +1277,19 @@ img, svg {
 }
 .button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--primary);
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--primary);
 }
 .button--primary {
   background: var(--primary);
-  color: #FFFFFF;
+  color: #ffffff;
 }
 .button--primary:hover:not(:disabled) {
   background: var(--primary-hover);
-  box-shadow: 0 3px 10px rgba(5, 150, 105, 0.28), 0 1px 3px rgba(5, 150, 105, 0.18);
+  box-shadow:
+    0 3px 10px rgba(5, 150, 105, 0.28),
+    0 1px 3px rgba(5, 150, 105, 0.18);
 }
 .button--primary:active:not(:disabled) {
   box-shadow: 0 1px 3px rgba(5, 150, 105, 0.2);
@@ -1229,7 +1319,7 @@ img, svg {
 /* Destructive action (Xoá, Rời nhóm…), also the confirm button of ConfirmDialog. */
 .button--danger {
   background: var(--red-600);
-  color: #FFFFFF;
+  color: #ffffff;
 }
 .button--danger:hover:not(:disabled) {
   background: var(--red-500);
@@ -1279,10 +1369,11 @@ img, svg {
   color: var(--text-secondary);
   background: transparent;
   cursor: pointer;
-  transition: background-color 0.16s cubic-bezier(0.16, 1, 0.3, 1),
-              color 0.16s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    background-color 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .icon-button:hover:not(:disabled) {
   background: var(--bg-subtle);
@@ -1319,10 +1410,26 @@ img, svg {
   object-fit: cover;
   border-radius: inherit;
 }
-.avatar--xs { width: 22px; height: 22px; font-size: 9px; }
-.avatar--sm { width: 28px; height: 28px; font-size: 11px; }
-.avatar--md { width: 34px; height: 34px; font-size: 13px; }
-.avatar--lg { width: 44px; height: 44px; font-size: 15px; }
+.avatar--xs {
+  width: 22px;
+  height: 22px;
+  font-size: 9px;
+}
+.avatar--sm {
+  width: 28px;
+  height: 28px;
+  font-size: 11px;
+}
+.avatar--md {
+  width: 34px;
+  height: 34px;
+  font-size: 13px;
+}
+.avatar--lg {
+  width: 44px;
+  height: 44px;
+  font-size: 15px;
+}
 
 .badge {
   display: inline-flex;
@@ -1337,11 +1444,26 @@ img, svg {
   line-height: 1;
   white-space: nowrap;
 }
-.badge--blue { background: var(--tint-blue-bg); color: var(--tint-blue-fg); }
-.badge--green { background: var(--tint-green-bg); color: var(--tint-green-fg); }
-.badge--amber { background: var(--tint-amber-bg); color: var(--tint-amber-fg); }
-.badge--red { background: var(--tint-red-bg); color: var(--tint-red-fg); }
-.badge--violet { background: var(--tint-violet-bg); color: var(--tint-violet-fg); }
+.badge--blue {
+  background: var(--tint-blue-bg);
+  color: var(--tint-blue-fg);
+}
+.badge--green {
+  background: var(--tint-green-bg);
+  color: var(--tint-green-fg);
+}
+.badge--amber {
+  background: var(--tint-amber-bg);
+  color: var(--tint-amber-fg);
+}
+.badge--red {
+  background: var(--tint-red-bg);
+  color: var(--tint-red-fg);
+}
+.badge--violet {
+  background: var(--tint-violet-bg);
+  color: var(--tint-violet-fg);
+}
 
 .chip,
 .tws-chip {
@@ -1387,11 +1509,12 @@ img, svg {
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color 0.16s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.16s cubic-bezier(0.16, 1, 0.3, 1),
-              color 0.16s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    background-color 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .filter-pill-btn:hover:not(.is-active) {
   background: var(--bg-subtle);
@@ -1551,7 +1674,9 @@ button.tws-list-item:hover:not(:disabled) {
   font-size: var(--fs-subtext);
   font-weight: normal;
 }
-.field input, .field select, .field textarea {
+.field input,
+.field select,
+.field textarea {
   width: 100%;
   height: 34px;
   padding: 0 10px;
@@ -1561,13 +1686,19 @@ button.tws-list-item:hover:not(:disabled) {
   color: var(--text);
   font-size: var(--fs-control);
   outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
-.field input:focus, .field select:focus, .field textarea:focus {
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
-.field input:focus, .field select:focus, .field textarea:focus {
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
@@ -1607,8 +1738,14 @@ button.tws-list-item:hover:not(:disabled) {
   background: var(--bg-subtle);
   animation: suspenseShimmer 1.4s ease-in-out infinite;
 }
-.page-suspense-line.is-title { height: 32px; width: 40%; }
-.page-suspense-line.is-body { height: 16px; width: 75%; }
+.page-suspense-line.is-title {
+  height: 32px;
+  width: 40%;
+}
+.page-suspense-line.is-body {
+  height: 16px;
+  width: 75%;
+}
 .page-suspense-card {
   height: 160px;
   border-radius: var(--radius-lg);
@@ -1616,8 +1753,13 @@ button.tws-list-item:hover:not(:disabled) {
   animation: suspenseShimmer 1.4s ease-in-out infinite;
 }
 @keyframes suspenseShimmer {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 /* Network reconnect bar */
@@ -1659,5 +1801,5 @@ button.tws-list-item:hover:not(:disabled) {
 
 /* TDTU navy letters; on dark surfaces they turn light so the mark stays readable (the red accents stay). */
 .tdtu-logo {
-  color: #002D62;
+  color: #002d62;
 }

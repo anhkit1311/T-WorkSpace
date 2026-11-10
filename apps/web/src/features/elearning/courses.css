@@ -84,7 +84,9 @@
   color: var(--text);
   font: inherit;
   cursor: pointer;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 .course-card:hover,
 .course-card:focus-visible {
@@ -423,7 +425,10 @@
 .course-card {
   padding: 0 0 10px;
   overflow: hidden;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
 }
 .course-card > :not(.course-card__cover) {
   margin: 0 10px;
@@ -438,7 +443,11 @@
   margin-bottom: 6px;
   padding: 0 10px;
   place-items: center start;
-  background: linear-gradient(135deg, hsl(var(--course-hue) 70% 92%), hsl(calc(var(--course-hue) + 40) 70% 84%));
+  background: linear-gradient(
+    135deg,
+    hsl(var(--course-hue) 70% 92%),
+    hsl(calc(var(--course-hue) + 40) 70% 84%)
+  );
   color: hsl(var(--course-hue) 55% 32%);
 }
 .course-card__cover svg {

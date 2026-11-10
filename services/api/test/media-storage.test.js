@@ -4,7 +4,11 @@ import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
 import { config } from "../../../dist/api/config/config.js";
-import { archiveMedia, openMedia, openMediaPath } from "../../../dist/api/infrastructure/media-storage.js";
+import {
+  archiveMedia,
+  openMedia,
+  openMediaPath,
+} from "../../../dist/api/infrastructure/media-storage.js";
 
 test("media is served from the local disk; without MEDIA_STORAGE=s3 nothing goes to a bucket", async () => {
   delete process.env.MEDIA_STORAGE;

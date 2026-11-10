@@ -45,7 +45,15 @@ export function AnnouncementDetailModal({ announcement, onClose }: Props) {
       }
     >
       <div className="announcement-detail">
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 16,
+            flexWrap: "wrap",
+          }}
+        >
           <Badge tone={CATEGORY_TONES[announcement.category] || "blue"}>
             📢 {CATEGORY_NAMES[announcement.category] || announcement.category}
           </Badge>
@@ -54,11 +62,7 @@ export function AnnouncementDetailModal({ announcement, onClose }: Props) {
               {announcement.badge}
             </Badge>
           )}
-          {announcement.pinned && (
-            <Badge tone="violet">
-              ⭐ Đã ghim
-            </Badge>
-          )}
+          {announcement.pinned && <Badge tone="violet">⭐ Đã ghim</Badge>}
           <span style={{ fontSize: 13, color: "var(--text-muted, #64748B)", marginLeft: "auto" }}>
             {formattedDate}
           </span>

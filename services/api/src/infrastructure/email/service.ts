@@ -62,11 +62,7 @@ export async function sendWorkspaceInvitation(to: string, link: string): Promise
   throw new Error("Invitation email delivery unavailable");
 }
 
-export async function sendOtpEmail({
-  to,
-  otp,
-  displayName,
-}: SendOtpEmailOptions): Promise<void> {
+export async function sendOtpEmail({ to, otp, displayName }: SendOtpEmailOptions): Promise<void> {
   const subject = `[T-WorkSpace] ${otp} là mã xác thực tài khoản của bạn`;
   const textBody = `Xin chào ${displayName},\n\nMã xác thực OTP của bạn là: ${otp}\n\nMã này có hiệu lực trong ${config.otpExpirationMinutes} phút. Vui lòng không chia sẻ mã này cho bất kỳ ai. Nếu bạn không yêu cầu, hãy bỏ qua email này.\n\nTrân trọng,\nĐội ngũ T-WorkSpace`;
 
@@ -158,7 +154,11 @@ export async function sendOtpEmail({
 }
 
 /** A short plain-text notice (voicemail, ticket update). Resolves false when no mail service is configured. */
-export async function sendNoticeEmail(to: string, subject: string, textBody: string): Promise<boolean> {
+export async function sendNoticeEmail(
+  to: string,
+  subject: string,
+  textBody: string,
+): Promise<boolean> {
   const html = textBody
     .split("\n")
     .map((line) => `<p>${escapeHtml(line)}</p>`)
@@ -167,7 +167,10 @@ export async function sendNoticeEmail(to: string, subject: string, textBody: str
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       signal: AbortSignal.timeout(10000),
-      headers: { Authorization: `Bearer ${config.resendApiKey}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${config.resendApiKey}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ from: config.smtpFrom, to: [to], subject, html, text: textBody }),
     });
     if (response.ok) return true;

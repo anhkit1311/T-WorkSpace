@@ -157,8 +157,6 @@
   user-select: all;
 }
 
-
-
 /* CC-8 tickets, CC-9 KPI and wallboard */
 .desk-toolbar {
   display: flex;
@@ -272,7 +270,6 @@
   font-size: 11px;
   color: var(--text-muted);
 }
-
 
 @media (max-width: 900px) {
   .desk-ticket-grid {
@@ -509,36 +506,80 @@
 }
 
 /* NV-CC1 caller profile */
-.desk-profile { display: grid; gap: 10px; margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--border, rgba(0, 0, 0, 0.08)); }
-.desk-profile__student { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 0; font-size: 0.875rem; }
-.desk-profile__student span { color: var(--text-muted, #667085); }
-.desk-profile h3 { margin: 0 0 4px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--text-muted, #667085); }
-.desk-profile ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
-.desk-profile li { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.8125rem; }
-.desk-profile li > span { min-width: 0; overflow-wrap: anywhere; }
-.desk-profile em { color: var(--text-muted, #667085); }
+.desk-profile {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border, rgba(0, 0, 0, 0.08));
+}
+.desk-profile__student {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 0.875rem;
+}
+.desk-profile__student span {
+  color: var(--text-muted, #667085);
+}
+.desk-profile h3 {
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted, #667085);
+}
+.desk-profile ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.desk-profile li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.8125rem;
+}
+.desk-profile li > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.desk-profile em {
+  color: var(--text-muted, #667085);
+}
 
-.desk-actions:has(> .desk-muted) { flex-wrap: wrap; }
-.desk-actions > .desk-muted { flex: 1 0 100%; margin: 0; text-align: right; }
+.desk-actions:has(> .desk-muted) {
+  flex-wrap: wrap;
+}
+.desk-actions > .desk-muted {
+  flex: 1 0 100%;
+  margin: 0;
+  text-align: right;
+}
 
 /* ==========================================================================
    Call center redesign: role tabs, agent console, wallboard rack, call history.
    Dark panels follow the home board (#22272E panel, #1B1F24 rack, mono numbers, status LEDs).
    ========================================================================== */
 .callcenter-page {
-  --cc-ink: #22272E;
-  --cc-rack: #1B1F24;
-  --cc-unit: #2D333B;
-  --cc-line: #3A424C;
-  --cc-on-ink: #E6EDF3;
-  --cc-ink-soft: #C9D1D9;
-  --cc-ink-muted: #9DA7B3;
+  --cc-ink: #22272e;
+  --cc-rack: #1b1f24;
+  --cc-unit: #2d333b;
+  --cc-line: #3a424c;
+  --cc-on-ink: #e6edf3;
+  --cc-ink-soft: #c9d1d9;
+  --cc-ink-muted: #9da7b3;
   --led-green: #059669;
-  --led-red: #C8102E;
-  --led-amber: #D97706;
-  --led-blue: #2563EB;
-  --led-neutral: #9CA3AF;
-  --led-group: #15479C;
+  --led-red: #c8102e;
+  --led-amber: #d97706;
+  --led-blue: #2563eb;
+  --led-neutral: #9ca3af;
+  --led-group: #15479c;
   --led: var(--led-neutral);
 }
 /* LEDs read brighter on the dark panels. */
@@ -547,18 +588,30 @@
 .cc-kpis,
 .cc-rack,
 .cc-drawer__head {
-  --led-green: #34D399;
-  --led-red: #F87171;
-  --led-amber: #FBBF24;
-  --led-blue: #60A5FA;
-  --led-neutral: #8B949E;
+  --led-green: #34d399;
+  --led-red: #f87171;
+  --led-amber: #fbbf24;
+  --led-blue: #60a5fa;
+  --led-neutral: #8b949e;
 }
-.callcenter-page .tone-green { --led: var(--led-green); }
-.callcenter-page .tone-red { --led: var(--led-red); }
-.callcenter-page .tone-amber { --led: var(--led-amber); }
-.callcenter-page .tone-blue { --led: var(--led-blue); }
-.callcenter-page .tone-neutral { --led: var(--led-neutral); }
-.callcenter-page .tone-group { --led: var(--led-group); }
+.callcenter-page .tone-green {
+  --led: var(--led-green);
+}
+.callcenter-page .tone-red {
+  --led: var(--led-red);
+}
+.callcenter-page .tone-amber {
+  --led: var(--led-amber);
+}
+.callcenter-page .tone-blue {
+  --led: var(--led-blue);
+}
+.callcenter-page .tone-neutral {
+  --led: var(--led-neutral);
+}
+.callcenter-page .tone-group {
+  --led: var(--led-group);
+}
 
 .cc-led {
   flex: none;
@@ -572,8 +625,12 @@
   animation: cc-pulse 1.6s ease-out infinite;
 }
 @keyframes cc-pulse {
-  from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--led) 50%, transparent); }
-  to { box-shadow: 0 0 0 7px transparent; }
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--led) 50%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 7px transparent;
+  }
 }
 
 /* Shared bits */
@@ -614,11 +671,21 @@
   font-size: 12px;
   color: var(--text-muted);
 }
-.cc-summary b { font-weight: 600; }
-.cc-summary .tone-green { color: var(--tint-green-fg); }
-.cc-summary .tone-amber { color: var(--tint-amber-fg); }
-.cc-summary .tone-red { color: var(--live-text); }
-.cc-summary .tone-blue { color: var(--tint-blue-fg); }
+.cc-summary b {
+  font-weight: 600;
+}
+.cc-summary .tone-green {
+  color: var(--tint-green-fg);
+}
+.cc-summary .tone-amber {
+  color: var(--tint-amber-fg);
+}
+.cc-summary .tone-red {
+  color: var(--live-text);
+}
+.cc-summary .tone-blue {
+  color: var(--tint-blue-fg);
+}
 .cc-select {
   min-height: 38px;
   max-width: 100%;
@@ -700,7 +767,7 @@
 .cc-round.is-on {
   border-color: var(--text-strong);
   background: var(--text-strong);
-  color: #FFFFFF;
+  color: #ffffff;
 }
 .cc-count {
   padding: 3px 8px;
@@ -712,9 +779,18 @@
   font-weight: 600;
   white-space: nowrap;
 }
-.cc-count.tone-green { background: var(--tint-green-bg); color: var(--tint-green-fg); }
-.cc-count.tone-amber { background: var(--tint-amber-bg); color: var(--tint-amber-fg); }
-.cc-count.tone-red { background: var(--live-soft); color: var(--live-text); }
+.cc-count.tone-green {
+  background: var(--tint-green-bg);
+  color: var(--tint-green-fg);
+}
+.cc-count.tone-amber {
+  background: var(--tint-amber-bg);
+  color: var(--tint-amber-fg);
+}
+.cc-count.tone-red {
+  background: var(--live-soft);
+  color: var(--live-text);
+}
 .cc-chip {
   display: inline-flex;
   align-items: center;
@@ -731,7 +807,7 @@
 }
 .cc-chip[class*="tone-"] {
   background: color-mix(in srgb, var(--led) 18%, transparent);
-  color: color-mix(in srgb, var(--led) 65%, #FFFFFF);
+  color: color-mix(in srgb, var(--led) 65%, #ffffff);
 }
 .cc-chip .cc-led {
   width: 7px;
@@ -775,16 +851,18 @@
   font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 .cc-state:hover:not(:disabled):not(.is-active) {
   background: var(--cc-unit);
-  color: #FFFFFF;
+  color: #ffffff;
 }
 .cc-state.is-active {
   border-color: var(--led);
   background: color-mix(in srgb, var(--led) 16%, var(--cc-unit));
-  color: #FFFFFF;
+  color: #ffffff;
 }
 .cc-state.is-active .cc-led {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--led) 25%, transparent);
@@ -849,7 +927,7 @@
   font-size: 20px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: #FFFFFF;
+  color: #ffffff;
 }
 .cc-statebar__stats dd[class*="tone-"] {
   color: var(--led);
@@ -882,7 +960,11 @@
   animation: cc-ring 1.4s ease-out infinite;
 }
 @keyframes cc-ring {
-  50% { box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.45), 0 18px 40px -18px rgba(15, 23, 42, 0.45); }
+  50% {
+    box-shadow:
+      0 0 0 4px rgba(248, 113, 113, 0.45),
+      0 18px 40px -18px rgba(15, 23, 42, 0.45);
+  }
 }
 .cc-call__top {
   display: flex;
@@ -905,7 +987,7 @@
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: -0.03em;
-  color: #FFFFFF;
+  color: #ffffff;
   overflow-wrap: anywhere;
 }
 .cc-call__number {
@@ -932,7 +1014,7 @@
   font-weight: 600;
   line-height: 1.05;
   font-variant-numeric: tabular-nums;
-  color: #FFFFFF;
+  color: #ffffff;
 }
 .cc-call__controls {
   display: flex;
@@ -956,11 +1038,13 @@
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 .cc-ctl:hover:not(:disabled) {
-  border-color: #4A535E;
-  background: #353C45;
+  border-color: #4a535e;
+  background: #353c45;
 }
 .cc-ctl:disabled {
   opacity: 0.5;
@@ -979,7 +1063,7 @@
   flex-direction: row;
   min-width: 140px;
   font-size: 14px;
-  color: #FFFFFF;
+  color: #ffffff;
 }
 .cc-ctl.is-answer,
 .cc-ctl.is-answer:hover {
@@ -991,8 +1075,8 @@
 }
 .cc-ctl.is-end,
 .cc-ctl.is-end:hover {
-  border-color: #C8102E;
-  background: #C8102E;
+  border-color: #c8102e;
+  background: #c8102e;
 }
 .cc-ctl.is-answer:hover,
 .cc-ctl.is-end:hover {
@@ -1009,7 +1093,7 @@
   font-size: 19px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: #FFFFFF;
+  color: #ffffff;
 }
 .cc-call__idle p {
   max-width: 62ch;
@@ -1082,7 +1166,9 @@
   background: var(--surface);
   color: var(--text-strong);
   cursor: pointer;
-  transition: background-color 0.12s ease, transform 0.08s ease;
+  transition:
+    background-color 0.12s ease,
+    transform 0.08s ease;
 }
 .cc-key b {
   font-family: var(--font-mono);
@@ -1210,7 +1296,7 @@ button.cc-dir__who:hover strong {
   overflow: auto;
   padding: 24px 32px;
   background-color: var(--bg);
-  background-image: radial-gradient(#CBD5E1 1px, transparent 1px);
+  background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
   background-size: 16px 16px;
   /* UI-3 TV mode: readable from across the room. */
   zoom: 1.2;
@@ -1252,7 +1338,7 @@ button.cc-dir__who:hover strong {
   font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  color: #FFFFFF;
+  color: #ffffff;
 }
 .cc-kpi span {
   font-size: 12px;
@@ -1263,7 +1349,7 @@ button.cc-dir__who:hover strong {
   background: color-mix(in srgb, var(--led) 12%, var(--cc-unit));
 }
 .cc-kpi[class*="tone-"] strong {
-  color: color-mix(in srgb, var(--led) 70%, #FFFFFF);
+  color: color-mix(in srgb, var(--led) 70%, #ffffff);
 }
 .cc-wall__grid {
   display: grid;
@@ -1287,10 +1373,14 @@ button.cc-dir__who:hover strong {
   bottom: 16px;
   width: 6px;
   border-radius: 3px;
-  background: radial-gradient(#4A535E 1.5px, transparent 1.6px) 0 0 / 6px 12px repeat-y;
+  background: radial-gradient(#4a535e 1.5px, transparent 1.6px) 0 0 / 6px 12px repeat-y;
 }
-.cc-rack::before { left: 13px; }
-.cc-rack::after { right: 13px; }
+.cc-rack::before {
+  left: 13px;
+}
+.cc-rack::after {
+  right: 13px;
+}
 .cc-rack__head {
   display: flex;
   flex-wrap: wrap;
@@ -1303,7 +1393,7 @@ button.cc-dir__who:hover strong {
   margin: 0;
   font-size: 15px;
   font-weight: 800;
-  color: #FFFFFF;
+  color: #ffffff;
 }
 .cc-legend {
   display: flex;
@@ -1403,7 +1493,7 @@ button.cc-dir__who:hover strong {
   font-size: 14px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in srgb, var(--led) 70%, #FFFFFF);
+  color: color-mix(in srgb, var(--led) 70%, #ffffff);
 }
 .cc-unit__monitor {
   display: flex;
@@ -1412,7 +1502,7 @@ button.cc-dir__who:hover strong {
 .cc-unit__monitor button {
   height: 28px;
   padding: 0 9px;
-  border: 1px solid #4A535E;
+  border: 1px solid #4a535e;
   border-radius: 6px;
   background: var(--cc-ink);
   color: var(--cc-on-ink);
@@ -1424,7 +1514,7 @@ button.cc-dir__who:hover strong {
 .cc-unit__monitor button:hover,
 .cc-unit__monitor button:focus-visible {
   border-color: var(--led-green);
-  color: #FFFFFF;
+  color: #ffffff;
 }
 .cc-queue__list {
   display: grid;
@@ -1467,9 +1557,15 @@ button.cc-dir__who:hover strong {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.cc-queue__list .tone-green time { color: var(--tint-green-fg); }
-.cc-queue__list .tone-amber time { color: var(--tint-amber-fg); }
-.cc-queue__list .tone-red time { color: var(--live-text); }
+.cc-queue__list .tone-green time {
+  color: var(--tint-green-fg);
+}
+.cc-queue__list .tone-amber time {
+  color: var(--tint-amber-fg);
+}
+.cc-queue__list .tone-red time {
+  color: var(--live-text);
+}
 
 /* Call history: one line per call, details in a side drawer */
 .cc-chips {
@@ -1507,10 +1603,10 @@ button.cc-dir__who:hover strong {
 .cc-chip-btn[aria-pressed="true"] {
   border-color: var(--text-strong);
   background: var(--text-strong);
-  color: #FFFFFF;
+  color: #ffffff;
 }
 .cc-chip-btn[aria-pressed="true"] small {
-  color: #C9D1D9;
+  color: #c9d1d9;
 }
 .cc-chips__sep {
   width: 1px;
@@ -1573,7 +1669,7 @@ button.cc-dir__who:hover strong {
   border-bottom: 0;
 }
 .cc-row:hover {
-  background: #F8FAFC;
+  background: #f8fafc;
 }
 .cc-row.is-selected {
   background: var(--tint-green-bg);
@@ -1659,7 +1755,7 @@ button.cc-dir__who:hover strong {
 }
 .cc-drawer__head .cc-icon-btn:hover {
   background: var(--cc-unit);
-  color: #FFFFFF;
+  color: #ffffff;
 }
 .cc-drawer__id {
   flex: 1;
@@ -1670,7 +1766,7 @@ button.cc-dir__who:hover strong {
   font-size: 21px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: #FFFFFF;
+  color: #ffffff;
   overflow-wrap: anywhere;
 }
 .cc-drawer__id p {
@@ -1697,7 +1793,7 @@ button.cc-dir__who:hover strong {
   margin-left: auto;
   font-family: var(--font-mono);
   font-size: 13px;
-  color: #FFFFFF;
+  color: #ffffff;
 }
 .cc-drawer__facts {
   display: grid;
@@ -1752,9 +1848,15 @@ button.cc-dir__who:hover strong {
     grid-template-rows: auto 1fr;
   }
   /* Own calls and voicemail go under the call; the dial pad keeps the right column. */
-  .cc-console__col--call { grid-area: 1 / 1; }
-  .cc-console__col--mine { grid-area: 2 / 1; }
-  .cc-console__col--dial { grid-area: 1 / 2 / 3 / 3; }
+  .cc-console__col--call {
+    grid-area: 1 / 1;
+  }
+  .cc-console__col--mine {
+    grid-area: 2 / 1;
+  }
+  .cc-console__col--dial {
+    grid-area: 1 / 2 / 3 / 3;
+  }
 }
 @media (max-width: 1100px) {
   .cc-wall__grid {
@@ -1840,6 +1942,10 @@ button.cc-dir__who:hover strong {
   .cc-rack {
     padding: 14px 24px;
   }
-  .cc-rack::before { left: 9px; }
-  .cc-rack::after { right: 9px; }
+  .cc-rack::before {
+    left: 9px;
+  }
+  .cc-rack::after {
+    right: 9px;
+  }
 }

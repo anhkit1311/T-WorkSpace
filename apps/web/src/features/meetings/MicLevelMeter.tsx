@@ -8,7 +8,13 @@ const SPEECH_LEVEL = 0.25;
  * Live input level for the lobby mic check. The bar is written straight to the DOM each frame
  * so the (large) meeting page does not re-render at animation rate.
  */
-export function MicLevelMeter({ stream, enabled }: { stream: MediaStream | null; enabled: boolean }) {
+export function MicLevelMeter({
+  stream,
+  enabled,
+}: {
+  stream: MediaStream | null;
+  enabled: boolean;
+}) {
   const fillRef = useRef<HTMLSpanElement>(null);
   const [silent, setSilent] = useState(false);
   const track = stream?.getAudioTracks()[0] ?? null;

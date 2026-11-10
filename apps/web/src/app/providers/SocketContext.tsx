@@ -72,7 +72,10 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     try {
       // "Tin nhắn" counts direct conversations; group channels are counted for the groups menu item.
       const [{ conversations }, workspaces] = await Promise.all([
-        governanceApi<{ conversations: { unreadCount?: number }[] }>(accessToken, "direct-conversations"),
+        governanceApi<{ conversations: { unreadCount?: number }[] }>(
+          accessToken,
+          "direct-conversations",
+        ),
         getWorkspacesApi(accessToken),
       ]);
       setUnreadCount(total(conversations));
@@ -225,17 +228,26 @@ export function SocketProvider({ children }: { children: ReactNode }) {
               {
                 icon: "message",
                 // Direct conversations have no workspace; the chat page resolves them by id.
-                onOpen: () => notificationRef.current.openChannel(workspaceId ?? "", message.channelId),
+                onOpen: () =>
+                  notificationRef.current.openChannel(workspaceId ?? "", message.channelId),
               },
             );
           }
         })
-        .catch(() => { /* Do not send a toast when the mute preference is unknown. Unread data remains in the inbox and reconnect retries. */ });
+        .catch(() => {
+          /* Do not send a toast when the mute preference is unknown. Unread data remains in the inbox and reconnect retries. */
+        });
     });
 
     // socket.io stops after reconnectionAttempts; coming back online or to the tab starts it again.
     const revive = () => {
-      if (document.visibilityState === "visible" && navigator.onLine && !socket.connected && !socket.active) socket.connect();
+      if (
+        document.visibilityState === "visible" &&
+        navigator.onLine &&
+        !socket.connected &&
+        !socket.active
+      )
+        socket.connect();
     };
     window.addEventListener("online", revive);
     document.addEventListener("visibilitychange", revive);

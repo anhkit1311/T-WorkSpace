@@ -10,7 +10,13 @@ const clock = (ms: number) => {
 };
 
 /** EL-4: one attempt at a time; the deadline comes from the server and the attempt submits itself at zero. */
-export function QuizRunner({ lesson, onFinished }: { lesson: LessonDetail; onFinished: () => void }) {
+export function QuizRunner({
+  lesson,
+  onFinished,
+}: {
+  lesson: LessonDetail;
+  onFinished: () => void;
+}) {
   const { accessToken } = useApp();
   const quiz = lesson.quiz!;
   const [attempt, setAttempt] = useState<QuizAttempt | null>(null);
@@ -78,12 +84,41 @@ export function QuizRunner({ lesson, onFinished }: { lesson: LessonDetail; onFin
     return (
       <div className="quiz">
         <p>
-          {quiz.drawCount && quiz.drawCount < quiz.questionIds.length ? `${quiz.drawCount} câu rút ngẫu nhiên từ ${quiz.questionIds.length}` : `${quiz.questionIds.length} câu hỏi`} · {quiz.timeLimitSeconds ? `${Math.round(quiz.timeLimitSeconds / 60)} phút` : "không giới hạn thời gian"} · đạt từ {quiz.passPercent}%
+          {quiz.drawCount && quiz.drawCount < quiz.questionIds.length
+            ? `${quiz.drawCount} câu rút ngẫu nhiên từ ${quiz.questionIds.length}`
+            : `${quiz.questionIds.length} câu hỏi`}{" "}
+          ·{" "}
+          {quiz.timeLimitSeconds
+            ? `${Math.round(quiz.timeLimitSeconds / 60)} phút`
+            : "không giới hạn thời gian"}{" "}
+          · đạt từ {quiz.passPercent}%
         </p>
-        {quiz.bestPercent !== null && <Badge tone={quiz.passed ? "green" : "amber"}>Điểm cao nhất: {quiz.bestPercent}%{quiz.passed ? " · Đạt" : ""}</Badge>}
-        {quiz.attemptsLeft !== null && <Badge>Còn {quiz.attemptsLeft}/{quiz.maxAttempts} lần làm</Badge>}
-        {error && <p role="alert" className="courses-error">{error}</p>}
-        <Button icon="play" disabled={!quiz.openAttemptId && quiz.attemptsLeft === 0} onClick={() => void start()}>{quiz.openAttemptId ? "Làm tiếp" : quiz.bestPercent === null ? "Bắt đầu làm bài" : "Làm lại"}</Button>
+        {quiz.bestPercent !== null && (
+          <Badge tone={quiz.passed ? "green" : "amber"}>
+            Điểm cao nhất: {quiz.bestPercent}%{quiz.passed ? " · Đạt" : ""}
+          </Badge>
+        )}
+        {quiz.attemptsLeft !== null && (
+          <Badge>
+            Còn {quiz.attemptsLeft}/{quiz.maxAttempts} lần làm
+          </Badge>
+        )}
+        {error && (
+          <p role="alert" className="courses-error">
+            {error}
+          </p>
+        )}
+        <Button
+          icon="play"
+          disabled={!quiz.openAttemptId && quiz.attemptsLeft === 0}
+          onClick={() => void start()}
+        >
+          {quiz.openAttemptId
+            ? "Làm tiếp"
+            : quiz.bestPercent === null
+              ? "Bắt đầu làm bài"
+              : "Làm lại"}
+        </Button>
       </div>
     );
 
@@ -92,7 +127,14 @@ export function QuizRunner({ lesson, onFinished }: { lesson: LessonDetail; onFin
     dirty.current = true;
     setAnswers((current) => {
       const previous = current[questionId] ?? [];
-      return { ...current, [questionId]: multiple ? (previous.includes(value) ? previous.filter((item) => item !== value) : [...previous, value]) : [value] };
+      return {
+        ...current,
+        [questionId]: multiple
+          ? previous.includes(value)
+            ? previous.filter((item) => item !== value)
+            : [...previous, value]
+          : [value],
+      };
     });
   };
 
@@ -105,30 +147,51 @@ export function QuizRunner({ lesson, onFinished }: { lesson: LessonDetail; onFin
       }}
     >
       {running && left !== null && (
-        <p className={`quiz-timer${left < 60_000 ? " is-urgent" : ""}`} role="timer" aria-live="off">
+        <p
+          className={`quiz-timer${left < 60_000 ? " is-urgent" : ""}`}
+          role="timer"
+          aria-live="off"
+        >
           Còn lại {clock(left)}
         </p>
       )}
       {running && saved !== "idle" && (
         <p className={`quiz-saved${saved === "failed" ? " is-failed" : ""}`} role="status">
-          {saved === "saving" ? "Đang lưu nháp…" : saved === "saved" ? "Đã lưu nháp" : "Chưa lưu được nháp — kiểm tra kết nối"}
+          {saved === "saving"
+            ? "Đang lưu nháp…"
+            : saved === "saved"
+              ? "Đã lưu nháp"
+              : "Chưa lưu được nháp — kiểm tra kết nối"}
         </p>
       )}
       {attempt.submittedAt && (
         <p className="quiz-result" role="status">
-          Kết quả: {attempt.score}/{attempt.maxScore} điểm · <strong>{attempt.passed ? "Đạt" : "Chưa đạt"}</strong>
+          Kết quả: {attempt.score}/{attempt.maxScore} điểm ·{" "}
+          <strong>{attempt.passed ? "Đạt" : "Chưa đạt"}</strong>
         </p>
       )}
       <ol className="quiz-questions">
         {attempt.questions.map((question) => {
           const result = review.get(question.id);
-          const choices = question.kind === "true_false" ? [{ id: true, text: "Đúng" }, { id: false, text: "Sai" }] : question.options;
+          const choices =
+            question.kind === "true_false"
+              ? [
+                  { id: true, text: "Đúng" },
+                  { id: false, text: "Sai" },
+                ]
+              : question.options;
           const multiple = question.kind === "multiple";
           return (
-            <li key={question.id} className={result ? (result.correct ? "is-correct" : "is-wrong") : ""}>
+            <li
+              key={question.id}
+              className={result ? (result.correct ? "is-correct" : "is-wrong") : ""}
+            >
               <fieldset disabled={!running}>
                 <legend>
-                  {question.prompt} <small>({question.points} điểm{multiple ? ", chọn tất cả đáp án đúng" : ""})</small>
+                  {question.prompt}{" "}
+                  <small>
+                    ({question.points} điểm{multiple ? ", chọn tất cả đáp án đúng" : ""})
+                  </small>
                 </legend>
                 {choices.map((choice) => (
                   <label key={String(choice.id)}>
@@ -148,11 +211,19 @@ export function QuizRunner({ lesson, onFinished }: { lesson: LessonDetail; onFin
           );
         })}
       </ol>
-      {error && <p role="alert" className="courses-error">{error}</p>}
+      {error && (
+        <p role="alert" className="courses-error">
+          {error}
+        </p>
+      )}
       {running ? (
-        <Button type="submit" icon="send" disabled={busy}>Nộp bài</Button>
+        <Button type="submit" icon="send" disabled={busy}>
+          Nộp bài
+        </Button>
       ) : (
-        <Button variant="secondary" type="button" onClick={() => void start()}>Làm lại</Button>
+        <Button variant="secondary" type="button" onClick={() => void start()}>
+          Làm lại
+        </Button>
       )}
     </form>
   );

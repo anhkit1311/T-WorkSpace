@@ -102,7 +102,12 @@ export function MeetingOutcomesPanel({ sessionId, live }: { sessionId: string; l
     inFlight.current = content;
     let saved = false;
     try {
-      const result = await saveMeetingNotesApi(accessToken, sessionId, content, baseVersion.current);
+      const result = await saveMeetingNotesApi(
+        accessToken,
+        sessionId,
+        content,
+        baseVersion.current,
+      );
       baseVersion.current = result.version;
       dirty.current = draftRef.current !== content;
       setSaveState("saved");
@@ -280,7 +285,9 @@ export function MeetingOutcomesPanel({ sessionId, live }: { sessionId: string; l
               : "Chưa chọn kênh văn bản"}
           </p>
         )}
-        <small>Việc tạo trong họp vào bảng công việc của kênh này; tổng kết được đăng khi kết thúc.</small>
+        <small>
+          Việc tạo trong họp vào bảng công việc của kênh này; tổng kết được đăng khi kết thúc.
+        </small>
       </section>
 
       <section aria-labelledby="agenda-title">
@@ -336,7 +343,12 @@ export function MeetingOutcomesPanel({ sessionId, live }: { sessionId: string; l
               placeholder="Thêm mục agenda…"
               aria-label="Mục agenda mới"
             />
-            <IconButton icon="plus" label="Thêm mục agenda" type="submit" disabled={busy || !agendaDraft.trim()} />
+            <IconButton
+              icon="plus"
+              label="Thêm mục agenda"
+              type="submit"
+              disabled={busy || !agendaDraft.trim()}
+            />
           </form>
         )}
       </section>
@@ -357,8 +369,7 @@ export function MeetingOutcomesPanel({ sessionId, live }: { sessionId: string; l
         {conflict && (
           <div className="meeting-notes-conflict" role="alert">
             <p>
-              {conflict.updatedByName ?? "Người khác"} vừa cập nhật ghi chú trong lúc bạn đang
-              sửa.
+              {conflict.updatedByName ?? "Người khác"} vừa cập nhật ghi chú trong lúc bạn đang sửa.
             </p>
             <div>
               <Button size="sm" variant="secondary" onClick={() => resolveConflict(false)}>
@@ -404,7 +415,10 @@ export function MeetingOutcomesPanel({ sessionId, live }: { sessionId: string; l
           <ul className="meeting-task-list">
             {outcomes.tasks.map((task) => (
               <li key={task.id}>
-                <div className="meeting-task-item-label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div
+                  className="meeting-task-item-label"
+                  style={{ display: "flex", alignItems: "center", gap: 6 }}
+                >
                   <Icon name="check-square" size={14} />
                   <span>{task.title}</span>
                 </div>
@@ -447,7 +461,12 @@ export function MeetingOutcomesPanel({ sessionId, live }: { sessionId: string; l
                 onChange={(event) => setTaskDue(event.target.value)}
                 aria-label="Hạn chót"
               />
-              <Button size="sm" variant="primary" type="submit" disabled={busy || !taskTitle.trim()}>
+              <Button
+                size="sm"
+                variant="primary"
+                type="submit"
+                disabled={busy || !taskTitle.trim()}
+              >
                 Tạo việc
               </Button>
             </div>

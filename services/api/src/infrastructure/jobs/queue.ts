@@ -49,13 +49,20 @@ export async function claimJob(kinds: string[], worker = workerId): Promise<Job 
 /** Done, or back in the queue with a growing delay, or failed after MAX_ATTEMPTS. */
 export async function settleJob(job: Job, error: unknown = null) {
   if (error === null) {
-    await query(`UPDATE media_jobs SET status='done',error=NULL,updated_at=now() WHERE id=$1`, [job.id]);
+    await query(`UPDATE media_jobs SET status='done',error=NULL,updated_at=now() WHERE id=$1`, [
+      job.id,
+    ]);
     return;
   }
   const retry = job.attempts < MAX_ATTEMPTS;
   await query(
     `UPDATE media_jobs SET status=$2,error=$3,locked_by=NULL,run_after=now()+make_interval(secs=>$4),updated_at=now() WHERE id=$1`,
-    [job.id, retry ? "queued" : "failed", String(error).slice(0, 500), 30 * 2 ** (job.attempts - 1)],
+    [
+      job.id,
+      retry ? "queued" : "failed",
+      String(error).slice(0, 500),
+      30 * 2 ** (job.attempts - 1),
+    ],
   );
 }
 
@@ -78,7 +85,11 @@ export function startJobWorker(log: (event: string, details?: Record<string, unk
     if (stopped) return;
     try {
       await requeueStale();
-      for (let job = await claimJob([...handlers.keys()]); job && !stopped; job = await claimJob([...handlers.keys()])) {
+      for (
+        let job = await claimJob([...handlers.keys()]);
+        job && !stopped;
+        job = await claimJob([...handlers.keys()])
+      ) {
         const started = Date.now();
         try {
           await handlers.get(job.kind)!(job.ref_id, job.attempts >= MAX_ATTEMPTS);
@@ -86,7 +97,12 @@ export function startJobWorker(log: (event: string, details?: Record<string, unk
           log("media_job_done", { kind: job.kind, refId: job.ref_id, ms: Date.now() - started });
         } catch (error) {
           await settleJob(job, error);
-          log("media_job_failed", { kind: job.kind, refId: job.ref_id, attempt: job.attempts, message: String(error) });
+          log("media_job_failed", {
+            kind: job.kind,
+            refId: job.ref_id,
+            attempt: job.attempts,
+            message: String(error),
+          });
         }
       }
     } catch (error) {

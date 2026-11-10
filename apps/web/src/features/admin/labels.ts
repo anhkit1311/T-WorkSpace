@@ -5,7 +5,9 @@ export function parseAccountLines(text: string) {
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => {
-      const [email, displayName = "", userCode = ""] = line.split(/[\t,;]/).map((cell) => cell.trim());
+      const [email, displayName = "", userCode = ""] = line
+        .split(/[\t,;]/)
+        .map((cell) => cell.trim());
       return { email, displayName, userCode: userCode || undefined };
     })
     .filter((row) => row.email.toLowerCase() !== "email");

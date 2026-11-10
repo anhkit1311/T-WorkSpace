@@ -7,7 +7,8 @@ export type Metric = {
   samples: { labels?: Record<string, string>; value: number }[];
 };
 
-const escape = (value: string) => value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/"/g, '\\"');
+const escape = (value: string) =>
+  value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/"/g, '\\"');
 
 export function renderMetrics(metrics: Metric[]): string {
   const lines: string[] = [];
@@ -15,7 +16,9 @@ export function renderMetrics(metrics: Metric[]): string {
     lines.push(`# HELP ${metric.name} ${metric.help}`, `# TYPE ${metric.name} ${metric.type}`);
     for (const sample of metric.samples) {
       const labels = Object.entries(sample.labels ?? {});
-      const suffix = labels.length ? `{${labels.map(([key, value]) => `${key}="${escape(value)}"`).join(",")}}` : "";
+      const suffix = labels.length
+        ? `{${labels.map(([key, value]) => `${key}="${escape(value)}"`).join(",")}}`
+        : "";
       lines.push(`${metric.name}${suffix} ${Number.isFinite(sample.value) ? sample.value : 0}`);
     }
   }

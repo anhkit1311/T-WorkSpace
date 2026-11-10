@@ -8,7 +8,12 @@ import { unitReport } from "./reports.js";
 import { provisionStaffPhones, releasePhones } from "../callcenter/index.js";
 
 type Body = Record<string, unknown>;
-type Handler = (userId: string, match: string[], body: Body, params: URLSearchParams) => Promise<unknown>;
+type Handler = (
+  userId: string,
+  match: string[],
+  body: Body,
+  params: URLSearchParams,
+) => Promise<unknown>;
 interface Route {
   method: "GET" | "POST" | "PATCH" | "DELETE";
   pattern: RegExp;
@@ -67,7 +72,10 @@ async function issuePhones(userId: string, unitId: string, kind: string, created
         : null,
     };
   } catch (error) {
-    return { phones: new Map<string, string>(), phoneWarning: `Đã tạo tài khoản nhưng chưa cấp được máy lẻ: ${(error as Error).message}` };
+    return {
+      phones: new Map<string, string>(),
+      phoneWarning: `Đã tạo tài khoản nhưng chưa cấp được máy lẻ: ${(error as Error).message}`,
+    };
   }
 }
 
@@ -77,14 +85,22 @@ async function createStaffAccounts(userId: string, body: Body) {
   const { phones, phoneWarning } = await issuePhones(userId, unitId, kind, created);
   return {
     phoneWarning,
-    accounts: accounts.map(({ userId: id, ...row }) => ({ ...row, extension: (id && phones.get(id)) || null })),
+    accounts: accounts.map(({ userId: id, ...row }) => ({
+      ...row,
+      extension: (id && phones.get(id)) || null,
+    })),
   };
 }
 
 /** One account created in / moved to a unit; one without a máy lẻ gets it, as above. */
 async function enrollAccount(userId: string, unitId: string, body: Body) {
   const { phoneless, ...account } = await organization.enrollAccount(userId, unitId, body);
-  const { phones, phoneWarning } = await issuePhones(userId, unitId, account.kind, phoneless ? [account.userId] : []);
+  const { phones, phoneWarning } = await issuePhones(
+    userId,
+    unitId,
+    account.kind,
+    phoneless ? [account.userId] : [],
+  );
   return { ...account, extension: phones.get(account.userId) ?? null, phoneWarning };
 }
 
@@ -95,7 +111,12 @@ async function deleteAccount(userId: string, targetId: string) {
   return { deleted };
 }
 
-export async function academicRoutes({ request, response, pathname, params }: RouteContext): Promise<void> {
+export async function academicRoutes({
+  request,
+  response,
+  pathname,
+  params,
+}: RouteContext): Promise<void> {
   if (!pathname.startsWith("/api/academic/")) return;
   const candidates = routes.filter((route) => route.pattern.test(pathname));
   if (!candidates.length) return;
@@ -112,9 +133,15 @@ export async function academicRoutes({ request, response, pathname, params }: Ro
   } catch (error) {
     const pg = error as { code?: string };
     // Database guards (checks, unique constraints) are the last line of defence.
-    if (pg.code === "23514") throw new HttpError(409, "RULE_VIOLATION", "Thao tác vi phạm ràng buộc nghiệp vụ của hệ thống.");
+    if (pg.code === "23514")
+      throw new HttpError(
+        409,
+        "RULE_VIOLATION",
+        "Thao tác vi phạm ràng buộc nghiệp vụ của hệ thống.",
+      );
     if (pg.code === "23505") throw new HttpError(409, "DUPLICATE", "Dữ liệu bị trùng.");
-    if (pg.code === "40P01") throw new HttpError(409, "RETRY", "Xung đột đồng thời, vui lòng thử lại.");
+    if (pg.code === "40P01")
+      throw new HttpError(409, "RETRY", "Xung đột đồng thời, vui lòng thử lại.");
     throw error;
   }
 }

@@ -3,8 +3,10 @@ import { MotionConfig } from "motion/react";
 import { getMotionPreset } from "./tokens";
 
 type Preview = "system" | "full" | "reduced";
-export const motionDebugEnabled = import.meta.env.DEV && typeof window !== "undefined"
-  && new URLSearchParams(window.location.search).has("motion-debug");
+export const motionDebugEnabled =
+  import.meta.env.DEV &&
+  typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).has("motion-debug");
 export function setMotionPreview(_value: Preview) {
   void _value;
   if (!import.meta.env.DEV) return;
@@ -22,5 +24,6 @@ export function MotionProvider({ children }: { children: ReactNode }) {
     </context.Provider>
   );
 }
-export function useMotionSafe() { return useContext(context); }
-
+export function useMotionSafe() {
+  return useContext(context);
+}

@@ -46,10 +46,10 @@ export async function homeSummary(userId: string): Promise<HomeSummary> {
 
 async function requireWorkspaceMembership(userId: string, workspaceId: string): Promise<void> {
   validateId(workspaceId);
-  const member = await query(
-    `SELECT 1 FROM memberships WHERE workspace_id = $1 AND user_id = $2`,
-    [workspaceId, userId],
-  );
+  const member = await query(`SELECT 1 FROM memberships WHERE workspace_id = $1 AND user_id = $2`, [
+    workspaceId,
+    userId,
+  ]);
   if (!member.rowCount) {
     throw new HttpError(403, "FORBIDDEN", "Bạn không có quyền truy cập workspace này.");
   }
@@ -107,9 +107,15 @@ export async function listWorkspaceFiles(
          OR task_link.task_id IS NOT NULL
        )
        AND ($3::uuid IS NULL OR (a.created_at, a.id) < (SELECT created_at, id FROM message_attachments WHERE id = $3::uuid))
-     ORDER BY ${prioritizePinned ? 'EXISTS(SELECT 1 FROM message_pins mp WHERE mp.message_id = a.message_id) DESC, ' : ''}a.created_at DESC, a.id DESC
+     ORDER BY ${prioritizePinned ? "EXISTS(SELECT 1 FROM message_pins mp WHERE mp.message_id = a.message_id) DESC, " : ""}a.created_at DESC, a.id DESC
      LIMIT $4`,
-    [userId, workspaceId, before ?? null, safeLimit + 1, search?.trim() ? search.trim().replace(/[\\%_]/g, "\\$&") : null],
+    [
+      userId,
+      workspaceId,
+      before ?? null,
+      safeLimit + 1,
+      search?.trim() ? search.trim().replace(/[\\%_]/g, "\\$&") : null,
+    ],
   );
   return {
     files: result.rows.slice(0, safeLimit),
@@ -227,4 +233,3 @@ export async function workspaceOverview(
     files: fileResult.files,
   };
 }
-

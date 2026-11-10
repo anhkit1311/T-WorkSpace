@@ -10,12 +10,22 @@ import "./group-dialogs.css";
 
 /** Messenger's default group name: the first names of who is in it. */
 function defaultGroupName(people: DirectUserItem[]) {
-  const names = people.map((person) => person.displayName.trim().split(/\s+/).pop() ?? person.displayName);
-  return names.length > 3 ? `${names.slice(0, 3).join(", ")} và ${names.length - 3} người khác` : names.join(", ");
+  const names = people.map(
+    (person) => person.displayName.trim().split(/\s+/).pop() ?? person.displayName,
+  );
+  return names.length > 3
+    ? `${names.slice(0, 3).join(", ")} và ${names.length - 3} người khác`
+    : names.join(", ");
 }
 
 /** "Tạo nhóm" like Messenger: pick at least two people, the name is optional. */
-export function CreateGroupDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (group: WorkspaceItem) => void }) {
+export function CreateGroupDialog({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: (group: WorkspaceItem) => void;
+}) {
   const { accessToken, notify } = useApp();
   const [name, setName] = useState("");
   const [search, setSearch] = useState("");
@@ -29,7 +39,13 @@ export function CreateGroupDialog({ onClose, onCreated }: { onClose: () => void;
     if (!accessToken || term.length < 2) return;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
-      governanceApi<{ users: DirectUserItem[] }>(accessToken, `direct-conversations/users?q=${encodeURIComponent(term)}`, "GET", undefined, controller.signal)
+      governanceApi<{ users: DirectUserItem[] }>(
+        accessToken,
+        `direct-conversations/users?q=${encodeURIComponent(term)}`,
+        "GET",
+        undefined,
+        controller.signal,
+      )
         .then((data) => setResults(data.users))
         .catch(() => {
           /* Aborted or failed lookups leave the list empty; typing again retries. */
@@ -42,7 +58,11 @@ export function CreateGroupDialog({ onClose, onCreated }: { onClose: () => void;
   }, [accessToken, search]);
   const toggle = (person: DirectUserItem) => {
     setError("");
-    setPicked((old) => (old.some((p) => p.userId === person.userId) ? old.filter((p) => p.userId !== person.userId) : [...old, person]));
+    setPicked((old) =>
+      old.some((p) => p.userId === person.userId)
+        ? old.filter((p) => p.userId !== person.userId)
+        : [...old, person],
+    );
   };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -53,7 +73,11 @@ export function CreateGroupDialog({ onClose, onCreated }: { onClose: () => void;
     }
     setBusy(true);
     try {
-      const created = await createWorkspaceApi(accessToken, (name.trim() || defaultGroupName(picked)).slice(0, 80), picked.map((p) => p.userId));
+      const created = await createWorkspaceApi(
+        accessToken,
+        (name.trim() || defaultGroupName(picked)).slice(0, 80),
+        picked.map((p) => p.userId),
+      );
       notify("Đã tạo nhóm", `Nhóm "${created.name}" đã sẵn sàng.`);
       onCreated(created);
     } catch (reason) {
@@ -72,7 +96,12 @@ export function CreateGroupDialog({ onClose, onCreated }: { onClose: () => void;
           <Button variant="ghost" disabled={busy} onClick={onClose}>
             Hủy
           </Button>
-          <Button icon="plus" loading={busy} disabled={picked.length < 2} onClick={(event) => void submit(event as unknown as FormEvent)}>
+          <Button
+            icon="plus"
+            loading={busy}
+            disabled={picked.length < 2}
+            onClick={(event) => void submit(event as unknown as FormEvent)}
+          >
             Tạo nhóm
           </Button>
         </div>
@@ -82,7 +111,9 @@ export function CreateGroupDialog({ onClose, onCreated }: { onClose: () => void;
         <Field label="Tên nhóm (không bắt buộc)">
           <input
             type="text"
-            placeholder={picked.length >= 2 ? defaultGroupName(picked) : "Ví dụ: Bộ môn Mạng máy tính"}
+            placeholder={
+              picked.length >= 2 ? defaultGroupName(picked) : "Ví dụ: Bộ môn Mạng máy tính"
+            }
             value={name}
             onChange={(event) => setName(event.target.value)}
             maxLength={80}
@@ -94,7 +125,11 @@ export function CreateGroupDialog({ onClose, onCreated }: { onClose: () => void;
               <li key={person.userId}>
                 <Avatar name={person.displayName} size="xs" />
                 <span>{person.displayName}</span>
-                <button type="button" aria-label={`Bỏ chọn ${person.displayName}`} onClick={() => toggle(person)}>
+                <button
+                  type="button"
+                  aria-label={`Bỏ chọn ${person.displayName}`}
+                  onClick={() => toggle(person)}
+                >
                   <Icon name="x" size={12} />
                 </button>
               </li>
@@ -102,7 +137,12 @@ export function CreateGroupDialog({ onClose, onCreated }: { onClose: () => void;
           </ul>
         )}
         <Field label="Thêm người" error={error}>
-          <input type="search" placeholder="Tìm tên hoặc email…" value={search} onChange={(event) => setSearch(event.target.value)} />
+          <input
+            type="search"
+            placeholder="Tìm tên hoặc email…"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
         </Field>
         <ul className="group-create__results" aria-label="Kết quả tìm kiếm">
           {search.trim().length < 2 ? (
@@ -154,16 +194,27 @@ export function JoinGroupDialog({ onClose }: { onClose: () => void }) {
           <Button variant="ghost" onClick={onClose}>
             Đóng
           </Button>
-          <Button icon="check" disabled={!value.trim()} onClick={(event) => submit(event as unknown as FormEvent)}>
+          <Button
+            icon="check"
+            disabled={!value.trim()}
+            onClick={(event) => submit(event as unknown as FormEvent)}
+          >
             Tiếp tục
           </Button>
         </div>
       }
     >
       <form onSubmit={submit} className="ws-modal-form">
-        <p className="modal-lead">Dán liên kết lời mời hoặc mã mà quản trị viên nhóm đã gửi cho bạn.</p>
+        <p className="modal-lead">
+          Dán liên kết lời mời hoặc mã mà quản trị viên nhóm đã gửi cho bạn.
+        </p>
         <Field label="Liên kết hoặc mã mời">
-          <input type="text" value={value} onChange={(event) => setValue(event.target.value)} required />
+          <input
+            type="text"
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            required
+          />
         </Field>
       </form>
     </Modal>
@@ -188,7 +239,10 @@ export function NoGroups({ text }: { text: string }) {
       </div>
       <AnimatePresence>
         {dialog === "create" && (
-          <CreateGroupDialog onClose={() => setDialog(null)} onCreated={(group) => navigate({ view: "chat", workspaceId: group.id })} />
+          <CreateGroupDialog
+            onClose={() => setDialog(null)}
+            onCreated={(group) => navigate({ view: "chat", workspaceId: group.id })}
+          />
         )}
         {dialog === "join" && <JoinGroupDialog onClose={() => setDialog(null)} />}
       </AnimatePresence>

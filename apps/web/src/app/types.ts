@@ -26,7 +26,7 @@ export interface ToastMessage {
   title: string;
   description?: string;
   tone?: "success" | "info" | "warning";
-  action?: {label: string; onClick: () => void};
+  action?: { label: string; onClick: () => void };
   /** Overrides the tone icon, e.g. "message" for chat notifications. */
   icon?: IconName;
   /** Makes the toast body clickable; the toast dismisses itself after opening. */

@@ -34,7 +34,13 @@ const RTCP_NAMES = { 200: "SR", 201: "RR", 202: "SDES", 203: "BYE", 204: "APP" }
 export function rtcpName(pt, fmt) {
   if (pt === 205) return fmt === 1 ? "RTPFB/NACK" : fmt === 15 ? "RTPFB/TWCC" : `RTPFB/${fmt}`;
   if (pt === 206)
-    return fmt === 1 ? "PSFB/PLI" : fmt === 4 ? "PSFB/FIR" : fmt === 15 ? "PSFB/REMB" : `PSFB/${fmt}`;
+    return fmt === 1
+      ? "PSFB/PLI"
+      : fmt === 4
+        ? "PSFB/FIR"
+        : fmt === 15
+          ? "PSFB/REMB"
+          : `PSFB/${fmt}`;
   return RTCP_NAMES[pt] ?? `RTCP/${pt}`;
 }
 
@@ -136,7 +142,8 @@ export function analyze(rows) {
           kind: clockRate(s.payloadType) === 90000 ? "video" : "audio",
           packets: s.packets,
           kbps: Math.round(((s.bytes * 8) / seconds / 1000) * 10) / 10,
-          lossPct: Math.round((Math.max(0, expected - s.packets) / Math.max(1, expected)) * 10000) / 100,
+          lossPct:
+            Math.round((Math.max(0, expected - s.packets) / Math.max(1, expected)) * 10000) / 100,
           jitterMs: Math.round((s.jitter / clockRate(s.payloadType)) * 1000 * 100) / 100,
         };
       })
@@ -153,7 +160,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const summary = analyze(parseCsv(await readFile(input, "utf8")));
   const out = process.argv.find((arg) => arg.startsWith("--out="))?.slice(6);
   if (out) await writeFile(out, JSON.stringify(summary, null, 2));
-  console.log(`Duration ${summary.durationS}s · STUN ${summary.stunPackets} · DTLS ${summary.dtlsRecords}`);
+  console.log(
+    `Duration ${summary.durationS}s · STUN ${summary.stunPackets} · DTLS ${summary.dtlsRecords}`,
+  );
   console.log("RTCP:", JSON.stringify(summary.rtcp));
   console.table(summary.streams.slice(0, 20));
 }

@@ -10,14 +10,14 @@
   display: grid;
   gap: 16px;
   font-family: var(--font-sans);
-  color: var(--tws-text-primary, #1C1B19);
+  color: var(--tws-text-primary, #1c1b19);
 }
 
 .workspace-admin h1 {
   font-style: normal;
   font-size: var(--fs-page-title, 22px);
   font-weight: 700;
-  color: var(--tws-text-primary, #1C1B19);
+  color: var(--tws-text-primary, #1c1b19);
   letter-spacing: -0.015em;
   margin: 0 0 4px;
 }
@@ -26,19 +26,19 @@
   font-style: normal;
   font-size: var(--fs-section, 17px);
   font-weight: 600;
-  color: var(--tws-text-primary, #1C1B19);
+  color: var(--tws-text-primary, #1c1b19);
   margin: 0 0 8px;
 }
 
 .workspace-admin h3 {
   font-size: 15px;
   font-weight: 600;
-  color: var(--tws-text-primary, #1C1B19);
+  color: var(--tws-text-primary, #1c1b19);
   margin: 0 0 8px;
 }
 
 .workspace-admin p {
-  color: var(--tws-text-muted, #8A8780);
+  color: var(--tws-text-muted, #8a8780);
   line-height: 1.6;
   font-size: 13px;
 }
@@ -80,7 +80,10 @@
   font: inherit;
   font-size: 13px;
   outline: none !important;
-  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
   box-sizing: border-box;
 }
 
@@ -102,7 +105,7 @@
 
 .workspace-admin select option {
   background: var(--surface);
-  color: var(--tws-text-primary, #1C1B19);
+  color: var(--tws-text-primary, #1c1b19);
 }
 
 .workspace-admin .admin-check {
@@ -113,7 +116,7 @@
   text-transform: none;
   font-size: 13px;
   font-weight: 500;
-  color: var(--tws-text-primary, #1C1B19);
+  color: var(--tws-text-primary, #1c1b19);
   cursor: pointer;
 }
 
@@ -145,7 +148,7 @@
 .workspace-admin td,
 .workspace-admin th {
   padding: 14px 16px;
-  border-bottom: 1px solid var(--tws-border-beige, #E6E2DA);
+  border-bottom: 1px solid var(--tws-border-beige, #e6e2da);
   font-size: 13.5px;
 }
 
@@ -153,13 +156,13 @@
   font-size: 11.5px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--tws-text-muted, #8A8780);
+  color: var(--tws-text-muted, #8a8780);
   font-weight: 600;
 }
 
 .workspace-admin td small {
   display: block;
-  color: var(--tws-text-muted, #8A8780);
+  color: var(--tws-text-muted, #8a8780);
   margin-top: 4px;
   font-size: 11.5px;
 }
@@ -175,7 +178,7 @@
   align-items: center;
   min-height: 64px;
   padding: 12px 0;
-  border-bottom: 1px solid var(--tws-border-beige, #E6E2DA);
+  border-bottom: 1px solid var(--tws-border-beige, #e6e2da);
 }
 
 .workspace-admin ol,

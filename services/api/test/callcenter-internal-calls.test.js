@@ -1,11 +1,17 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { InternalCallLog, internalOutcome } from "../../../dist/api/modules/callcenter/service/internal-call-service.js";
+import {
+  InternalCallLog,
+  internalOutcome,
+} from "../../../dist/api/modules/callcenter/service/internal-call-service.js";
 
 function harness() {
   const saved = [];
   let clock = 0;
-  const log = new InternalCallLog({ saveInternalCall: async (record) => void saved.push(record) }, () => new Date(Date.UTC(2026, 9, 24, 8, 0, clock++)));
+  const log = new InternalCallLog(
+    { saveInternalCall: async (record) => void saved.push(record) },
+    () => new Date(Date.UTC(2026, 9, 24, 8, 0, clock++)),
+  );
   return { log, saved };
 }
 
@@ -33,7 +39,11 @@ test("Internal calls: answered call is saved once, with answer and end times", a
   assert.equal(saved[0].outcome, "answered");
   assert.equal(saved[0].linkedId, "L1");
   assert.ok(saved[0].answeredAt > saved[0].startedAt && saved[0].endedAt > saved[0].answeredAt);
-  assert.equal(log.handle({ type: "channel_ended", channelId: "a" }), null, "a second end is ignored");
+  assert.equal(
+    log.handle({ type: "channel_ended", channelId: "a" }),
+    null,
+    "a second end is ignored",
+  );
 });
 
 test("Internal calls: a unit group number is logged once, answered by whoever picked up", async () => {
@@ -63,17 +73,23 @@ test("Internal calls: a blind transfer ends the first leg and links the next one
   await log.handle(dialplan("a", "10103", "Dial", "PJSIP/10103,25"));
   log.handle({ type: "dial", callerChannelId: "a", status: "BUSY" });
   await log.handle({ type: "channel_ended", channelId: "a" });
-  assert.deepEqual(saved.map((call) => [call.calleeNumber, call.outcome, call.linkedId]), [
-    ["10102", "transferred", "L1"],
-    ["10103", "busy", "L1#1"],
-  ]);
+  assert.deepEqual(
+    saved.map((call) => [call.calleeNumber, call.outcome, call.linkedId]),
+    [
+      ["10102", "transferred", "L1"],
+      ["10103", "busy", "L1#1"],
+    ],
+  );
   assert.equal(saved[1].transferredFrom, saved[0].id);
 });
 
 test("Internal calls: hotline, echo test and other contexts are not logged", () => {
   const { log } = harness();
   assert.equal(log.handle(dialplan("a", "8000", "Echo", "")), null);
-  assert.equal(log.handle(dialplan("b", "hotline", "Stasis", "tworkspace,web,x", { context: "from-web" })), null);
+  assert.equal(
+    log.handle(dialplan("b", "hotline", "Stasis", "tworkspace,web,x", { context: "from-web" })),
+    null,
+  );
   assert.equal(log.handle({ type: "channel_ended", channelId: "a" }), null);
   assert.equal(log.handle({ type: "dial", callerChannelId: "z", status: "ANSWER" }), null);
 });

@@ -21,19 +21,29 @@ const TYPES: Record<string, string> = {
   ".pdf": "application/pdf",
 };
 /** Only what viewers fetch goes to the bucket (not sources, SDP files or manifests). */
-const SHARED = /^(index\.m3u8|index_\d{5}\.ts|p\d{4}_\d{5}\.ts|captions\.vtt|transcript\.json|document\.pdf)$/;
+const SHARED =
+  /^(index\.m3u8|index_\d{5}\.ts|p\d{4}_\d{5}\.ts|captions\.vtt|transcript\.json|document\.pdf)$/;
 
 /** Copies the servable files of `dir` (relative to MEDIA_DIR) to the bucket; `only` limits the names. */
 export async function archiveMedia(dir: string, only?: string[]) {
   if (!mediaInBucket()) return 0;
-  const names = (only ?? (await readdir(path.join(config.mediaDir, dir)))).filter((name) => SHARED.test(name));
+  const names = (only ?? (await readdir(path.join(config.mediaDir, dir)))).filter((name) =>
+    SHARED.test(name),
+  );
   for (const name of names)
-    await putObject(keyOf(dir, name), await readFile(path.join(config.mediaDir, dir, name)), TYPES[path.extname(name)] ?? "application/octet-stream");
+    await putObject(
+      keyOf(dir, name),
+      await readFile(path.join(config.mediaDir, dir, name)),
+      TYPES[path.extname(name)] ?? "application/octet-stream",
+    );
   return names.length;
 }
 
 /** A media file from this disk, else from the bucket; null when neither has it. */
-export async function openMedia(dir: string, name: string): Promise<{ size: number; stream: Readable } | null> {
+export async function openMedia(
+  dir: string,
+  name: string,
+): Promise<{ size: number; stream: Readable } | null> {
   const local = path.join(config.mediaDir, dir, name);
   const size = (await stat(local).catch(() => null))?.size;
   if (size !== undefined) return { size, stream: createReadStream(local) };
@@ -51,5 +61,7 @@ export function openMediaPath(file: string) {
 /** Archiving is a copy: a failure is logged and the local file keeps being served. */
 export const archiveQuietly = (dir: string, only?: string[]) =>
   archiveMedia(dir, only).catch((error) =>
-    console.error(JSON.stringify({ level: "warn", event: "media_archive_failed", dir, message: String(error) })),
+    console.error(
+      JSON.stringify({ level: "warn", event: "media_archive_failed", dir, message: String(error) }),
+    ),
   );

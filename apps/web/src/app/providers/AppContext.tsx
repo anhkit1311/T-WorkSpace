@@ -17,12 +17,7 @@ import {
   verifyOtpApi,
 } from "../../features/auth/api";
 import type { PublicScreen, ToastMessage, ViewId } from "../types";
-import {
-  appEntryRoute,
-  appRouteUrl,
-  readAppRoute,
-  type AppRoute,
-} from "../navigation";
+import { appEntryRoute, appRouteUrl, readAppRoute, type AppRoute } from "../navigation";
 import { clearAccountDrafts } from "../../shared/lib/drafts";
 import { readSessionHint, shouldTryRestore, writeSessionHint } from "../session-hint";
 
@@ -58,7 +53,13 @@ interface AppContextValue {
   mobileNavOpen: boolean;
   setMobileNavOpen: (value: boolean) => void;
   toasts: ToastMessage[];
-  notify: (title: string, description?: string, tone?: ToastMessage["tone"], action?: ToastMessage["action"], extras?: Pick<ToastMessage, "icon" | "onOpen">) => void;
+  notify: (
+    title: string,
+    description?: string,
+    tone?: ToastMessage["tone"],
+    action?: ToastMessage["action"],
+    extras?: Pick<ToastMessage, "icon" | "onOpen">,
+  ) => void;
   dismissToast: (id: number) => void;
   user: AuthUser | null;
   accessToken: string | null;
@@ -79,7 +80,7 @@ const AppContext = createContext<AppContextValue | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [screen, setScreen] = useState<PublicScreen>(() =>
-    window.location.pathname.startsWith("/app/") ? "app" : "login"
+    window.location.pathname.startsWith("/app/") ? "app" : "login",
   );
   const [route, setRoute] = useState(() => readAppRoute(new URL(window.location.href)));
   const activeView = route.view;
@@ -130,7 +131,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const toastId = useRef(0);
-  const dismissToast = (id: number) => setToasts(items => items.filter(item => item.id !== id));
+  const dismissToast = (id: number) => setToasts((items) => items.filter((item) => item.id !== id));
 
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
@@ -138,11 +139,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (isAuthChecking) return;
     const path = window.location.pathname;
     // Retain an incoming protected deep link while authentication is required.
-    if(screen === "login" && path.startsWith("/app/")) return;
+    if (screen === "login" && path.startsWith("/app/")) return;
     const destination = screen === "login" ? "/login" : appRouteUrl(route);
     if (`${path}${window.location.search}${window.location.hash}` !== destination)
-      window.history[screen === "app" ? "replaceState" : "pushState"]({},"",destination);
-  },[screen,isAuthChecking,route]);
+      window.history[screen === "app" ? "replaceState" : "pushState"]({}, "", destination);
+  }, [screen, isAuthChecking, route]);
 
   useEffect(() => {
     try {
@@ -184,7 +185,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [enterApp]);
 
-  const notify = (title: string, description?: string, tone: ToastMessage["tone"] = "success", action?: ToastMessage["action"], extras?: Pick<ToastMessage, "icon" | "onOpen">) => {
+  const notify = (
+    title: string,
+    description?: string,
+    tone: ToastMessage["tone"] = "success",
+    action?: ToastMessage["action"],
+    extras?: Pick<ToastMessage, "icon" | "onOpen">,
+  ) => {
     // Preserve the owner's previous request to hide login welcome banners.
     if (["Chào mừng trở lại", "Xác thực thành công"].includes(title)) return;
     const id = ++toastId.current;
@@ -271,7 +278,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setChatNavigation(null);
       setScreen("login");
       setActiveView("overview");
-      if(reason === "password-changed") notify("Đã đổi mật khẩu", "Vui lòng đăng nhập lại.", "info");
+      if (reason === "password-changed")
+        notify("Đã đổi mật khẩu", "Vui lòng đăng nhập lại.", "info");
       else notify("Đã đăng xuất", "Hẹn gặp lại bạn tại T-WorkSpace.", "info");
     }
   };

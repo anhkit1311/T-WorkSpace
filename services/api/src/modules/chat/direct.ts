@@ -45,7 +45,9 @@ export async function openDirectConversation(userId: string, otherUserId: unknow
   const [low, high] = userId < otherUserId ? [userId, otherUserId] : [otherUserId, userId];
   const channelId = await withTransaction(async (client) => {
     // Serialise concurrent opens of the same pair; the unique pair is the final guard.
-    await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, [`direct:${low}:${high}`]);
+    await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, [
+      `direct:${low}:${high}`,
+    ]);
     const existing = await client.query<{ channel_id: string }>(
       `SELECT channel_id FROM direct_conversations WHERE user_low=$1 AND user_high=$2`,
       [low, high],

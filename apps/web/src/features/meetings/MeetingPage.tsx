@@ -2,7 +2,12 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { MeetingState } from "@doan/shared";
 import type { ChatMessageItem, WorkspaceItem } from "@doan/shared";
 import { getChannelsApi, getMessagesApi, getWorkspacesApi } from "../chat/api";
-import { getDialInApi, downloadMeetingAttendanceApi, getMeetingRecordingsApi, getSessionCouncilApi } from "./api";
+import {
+  getDialInApi,
+  downloadMeetingAttendanceApi,
+  getMeetingRecordingsApi,
+  getSessionCouncilApi,
+} from "./api";
 import { MeetingCouncilPanel } from "./MeetingCouncilPanel";
 import { MeetingsCalendar } from "./MeetingsCalendar";
 import { MeetingClock } from "./MeetingClock";
@@ -48,7 +53,11 @@ const NETWORK_CAP_LABEL: Record<string, string> = {
 const studentIdOf = (name: string) => name.match(/\b(5\d{7})\b/)?.[1] ?? "";
 
 /** Header network state from the latest QoS sample. */
-function networkTone(rtt: number | null | undefined, loss: number | null | undefined, connected: boolean) {
+function networkTone(
+  rtt: number | null | undefined,
+  loss: number | null | undefined,
+  connected: boolean,
+) {
   if (!connected) return "bad";
   return (rtt ?? 0) > 300 || (loss ?? 0) > 5 ? "weak" : "good";
 }
@@ -64,8 +73,14 @@ function Video({ stream }: { stream: MediaStream | null }) {
   return <video ref={ref} autoPlay playsInline muted className="rtc-video-element" />;
 }
 
-function Audio({ track, outputDeviceId }: { track: MediaStreamTrack | null; outputDeviceId?: string }) {
-  const {notify} = useApp();
+function Audio({
+  track,
+  outputDeviceId,
+}: {
+  track: MediaStreamTrack | null;
+  outputDeviceId?: string;
+}) {
+  const { notify } = useApp();
   const notice = useRef(notify);
   notice.current = notify;
   const ref = useRef<HTMLAudioElement>(null);
@@ -79,7 +94,15 @@ function Audio({ track, outputDeviceId }: { track: MediaStreamTrack | null; outp
   useEffect(() => {
     if (!outputDeviceId || !ref.current) return;
     const element = ref.current as HTMLAudioElement & { setSinkId?: (id: string) => Promise<void> };
-    void element.setSinkId?.(outputDeviceId).catch(() => notice.current("Không chọn được loa", "Âm thanh tiếp tục phát qua thiết bị mặc định. Hãy kiểm tra quyền thiết bị.", "warning"));
+    void element
+      .setSinkId?.(outputDeviceId)
+      .catch(() =>
+        notice.current(
+          "Không chọn được loa",
+          "Âm thanh tiếp tục phát qua thiết bị mặc định. Hãy kiểm tra quyền thiết bị.",
+          "warning",
+        ),
+      );
   }, [outputDeviceId]);
   return <audio ref={ref} autoPlay />;
 }
@@ -172,7 +195,10 @@ function DialInBadge({ accessToken, roomId }: { accessToken: string; roomId: str
   const [dialIn, setDialIn] = useState<{ number: string; code: string } | null>(null);
   useEffect(() => {
     let alive = true;
-    getDialInApi(accessToken, roomId).then((info) => alive && setDialIn(info), () => alive && setDialIn(null));
+    getDialInApi(accessToken, roomId).then(
+      (info) => alive && setDialIn(info),
+      () => alive && setDialIn(null),
+    );
     return () => {
       alive = false;
     };
@@ -180,7 +206,10 @@ function DialInBadge({ accessToken, roomId }: { accessToken: string; roomId: str
   if (!dialIn) return null;
   const code = `${dialIn.code.slice(0, 3)} ${dialIn.code.slice(3)}`;
   return (
-    <span className="meeting-topbar__meta" title={`Từ máy lẻ: gọi ${dialIn.number}, nhập mã ${dialIn.code} rồi nhấn #`}>
+    <span
+      className="meeting-topbar__meta"
+      title={`Từ máy lẻ: gọi ${dialIn.number}, nhập mã ${dialIn.code} rồi nhấn #`}
+    >
       <Icon name="phone" size={14} /> Gọi {dialIn.number} · mã {code}
     </span>
   );
@@ -298,14 +327,15 @@ function ParticipantTile({
   const analysed = useAudioActivity(stream, hasAudio && speaking === undefined);
   const isSpeaking = speaking ?? analysed;
 
-  const initials = displayName
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(-2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase() || displayName.slice(0, 2).toUpperCase();
+  const initials =
+    displayName
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(-2)
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase() || displayName.slice(0, 2).toUpperCase();
 
   return (
     <article
@@ -336,7 +366,12 @@ function ParticipantTile({
       {(raisedHand || host) && (
         <span className="tile-badges">
           {raisedHand && (
-            <span className="participant-hand" role="img" aria-label="Đang giơ tay" title="Đang giơ tay">
+            <span
+              className="participant-hand"
+              role="img"
+              aria-label="Đang giơ tay"
+              title="Đang giơ tay"
+            >
               <Icon name="hand" size={13} /> Giơ tay
             </span>
           )}
@@ -344,7 +379,14 @@ function ParticipantTile({
         </span>
       )}
       <div className="participant-label">
-        {!hasAudio && <Icon name="mic-off" size={13} className="participant-label__muted" aria-label="Micro đang tắt" />}
+        {!hasAudio && (
+          <Icon
+            name="mic-off"
+            size={13}
+            className="participant-label__muted"
+            aria-label="Micro đang tắt"
+          />
+        )}
         <span>
           {displayName} {isLocal ? "(bạn)" : ""}
         </span>
@@ -376,7 +418,12 @@ export function MeetingPage() {
   // Leaving or being removed returns to the calendar; a dropped call (interrupted) stays to rejoin.
   const wasInCall = useRef(false);
   useEffect(() => {
-    if (wasInCall.current && !meeting.inCall && !meeting.interruptedRoomId && route.view === "meetings")
+    if (
+      wasInCall.current &&
+      !meeting.inCall &&
+      !meeting.interruptedRoomId &&
+      route.view === "meetings"
+    )
       navigate({ view: "meetings", workspaceId: route.workspaceId }, true);
     wasInCall.current = meeting.inCall;
   }, [meeting.inCall, meeting.interruptedRoomId]);
@@ -442,7 +489,9 @@ export function MeetingPage() {
   const gridRef = useRef<HTMLDivElement>(null);
   const [gridSize, setGridSize] = useState({ width: 0, height: 0 });
   const [gridPage, setGridPage] = useState(0);
-  const [sidePanel, setSidePanel] = useState<"none" | "people" | "chat" | "notes" | "network" | "council">("none");
+  const [sidePanel, setSidePanel] = useState<
+    "none" | "people" | "chat" | "notes" | "network" | "council"
+  >("none");
 
   const [callMessages, setCallMessages] = useState<ChatMessageItem[]>([]);
   const [callDraft, setCallDraft] = useState("");
@@ -464,11 +513,11 @@ export function MeetingPage() {
             : "Chat cuộc họp";
   useEffect(() => {
     const list = callListRef.current;
-    if(sidePanel === "chat") {
+    if (sidePanel === "chat") {
       setCallUnread(0);
-      if(list && followCallChat.current) list.scrollTop = list.scrollHeight;
+      if (list && followCallChat.current) list.scrollTop = list.scrollHeight;
     }
-  },[callMessages,sidePanel]);
+  }, [callMessages, sidePanel]);
   const control = useMeetingControl(meeting.inCall ? meeting.roomId : "");
   const meetingState = control.state;
   // NV-MT3: a scheduled council meeting gets its own side panel.
@@ -493,7 +542,8 @@ export function MeetingPage() {
     let alive = true;
     const load = () =>
       getMeetingRecordingsApi(accessToken, meetingSessionId).then(
-        (data) => alive && setRecording(data.recordings.some((item) => item.status === "recording")),
+        (data) =>
+          alive && setRecording(data.recordings.some((item) => item.status === "recording")),
         () => alive && setRecording(false),
       );
     void load();
@@ -524,7 +574,8 @@ export function MeetingPage() {
           label: "Cho vào",
           onClick: () => void control.action("admit", person.userId),
         });
-    for (const person of hands) notify(`${person.displayName} đang giơ tay`, undefined, "info", undefined, { icon: "hand" });
+    for (const person of hands)
+      notify(`${person.displayName} đang giơ tay`, undefined, "info", undefined, { icon: "hand" });
   }, [meetingState]);
   const raisedHands = raisedHandUserIds(meetingState);
   // Confirm the local hand state from the server, whether it changed via H or the button.
@@ -544,20 +595,26 @@ export function MeetingPage() {
   useEffect(() => {
     if (!meeting.inCall) return;
     const onKey = (event: KeyboardEvent) => {
-      const typing = event.target instanceof Element && Boolean(event.target.closest('input,textarea,select,[contenteditable="true"]'));
-      const key = meetingShortcut(event,typing,Boolean(document.querySelector('[role="dialog"]')));
+      const typing =
+        event.target instanceof Element &&
+        Boolean(event.target.closest('input,textarea,select,[contenteditable="true"]'));
+      const key = meetingShortcut(
+        event,
+        typing,
+        Boolean(document.querySelector('[role="dialog"]')),
+      );
       if (!key) return;
       event.preventDefault();
       if (key === "m") void meeting.toggleMic();
       if (key === "v") void meeting.toggleCamera();
       if (key === "s") void meeting.toggleScreenShare();
-      if (key === "c") setSidePanel(old => old === "chat" ? "none" : "chat");
+      if (key === "c") setSidePanel((old) => (old === "chat" ? "none" : "chat"));
       if (key === "escape") setSidePanel("none");
       if (key === "h" && control.me) void control.action("hand", undefined, !control.me.raisedHand);
     };
-    document.addEventListener("keydown",onKey);
-    return () => document.removeEventListener("keydown",onKey);
-  },[meeting,control]);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [meeting, control]);
   useEffect(() => {
     if (!meeting.inCall || !meeting.roomId || !accessToken) return;
     const roomId = meeting.roomId;
@@ -576,7 +633,8 @@ export function MeetingPage() {
       });
     const onMessage = (message: ChatMessageItem) => {
       if (message.channelId === roomId) {
-        if(panelRef.current !== "chat" && message.authorId !== user?.id) setCallUnread(count => count+1);
+        if (panelRef.current !== "chat" && message.authorId !== user?.id)
+          setCallUnread((count) => count + 1);
         setCallMessages((previous) =>
           previous.some((item) => item.id === message.id) ? previous : [...previous, message],
         );
@@ -637,10 +695,22 @@ export function MeetingPage() {
     if (!accessToken || !meetingState) return;
     setExportingAttendance(true);
     try {
-      await downloadMeetingAttendanceApi(accessToken, meetingState.id, `diem-danh-${meetingState.startedAt.slice(0, 10)}.xlsx`);
-      notify("Đã xuất điểm danh", "Giờ vào, giờ rời và thời gian có mặt của từng người trong phiên họp.", "success");
+      await downloadMeetingAttendanceApi(
+        accessToken,
+        meetingState.id,
+        `diem-danh-${meetingState.startedAt.slice(0, 10)}.xlsx`,
+      );
+      notify(
+        "Đã xuất điểm danh",
+        "Giờ vào, giờ rời và thời gian có mặt của từng người trong phiên họp.",
+        "success",
+      );
     } catch (failure) {
-      notify("Không xuất được điểm danh", failure instanceof Error ? failure.message : "Hãy thử lại.", "warning");
+      notify(
+        "Không xuất được điểm danh",
+        failure instanceof Error ? failure.message : "Hãy thử lại.",
+        "warning",
+      );
     } finally {
       setExportingAttendance(false);
     }
@@ -653,12 +723,19 @@ export function MeetingPage() {
     }
   }, [meeting.interruptedRoomId, rooms]);
 
-  async function enterRoom(roomId: string, scheduleId = route.scheduleId, choice = joinChoice.current) {
+  async function enterRoom(
+    roomId: string,
+    scheduleId = route.scheduleId,
+    choice = joinChoice.current,
+  ) {
     setJoining(true);
     setError("");
     joinChoice.current = choice;
     try {
-      localStorage.setItem("meeting:lastWorkspace", rooms.find((item) => item.id === roomId)?.workspaceId ?? "");
+      localStorage.setItem(
+        "meeting:lastWorkspace",
+        rooms.find((item) => item.id === roomId)?.workspaceId ?? "",
+      );
     } catch {
       // Storage may be blocked; "Họp ngay" then starts from the first group.
     }
@@ -740,7 +817,12 @@ export function MeetingPage() {
     staged ? FILMSTRIP_PAGE_SIZE : pageSizeFor(gridSize.width || window.innerWidth),
     gridPage,
   );
-  const gridLayout = bestGridLayout(pagedTiles.items.length, gridSize.width, gridSize.height, GRID_GAP);
+  const gridLayout = bestGridLayout(
+    pagedTiles.items.length,
+    gridSize.width,
+    gridSize.height,
+    GRID_GAP,
+  );
   const visibleTileIds = new Set([
     ...pagedTiles.items.map((tile) => tile.id),
     ...(spotlightTile ? [spotlightTile.id] : []),
@@ -820,39 +902,85 @@ export function MeetingPage() {
   // Who is in the room: the server register when loaded, else the media peers.
   const roster = (
     control.admitted.length
-      ? control.admitted.map((p) => ({ userId: p.userId, displayName: p.displayName, role: p.role, raisedHand: p.raisedHand }))
+      ? control.admitted.map((p) => ({
+          userId: p.userId,
+          displayName: p.displayName,
+          role: p.role,
+          raisedHand: p.raisedHand,
+        }))
       : [
-          { userId: user?.id ?? "local", displayName: user?.displayName || "Bạn", role: "member" as const, raisedHand: false },
-          ...meeting.remotePeers.map((peer) => ({ userId: peer.userId, displayName: peer.displayName, role: "member" as const, raisedHand: false })),
+          {
+            userId: user?.id ?? "local",
+            displayName: user?.displayName || "Bạn",
+            role: "member" as const,
+            raisedHand: false,
+          },
+          ...meeting.remotePeers.map((peer) => ({
+            userId: peer.userId,
+            displayName: peer.displayName,
+            role: "member" as const,
+            raisedHand: false,
+          })),
         ]
   ).map((person) => {
     const isMe = person.userId === user?.id;
     const peer = meeting.remotePeers.find((item) => item.userId === person.userId);
-    return { ...person, isMe, tileId: isMe ? "local" : (peer?.socketId ?? ""), micOn: isMe ? meeting.mic : Boolean(peer?.audioTrack) };
+    return {
+      ...person,
+      isMe,
+      tileId: isMe ? "local" : (peer?.socketId ?? ""),
+      micOn: isMe ? meeting.mic : Boolean(peer?.audioTrack),
+    };
   });
   const personMenu = (person: (typeof roster)[number]): MenuItem[] => {
     const items: MenuItem[] = [];
     if (person.tileId)
-      items.push({ label: pinnedId === person.tileId ? "Bỏ ghim" : "Ghim lên khung chính", icon: "pin", onSelect: () => togglePin(person.tileId) });
+      items.push({
+        label: pinnedId === person.tileId ? "Bỏ ghim" : "Ghim lên khung chính",
+        icon: "pin",
+        onSelect: () => togglePin(person.tileId),
+      });
     if (control.canManage && !person.isMe && person.role !== "host") {
       items.push({
         label: "Tắt micro",
         icon: "mic-off",
-        onSelect: () => control.setConfirmation({ name: "mute", target: person.userId, label: "Tắt nguồn mic", description: `Tắt nguồn microphone của ${person.displayName}? Người này phải tự bật lại thiết bị.` }),
+        onSelect: () =>
+          control.setConfirmation({
+            name: "mute",
+            target: person.userId,
+            label: "Tắt nguồn mic",
+            description: `Tắt nguồn microphone của ${person.displayName}? Người này phải tự bật lại thiết bị.`,
+          }),
       });
       if (control.isHost) {
-        items.push({ label: person.role === "cohost" ? "Bỏ đồng chủ trì" : "Đặt làm đồng chủ trì", icon: "user-plus", onSelect: () => void control.action("cohost", person.userId, person.role !== "cohost") });
+        items.push({
+          label: person.role === "cohost" ? "Bỏ đồng chủ trì" : "Đặt làm đồng chủ trì",
+          icon: "user-plus",
+          onSelect: () => void control.action("cohost", person.userId, person.role !== "cohost"),
+        });
         items.push({
           label: "Chuyển quyền chủ trì",
           icon: "shield",
-          onSelect: () => control.setConfirmation({ name: "transfer", target: person.userId, label: "Chuyển host", description: `Chuyển quyền host cho ${person.displayName}? Bạn sẽ mất quyền host và không thể tự lấy lại quyền.` }),
+          onSelect: () =>
+            control.setConfirmation({
+              name: "transfer",
+              target: person.userId,
+              label: "Chuyển host",
+              description: `Chuyển quyền host cho ${person.displayName}? Bạn sẽ mất quyền host và không thể tự lấy lại quyền.`,
+            }),
         });
       }
       items.push({
         label: "Loại khỏi phiên",
         icon: "logout",
         danger: true,
-        onSelect: () => control.setConfirmation({ name: "kick", target: person.userId, label: "Loại khỏi phiên", description: `Ngắt kết nối của ${person.displayName} và loại người này khỏi phiên họp hiện tại?` }),
+        onSelect: () =>
+          control.setConfirmation({
+            name: "kick",
+            target: person.userId,
+            label: "Loại khỏi phiên",
+            description: `Ngắt kết nối của ${person.displayName} và loại người này khỏi phiên họp hiện tại?`,
+          }),
       });
     }
     return items.length ? items : [{ heading: "Không có tùy chọn" }];
@@ -860,19 +988,57 @@ export function MeetingPage() {
   const moreMenu: MenuItem[] = [
     { heading: "Bố cục" },
     { label: "Lưới", icon: "grid", checked: layout === "grid", onSelect: () => setLayout("grid") },
-    { label: "Tiêu điểm", icon: "monitor", checked: layout === "spotlight", onSelect: () => setLayout("spotlight") },
-    { label: "Người đang nói", icon: "mic", checked: layout === "auto", onSelect: () => setLayout("auto") },
+    {
+      label: "Tiêu điểm",
+      icon: "monitor",
+      checked: layout === "spotlight",
+      onSelect: () => setLayout("spotlight"),
+    },
+    {
+      label: "Người đang nói",
+      icon: "mic",
+      checked: layout === "auto",
+      onSelect: () => setLayout("auto"),
+    },
     { heading: "Cuộc họp" },
     { label: "Chất lượng mạng", icon: "activity", onSelect: () => setSidePanel("network") },
     { label: "Biên bản và ghi hình", icon: "record", onSelect: () => setSidePanel("notes") },
-    ...(hasCouncil ? [{ label: "Hội đồng chấm", icon: "clipboard" as IconName, onSelect: () => setSidePanel("council") }] : []),
+    ...(hasCouncil
+      ? [
+          {
+            label: "Hội đồng chấm",
+            icon: "clipboard" as IconName,
+            onSelect: () => setSidePanel("council"),
+          },
+        ]
+      : []),
     ...(control.canManage && meetingState
       ? ([
           { heading: "Điều hành" },
-          { label: meetingState.waitingEnabled ? "Tắt phòng chờ" : "Bật phòng chờ", icon: "clock", onSelect: () => void control.action("waiting", undefined, !meetingState.waitingEnabled) },
-          { label: meetingState.locked ? "Mở khóa phòng" : "Khóa phòng", icon: "lock", onSelect: () => void control.action("lock", undefined, !meetingState.locked) },
+          {
+            label: meetingState.waitingEnabled ? "Tắt phòng chờ" : "Bật phòng chờ",
+            icon: "clock",
+            onSelect: () => void control.action("waiting", undefined, !meetingState.waitingEnabled),
+          },
+          {
+            label: meetingState.locked ? "Mở khóa phòng" : "Khóa phòng",
+            icon: "lock",
+            onSelect: () => void control.action("lock", undefined, !meetingState.locked),
+          },
           ...(control.isHost
-            ? [{ label: "Kết thúc cho tất cả", icon: "x" as IconName, danger: true, onSelect: () => control.setConfirmation({ name: "end", label: "Xác nhận kết thúc", description: "Kết thúc phiên này và ngắt media của mọi người?" }) }]
+            ? [
+                {
+                  label: "Kết thúc cho tất cả",
+                  icon: "x" as IconName,
+                  danger: true,
+                  onSelect: () =>
+                    control.setConfirmation({
+                      name: "end",
+                      label: "Xác nhận kết thúc",
+                      description: "Kết thúc phiên này và ngắt media của mọi người?",
+                    }),
+                },
+              ]
             : []),
         ] as MenuItem[])
       : []),
@@ -957,7 +1123,8 @@ export function MeetingPage() {
           )}
           {meeting.interruptedRoomId && (
             <div className="meeting-return-notice" role="status">
-              Kết nối cuộc họp đã bị ngắt. Hệ thống đang tự vào lại khi mạng ổn định; nếu không được, chọn “Vào phòng”.
+              Kết nối cuộc họp đã bị ngắt. Hệ thống đang tự vào lại khi mạng ổn định; nếu không
+              được, chọn “Vào phòng”.
             </div>
           )}
           {route.channelId ? (
@@ -980,13 +1147,17 @@ export function MeetingPage() {
               <section className="state-card" role="alert">
                 <h3>Không thể mở phòng họp</h3>
                 <p>Phòng họp không tồn tại hoặc bạn không có quyền truy cập liên kết này.</p>
-                <Button variant="secondary" size="sm" onClick={() => navigate({ view: "meetings" })}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => navigate({ view: "meetings" })}
+                >
                   Về lịch họp
                 </Button>
               </section>
             )
           ) : (
-          <MeetingsCalendar groups={groups} rooms={rooms} />
+            <MeetingsCalendar groups={groups} rooms={rooms} />
           )}
         </div>
       ) : (
@@ -1037,7 +1208,13 @@ export function MeetingPage() {
                     if (control.canManage && meetingState) {
                       void control.action("lock", undefined, !meetingState.locked);
                     } else {
-                      notify("Bảo mật phòng", meetingState?.locked ? "Phòng đang được khóa." : "Phòng đang hoạt động an toàn.", "info");
+                      notify(
+                        "Bảo mật phòng",
+                        meetingState?.locked
+                          ? "Phòng đang được khóa."
+                          : "Phòng đang hoạt động an toàn.",
+                        "info",
+                      );
                     }
                   }}
                   aria-label="Bảo mật phòng"
@@ -1125,7 +1302,9 @@ export function MeetingPage() {
               className={`meeting-video-grid ${staged ? "is-spotlight" : ""} ${meeting.localScreenStream || meeting.remotePeers.some((peer) => peer.screenStream) ? "has-share" : ""}`}
               style={
                 layout === "grid" && gridLayout.tileWidth > 0
-                  ? { gridTemplateColumns: `repeat(${gridLayout.columns}, ${Math.floor(gridLayout.tileWidth)}px)` }
+                  ? {
+                      gridTemplateColumns: `repeat(${gridLayout.columns}, ${Math.floor(gridLayout.tileWidth)}px)`,
+                    }
                   : undefined
               }
             >
@@ -1133,7 +1312,9 @@ export function MeetingPage() {
                 <div className="meeting-spotlight-main">{renderTile(spotlightTile, true)}</div>
               )}
               {staged ? (
-                <div className="meeting-filmstrip">{pagedTiles.items.map((tile) => renderTile(tile))}</div>
+                <div className="meeting-filmstrip">
+                  {pagedTiles.items.map((tile) => renderTile(tile))}
+                </div>
               ) : (
                 pagedTiles.items.map((tile) => renderTile(tile))
               )}
@@ -1164,8 +1345,8 @@ export function MeetingPage() {
             {/* One audio element per peer, outside the tiles: layout, paging and speaker
                 changes never remount it, so speech is not cut or played twice. */}
             {meeting.remotePeers.map((peer) => (
-                <Audio key={peer.socketId} track={peer.audioTrack} outputDeviceId={outputDeviceId} />
-              ))}
+              <Audio key={peer.socketId} track={peer.audioTrack} outputDeviceId={outputDeviceId} />
+            ))}
 
             {sidePanel !== "none" && (
               <aside className="meeting-side-panel" aria-label={sidePanelTitle}>
@@ -1199,15 +1380,34 @@ export function MeetingPage() {
                 ) : sidePanel === "network" ? (
                   <div className="meeting-network-panel">
                     <dl className="meeting-network-stats">
-                      <div><dt>Độ trễ (RTT)</dt><dd>{meeting.qos?.rtt ?? "—"} ms</dd></div>
-                      <div><dt>Băng thông</dt><dd>{meeting.qos?.bitrate ?? "—"} kbps</dd></div>
-                      <div><dt>Mất gói</dt><dd>{meeting.qos?.packetLoss ?? "—"}%</dd></div>
-                      <div><dt>Jitter</dt><dd>{meeting.qos?.jitter ?? "—"} ms</dd></div>
-                      <div><dt>Kết nối</dt><dd>{meeting.qos?.transportPath?.toUpperCase() ?? "—"}</dd></div>
-                      <div><dt>Âm bị che</dt><dd>{meeting.qos?.audioConcealed?.toFixed(1) ?? "—"}%</dd></div>
+                      <div>
+                        <dt>Độ trễ (RTT)</dt>
+                        <dd>{meeting.qos?.rtt ?? "—"} ms</dd>
+                      </div>
+                      <div>
+                        <dt>Băng thông</dt>
+                        <dd>{meeting.qos?.bitrate ?? "—"} kbps</dd>
+                      </div>
+                      <div>
+                        <dt>Mất gói</dt>
+                        <dd>{meeting.qos?.packetLoss ?? "—"}%</dd>
+                      </div>
+                      <div>
+                        <dt>Jitter</dt>
+                        <dd>{meeting.qos?.jitter ?? "—"} ms</dd>
+                      </div>
+                      <div>
+                        <dt>Kết nối</dt>
+                        <dd>{meeting.qos?.transportPath?.toUpperCase() ?? "—"}</dd>
+                      </div>
+                      <div>
+                        <dt>Âm bị che</dt>
+                        <dd>{meeting.qos?.audioConcealed?.toFixed(1) ?? "—"}%</dd>
+                      </div>
                     </dl>
                     <p className="meeting-network-cap">
-                      Chất lượng nhận: <strong>{NETWORK_CAP_LABEL[String(meeting.networkCap)]}</strong>
+                      Chất lượng nhận:{" "}
+                      <strong>{NETWORK_CAP_LABEL[String(meeting.networkCap)]}</strong>
                     </p>
                     <label className="meeting-policy-select">
                       Chọn luồng video
@@ -1272,7 +1472,11 @@ export function MeetingPage() {
                             <div className="meeting-person-info">
                               <span className="meeting-person-name">{person.displayName}</span>
                             </div>
-                            <Button size="sm" disabled={control.busy} onClick={() => void control.action("admit", person.userId)}>
+                            <Button
+                              size="sm"
+                              disabled={control.busy}
+                              onClick={() => void control.action("admit", person.userId)}
+                            >
                               Cho vào
                             </Button>
                           </div>
@@ -1290,15 +1494,29 @@ export function MeetingPage() {
                               {person.isMe ? " (bạn)" : ""}
                             </span>
                             <span className="meeting-person-mssv">
-                              {person.role === "host" ? "Chủ trì" : person.role === "cohost" ? "Đồng chủ trì" : "Thành viên"}
-                              {studentIdOf(person.displayName) && ` · MSSV ${studentIdOf(person.displayName)}`}
+                              {person.role === "host"
+                                ? "Chủ trì"
+                                : person.role === "cohost"
+                                  ? "Đồng chủ trì"
+                                  : "Thành viên"}
+                              {studentIdOf(person.displayName) &&
+                                ` · MSSV ${studentIdOf(person.displayName)}`}
                             </span>
                           </div>
-                          {person.raisedHand && <Icon name="hand" size={16} className="meeting-person-hand" aria-label="Đang giơ tay" />}
+                          {person.raisedHand && (
+                            <Icon
+                              name="hand"
+                              size={16}
+                              className="meeting-person-hand"
+                              aria-label="Đang giơ tay"
+                            />
+                          )}
                           <Icon
                             name={person.micOn ? "mic" : "mic-off"}
                             size={16}
-                            className={person.micOn ? "meeting-person-mic" : "meeting-person-mic is-off"}
+                            className={
+                              person.micOn ? "meeting-person-mic" : "meeting-person-mic is-off"
+                            }
                             aria-label={person.micOn ? "Micro đang bật" : "Micro đang tắt"}
                           />
                           <PopoverMenu
@@ -1314,7 +1532,17 @@ export function MeetingPage() {
                   </div>
                 ) : (
                   <>
-                    <div ref={callListRef} className="meeting-chat-list" role="log" aria-label="Tin nhắn cuộc họp" onScroll={event => {const el=event.currentTarget;followCallChat.current=el.scrollHeight-el.scrollTop-el.clientHeight<90;}}>
+                    <div
+                      ref={callListRef}
+                      className="meeting-chat-list"
+                      role="log"
+                      aria-label="Tin nhắn cuộc họp"
+                      onScroll={(event) => {
+                        const el = event.currentTarget;
+                        followCallChat.current =
+                          el.scrollHeight - el.scrollTop - el.clientHeight < 90;
+                      }}
+                    >
                       {callMessages.length ? (
                         callMessages.map((item) => (
                           <p key={item.id}>
@@ -1456,7 +1684,9 @@ export function MeetingPage() {
                 aria-pressed={Boolean(control.me?.raisedHand)}
                 aria-keyshortcuts="H"
                 disabled={!control.me || control.busy}
-                onClick={() => control.me && void control.action("hand", undefined, !control.me.raisedHand)}
+                onClick={() =>
+                  control.me && void control.action("hand", undefined, !control.me.raisedHand)
+                }
                 title={control.me?.raisedHand ? "Hạ tay (H)" : "Giơ tay (H)"}
               >
                 <Icon name="hand" size={18} />
@@ -1469,10 +1699,22 @@ export function MeetingPage() {
                 buttonClass="jitsi-dock-chevron"
                 placement="up"
                 items={[
-                  { label: "Vỗ tay 👏", onSelect: () => notify("Phản hồi", "Bạn đã vỗ tay 👏", "info") },
-                  { label: "Thích 👍", onSelect: () => notify("Phản hồi", "Bạn đã thả like 👍", "info") },
-                  { label: "Tim ❤️", onSelect: () => notify("Phản hồi", "Bạn đã thả tim ❤️", "info") },
-                  { label: "Cười 😂", onSelect: () => notify("Phản hồi", "Bạn đã cười 😂", "info") },
+                  {
+                    label: "Vỗ tay 👏",
+                    onSelect: () => notify("Phản hồi", "Bạn đã vỗ tay 👏", "info"),
+                  },
+                  {
+                    label: "Thích 👍",
+                    onSelect: () => notify("Phản hồi", "Bạn đã thả like 👍", "info"),
+                  },
+                  {
+                    label: "Tim ❤️",
+                    onSelect: () => notify("Phản hồi", "Bạn đã thả tim ❤️", "info"),
+                  },
+                  {
+                    label: "Cười 😂",
+                    onSelect: () => notify("Phản hồi", "Bạn đã cười 😂", "info"),
+                  },
                 ]}
               />
             </div>
@@ -1529,9 +1771,14 @@ export function MeetingPage() {
               <span className="mt-led tone-amber is-pulse" />
               <span>
                 <b>{waitingPeople[0].displayName}</b>
-                {waitingPeople.length > 1 ? ` và ${waitingPeople.length - 1} người khác` : ""} đang chờ vào
+                {waitingPeople.length > 1 ? ` và ${waitingPeople.length - 1} người khác` : ""} đang
+                chờ vào
               </span>
-              <button type="button" disabled={control.busy} onClick={() => void control.action("admit", waitingPeople[0].userId)}>
+              <button
+                type="button"
+                disabled={control.busy}
+                onClick={() => void control.action("admit", waitingPeople[0].userId)}
+              >
                 Cho vào
               </button>
             </div>
@@ -1542,7 +1789,28 @@ export function MeetingPage() {
           {control.confirmDialog}
         </div>
       )}
-      <AnimatePresence>{leaveConfirm && <ConfirmDialog title="Rời phòng" description={meeting.sharing ? "Bạn đang chia sẻ màn hình. Rời phòng sẽ dừng chia sẻ và ngắt thiết bị của bạn." : "Bạn đang là host. Rời phòng sẽ chuyển quyền host cho người phù hợp; nếu không còn người tham gia, phiên sẽ kết thúc."} confirmLabel="Rời phòng" loading={leaving} onClose={() => setLeaveConfirm(false)} onConfirm={() => {setLeaving(true); void meeting.leaveCall().finally(() => {setLeaving(false);setLeaveConfirm(false);});}} />}</AnimatePresence>
+      <AnimatePresence>
+        {leaveConfirm && (
+          <ConfirmDialog
+            title="Rời phòng"
+            description={
+              meeting.sharing
+                ? "Bạn đang chia sẻ màn hình. Rời phòng sẽ dừng chia sẻ và ngắt thiết bị của bạn."
+                : "Bạn đang là host. Rời phòng sẽ chuyển quyền host cho người phù hợp; nếu không còn người tham gia, phiên sẽ kết thúc."
+            }
+            confirmLabel="Rời phòng"
+            loading={leaving}
+            onClose={() => setLeaveConfirm(false)}
+            onConfirm={() => {
+              setLeaving(true);
+              void meeting.leaveCall().finally(() => {
+                setLeaving(false);
+                setLeaveConfirm(false);
+              });
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

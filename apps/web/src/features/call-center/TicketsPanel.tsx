@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import type { CcDepartment, CcTicket, CcTicketEvent, TicketPriority, TicketStatus } from "@doan/shared";
+import type {
+  CcDepartment,
+  CcTicket,
+  CcTicketEvent,
+  TicketPriority,
+  TicketStatus,
+} from "@doan/shared";
 import { useSocket } from "../../app/providers/SocketContext";
 import { Badge, Button, Field, FilterPills, Modal } from "../../shared/ui/Primitives";
 import { voicemailUrl } from "./api";
@@ -21,8 +27,20 @@ const STATUS_TONE: Record<TicketStatus, "blue" | "violet" | "amber" | "green" | 
   resolved: "green",
   closed: "neutral",
 };
-const PRIORITY: Record<TicketPriority, string> = { low: "Thấp", normal: "Bình thường", high: "Cao", urgent: "Khẩn" };
-const SOURCE = { call: "Từ cuộc gọi", missed_call: "Cuộc gọi nhỡ", voicemail: "Thư thoại", callback: "Khách hẹn gọi lại", manual: "Tạo tay", elearning: "Từ khóa học" };
+const PRIORITY: Record<TicketPriority, string> = {
+  low: "Thấp",
+  normal: "Bình thường",
+  high: "Cao",
+  urgent: "Khẩn",
+};
+const SOURCE = {
+  call: "Từ cuộc gọi",
+  missed_call: "Cuộc gọi nhỡ",
+  voicemail: "Thư thoại",
+  callback: "Khách hẹn gọi lại",
+  manual: "Tạo tay",
+  elearning: "Từ khóa học",
+};
 const FILTERS = [
   { key: "active", label: "Đang mở" },
   { key: "mine", label: "Của tôi" },
@@ -53,8 +71,15 @@ export function TicketsPanel({
 
   const load = useCallback(() => {
     const query = filter === "mine" ? "mine=1" : filter === "resolved" ? "status=resolved" : "";
-    api<CcTicket[]>(`tickets?${query}`)
-      .then((list) => setTickets(filter === "active" ? list.filter((ticket) => !["resolved", "closed"].includes(ticket.status)) : list), fail);
+    api<CcTicket[]>(`tickets?${query}`).then(
+      (list) =>
+        setTickets(
+          filter === "active"
+            ? list.filter((ticket) => !["resolved", "closed"].includes(ticket.status))
+            : list,
+        ),
+      fail,
+    );
   }, [api, fail, filter]);
   useEffect(load, [load]);
   useEffect(() => {
@@ -77,7 +102,14 @@ export function TicketsPanel({
     <>
       <div className="desk-toolbar">
         <FilterPills options={FILTERS} activeKey={filter} onChange={setFilter} />
-        <Button size="sm" icon="plus" onClick={() => setCreating(true)} disabled={!departments.length}>Tạo phiếu</Button>
+        <Button
+          size="sm"
+          icon="plus"
+          onClick={() => setCreating(true)}
+          disabled={!departments.length}
+        >
+          Tạo phiếu
+        </Button>
       </div>
       <div className="callcenter-main-grid desk-ticket-grid">
         <div className="callcenter-panel">
@@ -98,14 +130,21 @@ export function TicketsPanel({
                   <span>{SOURCE[ticket.source]}</span>
                   <span>·</span>
                   <span>{ticket.departmentName}</span>
-                  {ticket.assigneeName && <><span>·</span><span>{ticket.assigneeName}</span></>}
+                  {ticket.assigneeName && (
+                    <>
+                      <span>·</span>
+                      <span>{ticket.assigneeName}</span>
+                    </>
+                  )}
                   <span>·</span>
                   <span>{new Date(ticket.updatedAt).toLocaleString("vi-VN")}</span>
                 </div>
               </div>
               <div className="desk-agent-state">
                 <Badge tone={STATUS_TONE[ticket.status]}>{TICKET_STATUS[ticket.status]}</Badge>
-                {(ticket.priority === "high" || ticket.priority === "urgent") && <Badge tone="red">{PRIORITY[ticket.priority]}</Badge>}
+                {(ticket.priority === "high" || ticket.priority === "urgent") && (
+                  <Badge tone="red">{PRIORITY[ticket.priority]}</Badge>
+                )}
               </div>
             </button>
           ))}
@@ -113,14 +152,24 @@ export function TicketsPanel({
         {selected ? (
           <TicketDetail
             detail={selected}
-            members={departments.find((department) => department.id === selected.ticket.departmentId)?.members ?? []}
+            members={
+              departments.find((department) => department.id === selected.ticket.departmentId)
+                ?.members ?? []
+            }
             canCall={canCall}
             token={token}
             fail={fail}
             onChange={(body) => apply(api<Detail>(`tickets/${selected.ticket.id}`, "PATCH", body))}
-            onEvent={(body) => apply(api<Detail>(`tickets/${selected.ticket.id}/events`, "POST", body))}
+            onEvent={(body) =>
+              apply(api<Detail>(`tickets/${selected.ticket.id}/events`, "POST", body))
+            }
             onCallBack={() => {
-              apply(api<Detail>(`tickets/${selected.ticket.id}/events`, "POST", { kind: "callback", body: `Gọi lại ${selected.ticket.callerNumber}` }));
+              apply(
+                api<Detail>(`tickets/${selected.ticket.id}/events`, "POST", {
+                  kind: "callback",
+                  body: `Gọi lại ${selected.ticket.callerNumber}`,
+                }),
+              );
               onCallBack(selected.ticket.callerNumber!);
             }}
           />
@@ -134,8 +183,14 @@ export function TicketsPanel({
             className="desk-form"
             onSubmit={(event: FormEvent<HTMLFormElement>) => {
               event.preventDefault();
-              const values = Object.fromEntries(new FormData(event.currentTarget)) as Record<string, string>;
-              api<Detail>("tickets", "POST", { ...values, callerNumber: values.callerNumber || undefined }).then((detail) => {
+              const values = Object.fromEntries(new FormData(event.currentTarget)) as Record<
+                string,
+                string
+              >;
+              api<Detail>("tickets", "POST", {
+                ...values,
+                callerNumber: values.callerNumber || undefined,
+              }).then((detail) => {
                 setCreating(false);
                 setSelected(detail);
                 load();
@@ -144,20 +199,43 @@ export function TicketsPanel({
           >
             <Field label="Phòng ban">
               <select name="departmentId" aria-label="Phòng ban">
-                {departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}
+                {departments.map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.name}
+                  </option>
+                ))}
               </select>
             </Field>
-            <Field label="Tiêu đề"><input name="subject" aria-label="Tiêu đề" required maxLength={200} /></Field>
-            <Field label="Số điện thoại liên hệ"><input name="callerNumber" aria-label="Số điện thoại liên hệ" inputMode="tel" pattern="\+?[0-9]{3,15}" /></Field>
+            <Field label="Tiêu đề">
+              <input name="subject" aria-label="Tiêu đề" required maxLength={200} />
+            </Field>
+            <Field label="Số điện thoại liên hệ">
+              <input
+                name="callerNumber"
+                aria-label="Số điện thoại liên hệ"
+                inputMode="tel"
+                pattern="\+?[0-9]{3,15}"
+              />
+            </Field>
             <Field label="Mức ưu tiên">
               <select name="priority" aria-label="Mức ưu tiên" defaultValue="normal">
-                {Object.entries(PRIORITY).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                {Object.entries(PRIORITY).map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
               </select>
             </Field>
-            <Field label="Nội dung"><textarea name="description" aria-label="Nội dung" rows={4} maxLength={8000} /></Field>
+            <Field label="Nội dung">
+              <textarea name="description" aria-label="Nội dung" rows={4} maxLength={8000} />
+            </Field>
             <div className="desk-actions">
-              <Button variant="ghost" type="button" onClick={() => setCreating(false)}>Hủy</Button>
-              <Button type="submit" icon="check">Tạo phiếu</Button>
+              <Button variant="ghost" type="button" onClick={() => setCreating(false)}>
+                Hủy
+              </Button>
+              <Button type="submit" icon="check">
+                Tạo phiếu
+              </Button>
             </div>
           </form>
         </Modal>
@@ -189,7 +267,9 @@ function TicketDetail({
   const [audio, setAudio] = useState<string | null>(null);
   useEffect(() => () => void (audio && URL.revokeObjectURL(audio)), [audio]);
   useEffect(() => setAudio(null), [ticket.id]);
-  const people = members.filter((member, index, all) => all.findIndex((item) => item.userId === member.userId) === index);
+  const people = members.filter(
+    (member, index, all) => all.findIndex((item) => item.userId === member.userId) === index,
+  );
   const describe = (event: CcTicketEvent) =>
     event.kind === "status"
       ? `${event.fromStatus ? TICKET_STATUS[event.fromStatus] : ""} → ${event.toStatus ? TICKET_STATUS[event.toStatus] : ""}`
@@ -202,33 +282,72 @@ function TicketDetail({
   return (
     <div className="callcenter-panel desk-form">
       <div>
-        <div className="desk-muted">{ticket.code} · {SOURCE[ticket.source]} · {ticket.departmentName}</div>
+        <div className="desk-muted">
+          {ticket.code} · {SOURCE[ticket.source]} · {ticket.departmentName}
+        </div>
         <h2 className="desk-caller__name">{ticket.subject}</h2>
-        {ticket.callerNumber && <div className="desk-caller__meta"><span>{ticket.callerName ?? "Người gọi"}</span><span>{ticket.callerNumber}</span></div>}
+        {ticket.callerNumber && (
+          <div className="desk-caller__meta">
+            <span>{ticket.callerName ?? "Người gọi"}</span>
+            <span>{ticket.callerNumber}</span>
+          </div>
+        )}
       </div>
-      {ticket.description && <p className="desk-notes desk-ticket__description">{ticket.description}</p>}
+      {ticket.description && (
+        <p className="desk-notes desk-ticket__description">{ticket.description}</p>
+      )}
       <div className="desk-admin__inline">
         <Field label="Trạng thái">
-          <select aria-label="Trạng thái" value={ticket.status} onChange={(event) => onChange({ status: event.target.value })}>
-            {Object.entries(TICKET_STATUS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+          <select
+            aria-label="Trạng thái"
+            value={ticket.status}
+            onChange={(event) => onChange({ status: event.target.value })}
+          >
+            {Object.entries(TICKET_STATUS).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
           </select>
         </Field>
         <Field label="Ưu tiên">
-          <select aria-label="Ưu tiên" value={ticket.priority} onChange={(event) => onChange({ priority: event.target.value })}>
-            {Object.entries(PRIORITY).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+          <select
+            aria-label="Ưu tiên"
+            value={ticket.priority}
+            onChange={(event) => onChange({ priority: event.target.value })}
+          >
+            {Object.entries(PRIORITY).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
           </select>
         </Field>
         <Field label="Người xử lý">
-          <select aria-label="Người xử lý" value={ticket.assigneeId ?? ""} onChange={(event) => onChange({ assigneeId: event.target.value || null })}>
+          <select
+            aria-label="Người xử lý"
+            value={ticket.assigneeId ?? ""}
+            onChange={(event) => onChange({ assigneeId: event.target.value || null })}
+          >
             <option value="">— Chưa phân công —</option>
-            {people.map((member) => <option key={member.userId} value={member.userId}>{member.displayName}</option>)}
+            {people.map((member) => (
+              <option key={member.userId} value={member.userId}>
+                {member.displayName}
+              </option>
+            ))}
           </select>
         </Field>
       </div>
       <div className="desk-actions desk-actions--start">
         {/* An extension, or an outside number through the SIP trunk (needs the call-out permission, BR-20); web callers are answered in the ticket. */}
         {ticket.callerNumber && /^(1\d{3,4}|0[1-9]\d{8,9})$/.test(ticket.callerNumber) && (
-          <Button size="sm" icon="phone" onClick={onCallBack} disabled={!canCall} title={canCall ? undefined : "Cần đăng ký softphone trước"}>
+          <Button
+            size="sm"
+            icon="phone"
+            onClick={onCallBack}
+            disabled={!canCall}
+            title={canCall ? undefined : "Cần đăng ký softphone trước"}
+          >
             Gọi lại {ticket.callerNumber}
           </Button>
         )}
@@ -236,7 +355,12 @@ function TicketDetail({
           (audio ? (
             <audio src={audio} controls autoPlay />
           ) : (
-            <Button size="sm" variant="ghost" icon="play" onClick={() => voicemailUrl(token, ticket.voicemailId!).then(setAudio, fail)}>
+            <Button
+              size="sm"
+              variant="ghost"
+              icon="play"
+              onClick={() => voicemailUrl(token, ticket.voicemailId!).then(setAudio, fail)}
+            >
               Nghe thư thoại
             </Button>
           ))}
@@ -248,7 +372,10 @@ function TicketDetail({
         </li>
         {events.map((event) => (
           <li key={event.id}>
-            <span className="desk-muted">{new Date(event.createdAt).toLocaleString("vi-VN")}{event.actorName ? ` · ${event.actorName}` : " · Hệ thống"}</span>
+            <span className="desk-muted">
+              {new Date(event.createdAt).toLocaleString("vi-VN")}
+              {event.actorName ? ` · ${event.actorName}` : " · Hệ thống"}
+            </span>
             <span>{describe(event)}</span>
           </li>
         ))}
@@ -262,8 +389,19 @@ function TicketDetail({
           setComment("");
         }}
       >
-        <textarea rows={2} maxLength={4000} value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Ghi chú xử lý…" aria-label="Ghi chú xử lý" />
-        <div className="desk-actions"><Button size="sm" type="submit" icon="send" disabled={!comment.trim()}>Thêm ghi chú</Button></div>
+        <textarea
+          rows={2}
+          maxLength={4000}
+          value={comment}
+          onChange={(event) => setComment(event.target.value)}
+          placeholder="Ghi chú xử lý…"
+          aria-label="Ghi chú xử lý"
+        />
+        <div className="desk-actions">
+          <Button size="sm" type="submit" icon="send" disabled={!comment.trim()}>
+            Thêm ghi chú
+          </Button>
+        </div>
       </form>
     </div>
   );

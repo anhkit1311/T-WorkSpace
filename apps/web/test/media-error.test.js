@@ -41,7 +41,10 @@ test("titles name the device and the direction", () => {
 test("closing the screen picker is not an error, an OS block is", () => {
   assert.equal(isScreenPickerCancel(domError("NotAllowedError")), true);
   assert.equal(isScreenPickerCancel(domError("AbortError", "aborted")), true);
-  assert.equal(isScreenPickerCancel(domError("NotAllowedError", "Permission denied by system")), false);
+  assert.equal(
+    isScreenPickerCancel(domError("NotAllowedError", "Permission denied by system")),
+    false,
+  );
   assert.equal(isScreenPickerCancel(domError("NotReadableError")), false);
   assert.equal(isScreenPickerCancel(null), false);
 });

@@ -15,9 +15,14 @@ export async function limitRequest(
     process.env.TRUST_PROXY === "true" && typeof forwarded === "string"
       ? forwarded.split(",")[0].trim()
       : (request.socket.remoteAddress ?? "unknown");
-  await limitActor(ip,category,maxAttempts,windowSeconds);
+  await limitActor(ip, category, maxAttempts, windowSeconds);
 }
-export async function limitActor(actor:string,category:string,maxAttempts:number,windowSeconds:number){
+export async function limitActor(
+  actor: string,
+  category: string,
+  maxAttempts: number,
+  windowSeconds: number,
+) {
   const key = createHash("sha256").update(`${category}:${actor}`).digest("hex");
   const result = await query<{ attempts: number }>(
     `INSERT INTO request_rate_limits (bucket_key, window_start, attempts)

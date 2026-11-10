@@ -21,5 +21,7 @@ export function canTransition(from: AgentState, to: AgentState): boolean {
 
 /** Whether the agent may switch to `to` themselves from `from` (a call in progress blocks it). */
 export function canAgentChoose(from: AgentState, to: AgentState): boolean {
-  return agentChoices.includes(to) && from !== "ringing" && from !== "on_call" && canTransition(from, to);
+  return (
+    agentChoices.includes(to) && from !== "ringing" && from !== "on_call" && canTransition(from, to)
+  );
 }

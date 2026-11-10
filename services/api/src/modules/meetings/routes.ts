@@ -23,7 +23,9 @@ import { publishOutcomeChange } from "./outcome-events.js";
 import { noticeSchedule } from "./reminders.js";
 
 const logNoticeFailure = (error: Error) =>
-  console.warn(JSON.stringify({ level: "warn", event: "meeting_notice_failed", message: error.message }));
+  console.warn(
+    JSON.stringify({ level: "warn", event: "meeting_notice_failed", message: error.message }),
+  );
 import { exportMeetingAttendance, getMeetingAttendance } from "./attendance.js";
 import {
   exportCouncil,
@@ -59,7 +61,9 @@ export async function meetingRoutes({
   params,
   io,
 }: RouteContext): Promise<void> {
-  const attendance = pathname.match(/^\/api\/meetings\/sessions\/([^/]+)\/attendance(\.csv|\.xlsx)?$/);
+  const attendance = pathname.match(
+    /^\/api\/meetings\/sessions\/([^/]+)\/attendance(\.csv|\.xlsx)?$/,
+  );
   if (attendance && request.method === "GET") {
     const userId = await getAuthUserId(request);
     response.setHeader("Cache-Control", "no-store");
@@ -94,15 +98,25 @@ export async function meetingRoutes({
     if (request.method === "PATCH" && scheduleId && !scheduleSub)
       change = await saveCouncil(userId, scheduleId, await readJson(request));
     else if (request.method === "PATCH" && scheduleSub?.startsWith("/members/"))
-      change = await setMemberAbsent(userId, scheduleId, scheduleSub.slice(9), (await readJson(request)).absent);
-    else if (request.method === "POST" && action === "start") change = await startPresenter(userId, presenterId);
+      change = await setMemberAbsent(
+        userId,
+        scheduleId,
+        scheduleSub.slice(9),
+        (await readJson(request)).absent,
+      );
+    else if (request.method === "POST" && action === "start")
+      change = await startPresenter(userId, presenterId);
     else if (request.method === "PATCH" && action === "sheet")
       change = await submitSheet(userId, presenterId, await readJson(request));
     else if (request.method === "POST" && action === "finalize")
       change = await finalizePresenter(userId, presenterId, await readJson(request));
     if (!change) throw new HttpError(405, "METHOD_NOT_ALLOWED", "Phương thức không được hỗ trợ.");
     if (change.sessionId)
-      publishOutcomeChange(io, { roomId: change.roomId, sessionId: change.sessionId, part: "council" });
+      publishOutcomeChange(io, {
+        roomId: change.roomId,
+        sessionId: change.sessionId,
+        part: "council",
+      });
     sendJson(response, 200, { ok: true });
     return;
   }
@@ -136,14 +150,17 @@ export async function meetingRoutes({
     sendJson(response, 202, await requestRecordingTranscript(userId, transcript[1], changed));
     return;
   }
-  const recording = pathname.match(/^\/api\/meetings\/recordings\/([^/]+)(?:\/(stop|link)|\/files\/([^/]+))?$/);
+  const recording = pathname.match(
+    /^\/api\/meetings\/recordings\/([^/]+)(?:\/(stop|link)|\/files\/([^/]+))?$/,
+  );
   if (recording) {
     const [, recordingId, action, file] = recording;
     if (file && request.method === "GET") {
       // The video (playlist and segments) is served only through signed links; captions keep the token.
       const video = file === "index.m3u8" || file.endsWith(".ts");
       const viewer = video ? verifyLink(pathname, params) : await getAuthUserId(request);
-      if (!viewer) throw new HttpError(403, "LINK_EXPIRED", "Liên kết bản ghi không hợp lệ hoặc đã hết hạn.");
+      if (!viewer)
+        throw new HttpError(403, "LINK_EXPIRED", "Liên kết bản ghi không hợp lệ hoặc đã hết hạn.");
       const media = await openMediaPath(await recordingFile(viewer, recordingId, file));
       if (!media) throw new HttpError(404, "NOT_FOUND", "Không tìm thấy tệp.");
       if (file === "index.m3u8") {
@@ -153,10 +170,17 @@ export async function meetingRoutes({
         const playlist = Buffer.concat(chunks)
           .toString("utf8")
           .split("\n")
-          .map((line) => (line.trim() && !line.startsWith("#") ? signLink(folder + line.trim(), viewer, SEGMENT_LINK_SECONDS).url : line))
+          .map((line) =>
+            line.trim() && !line.startsWith("#")
+              ? signLink(folder + line.trim(), viewer, SEGMENT_LINK_SECONDS).url
+              : line,
+          )
           .join("\n");
         // Not cached, so every playback reaches the server and is logged.
-        response.writeHead(200, { "Content-Type": "application/vnd.apple.mpegurl", "Cache-Control": "private, no-store" });
+        response.writeHead(200, {
+          "Content-Type": "application/vnd.apple.mpegurl",
+          "Cache-Control": "private, no-store",
+        });
         response.end(playlist);
         return;
       }
@@ -177,7 +201,11 @@ export async function meetingRoutes({
     const userId = await getAuthUserId(request);
     const stop = action === "stop";
     if (action === "link" && request.method === "GET") {
-      sendJson(response, 200, signLink(`/api/meetings/recordings/${recordingId}/files/index.m3u8`, userId, 300));
+      sendJson(
+        response,
+        200,
+        signLink(`/api/meetings/recordings/${recordingId}/files/index.m3u8`, userId, 300),
+      );
       return;
     }
     if (stop && request.method === "POST") {
@@ -218,7 +246,11 @@ export async function meetingRoutes({
       sendJson(response, 201, { ok: true });
       return;
     }
-    if (part === "agenda" && itemId && (request.method === "PATCH" || request.method === "DELETE")) {
+    if (
+      part === "agenda" &&
+      itemId &&
+      (request.method === "PATCH" || request.method === "DELETE")
+    ) {
       const changed =
         request.method === "PATCH"
           ? await updateAgendaItem(userId, sessionId, itemId, await readJson(request))

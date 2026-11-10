@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { readAppRoute, appRouteUrl } from "../src/app/navigation.ts";
 import {
-  readAppRoute,
-  appRouteUrl,
-} from "../src/app/navigation.ts";
-import { mediaConstraints, publishSelectedTracks } from "../src/features/meetings/webrtc/local-media.ts";
+  mediaConstraints,
+  publishSelectedTracks,
+} from "../src/features/meetings/webrtc/local-media.ts";
 
 const workspaceId = "e9d8b4a7-1d86-49a3-b8d6-2d08c213565c";
 const channelId = "c0d0e0b1-20d6-401b-8823-f8de9d22dcad";
@@ -33,7 +33,9 @@ test("channel and meeting URLs retain identifiers and search through reload", ()
   });
   // "Tin nhắn" lists every group's channels, so a group channel link stays there.
   assert.deepEqual(
-    readAppRoute(new URL(`https://collab.test/app/chat?workspace=${workspaceId}&channel=${channelId}`)),
+    readAppRoute(
+      new URL(`https://collab.test/app/chat?workspace=${workspaceId}&channel=${channelId}`),
+    ),
     { view: "chat", workspaceId, channelId },
   );
 });

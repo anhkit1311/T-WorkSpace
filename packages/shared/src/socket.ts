@@ -16,9 +16,18 @@ export interface ServerToClientEvents {
   /** Call center: this agent's state or current offer changed; refetch /api/callcenter/me. */
   callcenter_agent: (data: { state: AgentState; offer: CcCallOffer | null }) => void;
   /** NV-CC5: a message was left on the user's own extension. */
-  callcenter_voicemail: (data: { voicemailId: string; from: string; durationSeconds: number }) => void;
+  callcenter_voicemail: (data: {
+    voicemailId: string;
+    from: string;
+    durationSeconds: number;
+  }) => void;
   /** NV-CC3: a ticket the user opened changed status. */
-  callcenter_ticket: (data: { ticketId: string; code: string; status: TicketStatus; message: string }) => void;
+  callcenter_ticket: (data: {
+    ticketId: string;
+    code: string;
+    status: TicketStatus;
+    message: string;
+  }) => void;
   /** Call center: the queue or agent board of a department changed; refetch its live snapshot. */
   callcenter_live: (data: { departmentId: string }) => void;
   /** M2: an agent moved this user's call to a video room; offer to join it. */
@@ -65,7 +74,9 @@ export interface ClientToServerEvents {
     callback: (response: { success: boolean; iceParameters?: unknown; error?: string }) => void,
   ) => void;
   /** 2.2: the client's getStats sample, every ~10 s, for the Prometheus QoS gauges. */
-  qos_report: (data: { roomId: string } & Partial<Pick<QosMetrics, "rtt" | "jitter" | "packetLoss">>) => void;
+  qos_report: (
+    data: { roomId: string } & Partial<Pick<QosMetrics, "rtt" | "jitter" | "packetLoss">>,
+  ) => void;
   consumer_layer: (
     data: { roomId: string; consumerId: string; spatialLayer: number },
     callback?: (response: { success: boolean; error?: string }) => void,

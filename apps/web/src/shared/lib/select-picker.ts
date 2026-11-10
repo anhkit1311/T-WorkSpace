@@ -6,6 +6,6 @@ export function isSelectPickerEvent(event: KeyboardEvent): boolean {
   const select = target.closest("select");
   return Boolean(
     target.closest("option") ||
-      (select && CSS.supports("selector(select:open)") && select.matches(":open")),
+    (select && CSS.supports("selector(select:open)") && select.matches(":open")),
   );
 }

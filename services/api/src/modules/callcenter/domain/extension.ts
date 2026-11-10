@@ -1,7 +1,10 @@
 import { randomBytes } from "node:crypto";
 
 /** The first free number of a department's range, or null when the range is full. */
-export function nextExtensionNumber(range: { from: number; to: number }, taken: Iterable<string>): string | null {
+export function nextExtensionNumber(
+  range: { from: number; to: number },
+  taken: Iterable<string>,
+): string | null {
   const used = new Set(taken);
   for (let number = range.from; number <= range.to; number++)
     if (!used.has(String(number))) return String(number);

@@ -6,7 +6,7 @@ import type {
   TransportOptions,
 } from "@doan/shared";
 import * as mediasoup from "mediasoup";
-import {EventEmitter} from 'node:events';
+import { EventEmitter } from "node:events";
 import type {
   ActiveSpeakerObserver,
   AudioLevelObserver,
@@ -59,37 +59,50 @@ export const AUDIO_LEVEL_INTERVAL_MS = 400;
 export const AUDIO_LEVEL_THRESHOLD_DB = -60;
 
 class MediasoupRoomManager {
-  readonly events=new EventEmitter();
+  readonly events = new EventEmitter();
   private workers: MediasoupWorker[] = [];
-  private allocations = new Map<number,number>();
+  private allocations = new Map<number, number>();
   private rooms = new Map<string, Room>();
   private workerPending: Promise<void> | null = null;
   private roomsPending = new Map<string, Promise<Room>>();
 
   private async getWorker(): Promise<MediasoupWorker> {
-    const count=Math.min(8,config.mediaWorkers);
-    if(this.workers.length<count){
-      this.workerPending??=(async()=>{
-        while(this.workers.length<count){
-          const worker=await mediasoup.createWorker(mediasoupConfig.worker);
-          worker.on('died',()=>{
-            console.error(JSON.stringify({level:'error',event:'media_worker_died',pid:worker.pid}));
-            this.workers=this.workers.filter(item=>item!==worker);
+    const count = Math.min(8, config.mediaWorkers);
+    if (this.workers.length < count) {
+      this.workerPending ??= (async () => {
+        while (this.workers.length < count) {
+          const worker = await mediasoup.createWorker(mediasoupConfig.worker);
+          worker.on("died", () => {
+            console.error(
+              JSON.stringify({ level: "error", event: "media_worker_died", pid: worker.pid }),
+            );
+            this.workers = this.workers.filter((item) => item !== worker);
             this.allocations.delete(worker.pid);
-            for(const room of [...this.rooms.values()])if(room.worker===worker){
-              for(const peer of [...room.peers.values()])this.events.emit('media_failure',{roomId:room.id,socketId:peer.socketId,reason:'Máy chủ media khởi động lại. Hãy tham gia lại.'});
-              room.router.close();this.rooms.delete(room.id);
-            }
+            for (const room of [...this.rooms.values()])
+              if (room.worker === worker) {
+                for (const peer of [...room.peers.values()])
+                  this.events.emit("media_failure", {
+                    roomId: room.id,
+                    socketId: peer.socketId,
+                    reason: "Máy chủ media khởi động lại. Hãy tham gia lại.",
+                  });
+                room.router.close();
+                this.rooms.delete(room.id);
+              }
             // The next join replaces the failed worker; API/chat remain available.
           });
           this.workers.push(worker);
         }
-      })().finally(()=>{this.workerPending=null;});
+      })().finally(() => {
+        this.workerPending = null;
+      });
       await this.workerPending;
     }
-    const worker=[...this.workers].sort((a,b)=>(this.allocations.get(a.pid)??0)-(this.allocations.get(b.pid)??0))[0];
-    if(!worker)throw new Error('Media worker unavailable');
-    this.allocations.set(worker.pid,(this.allocations.get(worker.pid)??0)+1);
+    const worker = [...this.workers].sort(
+      (a, b) => (this.allocations.get(a.pid) ?? 0) - (this.allocations.get(b.pid) ?? 0),
+    )[0];
+    if (!worker) throw new Error("Media worker unavailable");
+    this.allocations.set(worker.pid, (this.allocations.get(worker.pid) ?? 0) + 1);
     return worker;
   }
 
@@ -109,7 +122,10 @@ class MediasoupRoomManager {
     let room = this.rooms.get(roomId);
     if (!room) {
       const worker = await this.getWorker();
-      const router = await worker.createRouter(mediasoupConfig.router).catch(error=>{this.releaseWorker(worker);throw error;});
+      const router = await worker.createRouter(mediasoupConfig.router).catch((error) => {
+        this.releaseWorker(worker);
+        throw error;
+      });
       room = {
         id: roomId,
         router,
@@ -230,16 +246,34 @@ class MediasoupRoomManager {
    * M1: joins a phone caller as a peer with one microphone. FFmpeg sends the caller's voice as
    * Opus RTP with `ssrc` to the returned port (comedia: the SFU learns FFmpeg's address).
    */
-  async addPhonePeer(roomId: string, socketId: string, userId: string, displayName: string, ssrc: number) {
+  async addPhonePeer(
+    roomId: string,
+    socketId: string,
+    userId: string,
+    displayName: string,
+    ssrc: number,
+  ) {
     await this.joinRoom(roomId, socketId, userId, displayName);
     const room = this.rooms.get(roomId)!;
     const peer = room.peers.get(socketId)!;
     try {
-      peer.plain = await room.router.createPlainTransport({ listenIp: "0.0.0.0", rtcpMux: false, comedia: true });
+      peer.plain = await room.router.createPlainTransport({
+        listenIp: "0.0.0.0",
+        rtcpMux: false,
+        comedia: true,
+      });
       const producer = await peer.plain.produce({
         kind: "audio",
         rtpParameters: {
-          codecs: [{ mimeType: "audio/opus", clockRate: 48000, channels: 2, payloadType: 111, rtcpFeedback: [] }],
+          codecs: [
+            {
+              mimeType: "audio/opus",
+              clockRate: 48000,
+              channels: 2,
+              payloadType: 111,
+              rtcpFeedback: [],
+            },
+          ],
           encodings: [{ ssrc }],
         },
         appData: { source: "mic" },
@@ -247,8 +281,19 @@ class MediasoupRoomManager {
       peer.producers.set(producer.id, producer);
       for (const observer of [room.speakerObserver, room.levelObserver])
         await observer?.addProducer({ producerId: producer.id }).catch(() => {});
-      const info: ProducerInfo = { producerId: producer.id, socketId, userId, displayName, kind: "audio", source: "mic" };
-      return { producer: info, port: peer.plain.tuple.localPort, rtcpPort: peer.plain.rtcpTuple?.localPort ?? peer.plain.tuple.localPort };
+      const info: ProducerInfo = {
+        producerId: producer.id,
+        socketId,
+        userId,
+        displayName,
+        kind: "audio",
+        source: "mic",
+      };
+      return {
+        producer: info,
+        port: peer.plain.tuple.localPort,
+        rtcpPort: peer.plain.rtcpTuple?.localPort ?? peer.plain.tuple.localPort,
+      };
     } catch (error) {
       this.leaveRoom(roomId, socketId);
       throw error;
@@ -282,7 +327,14 @@ class MediasoupRoomManager {
     }
 
     peer.transports.set(transport.id, transport);
-    transport.on('dtlsstatechange',state=>{if(state==='failed'&&!transport.closed)this.events.emit('media_failure',{roomId,socketId,reason:'DTLS thất bại. Thiết bị đã dừng; hãy tham gia lại.'});});
+    transport.on("dtlsstatechange", (state) => {
+      if (state === "failed" && !transport.closed)
+        this.events.emit("media_failure", {
+          roomId,
+          socketId,
+          reason: "DTLS thất bại. Thiết bị đã dừng; hãy tham gia lại.",
+        });
+    });
 
     return {
       id: transport.id,
@@ -401,8 +453,16 @@ class MediasoupRoomManager {
 
     const consumerPeer = room.peers.get(consumerSocketId);
     if (!consumerPeer) throw new Error("Consumer peer not found");
-    if(consumerPeer.pendingConsumers.has(producerId)||[...consumerPeer.consumers.values()].some(item=>item.producerId===producerId))throw new Error('Producer already consumed');
-    if(consumerPeer.consumers.size+consumerPeer.pendingConsumers.size>=config.meetingMaxUsers*config.meetingMaxSources)throw new Error('Consumer limit reached');
+    if (
+      consumerPeer.pendingConsumers.has(producerId) ||
+      [...consumerPeer.consumers.values()].some((item) => item.producerId === producerId)
+    )
+      throw new Error("Producer already consumed");
+    if (
+      consumerPeer.consumers.size + consumerPeer.pendingConsumers.size >=
+      config.meetingMaxUsers * config.meetingMaxSources
+    )
+      throw new Error("Consumer limit reached");
 
     // Tìm producer và peer sở hữu producer
     let targetProducer: Producer | undefined;
@@ -433,12 +493,17 @@ class MediasoupRoomManager {
     }
 
     consumerPeer.pendingConsumers.add(producerId);
-    const consumer = await recvTransport.consume({
-      producerId,
-      rtpCapabilities,
-      paused: true, // mediasoup best practice: create paused, resume on client ready
-    }).finally(()=>consumerPeer.pendingConsumers.delete(producerId));
-    if(this.getPeer(roomId,consumerSocketId)!==consumerPeer||targetProducer.closed){consumer.close();throw new Error('Peer or producer left during consume');}
+    const consumer = await recvTransport
+      .consume({
+        producerId,
+        rtpCapabilities,
+        paused: true, // mediasoup best practice: create paused, resume on client ready
+      })
+      .finally(() => consumerPeer.pendingConsumers.delete(producerId));
+    if (this.getPeer(roomId, consumerSocketId) !== consumerPeer || targetProducer.closed) {
+      consumer.close();
+      throw new Error("Peer or producer left during consume");
+    }
 
     consumerPeer.consumers.set(consumer.id, consumer);
     if (consumer.kind === "video" && room.dominantSocketId === producerPeer.socketId)
@@ -541,9 +606,14 @@ class MediasoupRoomManager {
     const room = this.rooms.get(roomId);
     if (!room) return null;
     const paused = new Set(
-      [...room.peers.values()].flatMap((peer) => [...peer.producers.values()].filter((item) => item.paused).map((item) => item.id)),
+      [...room.peers.values()].flatMap((peer) =>
+        [...peer.producers.values()].filter((item) => item.paused).map((item) => item.id),
+      ),
     );
-    const producers = this.getRoomProducers(roomId).map((item) => ({ ...item, paused: paused.has(item.producerId) }));
+    const producers = this.getRoomProducers(roomId).map((item) => ({
+      ...item,
+      paused: paused.has(item.producerId),
+    }));
     return { router: room.router, dominantSocketId: room.dominantSocketId, producers };
   }
 
@@ -595,21 +665,44 @@ class MediasoupRoomManager {
   close(): void {
     for (const room of this.rooms.values()) room.router.close();
     this.rooms.clear();
-    for(const worker of this.workers)worker.close();
+    for (const worker of this.workers) worker.close();
     this.workers = [];
     this.allocations.clear();
     this.workerPending = null;
   }
-  private releaseWorker(worker:MediasoupWorker){this.allocations.set(worker.pid,Math.max(0,(this.allocations.get(worker.pid)??1)-1));}
-  metrics(){return {workers:this.workers.length,rooms:this.rooms.size,peers:[...this.rooms.values()].reduce((sum,room)=>sum+room.peers.size,0),workerRooms:this.workers.map(worker=>({pid:worker.pid,rooms:this.allocations.get(worker.pid)??0}))};}
+  private releaseWorker(worker: MediasoupWorker) {
+    this.allocations.set(worker.pid, Math.max(0, (this.allocations.get(worker.pid) ?? 1) - 1));
+  }
+  metrics() {
+    return {
+      workers: this.workers.length,
+      rooms: this.rooms.size,
+      peers: [...this.rooms.values()].reduce((sum, room) => sum + room.peers.size, 0),
+      workerRooms: this.workers.map((worker) => ({
+        pid: worker.pid,
+        rooms: this.allocations.get(worker.pid) ?? 0,
+      })),
+    };
+  }
   setPeerQos(roomId: string, socketId: string, data: Record<string, unknown>) {
     const peer = this.getPeer(roomId, socketId);
     if (peer) peer.qos = parseQosReport(data);
   }
   qosMetrics() {
-    return summarizeQos([...this.rooms.values()].flatMap((room) => [...room.peers.values()].flatMap((peer) => (peer.qos ? [peer.qos] : []))));
+    return summarizeQos(
+      [...this.rooms.values()].flatMap((room) =>
+        [...room.peers.values()].flatMap((peer) => (peer.qos ? [peer.qos] : [])),
+      ),
+    );
   }
-  async resourceUsage(){return Promise.all(this.workers.map(async worker=>({pid:worker.pid,usage:await worker.getResourceUsage()})));}
+  async resourceUsage() {
+    return Promise.all(
+      this.workers.map(async (worker) => ({
+        pid: worker.pid,
+        usage: await worker.getResourceUsage(),
+      })),
+    );
+  }
 }
 
 export const roomManager = new MediasoupRoomManager();

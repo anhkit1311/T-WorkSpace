@@ -1,7 +1,17 @@
 import type { TicketPriority, TicketStatus } from "@doan/shared";
 import type { CallCenterRepository } from "../repository/callcenter-repository.js";
 import type { CallCenterAdminService } from "./admin-service.js";
-import { forbidden, id, integer, invalid, notFound, oneOf, optionalId, text, type Body } from "./input.js";
+import {
+  forbidden,
+  id,
+  integer,
+  invalid,
+  notFound,
+  oneOf,
+  optionalId,
+  text,
+  type Body,
+} from "./input.js";
 
 const STATUSES = ["open", "in_progress", "waiting", "resolved", "closed"] as const;
 const PRIORITIES = ["low", "normal", "high", "urgent"] as const;
@@ -24,7 +34,10 @@ export class CallCenterTicketService {
     private readonly admin: CallCenterAdminService,
     private readonly recordings: () => ((name: string) => Promise<Response>) | null,
     /** NV-CC3: the requester is told about every status change. */
-    private readonly onStatus: (ticketId: string, status: TicketStatus) => Promise<void> = async () => {},
+    private readonly onStatus: (
+      ticketId: string,
+      status: TicketStatus,
+    ) => Promise<void> = async () => {},
   ) {}
 
   private async workable(userId: string, ticketId: string) {
@@ -67,7 +80,9 @@ export class CallCenterTicketService {
     const departmentId = id(body.departmentId);
     if (!access.worksIn(departmentId)) throw forbidden();
     const callId = optionalId(body.callId);
-    let callerNumber = body.callerNumber ? text(body, "callerNumber", 16, { pattern: /^\+?[0-9]{3,15}$/ }) : null;
+    let callerNumber = body.callerNumber
+      ? text(body, "callerNumber", 16, { pattern: /^\+?[0-9]{3,15}$/ })
+      : null;
     if (callId) {
       const call = await this.repo.call(callId);
       if (!call || !access.canReviewCall(call)) throw notFound("Không tìm thấy cuộc gọi.");
@@ -91,14 +106,22 @@ export class CallCenterTicketService {
 
   async update(userId: string, ticketId: string, body: Body) {
     const ticket = await this.workable(userId, ticketId);
-    const status = body.status === undefined ? undefined : oneOf<TicketStatus>(body, "status", STATUSES);
+    const status =
+      body.status === undefined ? undefined : oneOf<TicketStatus>(body, "status", STATUSES);
     await this.repo.updateTicket(ticket, userId, {
       status,
-      priority: body.priority === undefined ? undefined : oneOf<TicketPriority>(body, "priority", PRIORITIES),
-      assignee: body.assigneeId === undefined ? undefined : await this.assignee(ticket.departmentId, body.assigneeId),
+      priority:
+        body.priority === undefined
+          ? undefined
+          : oneOf<TicketPriority>(body, "priority", PRIORITIES),
+      assignee:
+        body.assigneeId === undefined
+          ? undefined
+          : await this.assignee(ticket.departmentId, body.assigneeId),
       dueAt: body.dueAt === undefined ? undefined : dueAt(body.dueAt),
     });
-    if (status && status !== ticket.status) await this.onStatus(ticket.id, status).catch(() => undefined);
+    if (status && status !== ticket.status)
+      await this.onStatus(ticket.id, status).catch(() => undefined);
     return this.get(userId, ticket.id);
   }
 
@@ -106,7 +129,12 @@ export class CallCenterTicketService {
   async addEvent(userId: string, ticketId: string, body: Body) {
     const ticket = await this.workable(userId, ticketId);
     const kind = oneOf(body, "kind", ["comment", "callback"] as const);
-    await this.repo.addTicketEvent(ticket.id, userId, kind, text(body, "body", 4000, { optional: kind === "callback" }));
+    await this.repo.addTicketEvent(
+      ticket.id,
+      userId,
+      kind,
+      text(body, "body", 4000, { optional: kind === "callback" }),
+    );
     return this.get(userId, ticket.id);
   }
 

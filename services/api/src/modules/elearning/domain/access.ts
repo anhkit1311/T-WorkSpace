@@ -34,7 +34,11 @@ export class CourseAccess {
 
   /** Learners see published courses; drafts and archived ones only their staff. */
   canSee(course: CourseRef, enrolled: boolean) {
-    return this.manages(course) || course.status === "published" || (enrolled && course.status === "archived");
+    return (
+      this.manages(course) ||
+      course.status === "published" ||
+      (enrolled && course.status === "archived")
+    );
   }
 
   canSelfEnroll(course: CourseRef) {

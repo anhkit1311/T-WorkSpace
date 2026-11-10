@@ -231,7 +231,9 @@
   font-size: 14px !important;
   font-weight: 600 !important;
   cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.1s ease;
+  transition:
+    background-color 0.15s ease,
+    transform 0.1s ease;
 }
 
 .dept-add-btn:hover {
@@ -632,7 +634,9 @@
   color: #0f172a !important;
   font-size: 13.5px !important;
   outline: none !important;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease !important;
   font-family: inherit !important;
 }
 
@@ -787,7 +791,9 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.1s ease;
+  transition:
+    background-color 0.15s ease,
+    transform 0.1s ease;
 }
 
 .staff-submit-btn:hover:not(:disabled) {

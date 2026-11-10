@@ -35,11 +35,20 @@ const KINDS: [StaffMember["unitKind"], string][] = [
   ["office", "Khối hành chính"],
   [null, "Khác"],
 ];
-const PHONE_STATE = { registered: "Sẵn sàng", registering: "Đang kết nối", failed: "Lỗi kết nối", off: "Chưa bật" } as const;
+const PHONE_STATE = {
+  registered: "Sẵn sàng",
+  registering: "Đang kết nối",
+  failed: "Lỗi kết nối",
+  off: "Chưa bật",
+} as const;
 
-const rankText = (staff: StaffMember) => (staff.rank ? (rankLabel[staff.rank] ?? staff.rank) : null);
+const rankText = (staff: StaffMember) =>
+  staff.rank ? (rankLabel[staff.rank] ?? staff.rank) : null;
 
-function groupBy(list: StaffMember[], key: (staff: StaffMember) => string): [string, StaffMember[]][] {
+function groupBy(
+  list: StaffMember[],
+  key: (staff: StaffMember) => string,
+): [string, StaffMember[]][] {
   const groups = new Map<string, StaffMember[]>();
   for (const staff of list) {
     const name = key(staff);
@@ -95,14 +104,23 @@ export function StaffDirectoryPage() {
   const matches = (staff: StaffMember) =>
     (!onlineOnly || online.has(staff.userId)) &&
     (!q ||
-      [staff.displayName, staff.userCode, staff.email, staff.extension, staff.unitName, staff.departmentName].some((value) =>
-        value?.toLowerCase().includes(q),
-      ));
+      [
+        staff.displayName,
+        staff.userCode,
+        staff.email,
+        staff.extension,
+        staff.unitName,
+        staff.departmentName,
+      ].some((value) => value?.toLowerCase().includes(q)));
 
   const current = units.find((item) => item.name === unit) ?? null;
   const scope = current ? current.members : (staffList ?? []);
-  const visible = scope.filter((staff) => matches(staff) && (!department || (staff.departmentName ?? OFFICE) === department));
-  const groups = current ? byDepartment(visible) : groupBy(visible, (staff) => staff.unitName ?? NO_UNIT);
+  const visible = scope.filter(
+    (staff) => matches(staff) && (!department || (staff.departmentName ?? OFFICE) === department),
+  );
+  const groups = current
+    ? byDepartment(visible)
+    : groupBy(visible, (staff) => staff.unitName ?? NO_UNIT);
   const selected = staffList?.find((staff) => staff.userId === selectedId) ?? null;
   const onlineCount = (staffList ?? []).filter((staff) => online.has(staff.userId)).length;
   const myExtension = staffList?.find((staff) => staff.userId === user?.id)?.extension ?? null;
@@ -114,7 +132,8 @@ export function StaffDirectoryPage() {
   const pickView = (next: "list" | "org") => {
     setView(next);
     // The chart is per unit: start from the first faculty when "all units" was picked.
-    if (next === "org" && !current && units.length) pickUnit((units.find((item) => item.kind === "faculty") ?? units[0]).name);
+    if (next === "org" && !current && units.length)
+      pickUnit((units.find((item) => item.kind === "faculty") ?? units[0]).name);
   };
 
   async function message(staff: StaffMember) {
@@ -159,7 +178,8 @@ export function StaffDirectoryPage() {
     </span>
   );
 
-  const open = (staff: StaffMember) => setSelectedId((id) => (id === staff.userId ? null : staff.userId));
+  const open = (staff: StaffMember) =>
+    setSelectedId((id) => (id === staff.userId ? null : staff.userId));
   const person = (staff: StaffMember) => (
     <button
       type="button"
@@ -172,7 +192,9 @@ export function StaffDirectoryPage() {
       <span className="sd-person__text">
         <b>{staff.displayName}</b>
         <small className="sd-person__email">{staff.email}</small>
-        <small className="sd-person__meta">{[rankText(staff), staff.roleTitle, staff.extension].filter(Boolean).join(" · ")}</small>
+        <small className="sd-person__meta">
+          {[rankText(staff), staff.roleTitle, staff.extension].filter(Boolean).join(" · ")}
+        </small>
       </span>
     </button>
   );
@@ -193,34 +215,62 @@ export function StaffDirectoryPage() {
         <div className="sd-head__title">
           <p className="sd-eyebrow">
             <i className="sd-led" aria-hidden="true" />
-            Danh bạ · {units.length} đơn vị · {staffList?.length ?? 0} cán bộ · {onlineCount} đang trực tuyến
+            Danh bạ · {units.length} đơn vị · {staffList?.length ?? 0} cán bộ · {onlineCount} đang
+            trực tuyến
           </p>
           <h1>Nhân sự</h1>
         </div>
         <div className="sd-seg" role="group" aria-label="Cách xem">
-          <button type="button" aria-pressed={view === "list"} onClick={() => pickView("list")}>Danh sách</button>
-          <button type="button" aria-pressed={view === "org"} onClick={() => pickView("org")}>Sơ đồ đơn vị</button>
+          <button type="button" aria-pressed={view === "list"} onClick={() => pickView("list")}>
+            Danh sách
+          </button>
+          <button type="button" aria-pressed={view === "org"} onClick={() => pickView("org")}>
+            Sơ đồ đơn vị
+          </button>
         </div>
-        <button type="button" className="sd-chip" aria-pressed={onlineOnly} onClick={() => setOnlineOnly((value) => !value)}>
+        <button
+          type="button"
+          className="sd-chip"
+          aria-pressed={onlineOnly}
+          onClick={() => setOnlineOnly((value) => !value)}
+        >
           <i className="sd-led" aria-hidden="true" />
           Đang trực tuyến
         </button>
-        <select className="sd-select sd-unit-select" aria-label="Đơn vị" value={unit} onChange={(event) => pickUnit(event.target.value)}>
+        <select
+          className="sd-select sd-unit-select"
+          aria-label="Đơn vị"
+          value={unit}
+          onChange={(event) => pickUnit(event.target.value)}
+        >
           {view === "list" && <option value="all">Tất cả đơn vị</option>}
           {units.map((item) => (
-            <option key={item.name} value={item.name}>{item.name}</option>
+            <option key={item.name} value={item.name}>
+              {item.name}
+            </option>
           ))}
         </select>
         <label className="sd-search">
           <Icon name="search" size={15} />
-          <input type="search" aria-label="Tìm nhân sự" placeholder="Tên, mã cán bộ, email hoặc máy lẻ…" value={query} onChange={(event) => setQuery(event.target.value)} />
+          <input
+            type="search"
+            aria-label="Tìm nhân sự"
+            placeholder="Tên, mã cán bộ, email hoặc máy lẻ…"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
         </label>
       </header>
 
       <div className={`sd-body${selected ? " has-profile" : ""}`}>
         <nav className="sd-tree" aria-label="Đơn vị">
           {view === "list" && (
-            <button type="button" className="sd-tree__item" aria-current={unit === "all" || undefined} onClick={() => pickUnit("all")}>
+            <button
+              type="button"
+              className="sd-tree__item"
+              aria-current={unit === "all" || undefined}
+              onClick={() => pickUnit("all")}
+            >
               <span>Tất cả đơn vị</span>
               <small>{staffList?.length ?? 0}</small>
             </button>
@@ -233,8 +283,16 @@ export function StaffDirectoryPage() {
                 <p className="sd-tree__group">{label}</p>
                 {list.map((item) => (
                   <Fragment key={item.name}>
-                    <button type="button" className="sd-tree__item" aria-current={unit === item.name || undefined} onClick={() => pickUnit(item.name)}>
-                      <Icon name={unit === item.name ? "chevron-down" : "chevron-right"} size={12} />
+                    <button
+                      type="button"
+                      className="sd-tree__item"
+                      aria-current={unit === item.name || undefined}
+                      onClick={() => pickUnit(item.name)}
+                    >
+                      <Icon
+                        name={unit === item.name ? "chevron-down" : "chevron-right"}
+                        size={12}
+                      />
                       <span>{item.name}</span>
                       <small>{item.members.length}</small>
                     </button>
@@ -263,7 +321,10 @@ export function StaffDirectoryPage() {
               <span className="sd-mono-label">Máy lẻ của bạn</span>
               <div>
                 <strong>{myExtension}</strong>
-                <i className={`sd-led${phone.status === "registered" ? "" : phone.status === "failed" ? " is-red" : " is-off"}`} aria-hidden="true" />
+                <i
+                  className={`sd-led${phone.status === "registered" ? "" : phone.status === "failed" ? " is-red" : " is-off"}`}
+                  aria-hidden="true"
+                />
                 <span className="sd-mono-label is-state">{PHONE_STATE[phone.status]}</span>
               </div>
               <p>Bấm số máy lẻ trong danh bạ để gọi bằng softphone.</p>
@@ -276,7 +337,8 @@ export function StaffDirectoryPage() {
             <div className="sd-card__head">
               <h2 id="sd-list-title">{department ?? current?.name ?? "Tất cả đơn vị"}</h2>
               <span className="sd-mono-label">
-                {visible.length} cán bộ · {visible.filter((staff) => online.has(staff.userId)).length} trực tuyến
+                {visible.length} cán bộ ·{" "}
+                {visible.filter((staff) => online.has(staff.userId)).length} trực tuyến
               </span>
             </div>
             <table className="sd-table">
@@ -284,36 +346,68 @@ export function StaffDirectoryPage() {
                 <tr>
                   <th scope="col">Cán bộ</th>
                   <th scope="col">Học vị · Vai trò</th>
-                  <th scope="col" className="sd-col-code">Mã CB</th>
+                  <th scope="col" className="sd-col-code">
+                    Mã CB
+                  </th>
                   <th scope="col">Máy lẻ</th>
-                  <th scope="col" className="sd-col-status">Trạng thái</th>
-                  <th scope="col"><span className="sr-only">Liên lạc</span></th>
+                  <th scope="col" className="sd-col-status">
+                    Trạng thái
+                  </th>
+                  <th scope="col">
+                    <span className="sr-only">Liên lạc</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {status && (
                   <tr>
-                    <td colSpan={6} className="sd-table__empty">{status}</td>
+                    <td colSpan={6} className="sd-table__empty">
+                      {status}
+                    </td>
                   </tr>
                 )}
                 {!failed &&
                   groups.map(([name, members]) => (
                     <Fragment key={name}>
                       <tr className="sd-table__group">
-                        <th colSpan={6} scope="colgroup">{name} · {members.length}</th>
+                        <th colSpan={6} scope="colgroup">
+                          {name} · {members.length}
+                        </th>
                       </tr>
                       {members.map((staff) => (
-                        <tr key={staff.userId} className={selectedId === staff.userId ? "is-selected" : undefined}>
+                        <tr
+                          key={staff.userId}
+                          className={selectedId === staff.userId ? "is-selected" : undefined}
+                        >
                           <td>{person(staff)}</td>
                           <td>
-                            {rankText(staff) && <span className={`sd-rank${staff.rank === "ths" || staff.rank === "cn" ? " is-light" : ""}`}>{rankText(staff)}</span>}
+                            {rankText(staff) && (
+                              <span
+                                className={`sd-rank${staff.rank === "ths" || staff.rank === "cn" ? " is-light" : ""}`}
+                              >
+                                {rankText(staff)}
+                              </span>
+                            )}
                             {staff.roleTitle}
                           </td>
-                          <td className="sd-col-code">{staff.userCode ? <code>{staff.userCode}</code> : "—"}</td>
-                          <td>{staff.extension ? <span className="sd-ext">{staff.extension}</span> : "—"}</td>
+                          <td className="sd-col-code">
+                            {staff.userCode ? <code>{staff.userCode}</code> : "—"}
+                          </td>
+                          <td>
+                            {staff.extension ? (
+                              <span className="sd-ext">{staff.extension}</span>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
                           <td className="sd-col-status">
-                            <span className={`sd-status${online.has(staff.userId) ? "" : " is-off"}`}>
-                              <i className={`sd-led${online.has(staff.userId) ? "" : " is-off"}`} aria-hidden="true" />
+                            <span
+                              className={`sd-status${online.has(staff.userId) ? "" : " is-off"}`}
+                            >
+                              <i
+                                className={`sd-led${online.has(staff.userId) ? "" : " is-off"}`}
+                                aria-hidden="true"
+                              />
                               {online.has(staff.userId) ? "Trực tuyến" : "Ngoại tuyến"}
                             </span>
                           </td>
@@ -326,7 +420,13 @@ export function StaffDirectoryPage() {
             </table>
           </section>
         ) : current ? (
-          <OrgChart unit={current} members={current.members.filter(matches)} online={online} person={person} contact={contact} />
+          <OrgChart
+            unit={current}
+            members={current.members.filter(matches)}
+            online={online}
+            person={person}
+            contact={contact}
+          />
         ) : (
           <p className="sd-card sd-table__empty">{status ?? "Chưa có đơn vị nào."}</p>
         )}
@@ -339,7 +439,11 @@ export function StaffDirectoryPage() {
             onKeyDown={(event) => event.key === "Escape" && setSelectedId(null)}
           >
             <div className="sd-profile__head">
-              <button type="button" className="sd-profile__back" onClick={() => setSelectedId(null)}>
+              <button
+                type="button"
+                className="sd-profile__back"
+                onClick={() => setSelectedId(null)}
+              >
                 <Icon name="chevron-left" size={18} />
                 Nhân sự
               </button>
@@ -348,20 +452,40 @@ export function StaffDirectoryPage() {
                 <div>
                   <h2>{selected.displayName}</h2>
                   <p>{[rankText(selected), selected.roleTitle].filter(Boolean).join(" · ")}</p>
-                  <span className="sd-mono-label">{[selected.unitName ?? NO_UNIT, selected.departmentName].filter(Boolean).join(" · ")}</span>
+                  <span className="sd-mono-label">
+                    {[selected.unitName ?? NO_UNIT, selected.departmentName]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
                 </div>
-                <button type="button" className="sd-profile__close" aria-label="Đóng hồ sơ" onClick={() => setSelectedId(null)}>
+                <button
+                  type="button"
+                  className="sd-profile__close"
+                  aria-label="Đóng hồ sơ"
+                  onClick={() => setSelectedId(null)}
+                >
                   <Icon name="x" size={15} />
                 </button>
               </div>
               <p className="sd-profile__state">
-                <i className={`sd-led${online.has(selected.userId) ? "" : " is-off"}`} aria-hidden="true" />
-                {selected.userId === user?.id ? "Đây là bạn" : online.has(selected.userId) ? "Đang trực tuyến" : "Ngoại tuyến"}
+                <i
+                  className={`sd-led${online.has(selected.userId) ? "" : " is-off"}`}
+                  aria-hidden="true"
+                />
+                {selected.userId === user?.id
+                  ? "Đây là bạn"
+                  : online.has(selected.userId)
+                    ? "Đang trực tuyến"
+                    : "Ngoại tuyến"}
               </p>
               {selected.userId !== user?.id && (
                 <div className="sd-profile__actions">
                   {selected.extension && (
-                    <button type="button" className="sd-btn is-primary" onClick={() => phone.call(selected.extension!)}>
+                    <button
+                      type="button"
+                      className="sd-btn is-primary"
+                      onClick={() => phone.call(selected.extension!)}
+                    >
                       <Icon name="phone" size={15} />
                       Gọi {selected.extension}
                     </button>
@@ -395,7 +519,13 @@ export function StaffDirectoryPage() {
               </div>
               <div>
                 <dt>Máy lẻ</dt>
-                <dd>{selected.extension ? <span className="sd-ext">{selected.extension}</span> : "Chưa có"}</dd>
+                <dd>
+                  {selected.extension ? (
+                    <span className="sd-ext">{selected.extension}</span>
+                  ) : (
+                    "Chưa có"
+                  )}
+                </dd>
               </div>
               <div>
                 <dt>Mã cán bộ</dt>
@@ -419,7 +549,15 @@ export function StaffDirectoryPage() {
   );
 }
 
-function Presence({ staff, online, size = "md" }: { staff: StaffMember; online: boolean; size?: "md" | "lg" }) {
+function Presence({
+  staff,
+  online,
+  size = "md",
+}: {
+  staff: StaffMember;
+  online: boolean;
+  size?: "md" | "lg";
+}) {
   return (
     <span className={`sd-avatar is-${size}`}>
       <Avatar name={staff.displayName} size={size} />
@@ -453,10 +591,14 @@ function OrgChart({
   const admins = members.filter((staff) => staff.roleTitle === "Quản trị đơn vị");
   const top = new Set([...heads, ...admins]);
   // Someone shown above stays in their department's column, but is not repeated under the office.
-  const departments = byDepartment(members.filter((staff) => staff.departmentName || !top.has(staff)));
+  const departments = byDepartment(
+    members.filter((staff) => staff.departmentName || !top.has(staff)),
+  );
   const onlineCount = unit.members.filter((staff) => online.has(staff.userId)).length;
   const office = admins.find((staff) => staff.extension)?.extension ?? null;
-  const ranks = RANK_GROUPS.map(([label, test]) => [label, unit.members.filter((staff) => test(staff.rank)).length] as const);
+  const ranks = RANK_GROUPS.map(
+    ([label, test]) => [label, unit.members.filter((staff) => test(staff.rank)).length] as const,
+  );
 
   return (
     <section className="sd-org" aria-label={`Sơ đồ ${unit.name}`}>
@@ -469,11 +611,18 @@ function OrgChart({
         <div className="sd-rack__unit is-wide">
           <span className="sd-mono-label">Học vị</span>
           <span className="sd-ranks" aria-hidden="true">
-            {ranks.map(([label, count], index) => count > 0 && <i key={label} className={`is-${index}`} style={{ flexGrow: count }} />)}
+            {ranks.map(
+              ([label, count], index) =>
+                count > 0 && (
+                  <i key={label} className={`is-${index}`} style={{ flexGrow: count }} />
+                ),
+            )}
           </span>
           <small className="sd-ranks__legend">
             {ranks.map(([label, count]) => (
-              <span key={label}><b>{count}</b> {label}</span>
+              <span key={label}>
+                <b>{count}</b> {label}
+              </span>
             ))}
           </small>
         </div>
@@ -516,13 +665,17 @@ function OrgChart({
       )}
 
       {departments.length > 0 ? (
-        <div className="sd-org__depts" style={{ "--cols": Math.min(departments.length, 3) } as CSSProperties}>
+        <div
+          className="sd-org__depts"
+          style={{ "--cols": Math.min(departments.length, 3) } as CSSProperties}
+        >
           {departments.map(([name, list]) => (
             <section key={name} className="sd-dept" aria-label={name}>
               <header>
                 <h3>{name}</h3>
                 <span className="sd-mono-label">
-                  {list.length} cán bộ · {list.filter((staff) => online.has(staff.userId)).length} trực tuyến
+                  {list.length} cán bộ · {list.filter((staff) => online.has(staff.userId)).length}{" "}
+                  trực tuyến
                 </span>
               </header>
               <ul>
@@ -537,7 +690,11 @@ function OrgChart({
           ))}
         </div>
       ) : (
-        !top.size && <p className="sd-card sd-table__empty">Không tìm thấy nhân sự phù hợp với điều kiện tìm kiếm.</p>
+        !top.size && (
+          <p className="sd-card sd-table__empty">
+            Không tìm thấy nhân sự phù hợp với điều kiện tìm kiếm.
+          </p>
+        )
       )}
     </section>
   );

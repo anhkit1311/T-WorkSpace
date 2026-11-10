@@ -1,9 +1,26 @@
 import type { CcDepartment, CcExtension } from "@doan/shared";
 import { CallCenterAccess } from "../domain/access.js";
-import { generateSipSecret, groupNumber, inRange, nextExtensionNumber } from "../domain/extension.js";
+import {
+  generateSipSecret,
+  groupNumber,
+  inRange,
+  nextExtensionNumber,
+} from "../domain/extension.js";
 import type { ExtensionState, Pbx } from "../domain/ports.js";
 import type { CallCenterRepository } from "../repository/callcenter-repository.js";
-import { bool, conflict, forbidden, id, integer, invalid, notFound, oneOf, optionalId, text, type Body } from "./input.js";
+import {
+  bool,
+  conflict,
+  forbidden,
+  id,
+  integer,
+  invalid,
+  notFound,
+  oneOf,
+  optionalId,
+  text,
+  type Body,
+} from "./input.js";
 
 const STRATEGIES = ["longest_idle", "round_robin"] as const;
 const ROLES = ["agent", "supervisor"] as const;
@@ -59,7 +76,12 @@ export class CallCenterAdminService {
   async createDepartment(userId: string, body: Body) {
     await this.admin(userId);
     const extensionFrom = integer(body, "extensionFrom", 100, 999999);
-    const extensionTo = integer(body, "extensionTo", extensionFrom, Math.min(999999, extensionFrom + 999));
+    const extensionTo = integer(
+      body,
+      "extensionTo",
+      extensionFrom,
+      Math.min(999999, extensionFrom + 999),
+    );
     if (await this.repo.rangeOverlaps(extensionFrom, extensionTo, null))
       throw conflict("RANGE_OVERLAP", "Dải máy lẻ trùng với phòng ban khác.");
     const departmentId = await this.repo.createDepartment({
@@ -85,7 +107,8 @@ export class CallCenterAdminService {
       qaThreshold: integer(body, "qaThreshold", 0, 100, current.qaThreshold),
     });
     // LT-4: a newly required course is assigned to every agent of the department.
-    if (trainingCourseId && trainingCourseId !== current.trainingCourseId) await this.repo.enrollAgents(current.id, trainingCourseId, userId);
+    if (trainingCourseId && trainingCourseId !== current.trainingCourseId)
+      await this.repo.enrollAgents(current.id, trainingCourseId, userId);
     return this.department(current.id);
   }
 
@@ -107,7 +130,8 @@ export class CallCenterAdminService {
   async setHours(userId: string, departmentId: string, body: Body) {
     await this.admin(userId);
     const department = await this.department(departmentId);
-    if (!Array.isArray(body.hours) || body.hours.length > 21) throw invalid("Giờ làm việc không hợp lệ.");
+    if (!Array.isArray(body.hours) || body.hours.length > 21)
+      throw invalid("Giờ làm việc không hợp lệ.");
     const hours = body.hours.map((item: Body) => {
       const window = {
         weekday: integer(item, "weekday", 0, 6),
@@ -133,7 +157,8 @@ export class CallCenterAdminService {
       const granted = await this.repo.grantCallOut(user.id);
       if (granted.length) await this.sync(granted);
     }
-    if (role === "agent" && department.trainingCourseId) await this.repo.enrollAgents(department.id, department.trainingCourseId, userId, user.id);
+    if (role === "agent" && department.trainingCourseId)
+      await this.repo.enrollAgents(department.id, department.trainingCourseId, userId, user.id);
     await this.rosterChanged();
     return this.department(department.id);
   }
@@ -141,7 +166,9 @@ export class CallCenterAdminService {
   async removeMember(userId: string, departmentId: string, memberId: string, role: string) {
     await this.admin(userId);
     const department = await this.department(departmentId);
-    if (!(await this.repo.removeMember(department.id, id(memberId), oneOf({ role }, "role", ROLES))))
+    if (
+      !(await this.repo.removeMember(department.id, id(memberId), oneOf({ role }, "role", ROLES)))
+    )
       throw notFound("Thành viên không thuộc phòng ban.");
     await this.rosterChanged();
     return this.department(department.id);
@@ -168,7 +195,12 @@ export class CallCenterAdminService {
    * agents, students only get the phone. Units without a switchboard, and people who already have a
    * máy lẻ there, are skipped. The caller checked authority.
    */
-  async provisionStaff(grantedBy: string, unitId: string, userIds: string[], asAgents = true): Promise<Map<string, string>> {
+  async provisionStaff(
+    grantedBy: string,
+    unitId: string,
+    userIds: string[],
+    asAgents = true,
+  ): Promise<Map<string, string>> {
     const issued = new Map<string, string>();
     const department = (await this.repo.departments([id(unitId)]))[0];
     if (!department || !userIds.length) return issued;
@@ -177,7 +209,11 @@ export class CallCenterAdminService {
     const existing = await this.repo.extensions([department.id]);
     const created: string[] = [];
     for (const userId of userIds) {
-      if (asAgents && (await this.repo.addMember(department.id, userId, "agent", grantedBy)) && department.trainingCourseId)
+      if (
+        asAgents &&
+        (await this.repo.addMember(department.id, userId, "agent", grantedBy)) &&
+        department.trainingCourseId
+      )
         await this.repo.enrollAgents(department.id, department.trainingCourseId, grantedBy, userId);
       const own = existing.find((extension) => extension.userId === userId);
       if (own) {
@@ -188,7 +224,14 @@ export class CallCenterAdminService {
       if (!number) break; // range full: the rest are members without a máy lẻ
       taken.push(number);
       created.push(
-        await this.repo.createExtension({ number, departmentId: department.id, userId, label: "", transport: "webrtc", secret: generateSipSecret() }),
+        await this.repo.createExtension({
+          number,
+          departmentId: department.id,
+          userId,
+          label: "",
+          transport: "webrtc",
+          secret: generateSipSecret(),
+        }),
       );
       issued.set(userId, number);
     }
@@ -208,7 +251,9 @@ export class CallCenterAdminService {
         : text(body, "number", 6);
     if (!number) throw conflict("RANGE_FULL", "Dải máy lẻ của phòng ban đã hết số.");
     if (!inRange(number, range))
-      throw invalid(`Số máy lẻ phải nằm trong dải ${department.extensionFrom}–${department.extensionTo}.`);
+      throw invalid(
+        `Số máy lẻ phải nằm trong dải ${department.extensionFrom}–${department.extensionTo}.`,
+      );
     const secret = generateSipSecret();
     const extensionId = await this.repo.createExtension({
       number,
@@ -230,7 +275,8 @@ export class CallCenterAdminService {
     const department = await this.department(current.department_id);
     const active = bool(body, "active", true);
     await this.repo.updateExtension(current.id, {
-      userId: body.userId === undefined ? current.user_id : await this.assignee(department, body.userId),
+      userId:
+        body.userId === undefined ? current.user_id : await this.assignee(department, body.userId),
       label: body.label === undefined ? undefined : text(body, "label", 80, { optional: true }),
       active,
       canCallOut: body.canCallOut === undefined ? undefined : bool(body, "canCallOut", false),
@@ -260,7 +306,13 @@ export class CallCenterAdminService {
     for (const extensionId of extensionIds) {
       const current = await this.repo.extension(extensionId);
       if (!current || current.user_id) continue;
-      if (await this.repo.deleteExtension(current.id).then(() => true, () => false)) await this.unpublish(current.number);
+      if (
+        await this.repo.deleteExtension(current.id).then(
+          () => true,
+          () => false,
+        )
+      )
+        await this.unpublish(current.number);
     }
     await this.pushGroups();
     await this.rosterChanged();
@@ -300,7 +352,10 @@ export class CallCenterAdminService {
         });
         synced.push(row.id);
       } catch (error) {
-        this.log("cc_extension_sync_failed", { number: row.number, message: (error as Error).message });
+        this.log("cc_extension_sync_failed", {
+          number: row.number,
+          message: (error as Error).message,
+        });
       }
     }
     if (synced.length) await this.repo.markSynced(synced);
@@ -321,21 +376,33 @@ export class CallCenterAdminService {
   private async pushGroups(): Promise<void> {
     const pbx = this.pbx();
     if (!pbx) return;
-    const [departments, extensions] = await Promise.all([this.repo.departments(null), this.repo.extensions(null)]);
+    const [departments, extensions] = await Promise.all([
+      this.repo.departments(null),
+      this.repo.extensions(null),
+    ]);
     for (const department of departments) {
       const group = groupNumber(department.extensionFrom);
       if (!group) continue;
-      const members = extensions.filter((extension) => extension.departmentId === department.id && extension.active);
+      const members = extensions.filter(
+        (extension) => extension.departmentId === department.id && extension.active,
+      );
       await pbx
-        .setGlobal(`GROUP_${group}`, members.map((extension) => `PJSIP/${extension.number}`).join("&"))
-        .catch((error: Error) => this.log("cc_group_sync_failed", { group, message: error.message }));
+        .setGlobal(
+          `GROUP_${group}`,
+          members.map((extension) => `PJSIP/${extension.number}`).join("&"),
+        )
+        .catch((error: Error) =>
+          this.log("cc_group_sync_failed", { group, message: error.message }),
+        );
     }
   }
 
   private async unpublish(number: string) {
     await this.pbx()
       ?.removeExtension(number)
-      .catch((error: Error) => this.log("cc_extension_remove_failed", { number, message: error.message }));
+      .catch((error: Error) =>
+        this.log("cc_extension_remove_failed", { number, message: error.message }),
+      );
   }
 
   // ---- hotlines and dispositions -----------------------------------------------------------
@@ -347,12 +414,14 @@ export class CallCenterAdminService {
 
   async saveHotline(userId: string, hotlineId: string | null, body: Body) {
     await this.admin(userId);
-    if (!Array.isArray(body.options) || body.options.length > 10) throw invalid("Danh sách phím IVR không hợp lệ.");
+    if (!Array.isArray(body.options) || body.options.length > 10)
+      throw invalid("Danh sách phím IVR không hợp lệ.");
     const options = body.options.map((option: Body) => ({
       digit: text(option, "digit", 1, { pattern: /^[0-9]$/ }),
       departmentId: id(option.departmentId),
     }));
-    if (new Set(options.map((option) => option.digit)).size !== options.length) throw invalid("Mỗi phím chỉ dùng một lần.");
+    if (new Set(options.map((option) => option.digit)).size !== options.length)
+      throw invalid("Mỗi phím chỉ dùng một lần.");
     if (hotlineId && !(await this.repo.hotlines()).some((hotline) => hotline.id === id(hotlineId)))
       throw notFound("Không tìm thấy đường dây nóng.");
     const savedId = await this.repo.saveHotline({

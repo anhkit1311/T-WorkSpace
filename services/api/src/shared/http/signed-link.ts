@@ -12,7 +12,11 @@ const signature = (path: string, userId: string, expires: number) =>
 
 export function signLink(path: string, userId: string, ttlSeconds: number) {
   const expires = Math.floor(Date.now() / 1000) + ttlSeconds;
-  const query = new URLSearchParams({ u: userId, e: String(expires), s: signature(path, userId, expires) });
+  const query = new URLSearchParams({
+    u: userId,
+    e: String(expires),
+    s: signature(path, userId, expires),
+  });
   return { url: `${path}?${query}`, expiresAt: new Date(expires * 1000).toISOString() };
 }
 

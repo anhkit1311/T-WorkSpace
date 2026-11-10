@@ -8,9 +8,7 @@ export function MessagesPage() {
       <header className="messages-page__header">
         <div>
           <h1 className="messages-page__title">Tin nhắn</h1>
-          <p className="messages-page__subtitle">
-            Nhóm chat và trò chuyện riêng với đồng nghiệp
-          </p>
+          <p className="messages-page__subtitle">Nhóm chat và trò chuyện riêng với đồng nghiệp</p>
         </div>
       </header>
       <div className="messages-page__card">

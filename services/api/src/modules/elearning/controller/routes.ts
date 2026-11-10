@@ -28,7 +28,12 @@ const r = (method: Route["method"], path: string, handler: Handler, status = 200
 });
 
 /** REST controller of e-learning: maps HTTP onto the services, nothing more. */
-export function elearningRoutes(courses: CourseService, learning: LearningService, live: LiveClassService, media: LessonMediaService) {
+export function elearningRoutes(
+  courses: CourseService,
+  learning: LearningService,
+  live: LiveClassService,
+  media: LessonMediaService,
+) {
   const routes: Route[] = [
     r("GET", "/units", (u) => courses.units(u)),
     r("GET", "/courses", (u) => courses.list(u)),
@@ -36,13 +41,20 @@ export function elearningRoutes(courses: CourseService, learning: LearningServic
     r("GET", "/courses/:id", (u, m) => courses.detail(u, m[1])),
     r("PATCH", "/courses/:id", (u, m, b) => courses.update(u, m[1], b)),
     r("POST", "/courses/:id/instructors", (u, m, b) => courses.setInstructor(u, m[1], b, true)),
-    r("DELETE", "/courses/:id/instructors/:id", (u, m) => courses.setInstructor(u, m[1], { userId: m[2] }, false)),
+    r("DELETE", "/courses/:id/instructors/:id", (u, m) =>
+      courses.setInstructor(u, m[1], { userId: m[2] }, false),
+    ),
     r("POST", "/courses/:id/chapters", (u, m, b) => courses.addChapter(u, m[1], b), 201),
     r("PATCH", "/chapters/:id", (u, m, b) => courses.updateChapter(u, m[1], b)),
     r("DELETE", "/chapters/:id", (u, m) => courses.deleteChapter(u, m[1])),
     r("POST", "/chapters/:id/lessons", (u, m, b) => courses.addLesson(u, m[1], b), 201),
     r("POST", "/chapters/:id/live", (u, m, b) => live.create(u, m[1], b), 201),
-    r("POST", "/chapters/:id/call-lessons", (u, m, b) => media.importCallRecording(u, m[1], b), 201),
+    r(
+      "POST",
+      "/chapters/:id/call-lessons",
+      (u, m, b) => media.importCallRecording(u, m[1], b),
+      201,
+    ),
     r("GET", "/lessons/:id", (u, m) => learning.lesson(u, m[1])),
     r("PATCH", "/lessons/:id", (u, m, b) => courses.updateLesson(u, m[1], b)),
     r("DELETE", "/lessons/:id", (u, m) => courses.deleteLesson(u, m[1])),
@@ -69,7 +81,11 @@ export function elearningRoutes(courses: CourseService, learning: LearningServic
     r("POST", "/courses/:id/discussion", (u, m) => courses.discussion(u, m[1])),
   ];
 
-  return async function routesHandler({ request, response, pathname }: RouteContext): Promise<void> {
+  return async function routesHandler({
+    request,
+    response,
+    pathname,
+  }: RouteContext): Promise<void> {
     if (!pathname.startsWith("/api/elearning/")) return;
     // EL-8: certificate lookup is public (the QR code on a printed certificate), rate-limited per IP.
     const verify = pathname.match(/^\/api\/elearning\/verify\/([A-Za-z0-9-]{1,32})$/);
@@ -85,18 +101,30 @@ export function elearningRoutes(courses: CourseService, learning: LearningServic
       sendJson(response, 200, await media.upload(userId, upload[1], request));
       return;
     }
-    const file = pathname.match(new RegExp(`^/api/elearning/lessons/${uuid}/files/([A-Za-z0-9_.-]+)$`));
+    const file = pathname.match(
+      new RegExp(`^/api/elearning/lessons/${uuid}/files/([A-Za-z0-9_.-]+)$`),
+    );
     if (file && request.method === "GET") {
       const found = await media.file(await getAuthUserId(request), file[1], file[2]);
       const stored = await openMediaPath(found.file);
       if (!stored) throw new HttpError(404, "NOT_FOUND", "Không tìm thấy tệp.");
-      response.writeHead(200, { "Content-Type": found.type, "Content-Length": stored.size, "Cache-Control": "private, max-age=3600" });
+      response.writeHead(200, {
+        "Content-Type": found.type,
+        "Content-Length": stored.size,
+        "Cache-Control": "private, max-age=3600",
+      });
       await pipeline(stored.stream, response);
       return;
     }
-    const csv = pathname.match(new RegExp(`^/api/elearning/courses/${uuid}/progress(\\.csv|\\.xlsx)$`));
+    const csv = pathname.match(
+      new RegExp(`^/api/elearning/courses/${uuid}/progress(\\.csv|\\.xlsx)$`),
+    );
     if (csv && request.method === "GET") {
-      sendTable(response, await courses.progressTable(await getAuthUserId(request), csv[1]), csv[2]);
+      sendTable(
+        response,
+        await courses.progressTable(await getAuthUserId(request), csv[1]),
+        csv[2],
+      );
       return;
     }
     const candidates = routes.filter((route) => route.pattern.test(pathname));
@@ -108,12 +136,23 @@ export function elearningRoutes(courses: CourseService, learning: LearningServic
     if (route.method !== "GET") await limitRequest(request, `elearning:${userId}`, 300, 60);
     const body = route.method === "GET" || route.method === "DELETE" ? {} : await readJson(request);
     try {
-      sendJson(response, route.status, (await route.handler(userId, pathname.match(route.pattern)!, body)) ?? { ok: true });
+      sendJson(
+        response,
+        route.status,
+        (await route.handler(userId, pathname.match(route.pattern)!, body)) ?? { ok: true },
+      );
     } catch (error) {
       const pg = error as { code?: string };
-      if (pg.code === "23505") throw new HttpError(409, "DUPLICATE", "Dữ liệu bị trùng (ví dụ mã khóa học).");
-      if (pg.code === "23503") throw new HttpError(400, "INVALID_REFERENCE", "Dữ liệu tham chiếu không tồn tại hoặc đang được dùng.");
-      if (pg.code === "23514") throw new HttpError(400, "RULE_VIOLATION", "Dữ liệu vi phạm ràng buộc.");
+      if (pg.code === "23505")
+        throw new HttpError(409, "DUPLICATE", "Dữ liệu bị trùng (ví dụ mã khóa học).");
+      if (pg.code === "23503")
+        throw new HttpError(
+          400,
+          "INVALID_REFERENCE",
+          "Dữ liệu tham chiếu không tồn tại hoặc đang được dùng.",
+        );
+      if (pg.code === "23514")
+        throw new HttpError(400, "RULE_VIOLATION", "Dữ liệu vi phạm ràng buộc.");
       throw error;
     }
   };

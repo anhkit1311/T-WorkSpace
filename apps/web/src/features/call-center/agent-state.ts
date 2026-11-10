@@ -8,7 +8,10 @@ export const STATE_LABEL: Record<AgentState, string> = {
   on_call: "Đang đàm thoại",
   wrap_up: "Hoàn tất cuộc gọi",
 };
-export const STATE_TONE: Record<AgentState, "neutral" | "green" | "amber" | "blue" | "violet" | "red"> = {
+export const STATE_TONE: Record<
+  AgentState,
+  "neutral" | "green" | "amber" | "blue" | "violet" | "red"
+> = {
   offline: "neutral",
   ready: "green",
   not_ready: "amber",

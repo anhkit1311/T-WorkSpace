@@ -19,12 +19,14 @@ const SOURCES = ["media", "workspace", "academic"] as const;
  */
 export async function listActivity(userId: string, params: URLSearchParams) {
   const source = params.get("source") || null;
-  if (source && !SOURCES.includes(source as ActivitySource)) throw invalid("Nguồn nhật ký không hợp lệ.");
+  if (source && !SOURCES.includes(source as ActivitySource))
+    throw invalid("Nguồn nhật ký không hợp lệ.");
   const beforeText = params.get("before");
   const before = beforeText ? new Date(beforeText) : null;
   if (before && Number.isNaN(before.getTime())) throw invalid("Mốc thời gian không hợp lệ.");
   return withTransaction(async (client) => {
-    if (!(await loadActor(client, userId)).systemAdmin) throw forbidden("Chỉ quản trị hệ thống xem được nhật ký hoạt động.");
+    if (!(await loadActor(client, userId)).systemAdmin)
+      throw forbidden("Chỉ quản trị hệ thống xem được nhật ký hoạt động.");
     const rows = await client.query<ActivityItem & { at: Date }>(
       `SELECT * FROM (
          SELECT l.id::text, l.accessed_at AS at, 'media' AS source, u.display_name AS "actorName",

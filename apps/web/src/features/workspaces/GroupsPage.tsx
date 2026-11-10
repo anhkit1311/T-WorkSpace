@@ -10,7 +10,11 @@ import { governanceApi } from "./api";
 import { CreateGroupDialog, JoinGroupDialog, NoGroups } from "./GroupDialogs";
 import "./groups-page.css";
 
-const ROLE: Record<WorkspaceItem["role"], string> = { owner: "Chủ nhóm", admin: "Quản trị viên", member: "Thành viên" };
+const ROLE: Record<WorkspaceItem["role"], string> = {
+  owner: "Chủ nhóm",
+  admin: "Quản trị viên",
+  member: "Thành viên",
+};
 
 /**
  * "Nhóm của tôi": only for managing groups (create, join, members, leave). Day-to-day work lives in
@@ -31,7 +35,11 @@ export function GroupsPage() {
     let active = true;
     getWorkspacesApi(accessToken)
       .then((items) => active && (setGroups(items), setError("")))
-      .catch((reason) => active && setError(reason instanceof Error ? reason.message : "Không tải được danh sách nhóm."));
+      .catch(
+        (reason) =>
+          active &&
+          setError(reason instanceof Error ? reason.message : "Không tải được danh sách nhóm."),
+      );
     return () => {
       active = false;
     };
@@ -46,7 +54,11 @@ export function GroupsPage() {
       setLeaving(null);
       setRevision((value) => value + 1);
     } catch (reason) {
-      notify("Không thể rời nhóm", reason instanceof Error ? reason.message : "Vui lòng thử lại.", "warning");
+      notify(
+        "Không thể rời nhóm",
+        reason instanceof Error ? reason.message : "Vui lòng thử lại.",
+        "warning",
+      );
     } finally {
       setBusy(false);
     }
@@ -76,7 +88,9 @@ export function GroupsPage() {
         </p>
       )}
       {!groups && !error && <p role="status">Đang tải…</p>}
-      {groups?.length === 0 && <NoGroups text="Tạo một nhóm mới hoặc dùng mã mời để tham gia nhóm có sẵn." />}
+      {groups?.length === 0 && (
+        <NoGroups text="Tạo một nhóm mới hoặc dùng mã mời để tham gia nhóm có sẵn." />
+      )}
       {!!groups?.length && (
         <ul className="groups-page__list">
           {groups.map((group) => {
@@ -100,7 +114,12 @@ export function GroupsPage() {
                     </Button>
                   )}
                   {manages && (
-                    <Button size="sm" variant="secondary" icon="settings" onClick={() => navigate({ view: "admin", workspaceId: group.id })}>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      icon="settings"
+                      onClick={() => navigate({ view: "admin", workspaceId: group.id })}
+                    >
                       Quản lý
                     </Button>
                   )}
@@ -147,7 +166,9 @@ function MembersDialog({ group, onClose }: { group: WorkspaceItem; onClose: () =
     if (!accessToken) return;
     getWorkspaceMembersApi(accessToken, group.id)
       .then(setMembers)
-      .catch((reason) => setError(reason instanceof Error ? reason.message : "Không tải được thành viên."));
+      .catch((reason) =>
+        setError(reason instanceof Error ? reason.message : "Không tải được thành viên."),
+      );
   }, [accessToken, group.id]);
   return (
     <Modal title={`Thành viên: ${group.name}`} onClose={onClose}>
@@ -166,8 +187,12 @@ function MembersDialog({ group, onClose }: { group: WorkspaceItem; onClose: () =
                 </strong>
                 <span>{member.email}</span>
               </span>
-              <Badge tone={member.role === "member" ? "neutral" : "blue"}>{ROLE[member.role]}</Badge>
-              <span className={`groups-page__presence ${online ? "is-online" : ""}`}>{online ? "Trực tuyến" : "Ngoại tuyến"}</span>
+              <Badge tone={member.role === "member" ? "neutral" : "blue"}>
+                {ROLE[member.role]}
+              </Badge>
+              <span className={`groups-page__presence ${online ? "is-online" : ""}`}>
+                {online ? "Trực tuyến" : "Ngoại tuyến"}
+              </span>
             </li>
           );
         })}

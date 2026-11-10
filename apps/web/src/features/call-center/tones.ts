@@ -6,7 +6,10 @@
  */
 export type ToneKind = "ring" | "ringback";
 
-const PATTERNS: Record<ToneKind, { period: number; bursts: { at: number; length: number; freqs: number[]; gain: number }[] }> = {
+const PATTERNS: Record<
+  ToneKind,
+  { period: number; bursts: { at: number; length: number; freqs: number[]; gain: number }[] }
+> = {
   ringback: { period: 5, bursts: [{ at: 0, length: 1, freqs: [425], gain: 0.12 }] },
   ring: {
     period: 3,

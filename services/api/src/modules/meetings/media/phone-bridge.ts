@@ -26,7 +26,12 @@ const log = (event: string, details: Record<string, unknown>) =>
 export function mixFilter(count: number) {
   const labels = Array.from({ length: count }, (_, i) => `[a${i}]`);
   const resampled = labels.map((label, i) => `[0:a:${i}]aresample=async=1${label}`);
-  return [...resampled, count === 1 ? "[a0]anull[a]" : `${labels.join("")}amix=inputs=${count}:duration=longest:normalize=0[a]`].join(";");
+  return [
+    ...resampled,
+    count === 1
+      ? "[a0]anull[a]"
+      : `${labels.join("")}amix=inputs=${count}:duration=longest:normalize=0[a]`,
+  ].join(";");
 }
 
 function stopFfmpeg(child: ChildProcess | null) {
@@ -38,7 +43,9 @@ function stopFfmpeg(child: ChildProcess | null) {
 
 function spawnLogged(args: string[], event: string) {
   const child = spawnFfmpeg(args, true);
-  child.stderr!.on("data", (chunk: Buffer) => log(event, { message: chunk.toString().trim().slice(0, 300) }));
+  child.stderr!.on("data", (chunk: Buffer) =>
+    log(event, { message: chunk.toString().trim().slice(0, 300) }),
+  );
   child.on("error", (error) => log(event, { message: error.message }));
   return child;
 }
@@ -71,18 +78,60 @@ export class PhoneLeg {
   async connect(asterisk: { address: string; port: number }): Promise<ProducerInfo> {
     await mkdir(path.join(config.mediaDir, DIR), { recursive: true });
     const ssrc = randomInt(1, 2 ** 31);
-    const { producer, port, rtcpPort } = await roomManager.addPhonePeer(this.roomId, this.socketId, this.userId, this.displayName, ssrc);
+    const { producer, port, rtcpPort } = await roomManager.addPhonePeer(
+      this.roomId,
+      this.socketId,
+      this.userId,
+      this.displayName,
+      ssrc,
+    );
     this.producer = producer;
     const upSdp = `${DIR}/${this.name}-up.sdp`;
     await writeFile(
       path.join(config.mediaDir, upSdp),
-      ["v=0", "o=- 0 0 IN IP4 127.0.0.1", "s=tws-phone", `c=IN IP4 ${asterisk.address}`, "t=0 0", `m=audio ${this.listenPort} RTP/AVP 0`, "a=rtpmap:0 PCMU/8000", "a=recvonly", ""].join("\r\n"),
+      [
+        "v=0",
+        "o=- 0 0 IN IP4 127.0.0.1",
+        "s=tws-phone",
+        `c=IN IP4 ${asterisk.address}`,
+        "t=0 0",
+        `m=audio ${this.listenPort} RTP/AVP 0`,
+        "a=rtpmap:0 PCMU/8000",
+        "a=recvonly",
+        "",
+      ].join("\r\n"),
     );
     this.uplink = spawnLogged(
       [
-        "-protocol_whitelist", "file,udp,rtp", "-fflags", "nobuffer", "-analyzeduration", "0", "-f", "sdp", "-i", upSdp,
-        "-map", "0:a:0", "-c:a", "libopus", "-application", "voip", "-b:a", "24k", "-ar", "48000", "-ac", "2",
-        "-payload_type", "111", "-ssrc", String(ssrc), "-f", "rtp", `rtp://${config.phoneSfuHost}:${port}?rtcpport=${rtcpPort}&pkt_size=1200`,
+        "-protocol_whitelist",
+        "file,udp,rtp",
+        "-fflags",
+        "nobuffer",
+        "-analyzeduration",
+        "0",
+        "-f",
+        "sdp",
+        "-i",
+        upSdp,
+        "-map",
+        "0:a:0",
+        "-c:a",
+        "libopus",
+        "-application",
+        "voip",
+        "-b:a",
+        "24k",
+        "-ar",
+        "48000",
+        "-ac",
+        "2",
+        "-payload_type",
+        "111",
+        "-ssrc",
+        String(ssrc),
+        "-f",
+        "rtp",
+        `rtp://${config.phoneSfuHost}:${port}?rtcpport=${rtcpPort}&pkt_size=1200`,
       ],
       "phone_uplink_ffmpeg",
     );
@@ -92,7 +141,10 @@ export class PhoneLeg {
   }
 
   /** How many others (web peers' microphones) the caller can hear right now. */
-  others = () => (roomManager.recordingSource(this.roomId)?.producers ?? []).filter((item) => item.socketId !== this.socketId).length;
+  others = () =>
+    (roomManager.recordingSource(this.roomId)?.producers ?? []).filter(
+      (item) => item.socketId !== this.socketId,
+    ).length;
 
   private tick(asterisk: { address: string; port: number }) {
     this.busy = this.busy.then(async () => {
@@ -111,26 +163,57 @@ export class PhoneLeg {
         for (const mic of mics) {
           const port = takePort();
           this.downPorts.push(port);
-          const transport = await source.router.createPlainTransport({ listenIp: "127.0.0.1", rtcpMux: false, comedia: false });
+          const transport = await source.router.createPlainTransport({
+            listenIp: "127.0.0.1",
+            rtcpMux: false,
+            comedia: false,
+          });
           this.downTransports.push(transport);
           await transport.connect({ ip: "127.0.0.1", port, rtcpPort: port + 1 });
-          streams.push({ consumer: await transport.consume({ producerId: mic.producerId, rtpCapabilities: source.router.rtpCapabilities, paused: true }), port });
+          streams.push({
+            consumer: await transport.consume({
+              producerId: mic.producerId,
+              rtpCapabilities: source.router.rtpCapabilities,
+              paused: true,
+            }),
+            port,
+          });
         }
         const downSdp = `${DIR}/${this.name}-down.sdp`;
         await writeFile(path.join(config.mediaDir, downSdp), sdp(streams));
         this.downlink = spawnLogged(
           [
-            "-protocol_whitelist", "file,udp,rtp", "-fflags", "nobuffer", "-f", "sdp", "-i", downSdp,
-            "-filter_complex", mixFilter(streams.length), "-map", "[a]", "-ac", "1", "-ar", "8000", "-c:a", "pcm_mulaw",
+            "-protocol_whitelist",
+            "file,udp,rtp",
+            "-fflags",
+            "nobuffer",
+            "-f",
+            "sdp",
+            "-i",
+            downSdp,
+            "-filter_complex",
+            mixFilter(streams.length),
+            "-map",
+            "[a]",
+            "-ac",
+            "1",
+            "-ar",
+            "8000",
+            "-c:a",
+            "pcm_mulaw",
             // A fixed source port: Asterisk's strict RTP keeps the first source it learnt.
-            "-f", "rtp", `rtp://${asterisk.address}:${asterisk.port}?localrtpport=${this.sendPort}`,
+            "-f",
+            "rtp",
+            `rtp://${asterisk.address}:${asterisk.port}?localrtpport=${this.sendPort}`,
           ],
           "phone_downlink_ffmpeg",
         );
         await new Promise((resolve) => setTimeout(resolve, LISTEN_DELAY_MS));
         for (const { consumer } of streams) await consumer.resume();
       } catch (error) {
-        log("phone_downlink_failed", { message: error instanceof Error ? error.message : String(error) });
+        log("phone_downlink_failed", {
+          message: error instanceof Error ? error.message : String(error),
+        });
         await this.stopDownlink();
         this.downKey = ""; // try again on the next tick
       }
@@ -156,9 +239,15 @@ export class PhoneLeg {
     stopFfmpeg(this.uplink);
     releasePort(this.listenPort);
     releasePort(this.sendPort);
-    const { closedProducerIds } = this.producer ? roomManager.leaveRoom(this.roomId, this.socketId) : { closedProducerIds: [] };
-    await rm(path.join(config.mediaDir, DIR, `${this.name}-up.sdp`), { force: true }).catch(() => {});
-    await rm(path.join(config.mediaDir, DIR, `${this.name}-down.sdp`), { force: true }).catch(() => {});
+    const { closedProducerIds } = this.producer
+      ? roomManager.leaveRoom(this.roomId, this.socketId)
+      : { closedProducerIds: [] };
+    await rm(path.join(config.mediaDir, DIR, `${this.name}-up.sdp`), { force: true }).catch(
+      () => {},
+    );
+    await rm(path.join(config.mediaDir, DIR, `${this.name}-down.sdp`), { force: true }).catch(
+      () => {},
+    );
     return closedProducerIds;
   }
 }

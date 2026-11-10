@@ -35,7 +35,11 @@ export function newAttention(
   const before = new Map(previous.participants.map((p) => [p.userId, p]));
   const others = next.participants.filter((p) => p.userId !== selfId);
   return {
-    waiting: others.filter((p) => p.state === "waiting" && before.get(p.userId)?.state !== "waiting"),
-    hands: others.filter((p) => p.state === "admitted" && p.raisedHand && !before.get(p.userId)?.raisedHand),
+    waiting: others.filter(
+      (p) => p.state === "waiting" && before.get(p.userId)?.state !== "waiting",
+    ),
+    hands: others.filter(
+      (p) => p.state === "admitted" && p.raisedHand && !before.get(p.userId)?.raisedHand,
+    ),
   };
 }

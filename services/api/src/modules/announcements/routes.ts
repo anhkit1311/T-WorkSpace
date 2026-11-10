@@ -77,7 +77,11 @@ export async function announcementRoutes({
   if (itemMatch && request.method === "PATCH") {
     const announcementId = itemMatch[1];
     const body = await readJson(request);
-    const item = await updateAnnouncement(userId, announcementId, body as unknown as UpdateAnnouncementInput);
+    const item = await updateAnnouncement(
+      userId,
+      announcementId,
+      body as unknown as UpdateAnnouncementInput,
+    );
     io?.emit("announcements_changed");
     sendJson(response, 200, { item });
     return;

@@ -4,3 +4,7 @@ postgres-data/
 package-lock.json
 backups/
 **/.vite-cache/
+docs/benchmarks/raw/
+docs/evidence/
+docs/benchmarks/benchmark-results.json
+**/*.md

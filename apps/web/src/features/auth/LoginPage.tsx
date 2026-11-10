@@ -1,15 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import {
-  ArrowLeft,
-  Check,
-  Eye,
-  EyeOff,
-  Lock,
-  Mail,
-  RotateCw,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowLeft, Check, Eye, EyeOff, Lock, Mail, RotateCw, ShieldCheck } from "lucide-react";
 import { ApiError } from "./api";
 import { authErrorField } from "./auth-error-field";
 import { useApp } from "../../app/providers/AppContext";
@@ -20,11 +11,7 @@ import { useMotionSafe } from "../../shared/motion/MotionProvider";
 
 export function LoginPage() {
   const safe = useMotionSafe();
-  const {
-    login,
-    verifyOtp,
-    resendOtp,
-  } = useApp();
+  const { login, verifyOtp, resendOtp } = useApp();
 
   const [authStep, setAuthStep] = useState<"form" | "otp">("form");
   const [email, setEmail] = useState("");
@@ -67,7 +54,10 @@ export function LoginPage() {
     }
 
     setErrors(next);
-    if (Object.keys(next).length > 0) { focusFirstInvalid(event.currentTarget); return; }
+    if (Object.keys(next).length > 0) {
+      focusFirstInvalid(event.currentTarget);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -118,30 +108,36 @@ export function LoginPage() {
 
   const handleResendOtpCode = async () => {
     if (cooldown > 0 || resending || !otpEmail) return;
-    await withPending(async () => { try {
-      const res = await resendOtp(otpEmail);
-      setCooldown(res.cooldownSeconds || 60);
-      setErrors({});
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Không thể gửi lại mã OTP. Vui lòng thử lại sau.";
-      setErrors({ general: message });
-    } }, setResending);
+    await withPending(async () => {
+      try {
+        const res = await resendOtp(otpEmail);
+        setCooldown(res.cooldownSeconds || 60);
+        setErrors({});
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "Không thể gửi lại mã OTP. Vui lòng thử lại sau.";
+        setErrors({ general: message });
+      }
+    }, setResending);
   };
 
   return (
     // Bubble-phase onInput, not onInputCapture: a capture-phase state update re-renders the
     // controlled input with its old value before React's onChange runs, swallowing keystrokes.
-    <main id="main-content" className="editorial-auth-shell" onInput={event => {
-      if (event.target instanceof HTMLInputElement && event.target.name) {
-        const name = event.target.name as keyof typeof errors;
-        setErrors(previous =>
-          previous[name] === undefined && previous.general === undefined
-            ? previous
-            : { ...previous, [name]: undefined, general: undefined },
-        );
-      }
-    }}>
+    <main
+      id="main-content"
+      className="editorial-auth-shell"
+      onInput={(event) => {
+        if (event.target instanceof HTMLInputElement && event.target.name) {
+          const name = event.target.name as keyof typeof errors;
+          setErrors((previous) =>
+            previous[name] === undefined && previous.general === undefined
+              ? previous
+              : { ...previous, [name]: undefined, general: undefined },
+          );
+        }
+      }}
+    >
       {/* Top Bar with Brand */}
       <header className="editorial-auth-nav">
         <div className="editorial-auth-brand" aria-label="T-WorkSpace">
@@ -156,7 +152,11 @@ export function LoginPage() {
             key={authStep}
             initial={safe.reduced ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: safe.reduced ? 1 : 0, y: safe.reduced ? 0 : -8, transition: { duration: safe.duration(0.15) } }}
+            exit={{
+              opacity: safe.reduced ? 1 : 0,
+              y: safe.reduced ? 0 : -8,
+              transition: { duration: safe.duration(0.15) },
+            }}
             transition={{ duration: safe.duration(0.22), ease: [0.16, 1, 0.3, 1] }}
           >
             {authStep === "otp" ? (
@@ -165,7 +165,7 @@ export function LoginPage() {
                 <button
                   type="button"
                   className="editorial-sublink editorial-auth-style-5"
-                  
+
                   onClick={() => {
                     setAuthStep("form");
                     setErrors({});
@@ -196,7 +196,10 @@ export function LoginPage() {
 
                 <form onSubmit={handleVerifyOtpSubmit} noValidate>
                   <div className="editorial-field">
-                    <label className="editorial-field-label editorial-auth-style-9" htmlFor="auth-code" >
+                    <label
+                      className="editorial-field-label editorial-auth-style-9"
+                      htmlFor="auth-code"
+                    >
                       Nhập mã OTP 6 chữ số
                     </label>
                     <input
@@ -205,7 +208,11 @@ export function LoginPage() {
                       pattern="[0-9]*"
                       maxLength={6}
                       value={otpCode}
-                      id="auth-code" name="otp" autoComplete="one-time-code" aria-invalid={Boolean(errors.otp)} aria-describedby={errors.otp ? "auth-code-error" : undefined}
+                      id="auth-code"
+                      name="otp"
+                      autoComplete="one-time-code"
+                      aria-invalid={Boolean(errors.otp)}
+                      aria-describedby={errors.otp ? "auth-code-error" : undefined}
                       onChange={(e) => {
                         const val = e.target.value.replace(/\D/g, "").slice(0, 6);
                         setOtpCode(val);
@@ -221,7 +228,11 @@ export function LoginPage() {
                       className="editorial-otp-input"
                     />
                     {errors.otp && (
-                      <div className="editorial-field-error editorial-auth-style-9" id="auth-code-error" role="alert" >
+                      <div
+                        className="editorial-field-error editorial-auth-style-9"
+                        id="auth-code-error"
+                        role="alert"
+                      >
                         {errors.otp}
                       </div>
                     )}
@@ -244,9 +255,7 @@ export function LoginPage() {
                   </button>
                 </form>
 
-                <div
-                  className="editorial-auth-style-10"
-                >
+                <div className="editorial-auth-style-10">
                   <button
                     type="button"
                     className="editorial-sublink"
@@ -263,11 +272,12 @@ export function LoginPage() {
                     disabled={cooldown > 0 || resending}
                     onClick={handleResendOtpCode}
                     className="editorial-sublink editorial-auth-style-11"
-                    
                   >
                     <RotateCw
-                      className={(resending ? "editorial-otp-resending" : undefined) + " editorial-auth-style-12"}
-                      
+                      className={
+                        (resending ? "editorial-otp-resending" : undefined) +
+                        " editorial-auth-style-12"
+                      }
                     />
                     <span>
                       {resending
@@ -300,31 +310,45 @@ export function LoginPage() {
 
                 <form onSubmit={submit} noValidate>
                   <div className="editorial-field">
-                    <label className="editorial-field-label" htmlFor="auth-email">Email hoặc mã số SV / GV</label>
+                    <label className="editorial-field-label" htmlFor="auth-email">
+                      Email hoặc mã số SV / GV
+                    </label>
                     <div className="editorial-input-wrap">
-                      <Mail className="editorial-input-icon editorial-auth-style-6"  />
+                      <Mail className="editorial-input-icon editorial-auth-style-6" />
                       <input
                         type="text"
                         autoComplete="username"
                         value={email}
-                        id="auth-email" name="email" aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "auth-email-error" : undefined}
+                        id="auth-email"
+                        name="email"
+                        aria-invalid={Boolean(errors.email)}
+                        aria-describedby={errors.email ? "auth-email-error" : undefined}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="523H0048 hoặc mssv@student.tdtu.edu.vn"
                         className="editorial-input"
                       />
                     </div>
-                    {errors.email && <div className="editorial-field-error" id="auth-email-error" role="alert">{errors.email}</div>}
+                    {errors.email && (
+                      <div className="editorial-field-error" id="auth-email-error" role="alert">
+                        {errors.email}
+                      </div>
+                    )}
                   </div>
 
                   <div className="editorial-field">
-                    <label className="editorial-field-label" htmlFor="auth-password">Mật khẩu</label>
+                    <label className="editorial-field-label" htmlFor="auth-password">
+                      Mật khẩu
+                    </label>
                     <div className="editorial-input-wrap">
-                      <Lock className="editorial-input-icon editorial-auth-style-6"  />
+                      <Lock className="editorial-input-icon editorial-auth-style-6" />
                       <input
                         type={showPassword ? "text" : "password"}
                         autoComplete="current-password"
                         value={password}
-                        id="auth-password" name="password" aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? "auth-password-error" : undefined}
+                        id="auth-password"
+                        name="password"
+                        aria-invalid={Boolean(errors.password)}
+                        aria-describedby={errors.password ? "auth-password-error" : undefined}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Tối thiểu 8 ký tự"
                         className="editorial-input"
@@ -343,7 +367,9 @@ export function LoginPage() {
                       </button>
                     </div>
                     {errors.password && (
-                      <div className="editorial-field-error" id="auth-password-error" role="alert">{errors.password}</div>
+                      <div className="editorial-field-error" id="auth-password-error" role="alert">
+                        {errors.password}
+                      </div>
                     )}
                   </div>
 
@@ -351,14 +377,17 @@ export function LoginPage() {
                     Quên mật khẩu? Vui lòng liên hệ hotline để được hỗ trợ.
                   </p>
 
-                  <button type="submit" disabled={loading} aria-busy={loading || undefined} className="editorial-submit-btn">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    aria-busy={loading || undefined}
+                    className="editorial-submit-btn"
+                  >
                     {loading ? "Đang xử lý..." : "Đăng nhập"}
                   </button>
                 </form>
 
-                <div
-                  className="editorial-auth-style-14"
-                >
+                <div className="editorial-auth-style-14">
                   <ShieldCheck className="editorial-auth-style-4" />
                   <span>Bảo mật phiên đăng nhập qua JWT & HttpOnly Session Cookie</span>
                 </div>

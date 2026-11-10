@@ -23,7 +23,13 @@ import type { PoolClient } from "pg";
 import { query, withTransaction } from "../../../infrastructure/database/db.js";
 import type { Segment } from "../../../infrastructure/speech/transcribe.js";
 import type { KpiCall } from "../domain/kpi.js";
-import type { AcdStore, AgentRecord, CallPatch, DepartmentSettings, HotlineRoute } from "../domain/ports.js";
+import type {
+  AcdStore,
+  AgentRecord,
+  CallPatch,
+  DepartmentSettings,
+  HotlineRoute,
+} from "../domain/ports.js";
 
 const TICKET_COLUMNS = `t.id,'TK-'||lpad(t.number::text,6,'0') AS code,t.department_id,du.name AS department_name,t.source,t.call_id,
   t.voicemail_id,t.caller_number,cu.display_name AS caller_name,t.subject,t.description,t.status,t.priority,t.assignee_id,
@@ -80,7 +86,11 @@ export class CallCenterRepository implements AcdStore {
   // ---- ACD -----------------------------------------------------------------------------------
 
   async hotline(number: string | null): Promise<HotlineRoute | null> {
-    const hotline = await query<{ id: string; number: string; fallback_department_id: string | null }>(
+    const hotline = await query<{
+      id: string;
+      number: string;
+      fallback_department_id: string | null;
+    }>(
       number === null
         ? `SELECT id,number,fallback_department_id FROM cc_hotlines WHERE active ORDER BY created_at LIMIT 1`
         : `SELECT id,number,fallback_department_id FROM cc_hotlines WHERE active AND number=$1`,
@@ -96,7 +106,10 @@ export class CallCenterRepository implements AcdStore {
       id: row.id,
       number: row.number,
       fallbackDepartmentId: row.fallback_department_id,
-      options: options.rows.map((option) => ({ digit: option.digit, departmentId: option.department_id })),
+      options: options.rows.map((option) => ({
+        digit: option.digit,
+        departmentId: option.department_id,
+      })),
     };
   }
 
@@ -137,7 +150,10 @@ export class CallCenterRepository implements AcdStore {
   async callerProfile(number: string, userId: string | null): Promise<CcCallerProfile> {
     const [student, tickets, courses, calls] = await Promise.all([
       // A numeric user code is an MSSV (same rule as the attendance export).
-      query<{ student_code: string }>(`SELECT user_code AS student_code FROM users WHERE id=$1::uuid AND user_code ~ '^[0-9]'`, [userId]),
+      query<{ student_code: string }>(
+        `SELECT user_code AS student_code FROM users WHERE id=$1::uuid AND user_code ~ '^[0-9]'`,
+        [userId],
+      ),
       query<{ id: string; code: string; subject: string; status: TicketStatus; updated_at: Date }>(
         `SELECT id,'TK-'||lpad(number::text,6,'0') AS code,subject,status,updated_at FROM cc_tickets
          WHERE caller_user_id=$1::uuid OR ($1::uuid IS NULL AND caller_number=$2) ORDER BY (status IN ('resolved','closed')),updated_at DESC LIMIT 5`,
@@ -148,7 +164,13 @@ export class CallCenterRepository implements AcdStore {
          WHERE e.user_id=$1::uuid ORDER BY e.enrolled_at DESC LIMIT 5`,
         [userId],
       ),
-      query<{ started_at: Date; outcome: CallOutcome | null; department_name: string | null; agent_name: string | null; notes: string }>(
+      query<{
+        started_at: Date;
+        outcome: CallOutcome | null;
+        department_name: string | null;
+        agent_name: string | null;
+        notes: string;
+      }>(
         `SELECT c.started_at,c.outcome,du.name AS department_name,au.display_name AS agent_name,c.notes FROM cc_calls c
            LEFT JOIN academic_units du ON du.id=c.department_id LEFT JOIN users au ON au.id=c.agent_user_id
          WHERE c.ended_at IS NOT NULL AND (c.caller_user_id=$1::uuid OR c.caller_number=$2) ORDER BY c.started_at DESC LIMIT 5`,
@@ -158,7 +180,13 @@ export class CallCenterRepository implements AcdStore {
     const row = student.rows[0];
     return {
       student: row ? { code: row.student_code, className: "", faculty: "" } : null,
-      tickets: tickets.rows.map((item) => ({ id: item.id, code: item.code, subject: item.subject, status: item.status, updatedAt: item.updated_at.toISOString() })),
+      tickets: tickets.rows.map((item) => ({
+        id: item.id,
+        code: item.code,
+        subject: item.subject,
+        status: item.status,
+        updatedAt: item.updated_at.toISOString(),
+      })),
       courses: courses.rows,
       calls: calls.rows.map((item) => ({
         startedAt: item.started_at.toISOString(),
@@ -197,7 +225,9 @@ export class CallCenterRepository implements AcdStore {
       agentUserId: "agent_user_id",
       recordingKey: "recording_key",
     };
-    const entries = (Object.keys(patch) as (keyof CallPatch)[]).filter((key) => patch[key] !== undefined);
+    const entries = (Object.keys(patch) as (keyof CallPatch)[]).filter(
+      (key) => patch[key] !== undefined,
+    );
     if (!entries.length) return;
     await query(
       `UPDATE cc_calls SET ${entries.map((key, index) => `${columns[key]}=$${index + 2}`).join(",")} WHERE id=$1`,
@@ -211,7 +241,14 @@ export class CallCenterRepository implements AcdStore {
       await client.query(
         `INSERT INTO cc_voicemails(id,department_id,call_id,caller_number,duration_seconds,recording_key)
          VALUES($1,$2,$3,$4,$5,$6)`,
-        [voicemailId, input.departmentId, input.callId, input.callerNumber, Math.round(input.durationSeconds), input.recordingKey],
+        [
+          voicemailId,
+          input.departmentId,
+          input.callId,
+          input.callerNumber,
+          Math.round(input.durationSeconds),
+          input.recordingKey,
+        ],
       );
       if (input.departmentId)
         await this.followUp(client, {
@@ -292,18 +329,27 @@ export class CallCenterRepository implements AcdStore {
         `UPDATE cc_tickets SET updated_at=now(), priority=CASE WHEN $2 AND priority IN ('low','normal') THEN 'high' ELSE priority END WHERE id=$1`,
         [open.id, input.priority === "high"],
       );
-      await client.query(`INSERT INTO cc_ticket_events(created_at,id,ticket_id,kind,body,call_id) VALUES(clock_timestamp(),$1,$2,'comment',$3,$4)`, [
-        randomUUID(),
-        open.id,
-        input.note,
-        input.callId,
-      ]);
+      await client.query(
+        `INSERT INTO cc_ticket_events(created_at,id,ticket_id,kind,body,call_id) VALUES(clock_timestamp(),$1,$2,'comment',$3,$4)`,
+        [randomUUID(), open.id, input.note, input.callId],
+      );
       return;
     }
     await client.query(
       `INSERT INTO cc_tickets(id,department_id,source,call_id,voicemail_id,caller_number,caller_user_id,subject,description,priority)
        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [randomUUID(), input.departmentId, input.source, input.callId, input.voicemailId, input.callerNumber, input.callerUserId, input.subject, input.note, input.priority ?? "normal"],
+      [
+        randomUUID(),
+        input.departmentId,
+        input.source,
+        input.callId,
+        input.voicemailId,
+        input.callerNumber,
+        input.callerUserId,
+        input.subject,
+        input.note,
+        input.priority ?? "normal",
+      ],
     );
   }
 
@@ -338,7 +384,10 @@ export class CallCenterRepository implements AcdStore {
 
   async recordAgentState(userId: string, state: AgentState, reason: string, callId: string | null) {
     await withTransaction(async (client) => {
-      await client.query(`UPDATE cc_agent_states SET ended_at=now() WHERE user_id=$1 AND ended_at IS NULL`, [userId]);
+      await client.query(
+        `UPDATE cc_agent_states SET ended_at=now() WHERE user_id=$1 AND ended_at IS NULL`,
+        [userId],
+      );
       await client.query(
         `INSERT INTO cc_agent_states(id,user_id,state,reason,call_id) VALUES($1,$2,$3,$4,$5)`,
         [randomUUID(), userId, state, reason.slice(0, 80), callId],
@@ -347,15 +396,21 @@ export class CallCenterRepository implements AcdStore {
   }
 
   async closeDanglingCalls(): Promise<number> {
-    const result = await query(`UPDATE cc_calls SET ended_at=now(), outcome='failed' WHERE ended_at IS NULL`);
+    const result = await query(
+      `UPDATE cc_calls SET ended_at=now(), outcome='failed' WHERE ended_at IS NULL`,
+    );
     return result.rowCount ?? 0;
   }
 
   // ---- access ----------------------------------------------------------------------------------
 
-  async access(userId: string): Promise<{ isAdmin: boolean; roles: Map<string, Set<CallCenterRole>> }> {
+  async access(
+    userId: string,
+  ): Promise<{ isAdmin: boolean; roles: Map<string, Set<CallCenterRole>> }> {
     const [admin, members] = await Promise.all([
-      query(`SELECT 1 FROM academic_role_grants WHERE user_id=$1 AND role='system_admin'`, [userId]),
+      query(`SELECT 1 FROM academic_role_grants WHERE user_id=$1 AND role='system_admin'`, [
+        userId,
+      ]),
       query<{ department_id: string; role: CallCenterRole }>(
         `SELECT department_id,role FROM cc_members WHERE user_id=$1`,
         [userId],
@@ -363,7 +418,10 @@ export class CallCenterRepository implements AcdStore {
     ]);
     const roles = new Map<string, Set<CallCenterRole>>();
     for (const row of members.rows)
-      (roles.get(row.department_id) ?? roles.set(row.department_id, new Set()).get(row.department_id)!).add(row.role);
+      (
+        roles.get(row.department_id) ??
+        roles.set(row.department_id, new Set()).get(row.department_id)!
+      ).add(row.role);
     return { isAdmin: Boolean(admin.rowCount), roles };
   }
 
@@ -406,7 +464,13 @@ export class CallCenterRepository implements AcdStore {
          WHERE department_id=ANY($1::uuid[]) ORDER BY weekday,opens`,
         [unitIds],
       ),
-      query<{ department_id: string; user_id: string; display_name: string; email: string; role: CallCenterRole }>(
+      query<{
+        department_id: string;
+        user_id: string;
+        display_name: string;
+        email: string;
+        role: CallCenterRole;
+      }>(
         `SELECT m.department_id,m.user_id,u.display_name,u.email,m.role FROM cc_members m JOIN users u ON u.id=m.user_id
          WHERE m.department_id=ANY($1::uuid[]) ORDER BY m.role DESC,u.display_name`,
         [unitIds],
@@ -428,10 +492,19 @@ export class CallCenterRepository implements AcdStore {
       qaThreshold: row.qa_threshold,
       hours: hours.rows
         .filter((hour) => hour.department_id === row.unit_id)
-        .map((hour) => ({ weekday: hour.weekday, opens: time(hour.opens), closes: time(hour.closes) })),
+        .map((hour) => ({
+          weekday: hour.weekday,
+          opens: time(hour.opens),
+          closes: time(hour.closes),
+        })),
       members: members.rows
         .filter((member) => member.department_id === row.unit_id)
-        .map((member) => ({ userId: member.user_id, displayName: member.display_name, email: member.email, role: member.role })),
+        .map((member) => ({
+          userId: member.user_id,
+          displayName: member.display_name,
+          email: member.email,
+          role: member.role,
+        })),
     }));
   }
 
@@ -456,11 +529,22 @@ export class CallCenterRepository implements AcdStore {
   }): Promise<string> {
     const id = randomUUID();
     await withTransaction(async (client) => {
-      await client.query(`INSERT INTO academic_units(id,code,name,kind) VALUES($1,$2,$3,'office')`, [id, input.code, input.name]);
+      await client.query(
+        `INSERT INTO academic_units(id,code,name,kind) VALUES($1,$2,$3,'office')`,
+        [id, input.code, input.name],
+      );
       await client.query(
         `INSERT INTO cc_departments(unit_id,extension_from,extension_to,strategy,ring_seconds,max_wait_seconds,wrap_up_seconds)
          VALUES($1,$2,$3,$4,$5,$6,$7)`,
-        [id, input.extensionFrom, input.extensionTo, input.strategy, input.ringSeconds, input.maxWaitSeconds, input.wrapUpSeconds],
+        [
+          id,
+          input.extensionFrom,
+          input.extensionTo,
+          input.strategy,
+          input.ringSeconds,
+          input.maxWaitSeconds,
+          input.wrapUpSeconds,
+        ],
       );
     });
     return id;
@@ -485,8 +569,17 @@ export class CallCenterRepository implements AcdStore {
       await client.query(
         `UPDATE cc_departments SET strategy=$2,ring_seconds=$3,max_wait_seconds=$4,wrap_up_seconds=$5,active=$6,
            training_course_id=$7,coaching_course_id=$8,qa_threshold=$9 WHERE unit_id=$1`,
-        [id, input.strategy, input.ringSeconds, input.maxWaitSeconds, input.wrapUpSeconds, input.active,
-          input.trainingCourseId, input.coachingCourseId, input.qaThreshold],
+        [
+          id,
+          input.strategy,
+          input.ringSeconds,
+          input.maxWaitSeconds,
+          input.wrapUpSeconds,
+          input.active,
+          input.trainingCourseId,
+          input.coachingCourseId,
+          input.qaThreshold,
+        ],
       );
     });
   }
@@ -494,7 +587,9 @@ export class CallCenterRepository implements AcdStore {
   // ---- LT-4 training gate -------------------------------------------------------------------------
 
   /** Published required courses of the agent's departments that the agent has not completed. */
-  async pendingTraining(userId: string): Promise<{ courseId: string; code: string; title: string; percent: number }[]> {
+  async pendingTraining(
+    userId: string,
+  ): Promise<{ courseId: string; code: string; title: string; percent: number }[]> {
     return (
       await query<{ courseId: string; code: string; title: string; percent: number }>(
         `SELECT DISTINCT c.id AS "courseId",c.code,c.title,
@@ -511,7 +606,12 @@ export class CallCenterRepository implements AcdStore {
   }
 
   /** Enrolls the department's agents (or one of them) in a course; existing enrollments stay. */
-  async enrollAgents(departmentId: string, courseId: string, assignedBy: string | null, userId: string | null = null) {
+  async enrollAgents(
+    departmentId: string,
+    courseId: string,
+    assignedBy: string | null,
+    userId: string | null = null,
+  ) {
     await query(
       `INSERT INTO course_enrollments(course_id,user_id,source,assigned_by)
        SELECT $2,m.user_id,'assigned',$3 FROM cc_members m
@@ -522,7 +622,11 @@ export class CallCenterRepository implements AcdStore {
   }
 
   async publishedCourses(): Promise<{ id: string; code: string; title: string }[]> {
-    return (await query<{ id: string; code: string; title: string }>(`SELECT id,code,title FROM courses WHERE status='published' ORDER BY code`)).rows;
+    return (
+      await query<{ id: string; code: string; title: string }>(
+        `SELECT id,code,title FROM courses WHERE status='published' ORDER BY code`,
+      )
+    ).rows;
   }
 
   async replaceHours(id: string, hours: { weekday: number; opens: string; closes: string }[]) {
@@ -541,7 +645,9 @@ export class CallCenterRepository implements AcdStore {
       `SELECT id,display_name FROM users WHERE lower(email)=lower($1)`,
       [email],
     );
-    return result.rows[0] ? { id: result.rows[0].id, displayName: result.rows[0].display_name } : null;
+    return result.rows[0]
+      ? { id: result.rows[0].id, displayName: result.rows[0].display_name }
+      : null;
   }
 
   async addMember(departmentId: string, userId: string, role: CallCenterRole, grantedBy: string) {
@@ -553,11 +659,10 @@ export class CallCenterRepository implements AcdStore {
   }
 
   async removeMember(departmentId: string, userId: string, role: CallCenterRole) {
-    const result = await query(`DELETE FROM cc_members WHERE department_id=$1 AND user_id=$2 AND role=$3`, [
-      departmentId,
-      userId,
-      role,
-    ]);
+    const result = await query(
+      `DELETE FROM cc_members WHERE department_id=$1 AND user_id=$2 AND role=$3`,
+      [departmentId, userId, role],
+    );
     return Boolean(result.rowCount);
   }
 
@@ -596,7 +701,9 @@ export class CallCenterRepository implements AcdStore {
   }
 
   async extensionNumbers(): Promise<string[]> {
-    return (await query<{ number: string }>(`SELECT number FROM cc_extensions`)).rows.map((row) => row.number);
+    return (await query<{ number: string }>(`SELECT number FROM cc_extensions`)).rows.map(
+      (row) => row.number,
+    );
   }
 
   /** Everything needed to (re)create extensions in Asterisk, secrets included. Server-side only. */
@@ -630,20 +737,38 @@ export class CallCenterRepository implements AcdStore {
       // BR-20: an agent's extension may call requesters back through the trunk.
       `INSERT INTO cc_extensions(id,number,department_id,user_id,label,transport,sip_secret,can_call_out)
        VALUES($1,$2,$3,$4,$5,$6,$7,EXISTS (SELECT 1 FROM cc_members WHERE user_id=$4 AND role='agent'))`,
-      [id, input.number, input.departmentId, input.userId, input.label, input.transport, input.secret],
+      [
+        id,
+        input.number,
+        input.departmentId,
+        input.userId,
+        input.label,
+        input.transport,
+        input.secret,
+      ],
     );
     return id;
   }
 
   async extension(id: string) {
-    const result = await query<{ id: string; number: string; department_id: string; user_id: string | null }>(
-      `SELECT id,number,department_id,user_id FROM cc_extensions WHERE id=$1`,
-      [id],
-    );
+    const result = await query<{
+      id: string;
+      number: string;
+      department_id: string;
+      user_id: string | null;
+    }>(`SELECT id,number,department_id,user_id FROM cc_extensions WHERE id=$1`, [id]);
     return result.rows[0] ?? null;
   }
 
-  async updateExtension(id: string, input: { userId: string | null; label: string | undefined; active: boolean; canCallOut?: boolean }) {
+  async updateExtension(
+    id: string,
+    input: {
+      userId: string | null;
+      label: string | undefined;
+      active: boolean;
+      canCallOut?: boolean;
+    },
+  ) {
     await query(
       `UPDATE cc_extensions SET user_id=$2, label=COALESCE($3,label), active=$4, can_call_out=COALESCE($5,can_call_out), synced_at=NULL WHERE id=$1`,
       [id, input.userId, input.label ?? null, input.active, input.canCallOut ?? null],
@@ -672,7 +797,11 @@ export class CallCenterRepository implements AcdStore {
   }
 
   async ownExtension(userId: string) {
-    const result = await query<{ number: string; sip_secret: string; transport: ExtensionTransport }>(
+    const result = await query<{
+      number: string;
+      sip_secret: string;
+      transport: ExtensionTransport;
+    }>(
       `SELECT number,sip_secret,transport FROM cc_extensions WHERE user_id=$1 AND active ORDER BY created_at LIMIT 1`,
       [userId],
     );
@@ -683,7 +812,14 @@ export class CallCenterRepository implements AcdStore {
 
   async hotlines(): Promise<CcHotline[]> {
     const [hotlines, options] = await Promise.all([
-      query<{ id: string; number: string; name: string; trunk: string; fallback_department_id: string | null; active: boolean }>(
+      query<{
+        id: string;
+        number: string;
+        name: string;
+        trunk: string;
+        fallback_department_id: string | null;
+        active: boolean;
+      }>(
         `SELECT id,number,name,trunk,fallback_department_id,active FROM cc_hotlines ORDER BY created_at`,
       ),
       query<{ hotline_id: string; digit: string; department_id: string }>(
@@ -720,18 +856,21 @@ export class CallCenterRepository implements AcdStore {
       );
       await client.query(`DELETE FROM cc_ivr_options WHERE hotline_id=$1`, [id]);
       for (const option of input.options)
-        await client.query(`INSERT INTO cc_ivr_options(hotline_id,digit,department_id) VALUES($1,$2,$3)`, [
-          id,
-          option.digit,
-          option.departmentId,
-        ]);
+        await client.query(
+          `INSERT INTO cc_ivr_options(hotline_id,digit,department_id) VALUES($1,$2,$3)`,
+          [id, option.digit, option.departmentId],
+        );
     });
     return id;
   }
 
   // ---- calls ---------------------------------------------------------------------------------
 
-  async calls(filter: { departmentIds: string[] | null; agentUserId: string | null; limit: number }): Promise<CcCallRecord[]> {
+  async calls(filter: {
+    departmentIds: string[] | null;
+    agentUserId: string | null;
+    limit: number;
+  }): Promise<CcCallRecord[]> {
     const result = await query<{
       id: string;
       direction: CcCallRecord["direction"];
@@ -802,12 +941,25 @@ export class CallCenterRepository implements AcdStore {
     return result.rows[0] ?? null;
   }
 
-  async setCallTranscript(id: string, status: "processing" | "ready" | "failed", segments: Segment[] | null) {
-    await query(`UPDATE cc_calls SET transcript_status=$2, transcript=$3 WHERE id=$1`, [id, status, segments && JSON.stringify(segments)]);
+  async setCallTranscript(
+    id: string,
+    status: "processing" | "ready" | "failed",
+    segments: Segment[] | null,
+  ) {
+    await query(`UPDATE cc_calls SET transcript_status=$2, transcript=$3 WHERE id=$1`, [
+      id,
+      status,
+      segments && JSON.stringify(segments),
+    ]);
   }
 
   async callTranscript(id: string) {
-    const result = await query<{ transcript_status: CcCallTranscript["status"]; transcript: Segment[] | null; ai_summary: string | null; ai_disposition_id: string | null }>(
+    const result = await query<{
+      transcript_status: CcCallTranscript["status"];
+      transcript: Segment[] | null;
+      ai_summary: string | null;
+      ai_disposition_id: string | null;
+    }>(
       `SELECT transcript_status,transcript,ai_summary,ai_disposition_id FROM cc_calls WHERE id=$1`,
       [id],
     );
@@ -831,7 +983,11 @@ export class CallCenterRepository implements AcdStore {
   }
 
   async setCallSummary(id: string, summary: string, dispositionId: string | null) {
-    await query(`UPDATE cc_calls SET ai_summary=$2, ai_disposition_id=$3 WHERE id=$1`, [id, summary, dispositionId]);
+    await query(`UPDATE cc_calls SET ai_summary=$2, ai_disposition_id=$3 WHERE id=$1`, [
+      id,
+      summary,
+      dispositionId,
+    ]);
   }
 
   async setCallVideo(id: string, workspaceId: string) {
@@ -839,22 +995,45 @@ export class CallCenterRepository implements AcdStore {
   }
 
   async saveWrapUp(id: string, dispositionId: string | null, notes: string) {
-    await query(`UPDATE cc_calls SET disposition_id=$2, notes=$3 WHERE id=$1`, [id, dispositionId, notes]);
+    await query(`UPDATE cc_calls SET disposition_id=$2, notes=$3 WHERE id=$1`, [
+      id,
+      dispositionId,
+      notes,
+    ]);
   }
 
   async dispositions(departmentIds: string[] | null): Promise<CcDisposition[]> {
-    const result = await query<{ id: string; department_id: string | null; code: string; label: string }>(
+    const result = await query<{
+      id: string;
+      department_id: string | null;
+      code: string;
+      label: string;
+    }>(
       `SELECT id,department_id,code,label FROM cc_dispositions
        WHERE active AND (department_id IS NULL OR $1::uuid[] IS NULL OR department_id=ANY($1::uuid[]))
        ORDER BY department_id NULLS FIRST,code`,
       [departmentIds],
     );
-    return result.rows.map((row) => ({ id: row.id, departmentId: row.department_id, code: row.code, label: row.label }));
+    return result.rows.map((row) => ({
+      id: row.id,
+      departmentId: row.department_id,
+      code: row.code,
+      label: row.label,
+    }));
   }
 
-  async createDisposition(departmentId: string | null, code: string, label: string): Promise<string> {
+  async createDisposition(
+    departmentId: string | null,
+    code: string,
+    label: string,
+  ): Promise<string> {
     const id = randomUUID();
-    await query(`INSERT INTO cc_dispositions(id,department_id,code,label) VALUES($1,$2,$3,$4)`, [id, departmentId, code, label]);
+    await query(`INSERT INTO cc_dispositions(id,department_id,code,label) VALUES($1,$2,$3,$4)`, [
+      id,
+      departmentId,
+      code,
+      label,
+    ]);
     return id;
   }
 
@@ -868,7 +1047,12 @@ export class CallCenterRepository implements AcdStore {
 
   // ---- tickets (CC-8) ------------------------------------------------------------------------
 
-  async tickets(filter: { departmentIds: string[] | null; status: TicketStatus | null; assigneeId: string | null; limit: number }) {
+  async tickets(filter: {
+    departmentIds: string[] | null;
+    status: TicketStatus | null;
+    assigneeId: string | null;
+    limit: number;
+  }) {
     const result = await query<TicketRow>(
       `SELECT ${TICKET_COLUMNS}
        WHERE ($1::uuid[] IS NULL OR t.department_id=ANY($1::uuid[]))
@@ -948,7 +1132,12 @@ export class CallCenterRepository implements AcdStore {
   async updateTicket(
     current: CcTicket,
     actorId: string,
-    change: { status?: TicketStatus; priority?: TicketPriority; assignee?: { id: string | null; name: string }; dueAt?: Date | null },
+    change: {
+      status?: TicketStatus;
+      priority?: TicketPriority;
+      assignee?: { id: string | null; name: string };
+      dueAt?: Date | null;
+    },
   ) {
     await withTransaction(async (client) => {
       await client.query(
@@ -974,24 +1163,19 @@ export class CallCenterRepository implements AcdStore {
           [randomUUID(), current.id, actorId, current.status, change.status],
         );
       if (change.assignee && change.assignee.id !== current.assigneeId)
-        await client.query(`INSERT INTO cc_ticket_events(created_at,id,ticket_id,actor_id,kind,body) VALUES(clock_timestamp(),$1,$2,$3,'assign',$4)`, [
-          randomUUID(),
-          current.id,
-          actorId,
-          change.assignee.name,
-        ]);
+        await client.query(
+          `INSERT INTO cc_ticket_events(created_at,id,ticket_id,actor_id,kind,body) VALUES(clock_timestamp(),$1,$2,$3,'assign',$4)`,
+          [randomUUID(), current.id, actorId, change.assignee.name],
+        );
     });
   }
 
   async addTicketEvent(id: string, actorId: string, kind: "comment" | "callback", body: string) {
     await withTransaction(async (client) => {
-      await client.query(`INSERT INTO cc_ticket_events(created_at,id,ticket_id,actor_id,kind,body) VALUES(clock_timestamp(),$1,$2,$3,$4,$5)`, [
-        randomUUID(),
-        id,
-        actorId,
-        kind,
-        body,
-      ]);
+      await client.query(
+        `INSERT INTO cc_ticket_events(created_at,id,ticket_id,actor_id,kind,body) VALUES(clock_timestamp(),$1,$2,$3,$4,$5)`,
+        [randomUUID(), id, actorId, kind, body],
+      );
       await client.query(`UPDATE cc_tickets SET updated_at=now() WHERE id=$1`, [id]);
     });
   }
@@ -1005,7 +1189,10 @@ export class CallCenterRepository implements AcdStore {
   }
 
   async markVoicemailListened(id: string, userId: string) {
-    await query(`UPDATE cc_voicemails SET listened_by=$2, listened_at=now() WHERE id=$1 AND listened_at IS NULL`, [id, userId]);
+    await query(
+      `UPDATE cc_voicemails SET listened_by=$2, listened_at=now() WHERE id=$1 AND listened_at IS NULL`,
+      [id, userId],
+    );
   }
 
   // ---- KPI (CC-9) ----------------------------------------------------------------------------

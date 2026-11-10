@@ -15,7 +15,8 @@ export interface Actor {
 export const forbidden = (message = "Bạn không có quyền thực hiện thao tác này.") =>
   new HttpError(403, "FORBIDDEN", message);
 export const conflict = (code: string, message: string) => new HttpError(409, code, message);
-export const invalid = (message: string, code = "INVALID_INPUT") => new HttpError(400, code, message);
+export const invalid = (message: string, code = "INVALID_INPUT") =>
+  new HttpError(400, code, message);
 export const notFound = (message: string) => new HttpError(404, "NOT_FOUND", message);
 
 export async function loadActor(client: PoolClient, userId: string): Promise<Actor> {
@@ -30,15 +31,19 @@ export async function loadActor(client: PoolClient, userId: string): Promise<Act
   const unitRoles = new Map<string, Set<UnitRole>>();
   for (const grant of grants.rows)
     if (grant.unit_id)
-      (unitRoles.get(grant.unit_id) ?? unitRoles.set(grant.unit_id, new Set()).get(grant.unit_id)!).add(
-        grant.role as UnitRole,
-      );
+      (
+        unitRoles.get(grant.unit_id) ?? unitRoles.set(grant.unit_id, new Set()).get(grant.unit_id)!
+      ).add(grant.role as UnitRole);
   return {
     userId,
     systemAdmin: grants.rows.some((grant) => grant.role === "system_admin"),
     unitRoles,
     staff: staff.rows[0]
-      ? { unitId: staff.rows[0].unit_id, rank: staff.rows[0].academic_rank, active: staff.rows[0].active }
+      ? {
+          unitId: staff.rows[0].unit_id,
+          rank: staff.rows[0].academic_rank,
+          active: staff.rows[0].active,
+        }
       : null,
   };
 }
@@ -48,8 +53,7 @@ export function hasUnitRole(actor: Actor, unitId: string, ...roles: UnitRole[]):
 }
 
 export function requireUnitRole(actor: Actor, unitId: string, ...roles: UnitRole[]): void {
-  if (!hasUnitRole(actor, unitId, ...roles))
-    throw forbidden("Thao tác này dành cho giáo vụ khoa.");
+  if (!hasUnitRole(actor, unitId, ...roles)) throw forbidden("Thao tác này dành cho giáo vụ khoa.");
 }
 
 export async function audit(
@@ -100,7 +104,10 @@ export function choice<T extends string>(value: unknown, values: readonly T[], l
 }
 
 export function code(value: unknown, label: string, max = 20): string {
-  if (typeof value !== "string" || !new RegExp(`^[A-Z0-9_.-]{2,${max}}$`).test(value.trim().toUpperCase()))
+  if (
+    typeof value !== "string" ||
+    !new RegExp(`^[A-Z0-9_.-]{2,${max}}$`).test(value.trim().toUpperCase())
+  )
     throw invalid(`${label} chỉ gồm chữ in hoa, số, '_', '-', '.' (2–${max} ký tự).`);
   return value.trim().toUpperCase();
 }

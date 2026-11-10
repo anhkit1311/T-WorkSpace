@@ -66,7 +66,13 @@ function validateSchedule(input: ScheduleInput) {
  * or of a unit (the organizer's own, or any for a system admin). People from outside the group join it,
  * which only the group's owner/admin may do.
  */
-async function replaceInvitees(client: PoolClient, actorId: string, scheduleId: string, roomId: string, input: unknown) {
+async function replaceInvitees(
+  client: PoolClient,
+  actorId: string,
+  scheduleId: string,
+  roomId: string,
+  input: unknown,
+) {
   const invite = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
   const list = (key: string) => {
     const value = invite[key];
@@ -82,7 +88,8 @@ async function replaceInvitees(client: PoolClient, actorId: string, scheduleId: 
       `SELECT m.user_id FROM memberships m WHERE m.workspace_id=$1 AND EXISTS(SELECT 1 FROM memberships v WHERE v.workspace_id=$1 AND v.user_id=$2)`,
       [workspaceId, actorId],
     );
-    if (!members.rowCount) throw new HttpError(403, "FORBIDDEN", "Bạn chỉ mời được lớp (nhóm) mà mình tham gia.");
+    if (!members.rowCount)
+      throw new HttpError(403, "FORBIDDEN", "Bạn chỉ mời được lớp (nhóm) mà mình tham gia.");
     members.rows.forEach((row) => people.add(row.user_id));
   }
   for (const unitId of list("unitIds")) {
@@ -91,14 +98,16 @@ async function replaceInvitees(client: PoolClient, actorId: string, scheduleId: 
        UNION ALL SELECT 1 FROM academic_role_grants WHERE user_id=$2 AND (role='system_admin' OR unit_id=$1)`,
       [unitId, actorId],
     );
-    if (!allowed.rowCount) throw new HttpError(403, "FORBIDDEN", "Bạn chỉ mời được đơn vị của mình.");
+    if (!allowed.rowCount)
+      throw new HttpError(403, "FORBIDDEN", "Bạn chỉ mời được đơn vị của mình.");
     const members = await client.query<{ user_id: string }>(
       `SELECT user_id FROM academic_staff WHERE unit_id=$1 AND active UNION SELECT user_id FROM cc_members WHERE department_id=$1`,
       [unitId],
     );
     members.rows.forEach((row) => people.add(row.user_id));
   }
-  if (people.size > MAX_INVITEES) throw new HttpError(400, "INVALID_INVITE", "Tối đa 500 người được mời.");
+  if (people.size > MAX_INVITEES)
+    throw new HttpError(400, "INVALID_INVITE", "Tối đa 500 người được mời.");
   const room = (
     await client.query<{ workspace_id: string; is_private: boolean; manages: boolean }>(
       `SELECT c.workspace_id,c.is_private,
@@ -113,7 +122,11 @@ async function replaceInvitees(client: PoolClient, actorId: string, scheduleId: 
     [ids, room.workspace_id],
   );
   if (outsiders.rowCount && !room.manages)
-    throw new HttpError(403, "FORBIDDEN", "Chỉ chủ nhóm hoặc quản trị nhóm mời được người ngoài nhóm.");
+    throw new HttpError(
+      403,
+      "FORBIDDEN",
+      "Chỉ chủ nhóm hoặc quản trị nhóm mời được người ngoài nhóm.",
+    );
   await client.query(
     `INSERT INTO memberships(workspace_id,user_id,role) SELECT $2,u.id,'member' FROM users u WHERE u.id=ANY($1::uuid[]) ON CONFLICT DO NOTHING`,
     [ids, room.workspace_id],
@@ -170,10 +183,22 @@ export async function createMeetingSchedule(
     await client.query(
       `INSERT INTO meeting_schedules(id,channel_id,created_by,title,description,starts_at,ends_at,waiting_room,auto_record,mute_on_join)
        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [id, data.roomId, userId, data.title, data.description, data.startsAt, data.endsAt, data.waitingRoom, data.autoRecord, data.muteOnJoin],
+      [
+        id,
+        data.roomId,
+        userId,
+        data.title,
+        data.description,
+        data.startsAt,
+        data.endsAt,
+        data.waitingRoom,
+        data.autoRecord,
+        data.muteOnJoin,
+      ],
     );
     await replaceScheduleAgenda(client, id, agenda);
-    if (input.invite !== undefined) await replaceInvitees(client, userId, id, data.roomId as string, input.invite);
+    if (input.invite !== undefined)
+      await replaceInvitees(client, userId, id, data.roomId as string, input.invite);
   });
   const result = await query<MeetingScheduleItem>(`${selectSchedule} WHERE s.id=$2`, [userId, id]);
   return result.rows[0];
@@ -212,11 +237,22 @@ export async function updateMeetingSchedule(
       `UPDATE meeting_schedules SET channel_id=$2,title=$3,description=$4,starts_at=$5,ends_at=$6,updated_at=now(),
          reminded_at=CASE WHEN starts_at=$5 THEN reminded_at END,waiting_room=$7,auto_record=$8,mute_on_join=$9
        WHERE id=$1 AND canceled_at IS NULL RETURNING id`,
-      [id, data.roomId, data.title, data.description, data.startsAt, data.endsAt, data.waitingRoom, data.autoRecord, data.muteOnJoin],
+      [
+        id,
+        data.roomId,
+        data.title,
+        data.description,
+        data.startsAt,
+        data.endsAt,
+        data.waitingRoom,
+        data.autoRecord,
+        data.muteOnJoin,
+      ],
     );
     if (!result.rowCount)
       throw new HttpError(404, "SCHEDULE_NOT_FOUND", "Không tìm thấy lịch họp.");
-    if (input.invite !== undefined) await replaceInvitees(client, userId, id, data.roomId as string, input.invite);
+    if (input.invite !== undefined)
+      await replaceInvitees(client, userId, id, data.roomId as string, input.invite);
     if (!agenda) return;
     const current = await client.query<{ label: string }>(
       `SELECT label FROM meeting_agenda_items WHERE schedule_id=$1 ORDER BY position,id`,
@@ -226,7 +262,11 @@ export async function updateMeetingSchedule(
     // Once a session has used the agenda, its ticked progress belongs to that meeting.
     const started = await client.query(`SELECT 1 FROM meeting_sessions WHERE schedule_id=$1`, [id]);
     if (started.rowCount)
-      throw new HttpError(409, "AGENDA_IN_USE", "Cuộc họp đã bắt đầu, hãy sửa agenda trong phòng họp.");
+      throw new HttpError(
+        409,
+        "AGENDA_IN_USE",
+        "Cuộc họp đã bắt đầu, hãy sửa agenda trong phòng họp.",
+      );
     await replaceScheduleAgenda(client, id, agenda);
   });
   const schedule = await query<MeetingScheduleItem>(`${selectSchedule} WHERE s.id=$2`, [

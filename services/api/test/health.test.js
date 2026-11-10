@@ -87,4 +87,3 @@ test("POST /auth/resend-otp without valid email returns 400", async () => {
   });
   assert.equal(response.status, 400);
 });
-

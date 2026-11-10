@@ -78,7 +78,10 @@ export function MeetingRecordingPanel({ sessionId, live }: { sessionId: string; 
 
   // Outside the call there are no socket updates; check back while a recording is being processed.
   const processing = data?.recordings.some(
-    (item) => item.status === "processing" || item.status === "recording" || item.transcriptStatus === "processing",
+    (item) =>
+      item.status === "processing" ||
+      item.status === "recording" ||
+      item.transcriptStatus === "processing",
   );
   useEffect(() => {
     if (live || !processing) return;
@@ -108,13 +111,24 @@ export function MeetingRecordingPanel({ sessionId, live }: { sessionId: string; 
     <section className="meeting-attendance" aria-labelledby="meeting-recording-title">
       <div className="meeting-attendance-head">
         <h4 id="meeting-recording-title">Ghi hình</h4>
-        {live && data.canManage &&
+        {live &&
+          data.canManage &&
           (active ? (
-            <Button size="sm" variant="secondary" disabled={busy} onClick={() => void run(() => stopMeetingRecordingApi(accessToken!, active.id))}>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busy}
+              onClick={() => void run(() => stopMeetingRecordingApi(accessToken!, active.id))}
+            >
               Dừng ghi
             </Button>
           ) : (
-            <Button size="sm" variant="secondary" disabled={busy} onClick={() => void run(() => startMeetingRecordingApi(accessToken!, sessionId))}>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busy}
+              onClick={() => void run(() => startMeetingRecordingApi(accessToken!, sessionId))}
+            >
               Bắt đầu ghi hình
             </Button>
           ))}
@@ -130,16 +144,33 @@ export function MeetingRecordingPanel({ sessionId, live }: { sessionId: string; 
           <li key={item.id}>
             <span>
               {clock(item.startedAt)}
-              {item.durationSeconds ? ` · ${Math.max(1, Math.round(item.durationSeconds / 60))} phút` : ""} · {STATUS[item.status]}
+              {item.durationSeconds
+                ? ` · ${Math.max(1, Math.round(item.durationSeconds / 60))} phút`
+                : ""}{" "}
+              · {STATUS[item.status]}
               {item.transcriptStatus ? ` · ${CAPTIONS[item.transcriptStatus]}` : ""}
             </span>
-            {data.canManage && item.status === "ready" && item.transcriptStatus !== "ready" && item.transcriptStatus !== "processing" && (
-              <Button size="sm" variant="ghost" disabled={busy} onClick={() => void run(() => requestRecordingTranscriptApi(accessToken!, item.id))}>
-                Tạo phụ đề
-              </Button>
-            )}
+            {data.canManage &&
+              item.status === "ready" &&
+              item.transcriptStatus !== "ready" &&
+              item.transcriptStatus !== "processing" && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={() =>
+                    void run(() => requestRecordingTranscriptApi(accessToken!, item.id))
+                  }
+                >
+                  Tạo phụ đề
+                </Button>
+              )}
             {item.status === "ready" && (
-              <Button size="sm" variant="ghost" onClick={() => setPlaying(playing === item.id ? null : item.id)}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setPlaying(playing === item.id ? null : item.id)}
+              >
                 {playing === item.id ? "Đóng" : "Xem lại"}
               </Button>
             )}
@@ -149,7 +180,11 @@ export function MeetingRecordingPanel({ sessionId, live }: { sessionId: string; 
                   type="checkbox"
                   checked={item.shared}
                   disabled={busy}
-                  onChange={(event) => void run(() => shareMeetingRecordingApi(accessToken!, item.id, event.target.checked))}
+                  onChange={(event) =>
+                    void run(() =>
+                      shareMeetingRecordingApi(accessToken!, item.id, event.target.checked),
+                    )
+                  }
                 />
                 Cả phòng xem được
               </label>
@@ -171,7 +206,12 @@ export function MeetingRecordingPanel({ sessionId, live }: { sessionId: string; 
                             disabled={busy || added.has(action)}
                             onClick={() =>
                               void run(async () => {
-                                await createMeetingTaskApi(accessToken!, sessionId, { clientTaskId: crypto.randomUUID(), title: action, assigneeId: null, dueAt: null });
+                                await createMeetingTaskApi(accessToken!, sessionId, {
+                                  clientTaskId: crypto.randomUUID(),
+                                  title: action,
+                                  assigneeId: null,
+                                  dueAt: null,
+                                });
                                 setAdded((current) => new Set(current).add(action));
                               })
                             }
@@ -193,7 +233,9 @@ export function MeetingRecordingPanel({ sessionId, live }: { sessionId: string; 
           <HlsPlayer
             src={src}
             label="Bản ghi cuộc họp"
-            captions={data.recordings.find((item) => item.id === playing)?.transcriptStatus === "ready"}
+            captions={
+              data.recordings.find((item) => item.id === playing)?.transcriptStatus === "ready"
+            }
           />
         </div>
       )}

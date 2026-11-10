@@ -64,7 +64,8 @@ export function AttachmentView({
           <div className="attachment-text-meta">
             <strong className="attachment-filename">{attachment.fileName}</strong>
             <span className="attachment-filesize">
-              {formatFileSize(attachment.fileSize)} · {attachment.fileName.split(".").pop()?.toUpperCase() || "Tệp đính kèm"}
+              {formatFileSize(attachment.fileSize)} ·{" "}
+              {attachment.fileName.split(".").pop()?.toUpperCase() || "Tệp đính kèm"}
             </span>
           </div>
           <span className="attachment-download-circle" aria-hidden="true">

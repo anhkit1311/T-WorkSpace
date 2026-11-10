@@ -13,7 +13,11 @@ test("mic level maps -60..0 dBFS to 0..1 and clamps silence and clipping", () =>
 });
 
 test("mic capture requests the browser speech pipeline on every path", () => {
-  for (const constraints of [micConstraints(), micConstraints("dev-1"), mediaConstraints({}).audio]) {
+  for (const constraints of [
+    micConstraints(),
+    micConstraints("dev-1"),
+    mediaConstraints({}).audio,
+  ]) {
     assert.equal(constraints.echoCancellation, true);
     assert.equal(constraints.noiseSuppression, true);
     assert.equal(constraints.autoGainControl, true);

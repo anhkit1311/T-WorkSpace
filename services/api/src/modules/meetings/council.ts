@@ -48,10 +48,15 @@ async function lockPresenter(client: PoolClient, userId: string, presenterId: un
       [presenterId],
     )
   ).rows[0];
-  if (!presenter) throw new HttpError(404, "PRESENTER_NOT_FOUND", "Không tìm thấy người trình bày.");
+  if (!presenter)
+    throw new HttpError(404, "PRESENTER_NOT_FOUND", "Không tìm thấy người trình bày.");
   const schedule = await scheduleFor(client, userId, presenter.schedule_id);
   if (presenter.finalized_at)
-    throw new HttpError(409, "COUNCIL_FINALIZED", "Kết quả đã được chủ tịch chốt, không thể thay đổi.");
+    throw new HttpError(
+      409,
+      "COUNCIL_FINALIZED",
+      "Kết quả đã được chủ tịch chốt, không thể thay đổi.",
+    );
   return { presenter, schedule, member: await councilRole(client, schedule.id, userId) };
 }
 
@@ -69,8 +74,13 @@ async function changeFor(db: Db, schedule: ScheduleRow): Promise<Change> {
 }
 
 /** Weighted total of one sheet on the 10-point scale. */
-export function sheetTotal(scores: Record<string, number>, criteria: { id: string; weight: number }[]) {
-  return Math.round(criteria.reduce((sum, item) => sum + (scores[item.id] ?? 0) * item.weight, 0)) / 100;
+export function sheetTotal(
+  scores: Record<string, number>,
+  criteria: { id: string; weight: number }[],
+) {
+  return (
+    Math.round(criteria.reduce((sum, item) => sum + (scores[item.id] ?? 0) * item.weight, 0)) / 100
+  );
 }
 
 export async function getCouncil(userId: string, scheduleId: unknown): Promise<CouncilView | null> {
@@ -111,7 +121,12 @@ export async function getCouncil(userId: string, scheduleId: unknown): Promise<C
     )
   ).rows;
   const sheets = (
-    await query<{ presenterId: string; memberId: string; scores: Record<string, number>; comment: string }>(
+    await query<{
+      presenterId: string;
+      memberId: string;
+      scores: Record<string, number>;
+      comment: string;
+    }>(
       `SELECT s.presenter_id AS "presenterId",s.member_id AS "memberId",s.scores,s.comment
        FROM council_sheets s JOIN council_presenters p ON p.id=s.presenter_id
        WHERE p.schedule_id=$1 ORDER BY s.submitted_at`,
@@ -142,15 +157,13 @@ export async function getCouncil(userId: string, scheduleId: unknown): Promise<C
         submittedBy: own.map((sheet) => sheet.memberId),
         mySheet: mine ? { scores: mine.scores, comment: mine.comment } : null,
         sheets: seeSheets
-          ? own.map(
-              (sheet): CouncilSheet => ({
-                memberId: sheet.memberId,
-                displayName: nameOf.get(sheet.memberId) ?? "",
-                scores: sheet.scores,
-                comment: sheet.comment,
-                total: sheetTotal(sheet.scores, criteria),
-              }),
-            )
+          ? own.map((sheet): CouncilSheet => ({
+              memberId: sheet.memberId,
+              displayName: nameOf.get(sheet.memberId) ?? "",
+              scores: sheet.scores,
+              comment: sheet.comment,
+              total: sheetTotal(sheet.scores, criteria),
+            }))
           : null,
         finalScore: seeResult ? presenter.finalScore : null,
         conclusion: seeResult ? presenter.conclusion : null,
@@ -163,7 +176,10 @@ export async function getCouncil(userId: string, scheduleId: unknown): Promise<C
 export async function getSessionCouncil(userId: string, sessionId: unknown) {
   validateId(sessionId);
   const session = (
-    await query<{ schedule_id: string | null }>(`SELECT schedule_id FROM meeting_sessions WHERE id=$1`, [sessionId])
+    await query<{ schedule_id: string | null }>(
+      `SELECT schedule_id FROM meeting_sessions WHERE id=$1`,
+      [sessionId],
+    )
   ).rows[0];
   if (!session) throw new HttpError(404, "SESSION_NOT_FOUND", "Phiên họp không tồn tại.");
   return session.schedule_id ? getCouncil(userId, session.schedule_id) : null;
@@ -177,26 +193,36 @@ const text = (value: unknown, max: number, what: string) => {
 };
 
 /** Replaces the whole setup; only before the first presentation or sheet. */
-export async function saveCouncil(userId: string, scheduleId: unknown, input: Record<string, unknown>) {
+export async function saveCouncil(
+  userId: string,
+  scheduleId: unknown,
+  input: Record<string, unknown>,
+) {
   const { chairId, memberIds, presenters, criteria } = input;
   validateId(chairId);
   if (!Array.isArray(memberIds) || !Array.isArray(presenters) || !Array.isArray(criteria))
     throw invalid("Thiếu thành viên, người trình bày hoặc tiêu chí.");
   memberIds.forEach(validateId);
   const members = [...new Set([chairId as string, ...(memberIds as string[])])];
-  if (members.length < 2 || members.length > 7) throw invalid("Hội đồng cần 2–7 thành viên kể cả chủ tịch.");
+  if (members.length < 2 || members.length > 7)
+    throw invalid("Hội đồng cần 2–7 thành viên kể cả chủ tịch.");
   if (!presenters.length || presenters.length > 40) throw invalid("Cần 1–40 người trình bày.");
   const presenterRows = presenters.map((item: { userId?: unknown; topic?: unknown }) => {
     validateId(item?.userId);
     return { userId: item.userId as string, topic: text(item.topic, 200, "Tên đề tài") };
   });
   const presenterIds = presenterRows.map((item) => item.userId);
-  if (new Set(presenterIds).size !== presenterIds.length) throw invalid("Mỗi người chỉ trình bày một lần.");
+  if (new Set(presenterIds).size !== presenterIds.length)
+    throw invalid("Mỗi người chỉ trình bày một lần.");
   if (presenterIds.some((id) => members.includes(id)))
     throw invalid("Thành viên hội đồng không thể đồng thời là người trình bày.");
   if (!criteria.length || criteria.length > 10) throw invalid("Cần 1–10 tiêu chí chấm.");
   const criteriaRows = criteria.map((item: { label?: unknown; weight?: unknown }) => {
-    if (!Number.isInteger(item?.weight) || (item.weight as number) < 1 || (item.weight as number) > 100)
+    if (
+      !Number.isInteger(item?.weight) ||
+      (item.weight as number) < 1 ||
+      (item.weight as number) > 100
+    )
       throw invalid("Trọng số mỗi tiêu chí là số nguyên 1–100.");
     return { label: text(item.label, 120, "Tên tiêu chí"), weight: item.weight as number };
   });
@@ -214,7 +240,11 @@ export async function saveCouncil(userId: string, scheduleId: unknown, input: Re
       [schedule.id],
     );
     if (started.rowCount)
-      throw new HttpError(409, "COUNCIL_LOCKED", "Hội đồng đã bắt đầu chấm, không thể sửa thiết lập.");
+      throw new HttpError(
+        409,
+        "COUNCIL_LOCKED",
+        "Hội đồng đã bắt đầu chấm, không thể sửa thiết lập.",
+      );
     const everyone = [...members, ...presenterIds];
     const allowed = await client.query(
       `SELECT user_id FROM channel_access WHERE channel_id=$1 AND user_id=ANY($2::uuid[])`,
@@ -254,19 +284,28 @@ export async function startPresenter(userId: string, presenterId: unknown) {
       `UPDATE council_presenters SET status='done' WHERE schedule_id=$1 AND status='presenting' AND id<>$2`,
       [schedule.id, presenter.id],
     );
-    await client.query(`UPDATE council_presenters SET status='presenting' WHERE id=$1`, [presenter.id]);
+    await client.query(`UPDATE council_presenters SET status='presenting' WHERE id=$1`, [
+      presenter.id,
+    ]);
     return changeFor(client, schedule);
   });
 }
 
 /** A present member submits (or resubmits) their sheet until the chair finalizes. */
-export async function submitSheet(userId: string, presenterId: unknown, input: Record<string, unknown>) {
+export async function submitSheet(
+  userId: string,
+  presenterId: unknown,
+  input: Record<string, unknown>,
+) {
   return withTransaction(async (client) => {
     const { presenter, schedule, member } = await lockPresenter(client, userId, presenterId);
     if (!member) throw new HttpError(403, "COUNCIL_ONLY", "Chỉ thành viên hội đồng được chấm.");
-    if (member.absent) throw new HttpError(409, "MEMBER_ABSENT", "Bạn đang được ghi nhận vắng mặt.");
+    if (member.absent)
+      throw new HttpError(409, "MEMBER_ABSENT", "Bạn đang được ghi nhận vắng mặt.");
     const criteria = (
-      await client.query<{ id: string }>(`SELECT id FROM council_criteria WHERE schedule_id=$1`, [schedule.id])
+      await client.query<{ id: string }>(`SELECT id FROM council_criteria WHERE schedule_id=$1`, [
+        schedule.id,
+      ])
     ).rows;
     const raw = input.scores as Record<string, unknown> | undefined;
     if (!raw || typeof raw !== "object" || Object.keys(raw).length !== criteria.length)
@@ -290,7 +329,12 @@ export async function submitSheet(userId: string, presenterId: unknown, input: R
 }
 
 /** Chair marks a member absent (or back); absent members are not waited for at finalization. */
-export async function setMemberAbsent(userId: string, scheduleId: unknown, memberId: unknown, absent: unknown) {
+export async function setMemberAbsent(
+  userId: string,
+  scheduleId: unknown,
+  memberId: unknown,
+  absent: unknown,
+) {
   validateId(memberId);
   if (typeof absent !== "boolean") throw invalid("Thiếu trạng thái vắng mặt.");
   return withTransaction(async (client) => {
@@ -300,13 +344,18 @@ export async function setMemberAbsent(userId: string, scheduleId: unknown, membe
       `UPDATE council_members SET absent=$3 WHERE schedule_id=$1 AND user_id=$2 AND role='member'`,
       [schedule.id, memberId, absent],
     );
-    if (!result.rowCount) throw new HttpError(404, "MEMBER_NOT_FOUND", "Không tìm thấy thành viên hội đồng.");
+    if (!result.rowCount)
+      throw new HttpError(404, "MEMBER_NOT_FOUND", "Không tìm thấy thành viên hội đồng.");
     return changeFor(client, schedule);
   });
 }
 
 /** BR-12: the chair concludes once every present member has submitted; the result is then locked. */
-export async function finalizePresenter(userId: string, presenterId: unknown, input: Record<string, unknown>) {
+export async function finalizePresenter(
+  userId: string,
+  presenterId: unknown,
+  input: Record<string, unknown>,
+) {
   const conclusion = typeof input.conclusion === "string" ? input.conclusion.trim() : "";
   if (conclusion.length > 2000) throw invalid("Kết luận tối đa 2000 ký tự.");
   return withTransaction(async (client) => {
@@ -338,7 +387,8 @@ export async function finalizePresenter(userId: string, presenterId: unknown, in
         [schedule.id, presenter.id],
       )
     ).rows;
-    const average = sheets.reduce((sum, sheet) => sum + sheetTotal(sheet.scores, criteria), 0) / sheets.length;
+    const average =
+      sheets.reduce((sum, sheet) => sum + sheetTotal(sheet.scores, criteria), 0) / sheets.length;
     await client.query(
       `UPDATE council_presenters SET status='done',final_score=$2,conclusion=$3,finalized_at=now(),finalized_by=$4 WHERE id=$1`,
       [presenter.id, Math.round(average * 100) / 100, conclusion, userId],

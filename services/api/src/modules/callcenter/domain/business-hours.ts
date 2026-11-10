@@ -26,11 +26,17 @@ export function localTime(at: Date, timeZone = CALL_CENTER_TIME_ZONE) {
 }
 
 /** A department with no configured hours is always open; otherwise `at` must fall in a window. */
-export function isOpen(windows: readonly OpeningWindow[], at: Date, timeZone = CALL_CENTER_TIME_ZONE): boolean {
+export function isOpen(
+  windows: readonly OpeningWindow[],
+  at: Date,
+  timeZone = CALL_CENTER_TIME_ZONE,
+): boolean {
   if (!windows.length) return true;
   const now = localTime(at, timeZone);
   return windows.some(
     (window) =>
-      window.weekday === now.weekday && minutes(window.opens) <= now.minute && now.minute < minutes(window.closes),
+      window.weekday === now.weekday &&
+      minutes(window.opens) <= now.minute &&
+      now.minute < minutes(window.closes),
   );
 }

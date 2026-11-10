@@ -6,7 +6,14 @@ import { check, sleep } from "k6";
 
 export const options = {
   scenarios: {
-    ramp: { executor: "ramping-vus", stages: [{ duration: "30s", target: 50 }, { duration: "1m", target: 50 }, { duration: "15s", target: 0 }] },
+    ramp: {
+      executor: "ramping-vus",
+      stages: [
+        { duration: "30s", target: 50 },
+        { duration: "1m", target: 50 },
+        { duration: "15s", target: 0 },
+      ],
+    },
   },
   thresholds: {
     http_req_failed: ["rate<0.01"],
@@ -18,7 +25,12 @@ const BASE = __ENV.BASE || "http://localhost:3001";
 const params = { headers: { Authorization: `Bearer ${__ENV.TOKEN}` } };
 
 export default function () {
-  for (const path of ["/api/callcenter/me", "/api/elearning/courses", "/api/meetings/schedules", "/api/workspaces"]) {
+  for (const path of [
+    "/api/callcenter/me",
+    "/api/elearning/courses",
+    "/api/meetings/schedules",
+    "/api/workspaces",
+  ]) {
     const response = http.get(`${BASE}${path}`, params);
     check(response, { [`${path} 200`]: (r) => r.status === 200 });
   }

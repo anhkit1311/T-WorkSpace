@@ -12,7 +12,10 @@ export class CallCenterAccess {
   ) {}
 
   supervises(departmentId: string | null): boolean {
-    return this.isAdmin || (departmentId !== null && Boolean(this.roles.get(departmentId)?.has("supervisor")));
+    return (
+      this.isAdmin ||
+      (departmentId !== null && Boolean(this.roles.get(departmentId)?.has("supervisor")))
+    );
   }
 
   /** Departments whose data this user may read; null means every department. */

@@ -1,10 +1,17 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import type { AnnouncementCategory, CreateAnnouncementInput, PortalAnnouncement } from "@doan/shared";
+import type {
+  AnnouncementCategory,
+  CreateAnnouncementInput,
+  PortalAnnouncement,
+} from "@doan/shared";
 import { Icon } from "../../shared/ui/Icon";
 import { Avatar } from "../../shared/ui/Primitives";
 import { AnnouncementDetailModal } from "./AnnouncementDetailModal";
 
-export const CATEGORY_META: Record<AnnouncementCategory, { label: string; short: string; hint: string }> = {
+export const CATEGORY_META: Record<
+  AnnouncementCategory,
+  { label: string; short: string; hint: string }
+> = {
   general: { label: "Thông báo chung", short: "Chung", hint: "Tin hành chính, hoạt động" },
   training: { label: "Đào tạo", short: "Đào tạo", hint: "Học vụ, lịch học, đồ án" },
   event: { label: "Sự kiện", short: "Sự kiện", hint: "Hội thảo, lễ, cuộc thi" },
@@ -32,7 +39,15 @@ interface Props {
   onSubmit: (input: CreateAnnouncementInput) => Promise<void>;
 }
 
-export function AnnouncementComposer({ initial, featured, authorName, authorRole, submitting, onCancel, onSubmit }: Props) {
+export function AnnouncementComposer({
+  initial,
+  featured,
+  authorName,
+  authorRole,
+  submitting,
+  onCancel,
+  onSubmit,
+}: Props) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [category, setCategory] = useState<AnnouncementCategory>(initial?.category ?? "general");
   const [badge, setBadge] = useState(initial?.badge ?? "Mới");
@@ -57,14 +72,16 @@ export function AnnouncementComposer({ initial, featured, authorName, authorRole
     createdAt: initial?.createdAt ?? new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  const replacesPinned = pinned && featured?.pinned && featured.id !== initial?.id ? featured : null;
+  const replacesPinned =
+    pinned && featured?.pinned && featured.id !== initial?.id ? featured : null;
   const titleOk = title.trim().length >= 3;
 
   const submit = async (event?: FormEvent) => {
     event?.preventDefault();
     if (submitting) return;
     if (!titleOk) return setError("Tiêu đề cần ít nhất 3 ký tự.");
-    if (!summary.trim() && !content.trim()) return setError("Nhập tóm tắt hoặc nội dung thông báo.");
+    if (!summary.trim() && !content.trim())
+      return setError("Nhập tóm tắt hoặc nội dung thông báo.");
     setError("");
     try {
       await onSubmit({
@@ -97,7 +114,11 @@ export function AnnouncementComposer({ initial, featured, authorName, authorRole
   };
 
   return (
-    <form className="nf-compose" onSubmit={submit} aria-label={initial ? "Sửa thông báo" : "Soạn thông báo"}>
+    <form
+      className="nf-compose"
+      onSubmit={submit}
+      aria-label={initial ? "Sửa thông báo" : "Soạn thông báo"}
+    >
       <div className="nf-head">
         <div className="nf-head__title">
           <div className="nf-eyebrow">
@@ -114,7 +135,11 @@ export function AnnouncementComposer({ initial, featured, authorName, authorRole
           <span>
             <small>{initial ? "Người đăng" : "Đăng với tư cách"}</small>
             <b>{draft.authorName}</b>
-            {initial?.authorTitle ? ` · ${initial.authorTitle}` : authorRole ? ` · ${authorRole}` : ""}
+            {initial?.authorTitle
+              ? ` · ${initial.authorTitle}`
+              : authorRole
+                ? ` · ${authorRole}`
+                : ""}
           </span>
         </div>
       </div>
@@ -167,7 +192,13 @@ export function AnnouncementComposer({ initial, featured, authorName, authorRole
               <legend className="nf-label">Nhãn nổi bật</legend>
               <div className="nf-pills">
                 {BADGES.map((preset) => (
-                  <button key={preset} type="button" className="nf-pill" aria-pressed={badge === preset} onClick={() => setBadge(preset)}>
+                  <button
+                    key={preset}
+                    type="button"
+                    className="nf-pill"
+                    aria-pressed={badge === preset}
+                    onClick={() => setBadge(preset)}
+                  >
                     {preset}
                   </button>
                 ))}
@@ -184,7 +215,12 @@ export function AnnouncementComposer({ initial, featured, authorName, authorRole
             <fieldset className="nf-field">
               <legend className="nf-label">Phạm vi</legend>
               <div className="nf-pills">
-                <button type="button" className="nf-pill" aria-pressed={scope === SCHOOL} onClick={() => setScope(SCHOOL)}>
+                <button
+                  type="button"
+                  className="nf-pill"
+                  aria-pressed={scope === SCHOOL}
+                  onClick={() => setScope(SCHOOL)}
+                >
                   {SCHOOL}
                 </button>
                 <input
@@ -277,7 +313,9 @@ export function AnnouncementComposer({ initial, featured, authorName, authorRole
                   : "Tóm tắt vừa khung thẻ"}
             </Check>
             <Check ok>Hiện trên Bảng tin của mọi tài khoản · phạm vi ghi “{draft.scope}”</Check>
-            {replacesPinned && <Check ok={false}>Bật ghim sẽ đẩy tin đang ghim xuống danh sách</Check>}
+            {replacesPinned && (
+              <Check ok={false}>Bật ghim sẽ đẩy tin đang ghim xuống danh sách</Check>
+            )}
           </div>
         </aside>
       </div>
@@ -296,7 +334,9 @@ export function AnnouncementComposer({ initial, featured, authorName, authorRole
         </button>
       </footer>
 
-      {fullPreview && <AnnouncementDetailModal announcement={draft} onClose={() => setFullPreview(false)} />}
+      {fullPreview && (
+        <AnnouncementDetailModal announcement={draft} onClose={() => setFullPreview(false)} />
+      )}
     </form>
   );
 }
@@ -341,5 +381,11 @@ export function FeatureCard({ item, onOpen }: { item: PortalAnnouncement; onOpen
 }
 
 export function formatStamp(iso: string) {
-  return new Date(iso).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }

@@ -3,17 +3,17 @@
    Dark "rack" pieces share the meetings hub palette.
    -------------------------------------------------------------------------- */
 .staff-page {
-  --sd-ink: #22272E;
-  --sd-rack: #1B1F24;
-  --sd-unit: #2D333B;
-  --sd-line: #3A424C;
-  --sd-on-ink: #E6EDF3;
-  --sd-ink-soft: #C9D1D9;
-  --sd-ink-muted: #9DA7B3;
-  --sd-green: #10B981;
-  --sd-red: #EF4444;
-  --sd-off: #9CA3AF;
-  --sd-wire: #9CA3AF;
+  --sd-ink: #22272e;
+  --sd-rack: #1b1f24;
+  --sd-unit: #2d333b;
+  --sd-line: #3a424c;
+  --sd-on-ink: #e6edf3;
+  --sd-ink-soft: #c9d1d9;
+  --sd-ink-muted: #9da7b3;
+  --sd-green: #10b981;
+  --sd-red: #ef4444;
+  --sd-off: #9ca3af;
+  --sd-wire: #9ca3af;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -40,7 +40,9 @@
   height: 7px;
   border-radius: 999px;
   background: var(--sd-green);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2), 0 0 8px var(--sd-green);
+  box-shadow:
+    0 0 0 3px rgba(16, 185, 129, 0.2),
+    0 0 8px var(--sd-green);
 }
 
 .sd-led.is-off {
@@ -50,7 +52,9 @@
 
 .sd-led.is-red {
   background: var(--sd-red);
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2), 0 0 8px var(--sd-red);
+  box-shadow:
+    0 0 0 3px rgba(239, 68, 68, 0.2),
+    0 0 8px var(--sd-red);
 }
 
 /* Head ------------------------------------------------------------------- */
@@ -263,7 +267,7 @@
 }
 
 .sd-tree__item[aria-current="true"] small {
-  color: #6EE7B7;
+  color: #6ee7b7;
 }
 
 .sd-tree__item.is-sub {
@@ -274,9 +278,9 @@
 }
 
 .sd-tree__item.is-sub[aria-pressed="true"] {
-  background: #ECFDF5;
-  color: #065F46;
-  box-shadow: inset 0 0 0 1px #A7F3D0;
+  background: #ecfdf5;
+  color: #065f46;
+  box-shadow: inset 0 0 0 1px #a7f3d0;
 }
 
 .sd-mine {
@@ -307,7 +311,7 @@
 }
 
 .sd-mine .is-state {
-  color: #6EE7B7;
+  color: #6ee7b7;
 }
 
 .sd-mine p {
@@ -384,7 +388,7 @@
 }
 
 .sd-table tr.is-selected td {
-  background: #ECFDF5;
+  background: #ecfdf5;
 }
 
 .sd-table tr.is-selected td:first-child {
@@ -512,7 +516,7 @@
   font-size: 9.5px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: #6EE7B7;
+  color: #6ee7b7;
   vertical-align: middle;
 }
 
@@ -567,8 +571,8 @@
 }
 
 .sd-act.is-call {
-  border-color: #A7F3D0;
-  background: #ECFDF5;
+  border-color: #a7f3d0;
+  background: #ecfdf5;
   color: #047857;
 }
 
@@ -805,7 +809,7 @@
 }
 
 .sd-rack__unit strong.is-ext {
-  color: #6EE7B7;
+  color: #6ee7b7;
 }
 
 .sd-rack__unit small {
@@ -829,10 +833,18 @@
   display: block;
 }
 
-.sd-ranks .is-0 { background: #6EE7B7; }
-.sd-ranks .is-1 { background: #10B981; }
-.sd-ranks .is-2 { background: #047857; }
-.sd-ranks .is-3 { background: #57606A; }
+.sd-ranks .is-0 {
+  background: #6ee7b7;
+}
+.sd-ranks .is-1 {
+  background: #10b981;
+}
+.sd-ranks .is-2 {
+  background: #047857;
+}
+.sd-ranks .is-3 {
+  background: #57606a;
+}
 
 .sd-rack__unit .sd-ranks__legend {
   display: flex;
@@ -884,7 +896,7 @@
 }
 
 .sd-node.is-head .sd-mono-label {
-  color: #6EE7B7;
+  color: #6ee7b7;
 }
 
 .sd-node.is-head .sd-person b {

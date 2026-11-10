@@ -14,8 +14,15 @@ const SUBJECT: Record<Kind, string> = {
 };
 
 /** NV-MT1: tell everyone who can enter the room (except the actor) by socket and e-mail. */
-export async function noticeSchedule(io: Emitter, scheduleId: string, kind: Kind, actorId: string | null = null) {
-  const audience = await query<{ userId: string; email: string; mail: boolean } & Omit<MeetingScheduleNotice, "kind">>(
+export async function noticeSchedule(
+  io: Emitter,
+  scheduleId: string,
+  kind: Kind,
+  actorId: string | null = null,
+) {
+  const audience = await query<
+    { userId: string; email: string; mail: boolean } & Omit<MeetingScheduleNotice, "kind">
+  >(
     `SELECT a.user_id AS "userId", u.email, u.notifications_enabled AS mail,
        s.id AS "scheduleId", c.workspace_id AS "workspaceId", s.channel_id AS "roomId", s.title, s.starts_at AS "startsAt"
      FROM meeting_schedules s JOIN channels c ON c.id=s.channel_id
@@ -31,14 +38,26 @@ export async function noticeSchedule(io: Emitter, scheduleId: string, kind: Kind
   const when = new Date(first.startsAt).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
   await addNotices(
     audience.rows.map((row) => row.userId),
-    { kind: "meeting", title: SUBJECT[kind], body: `${first.title} · ${when}`, link: { view: "meetings", workspaceId: first.workspaceId, channelId: first.roomId } },
+    {
+      kind: "meeting",
+      title: SUBJECT[kind],
+      body: `${first.title} · ${when}`,
+      link: { view: "meetings", workspaceId: first.workspaceId, channelId: first.roomId },
+    },
   );
   for (const { userId, email, mail, ...notice } of audience.rows) {
     io.to(`user:${userId}`).emit("meeting_schedule_notice", { kind, ...notice });
     if (!mail) continue;
     const text = `${SUBJECT[kind]}: "${notice.title}"\nThời gian bắt đầu: ${when}\nMở lịch họp: ${webOrigin}/app`;
-    void sendNoticeEmail(email, `[T-WorkSpace] ${SUBJECT[kind]}: ${notice.title}`, text).catch((error: Error) =>
-      console.warn(JSON.stringify({ level: "warn", event: "meeting_notice_email_failed", message: error.message })),
+    void sendNoticeEmail(email, `[T-WorkSpace] ${SUBJECT[kind]}: ${notice.title}`, text).catch(
+      (error: Error) =>
+        console.warn(
+          JSON.stringify({
+            level: "warn",
+            event: "meeting_notice_email_failed",
+            message: error.message,
+          }),
+        ),
     );
   }
 }
@@ -58,7 +77,13 @@ export function startMeetingReminders(io: Emitter) {
   const timer = setInterval(
     () =>
       void sendDueReminders(io).catch((error: Error) =>
-        console.error(JSON.stringify({ level: "error", event: "meeting_reminder_failed", message: error.message })),
+        console.error(
+          JSON.stringify({
+            level: "error",
+            event: "meeting_reminder_failed",
+            message: error.message,
+          }),
+        ),
       ),
     60_000,
   );

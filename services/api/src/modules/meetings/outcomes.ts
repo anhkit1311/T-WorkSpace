@@ -188,8 +188,7 @@ export async function addAgendaItem(userId: string, sessionId: unknown, body: { 
       `SELECT count(*)::integer AS total FROM meeting_agenda_items WHERE session_id=$1 OR (schedule_id=$2 AND $2::uuid IS NOT NULL)`,
       [session.id, session.schedule_id],
     );
-    if (count.rows[0].total >= 30)
-      throw new HttpError(409, "AGENDA_FULL", "Agenda tối đa 30 mục.");
+    if (count.rows[0].total >= 30) throw new HttpError(409, "AGENDA_FULL", "Agenda tối đa 30 mục.");
     await client.query(
       `INSERT INTO meeting_agenda_items(id,session_id,label,position) VALUES($1,$2,$3,(SELECT COALESCE(max(position),0)+1024 FROM meeting_agenda_items WHERE session_id=$2))`,
       [randomUUID(), session.id, text],
@@ -332,9 +331,10 @@ export async function createMeetingSummary(client: PoolClient, sessionId: string
     )
   ).rows;
   const notes = (
-    await client.query<{ content: string }>(`SELECT content FROM meeting_notes WHERE session_id=$1`, [
-      sessionId,
-    ])
+    await client.query<{ content: string }>(
+      `SELECT content FROM meeting_notes WHERE session_id=$1`,
+      [sessionId],
+    )
   ).rows[0]?.content.trim();
   // A host testing alone with nothing recorded does not need a channel post.
   if (attendees.length < 2 && !tasks.length && !notes && !agenda.some((item) => item.done))
@@ -342,7 +342,10 @@ export async function createMeetingSummary(client: PoolClient, sessionId: string
   const target = (
     await client.query<{ id: string }>(
       `SELECT c.id FROM channels c WHERE c.id=ANY($1::uuid[]) AND c.archived_at IS NULL ORDER BY (c.id=$2) DESC LIMIT 1`,
-      [[session.outcome_channel_id, session.channel_id].filter(Boolean), session.outcome_channel_id],
+      [
+        [session.outcome_channel_id, session.channel_id].filter(Boolean),
+        session.outcome_channel_id,
+      ],
     )
   ).rows[0];
   if (!target) return null;

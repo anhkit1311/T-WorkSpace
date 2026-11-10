@@ -22,17 +22,30 @@ export function MeetingInviteListener() {
     const open = (workspaceId: string, roomId: string) => () =>
       actions.current.navigate({ view: "meetings", workspaceId, channelId: roomId });
     const onInvite = (data: { workspaceId: string; roomId: string; from: string }) =>
-      actions.current.notify("Mời tham gia họp video", `${data.from} mời bạn chuyển cuộc gọi sang họp video.`, "info", {
-        label: "Tham gia",
-        onClick: open(data.workspaceId, data.roomId),
-      });
+      actions.current.notify(
+        "Mời tham gia họp video",
+        `${data.from} mời bạn chuyển cuộc gọi sang họp video.`,
+        "info",
+        {
+          label: "Tham gia",
+          onClick: open(data.workspaceId, data.roomId),
+        },
+      );
     const onNotice = (data: MeetingScheduleNotice) => {
-      const when = new Date(data.startsAt).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" });
+      const when = new Date(data.startsAt).toLocaleString("vi-VN", {
+        dateStyle: "short",
+        timeStyle: "short",
+      });
       actions.current.notify(
         NOTICE_TITLE[data.kind],
         `${data.title} · ${when}`,
         data.kind === "canceled" ? "warning" : "info",
-        data.kind === "canceled" ? undefined : { label: data.kind === "reminder" ? "Vào phòng" : "Xem", onClick: open(data.workspaceId, data.roomId) },
+        data.kind === "canceled"
+          ? undefined
+          : {
+              label: data.kind === "reminder" ? "Vào phòng" : "Xem",
+              onClick: open(data.workspaceId, data.roomId),
+            },
       );
     };
     socket.on("meeting_invite", onInvite);

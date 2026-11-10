@@ -73,9 +73,13 @@ test("schedules are past once their slot ends; a session that ended early keeps 
       schedule("done", "2026-10-21T01:00:00Z", "2026-10-21T02:00:00Z"),
       schedule("early", "2026-10-21T03:00:00Z", "2026-10-21T04:00:00Z"),
     ],
-    sessions: [session("m2", "2026-10-21T03:00:00Z", "2026-10-21T03:10:00Z", { scheduleId: "early" })],
+    sessions: [
+      session("m2", "2026-10-21T03:00:00Z", "2026-10-21T03:10:00Z", { scheduleId: "early" }),
+    ],
   };
-  const byKey = Object.fromEntries(calendarEvents(data, new Date("2026-10-21T03:30:00Z")).map((item) => [item.scheduleId, item]));
+  const byKey = Object.fromEntries(
+    calendarEvents(data, new Date("2026-10-21T03:30:00Z")).map((item) => [item.scheduleId, item]),
+  );
   assert.equal(byKey.later.status, "upcoming");
   assert.equal(byKey.done.status, "past");
   assert.equal(byKey.early.status, "upcoming");
@@ -83,7 +87,10 @@ test("schedules are past once their slot ends; a session that ended early keeps 
 });
 
 test("a meeting started without a schedule is its own event named after the room", () => {
-  const data = { schedules: [], sessions: [session("m3", "2026-10-21T02:00:00Z", "2026-10-21T02:40:00Z")] };
+  const data = {
+    schedules: [],
+    sessions: [session("m3", "2026-10-21T02:00:00Z", "2026-10-21T02:40:00Z")],
+  };
   const [only] = calendarEvents(data, new Date("2026-10-21T05:00:00Z"));
   assert.equal(only.title, "Phòng họp");
   assert.equal(only.sessionId, "m3");
@@ -97,18 +104,30 @@ const wednesday = new Date("2026-10-20T17:00:00Z");
 
 test("overlapping meetings share the hour side by side", () => {
   const laid = layoutDay(
-    [event("a", "2026-10-21T02:00:00Z", "2026-10-21T03:00:00Z"), event("b", "2026-10-21T02:30:00Z", "2026-10-21T03:30:00Z")],
+    [
+      event("a", "2026-10-21T02:00:00Z", "2026-10-21T03:00:00Z"),
+      event("b", "2026-10-21T02:30:00Z", "2026-10-21T03:30:00Z"),
+    ],
     wednesday,
   );
   assert.equal(laid.length, 2);
-  assert.deepEqual(laid.map((item) => item.columns), [2, 2]);
+  assert.deepEqual(
+    laid.map((item) => item.columns),
+    [2, 2],
+  );
   assert.notEqual(laid[0].column, laid[1].column);
 });
 
 test("a meeting before 7:00 is clipped to the top of the day", () => {
-  const [only] = layoutDay([event("early", "2026-10-20T23:00:00Z", "2026-10-21T01:00:00Z")], wednesday);
+  const [only] = layoutDay(
+    [event("early", "2026-10-20T23:00:00Z", "2026-10-21T01:00:00Z")],
+    wednesday,
+  );
   assert.equal(only.top, 0);
-  assert.ok(Math.abs(only.height - (100 / 14)) < 1e-9, `8:00 is one hour into the 7h–21h frame, got ${only.height}`);
+  assert.ok(
+    Math.abs(only.height - 100 / 14) < 1e-9,
+    `8:00 is one hour into the 7h–21h frame, got ${only.height}`,
+  );
 });
 
 test("a meeting across midnight shows on both days, clipped to each day's edge", () => {
@@ -118,7 +137,10 @@ test("a meeting across midnight shows on both days, clipped to each day's edge",
   for (const day of [sunday, monday]) {
     const [only] = layoutDay([late], day);
     assert.ok(only, `missing on ${iso(day)}`);
-    assert.ok(only.top >= 0 && only.height > 0 && only.top + only.height <= 100 + 1e-9, JSON.stringify(only));
+    assert.ok(
+      only.top >= 0 && only.height > 0 && only.top + only.height <= 100 + 1e-9,
+      JSON.stringify(only),
+    );
   }
   assert.equal(layoutDay([late], sunday)[0].top + layoutDay([late], sunday)[0].height, 100);
   assert.equal(layoutDay([late], monday)[0].top, 0);

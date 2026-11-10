@@ -34,7 +34,9 @@ const seconds = Math.min(600, Math.max(10, Number(args.seconds ?? 60)));
 const warmup = Math.min(120, Math.max(5, Number(args.warmup ?? 15)));
 const layer = args.layer === undefined ? null : Number(args.layer);
 // --selection=visible|speaker|combined: stream-selection policy on a virtual 1280x720 gallery.
-const selection = ["visible", "speaker", "combined"].includes(args.selection) ? args.selection : null;
+const selection = ["visible", "speaker", "combined"].includes(args.selection)
+  ? args.selection
+  : null;
 // --speak=<seconds>: scripted talkers, each peer speaks for one slot of a round-robin cycle.
 const speakSlotMs = args.speak ? Math.max(2, Number(args.speak)) * 1000 : null;
 const label =
@@ -92,7 +94,9 @@ const lanCandidates = Object.entries(networkInterfaces()).flatMap(([name, items]
 );
 // Prefer a physical LAN adapter over VPN/virtual switches.
 const lanIp = (
-  lanCandidates.find((c) => /^(192\.168|10\.)/.test(c.address) && !/vEthernet|VPN|WSL/i.test(c.name)) ??
+  lanCandidates.find(
+    (c) => /^(192\.168|10\.)/.test(c.address) && !/vEthernet|VPN|WSL/i.test(c.name),
+  ) ??
   lanCandidates.find((c) => !/vEthernet|VPN|WSL/i.test(c.name)) ??
   lanCandidates[0]
 )?.address;
@@ -101,9 +105,8 @@ process.env.MEDIASOUP_ANNOUNCED_IP = announcedIp;
 const { pool } = await import("../../dist/api/infrastructure/database/db.js");
 const { createApiServer } = await import("../../dist/api/server.js");
 const { createAccessToken } = await import("../../dist/api/modules/auth/tokens.js");
-const { createWorkspace, addWorkspaceMember, getWorkspaceChannels } = await import(
-  "../../dist/api/modules/workspaces/service.js"
-);
+const { createWorkspace, addWorkspaceMember, getWorkspaceChannels } =
+  await import("../../dist/api/modules/workspaces/service.js");
 const { roomManager } = await import("../../dist/api/modules/meetings/media/room-manager.js");
 // --join=1: peers join an existing room on a running API (UI verification), nothing is measured.
 const joinMode = args.join === "1";
@@ -129,7 +132,9 @@ relay.on("connection", (socket) => {
     socket.data.room = room;
     socket.emit("peers", ids);
   });
-  socket.on("signal", (message) => relay.to(message.to).emit("signal", { ...message, from: socket.id }));
+  socket.on("signal", (message) =>
+    relay.to(message.to).emit("signal", { ...message, from: socket.id }),
+  );
   socket.on("disconnect", () => {
     if (socket.data.room) relay.to(socket.data.room).emit("peer_left", socket.id);
   });
@@ -221,8 +226,9 @@ async function launchChrome(url, index) {
   let pageUrl;
   for (let attempt = 0; attempt < 50 && !pageUrl; attempt++) {
     const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then((r) => r.json());
-    pageUrl = targets.find((t) => t.type === "page" && t.url.includes("lab.html"))
-      ?.webSocketDebuggerUrl;
+    pageUrl = targets.find(
+      (t) => t.type === "page" && t.url.includes("lab.html"),
+    )?.webSocketDebuggerUrl;
     if (!pageUrl) await delay(200);
   }
   if (!pageUrl) fail(new Error("Lab page target not found"));
@@ -285,7 +291,11 @@ async function runTier(n) {
     // Talk schedule starts once every client should be connected; until then all are silent.
     const speakEpoch = speakSlotMs ? Date.now() + n * 1500 + 5000 : null;
     for (let i = 0; i < n; i++) {
-      const query = new URLSearchParams({ mode, peer: `p${i}`, room: mode === "sfu" ? room.id : runId });
+      const query = new URLSearchParams({
+        mode,
+        peer: `p${i}`,
+        room: mode === "sfu" ? room.id : runId,
+      });
       if (selection) query.set("selection", selection);
       if (speakSlotMs) {
         query.set("speak", "1");
@@ -296,7 +306,10 @@ async function runTier(n) {
       }
       if (args.render === "0") query.set("render", "0");
       if (mode === "sfu") {
-        query.set("api", joinMode ? (args.api ?? "http://localhost:3001") : `http://127.0.0.1:${apiPort}`);
+        query.set(
+          "api",
+          joinMode ? (args.api ?? "http://localhost:3001") : `http://127.0.0.1:${apiPort}`,
+        );
         query.set("token", await createAccessToken(users[i]));
         if (layer !== null) query.set("layer", String(layer));
         if (args.simulcast === "0") query.set("simulcast", "0");
@@ -310,7 +323,10 @@ async function runTier(n) {
     for (;;) {
       const states = await Promise.all(
         clients.map((c) =>
-          evaluate(c, "({ready: __lab.ready, error: __lab.error, frames: Object.keys(__lab.firstFrames).length, logs: __lab.logs.slice(-8), videos: [...document.querySelectorAll('video')].map(v => v.readyState + ':' + v.videoWidth + ':' + v.paused), down: __lab.samples.at(-1)?.downVideoKbps, up: __lab.samples.at(-1)?.upVideoKbps, upAll: __lab.samples.at(-1)?.upKbps, downAll: __lab.samples.at(-1)?.downKbps})"),
+          evaluate(
+            c,
+            "({ready: __lab.ready, error: __lab.error, frames: Object.keys(__lab.firstFrames).length, logs: __lab.logs.slice(-8), videos: [...document.querySelectorAll('video')].map(v => v.readyState + ':' + v.videoWidth + ':' + v.paused), down: __lab.samples.at(-1)?.downVideoKbps, up: __lab.samples.at(-1)?.upVideoKbps, upAll: __lab.samples.at(-1)?.upKbps, downAll: __lab.samples.at(-1)?.downKbps})",
+          ),
         ),
       );
       const failed = states.find((s) => s?.error);
@@ -379,7 +395,10 @@ async function runTier(n) {
           sendWidth: round(mean(window.map((s) => s.sendWidth)), 0),
           recvFps: round(mean(window.map((s) => s.recvFpsAvg))),
           jitterBufferMs: round(mean(window.map((s) => s.jitterBufferMs)), 1),
-          nackPerMin: round(((window.at(-1)?.nackCount ?? 0) - (window[0]?.nackCount ?? 0)) / (seconds / 60), 1),
+          nackPerMin: round(
+            ((window.at(-1)?.nackCount ?? 0) - (window[0]?.nackCount ?? 0)) / (seconds / 60),
+            1,
+          ),
           protocols: [...new Set(window.map((s) => s.protocols))].join("|"),
           cpuPct: round(mean(cpuSamples[i])),
           limited: window.filter((s) => s.qualityLimitation).length / Math.max(1, window.length),
@@ -393,8 +412,14 @@ async function runTier(n) {
     const summary = {
       clients: n,
       upKbps: { mean: round(mean(pick("upKbps"))), p95: round(percentile(pick("upKbps"), 95)) },
-      downKbps: { mean: round(mean(pick("downKbps"))), p95: round(percentile(pick("downKbps"), 95)) },
-      clientCpuPct: { mean: round(mean(pick("cpuPct"))), p95: round(percentile(pick("cpuPct"), 95)) },
+      downKbps: {
+        mean: round(mean(pick("downKbps"))),
+        p95: round(percentile(pick("downKbps"), 95)),
+      },
+      clientCpuPct: {
+        mean: round(mean(pick("cpuPct"))),
+        p95: round(percentile(pick("cpuPct"), 95)),
+      },
       activeEncoders: round(mean(pick("activeEncoders"))),
       rttMs: round(mean(pick("rttMs")), 2),
       audioJitterMs: round(mean(pick("audioJitterMs")), 2),
@@ -490,7 +515,12 @@ async function runTier(n) {
 // while a talker is scheduled are counted as wrong (late or spurious switches).
 async function speakerMetrics(clients, n, epoch, slot, from, to) {
   const states = await Promise.all(
-    clients.map((c) => evaluate(c, "({socketId: __lab.socketId, events: __lab.speakerEvents, layerRequests: __lab.layerRequests})")),
+    clients.map((c) =>
+      evaluate(
+        c,
+        "({socketId: __lab.socketId, events: __lab.speakerEvents, layerRequests: __lab.layerRequests})",
+      ),
+    ),
   );
   const indexOf = new Map(states.map((state, i) => [state.socketId, i]));
   const latencies = [];
@@ -541,7 +571,7 @@ const environment = {
   meshEncodings: "single encoding, maxBitrate 1200 kbps per peer connection",
   consumerLayer: selection
     ? `${selection} policy on a virtual 1280x720 gallery (apps/web speaker-policy.ts)`
-    : layer ?? "auto (app policy: >6 consumers -> 0, >2 -> 1, else 2)",
+    : (layer ?? "auto (app policy: >6 consumers -> 0, >2 -> 1, else 2)"),
   talkers: speakSlotMs
     ? `scripted: 180 Hz tone, 4 Hz syllable modulation, round-robin ${speakSlotMs / 1000}s slots`
     : "Chromium fake microphone (continuous beep)",
@@ -558,7 +588,9 @@ const outFile = join(outDir, `${label}-${stamp}.json`);
 const results = [];
 // --join runs measure nothing, so they leave no evidence file.
 const save = () =>
-  joinMode ? Promise.resolve() : writeFile(outFile, JSON.stringify({ label, mode, environment, results }, null, 2));
+  joinMode
+    ? Promise.resolve()
+    : writeFile(outFile, JSON.stringify({ label, mode, environment, results }, null, 2));
 try {
   for (const n of tiers) {
     try {

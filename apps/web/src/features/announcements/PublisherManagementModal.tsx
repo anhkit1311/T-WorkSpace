@@ -77,8 +77,17 @@ export function PublisherManagementModal({ accessToken, onClose, onChanged }: Pr
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <p style={{ margin: 0, fontSize: 13.5, color: "var(--text-secondary, #475569)", lineHeight: 1.5 }}>
-          Những tài khoản trong danh sách dưới đây (cùng với Quản trị hệ thống và Ban Chủ nhiệm Khoa) sẽ có quyền tạo, chỉnh sửa và đăng thông báo trực tiếp lên Bảng tin Trang chủ cho toàn bộ sinh viên xem.
+        <p
+          style={{
+            margin: 0,
+            fontSize: 13.5,
+            color: "var(--text-secondary, #475569)",
+            lineHeight: 1.5,
+          }}
+        >
+          Những tài khoản trong danh sách dưới đây (cùng với Quản trị hệ thống và Ban Chủ nhiệm
+          Khoa) sẽ có quyền tạo, chỉnh sửa và đăng thông báo trực tiếp lên Bảng tin Trang chủ cho
+          toàn bộ sinh viên xem.
         </p>
 
         {error && (
@@ -130,12 +139,21 @@ export function PublisherManagementModal({ accessToken, onClose, onChanged }: Pr
         </form>
 
         <div style={{ marginTop: 10 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text, #0F172A)", marginBottom: 8 }}>
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: "var(--text, #0F172A)",
+              marginBottom: 8,
+            }}
+          >
             Danh sách tài khoản được cấp quyền đăng bài ({publishers.length})
           </div>
 
           {loading ? (
-            <p style={{ fontSize: 13, color: "var(--text-muted, #64748B)" }}>Đang tải danh sách...</p>
+            <p style={{ fontSize: 13, color: "var(--text-muted, #64748B)" }}>
+              Đang tải danh sách...
+            </p>
           ) : publishers.length === 0 ? (
             <div
               style={{
@@ -147,7 +165,8 @@ export function PublisherManagementModal({ accessToken, onClose, onChanged }: Pr
                 fontSize: 13,
               }}
             >
-              Chưa có tài khoản riêng nào được cấp quyền. Mặc định Quản trị hệ thống và Giáo vụ Khoa đã có sẵn quyền đăng bài.
+              Chưa có tài khoản riêng nào được cấp quyền. Mặc định Quản trị hệ thống và Giáo vụ Khoa
+              đã có sẵn quyền đăng bài.
             </div>
           ) : (
             <div

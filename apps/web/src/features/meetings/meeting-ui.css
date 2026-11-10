@@ -29,13 +29,13 @@
   display: grid;
   gap: 6px;
   font-size: 13px;
-  color: var(--tws-text-muted, #8A8780);
+  color: var(--tws-text-muted, #8a8780);
 }
 
 .mic-level__track {
   height: 6px;
   border-radius: var(--tws-radius-pill, 9999px);
-  background: var(--tws-bg-subtle, #EEECE7);
+  background: var(--tws-bg-subtle, #eeece7);
   overflow: hidden;
 }
 
@@ -151,11 +151,16 @@
   overflow: hidden;
   box-shadow: none;
   border: 2px solid rgba(255, 255, 255, 0.5);
-  transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.2s ease;
+  transition:
+    box-shadow 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.2s ease;
 }
 
 .video-tile.is-speaking {
-  box-shadow: 0 0 0 2px #0f172a, 0 0 24px rgba(15, 23, 42, 0.3);
+  box-shadow:
+    0 0 0 2px #0f172a,
+    0 0 24px rgba(15, 23, 42, 0.3);
   border-color: #0f172a;
 }
 
@@ -265,14 +270,14 @@
 }
 
 .participant-hand {
-  background: #F59E0B;
-  color: #3B2504;
+  background: #f59e0b;
+  color: #3b2504;
 }
 
 .participant-role {
   background: rgba(15, 18, 22, 0.66);
   backdrop-filter: blur(6px);
-  color: #6EE7B7;
+  color: #6ee7b7;
 }
 
 .shared-screen {
@@ -316,7 +321,9 @@
   color: #ffffff;
   cursor: pointer;
   opacity: 0.7;
-  transition: opacity 150ms ease, transform 150ms ease;
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
   outline: none !important;
 }
 
@@ -380,22 +387,22 @@
   --surface-soft: #0c0d0f;
   --card-bg: #18191c;
   --input-bg: #141517;
-  --text: #FFFFFF;
-  --text-secondary: #C4C7C5;
-  --text-muted: #9AA0A6;
+  --text: #ffffff;
+  --text-secondary: #c4c7c5;
+  --text-muted: #9aa0a6;
   --border: rgba(255, 255, 255, 0.12);
   --border-color: rgba(255, 255, 255, 0.12);
   --input-border: rgba(255, 255, 255, 0.2);
-  --primary: #2563EB;
-  --primary-hover: #3B82F6;
-  --primary-soft: #1E293B;
-  --primary-text: #FFFFFF;
+  --primary: #2563eb;
+  --primary-hover: #3b82f6;
+  --primary-soft: #1e293b;
+  --primary-text: #ffffff;
   color-scheme: dark;
   position: fixed;
   inset: 0;
   z-index: 200;
   background: #000000;
-  color: #FFFFFF;
+  color: #ffffff;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -456,7 +463,7 @@
   aspect-ratio: 16 / 9;
   overflow: hidden;
   border-radius: 18px;
-  background: radial-gradient(120% 90% at 50% 20%, #3B4A55 0%, #26313A 45%, #171C21 100%);
+  background: radial-gradient(120% 90% at 50% 20%, #3b4a55 0%, #26313a 45%, #171c21 100%);
   box-shadow: 0 24px 48px -30px rgba(15, 23, 42, 0.8);
 }
 .pj-stage__video {
@@ -472,7 +479,7 @@
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  color: #C9D1D9;
+  color: #c9d1d9;
   font-size: 14px;
   font-weight: 500;
 }
@@ -481,10 +488,10 @@
   height: 84px;
   display: grid;
   place-items: center;
-  border: 1px solid #3A424C;
+  border: 1px solid #3a424c;
   border-radius: 999px;
-  background: #2D333B;
-  color: #E6EDF3;
+  background: #2d333b;
+  color: #e6edf3;
   font-size: 30px;
   font-weight: 800;
 }
@@ -498,15 +505,21 @@
   border-radius: 999px;
   background: rgba(15, 18, 22, 0.62);
   backdrop-filter: blur(6px);
-  color: #E6EDF3;
+  color: #e6edf3;
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.pj-glass.is-top-left { left: 16px; top: 16px; }
-.pj-glass.is-top-right { right: 16px; top: 16px; }
+.pj-glass.is-top-left {
+  left: 16px;
+  top: 16px;
+}
+.pj-glass.is-top-right {
+  right: 16px;
+  top: 16px;
+}
 .pj-glass.is-name {
   left: 16px;
   bottom: 22px;
@@ -542,18 +555,18 @@
 .pj-ctl.is-on {
   border-color: #fff;
   background: #fff;
-  color: #1F2328;
+  color: #1f2328;
 }
 .pj-ctl.is-off {
-  border-color: #DC2626;
-  background: #DC2626;
+  border-color: #dc2626;
+  background: #dc2626;
 }
 .pj-ctl:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 .pj-ctl:focus-visible {
-  outline: 2px solid #6EE7B7;
+  outline: 2px solid #6ee7b7;
   outline-offset: 2px;
 }
 .pj-label {
@@ -878,7 +891,7 @@
   font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: #FCA5A5;
+  color: #fca5a5;
 }
 
 .meeting-topbar__clock {
@@ -904,7 +917,7 @@
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: #6EE7B7;
+  color: #6ee7b7;
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
@@ -972,7 +985,9 @@
   background: var(--mt-ink);
   color: var(--mt-ink-soft);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .jitsi-topbar-btn:hover {
@@ -983,7 +998,7 @@
 .jitsi-topbar-btn.is-active {
   border-color: var(--mt-on-ink);
   background: var(--mt-on-ink);
-  color: #1F2328;
+  color: #1f2328;
 }
 
 .jitsi-topbar-btn.is-network {
@@ -993,9 +1008,15 @@
   font-weight: 700;
 }
 
-.jitsi-topbar-btn.is-network.is-good svg { color: #34D399; }
-.jitsi-topbar-btn.is-network.is-weak svg { color: #FBBF24; }
-.jitsi-topbar-btn.is-network.is-bad svg { color: #F87171; }
+.jitsi-topbar-btn.is-network.is-good svg {
+  color: #34d399;
+}
+.jitsi-topbar-btn.is-network.is-weak svg {
+  color: #fbbf24;
+}
+.jitsi-topbar-btn.is-network.is-bad svg {
+  color: #f87171;
+}
 
 .meeting-room-active .shared-screen {
   flex: 0 1 auto;
@@ -1077,8 +1098,10 @@
 }
 
 .meeting-room-active .video-tile.is-speaking {
-  border-color: #10B981;
-  box-shadow: 0 0 0 1px #10B981, 0 0 22px -2px rgba(16, 185, 129, 0.65);
+  border-color: #10b981;
+  box-shadow:
+    0 0 0 1px #10b981,
+    0 0 22px -2px rgba(16, 185, 129, 0.65);
 }
 
 .meeting-room-active .participant-visual {
@@ -1099,7 +1122,7 @@
 }
 
 .is-speaking .jitsi-avatar-ring {
-  border-color: #10B981;
+  border-color: #10b981;
 }
 
 .jitsi-avatar-circle {
@@ -1199,7 +1222,7 @@
 }
 
 .participant-label__muted {
-  color: #F87171;
+  color: #f87171;
 }
 
 .meeting-pin {
@@ -1245,8 +1268,14 @@
 }
 
 @keyframes jitsiToastIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .jitsi-toast-icon {
@@ -1257,7 +1286,7 @@
   height: 22px;
   border-radius: 50%;
   background: var(--mt-unit);
-  color: #6EE7B7;
+  color: #6ee7b7;
 }
 
 .jitsi-toast-message {
@@ -1317,7 +1346,9 @@
   background: var(--mt-unit);
   color: var(--mt-on-ink);
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease;
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease;
 }
 
 .jitsi-dock-btn:hover:not(:disabled) {
@@ -1336,7 +1367,7 @@
 .jitsi-dock-btn.is-active,
 .jitsi-dock-btn.is-active:hover:not(:disabled) {
   background: var(--mt-on-ink);
-  color: #1F2328;
+  color: #1f2328;
 }
 
 .jitsi-dock-btn.is-leave {
@@ -1346,7 +1377,7 @@
   width: auto;
   padding: 0 18px;
   border-radius: 999px;
-  background: #DC2626;
+  background: #dc2626;
   color: #fff;
   font: inherit;
   font-size: 13px;
@@ -1354,7 +1385,7 @@
 }
 
 .jitsi-dock-btn.is-leave:hover:not(:disabled) {
-  background: #B91C1C;
+  background: #b91c1c;
 }
 
 .jitsi-dock-sep {
@@ -1382,21 +1413,21 @@
 }
 
 .jitsi-dock-split.is-muted {
-  background: #DC2626;
+  background: #dc2626;
   color: #fff;
 }
 
 .jitsi-dock-split.is-muted:hover {
-  background: #B91C1C;
+  background: #b91c1c;
 }
 
 .jitsi-dock-split.is-hand-raised {
-  background: #F59E0B;
-  color: #3B2504;
+  background: #f59e0b;
+  color: #3b2504;
 }
 
 .jitsi-dock-split.is-hand-raised:hover {
-  background: #D97706;
+  background: #d97706;
 }
 
 .jitsi-dock-split > .jitsi-dock-btn,
@@ -1456,8 +1487,8 @@
   place-items: center;
   border: 2px solid var(--mt-ink);
   border-radius: 999px;
-  background: #10B981;
-  color: #06281D;
+  background: #10b981;
+  color: #06281d;
   font-family: var(--font-mono);
   font-size: 9.5px;
   font-weight: 800;
@@ -1465,7 +1496,7 @@
 }
 
 .meeting-waiting-chip {
-  --led-amber: #FBBF24;
+  --led-amber: #fbbf24;
   position: fixed;
   left: 16px;
   bottom: 24px;
@@ -1476,10 +1507,10 @@
   height: 40px;
   max-width: calc(100vw - 32px);
   padding: 0 6px 0 12px;
-  border: 1px solid #5B4515;
+  border: 1px solid #5b4515;
   border-radius: 999px;
-  background: #2A2418;
-  color: #FDE68A;
+  background: #2a2418;
+  color: #fde68a;
   font-size: 12.5px;
   box-sizing: border-box;
 }
@@ -1501,8 +1532,8 @@
   padding: 0 12px;
   border: 0;
   border-radius: 999px;
-  background: #F59E0B;
-  color: #3B2504;
+  background: #f59e0b;
+  color: #3b2504;
   font: inherit;
   font-size: 12px;
   font-weight: 800;
@@ -1523,7 +1554,7 @@
   font-size: 10px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #57606A;
+  color: #57606a;
 }
 
 /* Popover menus */
@@ -1592,7 +1623,7 @@
 }
 
 .meeting-menu__item.is-danger {
-  color: #F87171;
+  color: #f87171;
 }
 
 .meeting-menu__item.is-danger:hover {
@@ -1600,7 +1631,7 @@
 }
 
 .meeting-menu__check {
-  color: #34D399;
+  color: #34d399;
 }
 
 /* Side panel: one card with tabs for people, chat, minutes and the council. */
@@ -1640,12 +1671,12 @@
 }
 
 .meeting-room-active .meeting-outcomes :is(select, input, textarea):focus-visible {
-  outline-color: #10B981;
+  outline-color: #10b981;
 }
 
 .meeting-room-active .meeting-outcomes-count {
   background: rgba(16, 185, 129, 0.16);
-  color: #6EE7B7;
+  color: #6ee7b7;
 }
 
 .meeting-room-active .meeting-task-list li:hover {
@@ -1653,7 +1684,7 @@
 }
 
 .meeting-room-active .meeting-agenda input[type="checkbox"] {
-  accent-color: #10B981;
+  accent-color: #10b981;
 }
 
 .meeting-room-active .meeting-side-panel-head {
@@ -1707,7 +1738,7 @@
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
-  color: #6EE7B7;
+  color: #6ee7b7;
 }
 
 .meeting-room-active .meeting-side-panel-head .icon-button {
@@ -1768,7 +1799,7 @@
 }
 
 .meeting-room-active .meeting-chat-compose input:focus {
-  border-color: #10B981;
+  border-color: #10b981;
 }
 
 .meeting-room-active .meeting-chat-compose button {
@@ -1853,12 +1884,12 @@
 }
 
 .meeting-person-mic.is-off {
-  color: #F87171;
+  color: #f87171;
 }
 
 .meeting-person-hand {
   flex: none;
-  color: #FBBF24;
+  color: #fbbf24;
 }
 
 .meeting-person-more {
@@ -1987,4 +2018,3 @@
     justify-content: center;
   }
 }
-

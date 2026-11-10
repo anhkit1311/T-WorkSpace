@@ -27,7 +27,11 @@ if (!process.env.ASTERISK_ARI_PASSWORD) throw new Error("ASTERISK_ARI_PASSWORD i
 const base = `${(process.env.ASTERISK_ARI_URL ?? "http://localhost:8088").replace(/\/$/, "")}/ari`;
 const auth = `Basic ${Buffer.from(`${process.env.ASTERISK_ARI_USER ?? "tworkspace"}:${process.env.ASTERISK_ARI_PASSWORD}`).toString("base64")}`;
 const ari = async (method, path) => {
-  const response = await fetch(base + path, { method, headers: { Authorization: auth }, signal: AbortSignal.timeout(5000) });
+  const response = await fetch(base + path, {
+    method,
+    headers: { Authorization: auth },
+    signal: AbortSignal.timeout(5000),
+  });
   if (!response.ok) throw new Error(`${method} ${path.split("?")[0]} → ${response.status}`);
   return response.status === 204 ? null : response.json();
 };
@@ -47,7 +51,12 @@ let next = 0;
 async function caller(index) {
   const callerNumber = `0999${run}${String(index).padStart(3, "0")}`; // 10 digits, unique in this run
   originated.set(callerNumber, Date.now());
-  const params = new URLSearchParams({ endpoint: "Local/9000@from-internal", app: "tworkspace", appArgs: "loadtest", callerId: callerNumber });
+  const params = new URLSearchParams({
+    endpoint: "Local/9000@from-internal",
+    app: "tworkspace",
+    appArgs: "loadtest",
+    callerId: callerNumber,
+  });
   const channel = await ari("POST", `/channels?${params}`);
   try {
     await sleep(1500); // let the IVR prompt start
@@ -85,17 +94,42 @@ const rows = (
     [startedAt],
   )
 ).rows;
-const setup = rows.filter((row) => originated.has(row.caller_number)).map((row) => row.started_at.getTime() - originated.get(row.caller_number));
+const setup = rows
+  .filter((row) => originated.has(row.caller_number))
+  .map((row) => row.started_at.getTime() - originated.get(row.caller_number));
 const queued = rows.filter((row) => row.queued_at).map((row) => row.queued_at - row.started_at);
-const outcomes = rows.reduce((all, row) => ({ ...all, [row.outcome ?? "open"]: (all[row.outcome ?? "open"] ?? 0) + 1 }), {});
+const outcomes = rows.reduce(
+  (all, row) => ({ ...all, [row.outcome ?? "open"]: (all[row.outcome ?? "open"] ?? 0) + 1 }),
+  {},
+);
 
-console.log(JSON.stringify({
-  calls, concurrency, holdSeconds: holdMs / 1000, wallSeconds: Number(wallSeconds.toFixed(1)),
-  recorded: rows.length, queued: queued.length, generatorErrors: errors.length, errors: [...new Set(errors)].slice(0, 5),
-  setupMs: { p50: percentile(setup, 50), p95: percentile(setup, 95), max: percentile(setup, 100) },
-  ivrToQueueMs: { p50: percentile(queued, 50), p95: percentile(queued, 95), max: percentile(queued, 100) },
-  outcomes,
-}, null, 2));
+console.log(
+  JSON.stringify(
+    {
+      calls,
+      concurrency,
+      holdSeconds: holdMs / 1000,
+      wallSeconds: Number(wallSeconds.toFixed(1)),
+      recorded: rows.length,
+      queued: queued.length,
+      generatorErrors: errors.length,
+      errors: [...new Set(errors)].slice(0, 5),
+      setupMs: {
+        p50: percentile(setup, 50),
+        p95: percentile(setup, 95),
+        max: percentile(setup, 100),
+      },
+      ivrToQueueMs: {
+        p50: percentile(queued, 50),
+        p95: percentile(queued, 95),
+        max: percentile(queued, 100),
+      },
+      outcomes,
+    },
+    null,
+    2,
+  ),
+);
 
 if (!keep && rows.length) {
   const ids = rows.map((row) => row.id);

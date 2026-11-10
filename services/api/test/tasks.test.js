@@ -20,7 +20,12 @@ import {
   setChannelMember,
   updateWorkspace,
 } from "../../../dist/api/modules/workspaces/governance.js";
-import { createTask, getTask, listTasks, mutateTask } from "../../../dist/api/modules/tasks/service.js";
+import {
+  createTask,
+  getTask,
+  listTasks,
+  mutateTask,
+} from "../../../dist/api/modules/tasks/service.js";
 import { createApiServer } from "../../../dist/api/server.js";
 import { createAccessToken } from "../../../dist/api/modules/auth/tokens.js";
 import { roomManager } from "../../../dist/api/modules/meetings/media/room-manager.js";
@@ -57,7 +62,10 @@ test(
       assert.equal(task.sourceMessageId, source.id);
       assert.equal(task.assigneeId, member);
       assert.equal((await createTask(owner, channel.id, input)).id, task.id);
-      await assert.rejects(createTask(owner,channel.id,{...input,description:'Different retry'}),{code:'IDEMPOTENCY_CONFLICT'});
+      await assert.rejects(
+        createTask(owner, channel.id, { ...input, description: "Different retry" }),
+        { code: "IDEMPOTENCY_CONFLICT" },
+      );
       await assert.rejects(
         createTask(owner, channel.id, {
           ...input,
@@ -73,7 +81,7 @@ test(
       assert.equal(concurrent.filter((r) => r.status === "fulfilled").length, 1);
       assert.equal(concurrent.find((r) => r.status === "rejected").reason.code, "TASK_CONFLICT");
       task = await getTask(member, task.id);
-      assert.equal((await createTask(owner,channel.id,input)).id,task.id);
+      assert.equal((await createTask(owner, channel.id, input)).id, task.id);
       task = await mutateTask(member, task.id, {
         version: task.version,
         action: "checklist-add",

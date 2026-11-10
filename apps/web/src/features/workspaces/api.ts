@@ -1,7 +1,4 @@
-import type {
-  ChannelItem,
-  GroupMemberItem,
-} from "@doan/shared";
+import type { ChannelItem, GroupMemberItem } from "@doan/shared";
 import { ApiError } from "../auth/api";
 
 export interface Administration {
@@ -53,5 +50,3 @@ export async function governanceApi<T = { success: boolean }>(
     );
   return data as T;
 }
-
-

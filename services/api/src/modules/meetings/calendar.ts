@@ -10,10 +10,18 @@ const MAX_RANGE_DAYS = 42;
  * are running in [from, to), in rooms the user can see. Rooms of archived groups stay visible
  * read-only, so canManage also needs write access.
  */
-export async function listMeetingCalendar(userId: string, from: Date, to: Date): Promise<MeetingCalendar> {
+export async function listMeetingCalendar(
+  userId: string,
+  from: Date,
+  to: Date,
+): Promise<MeetingCalendar> {
   const span = to.getTime() - from.getTime();
   if (!Number.isFinite(span) || span <= 0 || span > MAX_RANGE_DAYS * 86_400_000)
-    throw new HttpError(400, "INVALID_RANGE", `Khoảng thời gian phải hợp lệ và không quá ${MAX_RANGE_DAYS} ngày.`);
+    throw new HttpError(
+      400,
+      "INVALID_RANGE",
+      `Khoảng thời gian phải hợp lệ và không quá ${MAX_RANGE_DAYS} ngày.`,
+    );
   const [schedules, sessions] = await Promise.all([
     query<MeetingScheduleItem>(
       `SELECT s.id, s.channel_id AS "roomId", c.workspace_id AS "workspaceId",

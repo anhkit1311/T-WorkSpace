@@ -25,8 +25,50 @@ const lecturers = [
   ["gv.son", "Hoàng Văn Sơn", "pgs", "KHMT", "GV007"],
   ["gv.linh", "Bùi Khánh Linh", "ts", "HTTT", "GV008"],
 ];
-const familyNames = ["Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Phan", "Vũ", "Đặng", "Bùi", "Đỗ", "Hồ", "Ngô"];
-const givenNames = ["An", "Bình", "Chi", "Dũng", "Giang", "Hải", "Hạnh", "Khánh", "Long", "My", "Nam", "Ngân", "Phúc", "Quân", "Thảo", "Trang", "Tú", "Vy", "Yến", "Đạt", "Huy", "Kiệt", "Minh", "Nhi", "Phong", "Sơn", "Tâm", "Uyên"];
+const familyNames = [
+  "Nguyễn",
+  "Trần",
+  "Lê",
+  "Phạm",
+  "Hoàng",
+  "Phan",
+  "Vũ",
+  "Đặng",
+  "Bùi",
+  "Đỗ",
+  "Hồ",
+  "Ngô",
+];
+const givenNames = [
+  "An",
+  "Bình",
+  "Chi",
+  "Dũng",
+  "Giang",
+  "Hải",
+  "Hạnh",
+  "Khánh",
+  "Long",
+  "My",
+  "Nam",
+  "Ngân",
+  "Phúc",
+  "Quân",
+  "Thảo",
+  "Trang",
+  "Tú",
+  "Vy",
+  "Yến",
+  "Đạt",
+  "Huy",
+  "Kiệt",
+  "Minh",
+  "Nhi",
+  "Phong",
+  "Sơn",
+  "Tâm",
+  "Uyên",
+];
 
 async function account(handle, displayName, passwordHash) {
   const email = `${handle}@${DOMAIN}`;
@@ -47,7 +89,8 @@ async function reset() {
     if (unit) {
       await client.query(`SET LOCAL session_replication_role = replica`);
       await client.query(`DELETE FROM academic_audit_events WHERE unit_id=$1`, [unit.id]);
-      for (const table of ["academic_role_grants", "academic_staff", "academic_departments"]) await client.query(`DELETE FROM ${table} WHERE unit_id=$1`, [unit.id]);
+      for (const table of ["academic_role_grants", "academic_staff", "academic_departments"])
+        await client.query(`DELETE FROM ${table} WHERE unit_id=$1`, [unit.id]);
       await client.query(`DELETE FROM academic_units WHERE id=$1`, [unit.id]);
       await client.query(`SET LOCAL session_replication_role = origin`);
     }
@@ -72,14 +115,22 @@ async function main() {
     console.log("Demo faculty CNTT already exists; nothing to do.");
     return;
   }
-  const admin = (await sql(`SELECT user_id FROM academic_role_grants WHERE role='system_admin' ORDER BY created_at LIMIT 1`)).rows[0];
-  if (!admin) throw new Error('Cần một tài khoản system_admin: node scripts/ops/create-user.mjs admin@tdtu.edu.vn "Quản trị hệ thống" --admin');
+  const admin = (
+    await sql(
+      `SELECT user_id FROM academic_role_grants WHERE role='system_admin' ORDER BY created_at LIMIT 1`,
+    )
+  ).rows[0];
+  if (!admin)
+    throw new Error(
+      'Cần một tài khoản system_admin: node scripts/ops/create-user.mjs admin@tdtu.edu.vn "Quản trị hệ thống" --admin',
+    );
   const as = admin.user_id;
   const password = process.env.SEED_ACADEMIC_PASSWORD || randomBytes(9).toString("base64url");
   const passwordHash = await hashPassword(password);
   const people = {};
   people.giaovu = await account("giaovu", "Phòng Giáo vụ khoa CNTT", passwordHash);
-  for (const [handle, name] of lecturers) people[handle] = await account(handle, name, passwordHash);
+  for (const [handle, name] of lecturers)
+    people[handle] = await account(handle, name, passwordHash);
   for (let i = 1; i <= 30; i++) {
     const handle = `sv${String(i).padStart(2, "0")}`;
     const name = `${familyNames[i % familyNames.length]} ${["Văn", "Thị", "Minh", "Gia", "Ngọc"][i % 5]} ${givenNames[i % givenNames.length]}`;
@@ -90,18 +141,34 @@ async function main() {
   await org.grantRole(as, { role: "unit_admin", unitId: unit.id, email: people.giaovu.email });
   await org.grantRole(as, { role: "unit_head", unitId: unit.id, email: people.truongkhoa.email });
   const departments = {};
-  for (const [code, name] of [["KHMT", "Khoa học máy tính"], ["HTTT", "Hệ thống thông tin"], ["KTPM", "Kỹ thuật phần mềm"]])
+  for (const [code, name] of [
+    ["KHMT", "Khoa học máy tính"],
+    ["HTTT", "Hệ thống thông tin"],
+    ["KTPM", "Kỹ thuật phần mềm"],
+  ])
     departments[code] = (await org.createDepartment(as, unit.id, { code, name })).id;
   // The mã số (GV…) comes from the unit's code range, like "Tạo tài khoản" in the admin page.
   for (const [handle, , rank, department] of lecturers)
-    await org.enrollAccount(as, unit.id, { email: people[handle].email, kind: "lecturer", rank, departmentId: departments[department] });
+    await org.enrollAccount(as, unit.id, {
+      email: people[handle].email,
+      kind: "lecturer",
+      rank,
+      departmentId: departments[department],
+    });
   // Students get an MSSV (khóa 23): attendance and caller profiles show it, and the staff list leaves them out.
   for (let i = 1; i <= 30; i++)
-    await org.enrollAccount(as, unit.id, { email: people[`sv${String(i).padStart(2, "0")}`].email, kind: "student", cohort: "23" });
+    await org.enrollAccount(as, unit.id, {
+      email: people[`sv${String(i).padStart(2, "0")}`].email,
+      kind: "student",
+      cohort: "23",
+    });
 
   console.log(`Seeded faculty CNTT: ${Object.keys(people).length} accounts @${DOMAIN}.`);
-  console.log("Accounts: giaovu (giáo vụ CNTT), truongkhoa (lãnh đạo khoa), gv.* (lecturers), sv01–sv30 (students).");
-  if (!process.env.SEED_ACADEMIC_PASSWORD) console.log(`Generated password for every demo account: ${password}`);
+  console.log(
+    "Accounts: giaovu (giáo vụ CNTT), truongkhoa (lãnh đạo khoa), gv.* (lecturers), sv01–sv30 (students).",
+  );
+  if (!process.env.SEED_ACADEMIC_PASSWORD)
+    console.log(`Generated password for every demo account: ${password}`);
 }
 
 main()

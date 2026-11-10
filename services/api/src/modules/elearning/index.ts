@@ -9,7 +9,9 @@ import { LessonMediaService } from "./service/media-service.js";
 // Composition root of the e-learning module.
 
 const log = (event: string, details: Record<string, unknown> = {}) =>
-  console.log(JSON.stringify({ level: event.endsWith("failed") ? "warn" : "info", event, ...details }));
+  console.log(
+    JSON.stringify({ level: event.endsWith("failed") ? "warn" : "info", event, ...details }),
+  );
 
 const repo = new ElearningRepository();
 const courses = new CourseService(repo);
@@ -21,8 +23,16 @@ export const elearningRoutes = buildRoutes(courses, learning, live, media);
 
 /** Background work: close finished live classes (EL-6/LT-2) and resume interrupted transcodes. */
 export function startElearning() {
-  void media.recover().catch((error) => log("lesson_media_recovery_failed", { message: String(error) }));
-  const timer = setInterval(() => void live.closeFinished().catch((error) => log("live_class_pass_failed", { message: String(error) })), 60_000);
+  void media
+    .recover()
+    .catch((error) => log("lesson_media_recovery_failed", { message: String(error) }));
+  const timer = setInterval(
+    () =>
+      void live
+        .closeFinished()
+        .catch((error) => log("live_class_pass_failed", { message: String(error) })),
+    60_000,
+  );
   timer.unref();
   return () => clearInterval(timer);
 }

@@ -20,14 +20,18 @@ const by =
       if (!best) return candidate;
       const difference = key(candidate) - key(best);
       // Ties go to the smaller id so the choice is deterministic (and testable).
-      return difference < 0 || (difference === 0 && candidate.userId < best.userId) ? candidate : best;
+      return difference < 0 || (difference === 0 && candidate.userId < best.userId)
+        ? candidate
+        : best;
     }, null);
 
 /** The agent who has been waiting longest since their last call. */
 export const longestIdle: DistributionStrategy = { pick: by((candidate) => candidate.readySince) };
 
 /** Agents take turns: the one offered a call least recently goes next. */
-export const roundRobin: DistributionStrategy = { pick: by((candidate) => candidate.lastOfferedAt) };
+export const roundRobin: DistributionStrategy = {
+  pick: by((candidate) => candidate.lastOfferedAt),
+};
 
 export const strategies: Record<DistributionStrategyName, DistributionStrategy> = {
   longest_idle: longestIdle,

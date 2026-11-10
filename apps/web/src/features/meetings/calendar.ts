@@ -53,7 +53,9 @@ export function calendarEvents(data: MeetingCalendar, now: Date): CalendarEvent[
   const sessions: CalendarEvent[] = [];
   // A running session wins its schedule, then the latest one; a schedule's other sessions show on their own.
   const ordered = [...data.sessions].sort(
-    (a, b) => Number(Boolean(a.endedAt)) - Number(Boolean(b.endedAt)) || b.startedAt.localeCompare(a.startedAt),
+    (a, b) =>
+      Number(Boolean(a.endedAt)) - Number(Boolean(b.endedAt)) ||
+      b.startedAt.localeCompare(a.startedAt),
   );
   for (const item of ordered) {
     const owner = item.scheduleId ? events.get(item.scheduleId) : undefined;
@@ -73,7 +75,9 @@ export function calendarEvents(data: MeetingCalendar, now: Date): CalendarEvent[
       workspaceId: item.workspaceId,
       roomId: item.roomId,
       start,
-      end: item.endedAt ? new Date(item.endedAt) : new Date(Math.max(now.getTime(), start.getTime() + HOUR / 4)),
+      end: item.endedAt
+        ? new Date(item.endedAt)
+        : new Date(Math.max(now.getTime(), start.getTime() + HOUR / 4)),
       status: live ? "live" : "past",
       scheduleId: item.scheduleId,
       sessionId: item.id,
@@ -81,7 +85,8 @@ export function calendarEvents(data: MeetingCalendar, now: Date): CalendarEvent[
       canManage: false,
     });
   }
-  for (const item of events.values()) if (item.status === "upcoming" && item.end <= now) item.status = "past";
+  for (const item of events.values())
+    if (item.status === "upcoming" && item.end <= now) item.status = "past";
   return [...events.values(), ...sessions].sort((a, b) => a.start.getTime() - b.start.getTime());
 }
 
@@ -94,12 +99,19 @@ export function layoutDay(events: CalendarEvent[], day: Date) {
   const dayEnd = dayStart + DAY;
   const frameStart = dayStart + FIRST_HOUR * HOUR;
   const frameLength = (LAST_HOUR - FIRST_HOUR) * HOUR;
-  const position = (time: number) => (Math.min(Math.max(time - frameStart, 0), frameLength) / frameLength) * 100;
+  const position = (time: number) =>
+    (Math.min(Math.max(time - frameStart, 0), frameLength) / frameLength) * 100;
   const inDay = events
     .filter((item) => item.start.getTime() < dayEnd && item.end.getTime() > dayStart)
     .sort((a, b) => a.start.getTime() - b.start.getTime() || b.end.getTime() - a.end.getTime());
 
-  const laid: { event: CalendarEvent; top: number; height: number; column: number; columns: number }[] = [];
+  const laid: {
+    event: CalendarEvent;
+    top: number;
+    height: number;
+    column: number;
+    columns: number;
+  }[] = [];
   let group: typeof laid = [];
   let columnEnds: number[] = [];
   let groupEnd = -Infinity;
@@ -117,7 +129,13 @@ export function layoutDay(events: CalendarEvent[], day: Date) {
     else columnEnds[column] = end;
     groupEnd = Math.max(groupEnd, end);
     const top = Math.min(position(start), 100 - MIN_HEIGHT);
-    const item = { event, top, height: Math.max(position(end) - top, MIN_HEIGHT), column, columns: 1 };
+    const item = {
+      event,
+      top,
+      height: Math.max(position(end) - top, MIN_HEIGHT),
+      column,
+      columns: 1,
+    };
     group.push(item);
     laid.push(item);
   }

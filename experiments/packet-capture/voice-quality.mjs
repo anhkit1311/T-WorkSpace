@@ -93,7 +93,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const results = [];
   for (const input of inputs) {
     const [label, file] = input.includes("=") ? input.split("=") : [input, input];
-    for (const call of callQuality(parseCsv(await readFile(file, "utf8")))) results.push({ profile: label, ...call });
+    for (const call of callQuality(parseCsv(await readFile(file, "utf8"))))
+      results.push({ profile: label, ...call });
   }
   const out = process.argv.find((arg) => arg.startsWith("--out="))?.slice(6);
   if (out) await writeFile(out, JSON.stringify(results, null, 2));

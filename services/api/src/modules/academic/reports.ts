@@ -6,7 +6,13 @@ export interface UnitReportRow {
   code: string;
   name: string;
   /** Hotline calls to the unit's department that reached its queue; callbacks are neither answered nor abandoned. */
-  calls: { offered: number; answered: number; abandoned: number; callbacks: number; answerRate: number | null };
+  calls: {
+    offered: number;
+    answered: number;
+    abandoned: number;
+    callbacks: number;
+    answerRate: number | null;
+  };
   /** Meetings hosted by the unit's lecturers and staff. */
   meetings: { sessions: number; hours: number };
   courses: { published: number; enrolled: number; completed: number };
@@ -20,7 +26,12 @@ const dayIn = (date: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: ZONE 
 function period(params: URLSearchParams) {
   const to = params.get("to") || dayIn(new Date());
   const from = params.get("from") || dayIn(new Date(Date.now() - 29 * 86_400_000));
-  if (!DAY.test(from) || !DAY.test(to) || Number.isNaN(Date.parse(from)) || Number.isNaN(Date.parse(to)))
+  if (
+    !DAY.test(from) ||
+    !DAY.test(to) ||
+    Number.isNaN(Date.parse(from)) ||
+    Number.isNaN(Date.parse(to))
+  )
     throw invalid("Ngày phải có dạng YYYY-MM-DD.");
   const days = (Date.parse(to) - Date.parse(from)) / 86_400_000;
   if (days < 0 || days > 366) throw invalid("Khoảng thời gian từ 1 đến 367 ngày.");
@@ -36,10 +47,21 @@ export async function unitReport(userId: string, params: URLSearchParams) {
   return withTransaction(async (client) => {
     const actor = await loadActor(client, userId);
     const units = actor.systemAdmin ? null : [...actor.unitRoles.keys()];
-    if (units && !units.length) throw forbidden("Báo cáo đơn vị dành cho lãnh đạo và giáo vụ đơn vị.");
+    if (units && !units.length)
+      throw forbidden("Báo cáo đơn vị dành cho lãnh đạo và giáo vụ đơn vị.");
     const rows = await client.query<{
-      id: string; code: string; name: string; offered: number; answered: number; abandoned: number; callbacks: number;
-      sessions: number; seconds: number; published: number; enrolled: number; completed: number;
+      id: string;
+      code: string;
+      name: string;
+      offered: number;
+      answered: number;
+      abandoned: number;
+      callbacks: number;
+      sessions: number;
+      seconds: number;
+      published: number;
+      enrolled: number;
+      completed: number;
     }>(
       `WITH span AS (SELECT ($1::date::timestamp AT TIME ZONE '${ZONE}') AS since, (($2::date + 1)::timestamp AT TIME ZONE '${ZONE}') AS until)
        SELECT u.id,u.code,u.name,c.offered,c.answered,c.abandoned,c.callbacks,m.sessions,m.seconds,k.published,e.enrolled,e.completed

@@ -24,13 +24,15 @@ async function main() {
      FROM users u 
      JOIN academic_role_grants r ON r.user_id = u.id 
      WHERE r.role = 'system_admin' 
-     ORDER BY r.created_at LIMIT 1`
+     ORDER BY r.created_at LIMIT 1`,
   );
   if (!adminRow.rowCount) {
     throw new Error("Không tìm thấy tài khoản system_admin nào trong hệ thống.");
   }
   const adminId = adminRow.rows[0].id;
-  console.log(`> Quản trị viên thực hiện: ${adminRow.rows[0].display_name} (${adminRow.rows[0].email})`);
+  console.log(
+    `> Quản trị viên thực hiện: ${adminRow.rows[0].display_name} (${adminRow.rows[0].email})`,
+  );
 
   // 2. Lấy danh sách người dùng để phân công / ghi danh
   const allUsers = (await pool.query(`SELECT id, email, display_name FROM users`)).rows;
@@ -60,25 +62,37 @@ async function main() {
   // KHÓA 1: CS-102 - Lập trình Web Hiện đại với React & TypeScript (Open, Published)
   // ---------------------------------------------------------------------------------------------------
   await deleteCourseIfExists("CS-102");
-  console.log("\n[1/6] Tạo khóa học CS-102: Lập trình Web Hiện đại với React & TypeScript (Open)...");
+  console.log(
+    "\n[1/6] Tạo khóa học CS-102: Lập trình Web Hiện đại với React & TypeScript (Open)...",
+  );
   {
     const created = await courses.create(adminId, {
       unitId: cnttUnit.id,
       code: "CS-102",
       title: "Lập trình Web Hiện đại với React & TypeScript",
-      description: "Khóa học chuyên sâu về xây dựng ứng dụng web hiện đại. Bao gồm TypeScript cơ bản đến nâng cao, React Hooks, quản lý state và kiến trúc Component sạch.",
+      description:
+        "Khóa học chuyên sâu về xây dựng ứng dụng web hiện đại. Bao gồm TypeScript cơ bản đến nâng cao, React Hooks, quản lý state và kiến trúc Component sạch.",
       enrollment: "open",
     });
 
-    await courses.addChapter(adminId, created.id, { title: "Chương 1: TypeScript nâng cao trong ứng dụng React" });
-    await courses.addChapter(adminId, created.id, { title: "Chương 2: React Hooks & State Management" });
-    await courses.addChapter(adminId, created.id, { title: "Chương 3: Kiểm tra đánh giá năng lực" });
+    await courses.addChapter(adminId, created.id, {
+      title: "Chương 1: TypeScript nâng cao trong ứng dụng React",
+    });
+    await courses.addChapter(adminId, created.id, {
+      title: "Chương 2: React Hooks & State Management",
+    });
+    await courses.addChapter(adminId, created.id, {
+      title: "Chương 3: Kiểm tra đánh giá năng lực",
+    });
 
     const detail = await courses.detail(adminId, created.id);
     const [ch1, ch2, ch3] = detail.chapters.map((c) => c.id);
 
     // Bài 1
-    const l1 = await courses.addLesson(adminId, ch1, { kind: "document", title: "Bài 1: TypeScript Interfaces & Generics" });
+    const l1 = await courses.addLesson(adminId, ch1, {
+      kind: "document",
+      title: "Bài 1: TypeScript Interfaces & Generics",
+    });
     await courses.updateLesson(adminId, l1.id, {
       body: `# TypeScript Interfaces & Generics trong ứng dụng React
 
@@ -127,7 +141,10 @@ Ghi nhớ: Hãy tận dụng Generics khi viết các component tái sử dụng
     });
 
     // Bài 2
-    const l2 = await courses.addLesson(adminId, ch2, { kind: "document", title: "Bài 2: React Hooks chuyên sâu (useMemo, useCallback, Custom Hooks)" });
+    const l2 = await courses.addLesson(adminId, ch2, {
+      kind: "document",
+      title: "Bài 2: React Hooks chuyên sâu (useMemo, useCallback, Custom Hooks)",
+    });
     await courses.updateLesson(adminId, l2.id, {
       body: `# React Hooks Chuyên sâu
 
@@ -162,7 +179,8 @@ export function useDebounce<T>(value: T, delay: number = 300): T {
     // Ngân hàng câu hỏi
     const q1 = await courses.saveQuestion(adminId, created.id, null, {
       kind: "single",
-      prompt: "Trong React, hook nào được dùng để ghi nhớ kết quả tính toán đắt đỏ giữa các lần render?",
+      prompt:
+        "Trong React, hook nào được dùng để ghi nhớ kết quả tính toán đắt đỏ giữa các lần render?",
       options: [
         { id: "a", text: "useCallback" },
         { id: "b", text: "useMemo" },
@@ -170,7 +188,8 @@ export function useDebounce<T>(value: T, delay: number = 300): T {
         { id: "d", text: "useEffect" },
       ],
       answer: ["b"],
-      explanation: "useMemo dùng để memoize kết quả trả về của hàm tính toán, trong khi useCallback dùng để memoize tham chiếu của bản thân hàm.",
+      explanation:
+        "useMemo dùng để memoize kết quả trả về của hàm tính toán, trong khi useCallback dùng để memoize tham chiếu của bản thân hàm.",
       points: 2,
     });
 
@@ -180,20 +199,29 @@ export function useDebounce<T>(value: T, delay: number = 300): T {
       options: [
         { id: "a", text: "TypeScript giúp phát hiện lỗi kiểu dữ liệu ở thời điểm biên dịch" },
         { id: "b", text: "Mọi mã JavaScript hợp lệ đều là mã TypeScript hợp lệ" },
-        { id: "c", text: "Trình duyệt có thể thực thi trực tiếp mã nguồn .ts mà không cần biên dịch sang .js" },
-        { id: "d", text: "Generics cho phép tạo các thành phần hoạt động với nhiều kiểu dữ liệu khác nhau" },
+        {
+          id: "c",
+          text: "Trình duyệt có thể thực thi trực tiếp mã nguồn .ts mà không cần biên dịch sang .js",
+        },
+        {
+          id: "d",
+          text: "Generics cho phép tạo các thành phần hoạt động với nhiều kiểu dữ liệu khác nhau",
+        },
       ],
       answer: ["a", "b", "d"],
-      explanation: "Trình duyệt không chạy trực tiếp tệp .ts; mã TypeScript bắt buộc phải được biên dịch (transpile) sang JavaScript tiêu chuẩn.",
+      explanation:
+        "Trình duyệt không chạy trực tiếp tệp .ts; mã TypeScript bắt buộc phải được biên dịch (transpile) sang JavaScript tiêu chuẩn.",
       points: 3,
     });
 
     const q3 = await courses.saveQuestion(adminId, created.id, null, {
       kind: "true_false",
-      prompt: "Thay đổi giá trị của một biến tham chiếu qua `useRef` sẽ kích hoạt component re-render lại ngay lập tức.",
+      prompt:
+        "Thay đổi giá trị của một biến tham chiếu qua `useRef` sẽ kích hoạt component re-render lại ngay lập tức.",
       options: [],
       answer: [false],
-      explanation: "useRef giữ nguyên tham chiếu và việc thay đổi thuộc tính `.current` không làm component kích hoạt re-render.",
+      explanation:
+        "useRef giữ nguyên tham chiếu và việc thay đổi thuộc tính `.current` không làm component kích hoạt re-render.",
       points: 2,
     });
 
@@ -202,16 +230,23 @@ export function useDebounce<T>(value: T, delay: number = 300): T {
       prompt: "Thuộc tính `key` trong danh sách React có vai trò quan trọng nhất là gì?",
       options: [
         { id: "a", text: "Dùng để gán CSS class cho phần tử" },
-        { id: "b", text: "Giúp thuật toán Reconciliation của React xác định phần tử nào đã thay đổi, thêm hay bị xóa" },
+        {
+          id: "b",
+          text: "Giúp thuật toán Reconciliation của React xác định phần tử nào đã thay đổi, thêm hay bị xóa",
+        },
         { id: "c", text: "Để truy cập giá trị của phần tử trong DOM thông qua JavaScript" },
       ],
       answer: ["b"],
-      explanation: "Key giúp React phân biệt danh tính ổn định của các nút DOM giữa các lần render, tối ưu hóa hiệu năng render.",
+      explanation:
+        "Key giúp React phân biệt danh tính ổn định của các nút DOM giữa các lần render, tối ưu hóa hiệu năng render.",
       points: 2,
     });
 
     // Bài 3: Quiz
-    const quizLesson = await courses.addLesson(adminId, ch3, { kind: "quiz", title: "Bài kiểm tra cuối khóa React & TypeScript" });
+    const quizLesson = await courses.addLesson(adminId, ch3, {
+      kind: "quiz",
+      title: "Bài kiểm tra cuối khóa React & TypeScript",
+    });
     await courses.updateLesson(adminId, quizLesson.id, {
       questionIds: [q1.id, q2.id, q3.id, q4.id],
       drawCount: 4,
@@ -230,23 +265,33 @@ export function useDebounce<T>(value: T, delay: number = 300): T {
   // KHÓA 2: SE-301 - Quản trị Dự án Phần mềm theo Agile & Scrum (Assigned, Published)
   // ---------------------------------------------------------------------------------------------------
   await deleteCourseIfExists("SE-301");
-  console.log("\n[2/6] Tạo khóa học SE-301: Quản trị Dự án Phần mềm theo Agile & Scrum (Assigned)...");
+  console.log(
+    "\n[2/6] Tạo khóa học SE-301: Quản trị Dự án Phần mềm theo Agile & Scrum (Assigned)...",
+  );
   {
     const created = await courses.create(adminId, {
       unitId: cnttUnit.id,
       code: "SE-301",
       title: "Quản trị Dự án Phần mềm theo Agile & Scrum",
-      description: "Khóa đào tạo bắt buộc dành cho sinh viên thực hiện đồ án tốt nghiệp và dự án phần mềm. Hướng dẫn thực hành khung làm việc Scrum, quản lý backlog và phối hợp nhóm hiệu quả.",
+      description:
+        "Khóa đào tạo bắt buộc dành cho sinh viên thực hiện đồ án tốt nghiệp và dự án phần mềm. Hướng dẫn thực hành khung làm việc Scrum, quản lý backlog và phối hợp nhóm hiệu quả.",
       enrollment: "assigned",
     });
 
-    await courses.addChapter(adminId, created.id, { title: "Chương 1: Các trụ cột và Giá trị của Scrum" });
-    await courses.addChapter(adminId, created.id, { title: "Chương 2: Đánh giá hiểu biết về Scrum Framework" });
+    await courses.addChapter(adminId, created.id, {
+      title: "Chương 1: Các trụ cột và Giá trị của Scrum",
+    });
+    await courses.addChapter(adminId, created.id, {
+      title: "Chương 2: Đánh giá hiểu biết về Scrum Framework",
+    });
 
     const detail = await courses.detail(adminId, created.id);
     const [ch1, ch2] = detail.chapters.map((c) => c.id);
 
-    const l1 = await courses.addLesson(adminId, ch1, { kind: "document", title: "Bài 1: 3 Vai trò cốt lõi trong Scrum" });
+    const l1 = await courses.addLesson(adminId, ch1, {
+      kind: "document",
+      title: "Bài 1: 3 Vai trò cốt lõi trong Scrum",
+    });
     await courses.updateLesson(adminId, l1.id, {
       body: `# 3 Vai trò Cốt lõi trong Nhóm Scrum
 
@@ -269,7 +314,10 @@ Trong một nhóm Scrum (Scrum Team), không có sự phân cấp quản lý tru
       status: "published",
     });
 
-    const l2 = await courses.addLesson(adminId, ch1, { kind: "document", title: "Bài 2: 5 Sự kiện chính trong chu kỳ Sprint" });
+    const l2 = await courses.addLesson(adminId, ch1, {
+      kind: "document",
+      title: "Bài 2: 5 Sự kiện chính trong chu kỳ Sprint",
+    });
     await courses.updateLesson(adminId, l2.id, {
       body: `# 5 Sự kiện (Ceremonies) trong Scrum
 
@@ -295,7 +343,8 @@ Chu kỳ một Sprint thường kéo dài từ 1 đến 4 tuần:
     // Câu hỏi
     const q1 = await courses.saveQuestion(adminId, created.id, null, {
       kind: "single",
-      prompt: "Ai là người chịu trách nhiệm cao nhất đối với việc sắp xếp thứ tự ưu tiên trong Product Backlog?",
+      prompt:
+        "Ai là người chịu trách nhiệm cao nhất đối với việc sắp xếp thứ tự ưu tiên trong Product Backlog?",
       options: [
         { id: "a", text: "Scrum Master" },
         { id: "b", text: "Product Owner" },
@@ -303,7 +352,8 @@ Chu kỳ một Sprint thường kéo dài từ 1 đến 4 tuần:
         { id: "d", text: "Giảng viên hướng dẫn" },
       ],
       answer: ["b"],
-      explanation: "Product Owner là người duy nhất sở hữu và chịu trách nhiệm tối ưu hóa giá trị của Product Backlog.",
+      explanation:
+        "Product Owner là người duy nhất sở hữu và chịu trách nhiệm tối ưu hóa giá trị của Product Backlog.",
       points: 2,
     });
 
@@ -317,20 +367,26 @@ Chu kỳ một Sprint thường kéo dài từ 1 đến 4 tuần:
         { id: "d", text: "60 phút" },
       ],
       answer: ["a"],
-      explanation: "Daily Scrum là buổi họp ngắn định kỳ hàng ngày, giới hạn tối đa 15 phút (Timebox 15 mins).",
+      explanation:
+        "Daily Scrum là buổi họp ngắn định kỳ hàng ngày, giới hạn tối đa 15 phút (Timebox 15 mins).",
       points: 2,
     });
 
     const q3 = await courses.saveQuestion(adminId, created.id, null, {
       kind: "true_false",
-      prompt: "Mục tiêu chính của buổi họp Sprint Retrospective là trình diễn các tính năng phần mềm mới cho khách hàng xem.",
+      prompt:
+        "Mục tiêu chính của buổi họp Sprint Retrospective là trình diễn các tính năng phần mềm mới cho khách hàng xem.",
       options: [],
       answer: [false],
-      explanation: "Trình diễn tính năng mới cho khách hàng là mục tiêu của Sprint Review. Sprint Retrospective là buổi họp nội bộ nhóm để tìm giải pháp cải tiến quy trình làm việc.",
+      explanation:
+        "Trình diễn tính năng mới cho khách hàng là mục tiêu của Sprint Review. Sprint Retrospective là buổi họp nội bộ nhóm để tìm giải pháp cải tiến quy trình làm việc.",
       points: 2,
     });
 
-    const quiz = await courses.addLesson(adminId, ch2, { kind: "quiz", title: "Kiểm tra kiến thức Scrum Foundation" });
+    const quiz = await courses.addLesson(adminId, ch2, {
+      kind: "quiz",
+      title: "Kiểm tra kiến thức Scrum Foundation",
+    });
     await courses.updateLesson(adminId, quiz.id, {
       questionIds: [q1.id, q2.id, q3.id],
       drawCount: 3,
@@ -358,17 +414,25 @@ Chu kỳ một Sprint thường kéo dài từ 1 đến 4 tuần:
       unitId: cnttUnit.id,
       code: "AI-101",
       title: "Nhập môn Trí tuệ Nhân tạo & Học máy",
-      description: "Nền tảng trí tuệ nhân tạo, phân loại học máy (Supervised, Unsupervised, Reinforcement Learning), mạng nơ-ron nhân tạo và đạo đức AI trong thời đại mới.",
+      description:
+        "Nền tảng trí tuệ nhân tạo, phân loại học máy (Supervised, Unsupervised, Reinforcement Learning), mạng nơ-ron nhân tạo và đạo đức AI trong thời đại mới.",
       enrollment: "open",
     });
 
-    await courses.addChapter(adminId, created.id, { title: "Chương 1: Các trường phái Học máy (Machine Learning Paradigms)" });
-    await courses.addChapter(adminId, created.id, { title: "Chương 2: Đánh giá mô hình & Kiểm tra tổng kết" });
+    await courses.addChapter(adminId, created.id, {
+      title: "Chương 1: Các trường phái Học máy (Machine Learning Paradigms)",
+    });
+    await courses.addChapter(adminId, created.id, {
+      title: "Chương 2: Đánh giá mô hình & Kiểm tra tổng kết",
+    });
 
     const detail = await courses.detail(adminId, created.id);
     const [ch1, ch2] = detail.chapters.map((c) => c.id);
 
-    const l1 = await courses.addLesson(adminId, ch1, { kind: "document", title: "Bài 1: Phân biệt Học có giám sát và Không giám sát" });
+    const l1 = await courses.addLesson(adminId, ch1, {
+      kind: "document",
+      title: "Bài 1: Phân biệt Học có giám sát và Không giám sát",
+    });
     await courses.updateLesson(adminId, l1.id, {
       body: `# Phân loại các trường phái Học máy chính
 
@@ -389,7 +453,10 @@ Chu kỳ một Sprint thường kéo dài từ 1 đến 4 tuần:
       status: "published",
     });
 
-    const l2 = await courses.addLesson(adminId, ch2, { kind: "document", title: "Bài 2: Các chỉ số đánh giá mô hình phân loại (Confusion Matrix)" });
+    const l2 = await courses.addLesson(adminId, ch2, {
+      kind: "document",
+      title: "Bài 2: Các chỉ số đánh giá mô hình phân loại (Confusion Matrix)",
+    });
     await courses.updateLesson(adminId, l2.id, {
       body: `# Ma trận nhầm lẫn (Confusion Matrix) và Chỉ số đo lường
 
@@ -410,7 +477,8 @@ Khi đánh giá mô hình phân loại nhị phân (Binary Classification):
 
     const q1 = await courses.saveQuestion(adminId, created.id, null, {
       kind: "single",
-      prompt: "Bài toán dự đoán giá bán bất động sản dựa trên diện tích và vị trí thuộc trường phái học máy nào?",
+      prompt:
+        "Bài toán dự đoán giá bán bất động sản dựa trên diện tích và vị trí thuộc trường phái học máy nào?",
       options: [
         { id: "a", text: "Học có giám sát - Bài toán Hồi quy (Regression)" },
         { id: "b", text: "Học có giám sát - Bài toán Phân loại (Classification)" },
@@ -418,20 +486,26 @@ Khi đánh giá mô hình phân loại nhị phân (Binary Classification):
         { id: "d", text: "Học tăng cường (Reinforcement Learning)" },
       ],
       answer: ["a"],
-      explanation: "Giá bán là giá trị số liên tục và có nhãn dữ liệu giá trong quá khứ, nên đây là bài toán Hồi quy có giám sát.",
+      explanation:
+        "Giá bán là giá trị số liên tục và có nhãn dữ liệu giá trong quá khứ, nên đây là bài toán Hồi quy có giám sát.",
       points: 2,
     });
 
     const q2 = await courses.saveQuestion(adminId, created.id, null, {
       kind: "true_false",
-      prompt: "Trong thuật toán phân cụm K-Means, tập dữ liệu đầu vào bắt buộc phải có sẵn nhãn phân loại do con người gán trước.",
+      prompt:
+        "Trong thuật toán phân cụm K-Means, tập dữ liệu đầu vào bắt buộc phải có sẵn nhãn phân loại do con người gán trước.",
       options: [],
       answer: [false],
-      explanation: "K-Means là thuật toán Học không giám sát (Unsupervised Learning), hoạt động trên tập dữ liệu hoàn toàn không có nhãn.",
+      explanation:
+        "K-Means là thuật toán Học không giám sát (Unsupervised Learning), hoạt động trên tập dữ liệu hoàn toàn không có nhãn.",
       points: 2,
     });
 
-    const quiz = await courses.addLesson(adminId, ch2, { kind: "quiz", title: "Đánh giá kiến thức Machine Learning cơ bản" });
+    const quiz = await courses.addLesson(adminId, ch2, {
+      kind: "quiz",
+      title: "Đánh giá kiến thức Machine Learning cơ bản",
+    });
     await courses.updateLesson(adminId, quiz.id, {
       questionIds: [q1.id, q2.id],
       drawCount: 2,
@@ -449,23 +523,33 @@ Khi đánh giá mô hình phân loại nhị phân (Binary Classification):
   // KHÓA 4: ENG-201 - Tiếng Anh Giao tiếp & Thuyết trình Học thuật (Khoa Ngoại ngữ, Open, Published)
   // ---------------------------------------------------------------------------------------------------
   await deleteCourseIfExists("ENG-201");
-  console.log("\n[4/6] Tạo khóa học ENG-201: Tiếng Anh Giao tiếp & Thuyết trình Học thuật (Khoa Ngoại ngữ)...");
+  console.log(
+    "\n[4/6] Tạo khóa học ENG-201: Tiếng Anh Giao tiếp & Thuyết trình Học thuật (Khoa Ngoại ngữ)...",
+  );
   {
     const created = await courses.create(adminId, {
       unitId: nnUnit.id,
       code: "ENG-201",
       title: "Tiếng Anh Giao tiếp & Thuyết trình Học thuật",
-      description: "Phát triển kỹ năng thuyết trình ý tưởng khoa học, phản biện luận điểm và giao tiếp chuyên nghiệp bằng tiếng Anh trong môi trường học thuật quốc tế.",
+      description:
+        "Phát triển kỹ năng thuyết trình ý tưởng khoa học, phản biện luận điểm và giao tiếp chuyên nghiệp bằng tiếng Anh trong môi trường học thuật quốc tế.",
       enrollment: "open",
     });
 
-    await courses.addChapter(adminId, created.id, { title: "Chapter 1: Academic Presentation Skills & Signposting" });
-    await courses.addChapter(adminId, created.id, { title: "Chapter 2: Academic English Assessment" });
+    await courses.addChapter(adminId, created.id, {
+      title: "Chapter 1: Academic Presentation Skills & Signposting",
+    });
+    await courses.addChapter(adminId, created.id, {
+      title: "Chapter 2: Academic English Assessment",
+    });
 
     const detail = await courses.detail(adminId, created.id);
     const [ch1, ch2] = detail.chapters.map((c) => c.id);
 
-    const l1 = await courses.addLesson(adminId, ch1, { kind: "document", title: "Lesson 1: The Structure of a Great Academic Presentation" });
+    const l1 = await courses.addLesson(adminId, ch1, {
+      kind: "document",
+      title: "Lesson 1: The Structure of a Great Academic Presentation",
+    });
     await courses.updateLesson(adminId, l1.id, {
       body: `# Structuring an Academic Presentation
 
@@ -491,27 +575,34 @@ Use signpost language to transition smoothly between sections:
 
     const q1 = await courses.saveQuestion(adminId, created.id, null, {
       kind: "single",
-      prompt: "Which phrase is the most appropriate signpost to introduce the next topic in an academic presentation?",
+      prompt:
+        "Which phrase is the most appropriate signpost to introduce the next topic in an academic presentation?",
       options: [
         { id: "a", text: "Now let's turn our attention to the experimental results." },
         { id: "b", text: "I want to talk about other stuff now." },
         { id: "c", text: "Forget what I just said, look here." },
       ],
       answer: ["a"],
-      explanation: "'Let us turn our attention to...' is a formal, natural signposting phrase used in academic conferences.",
+      explanation:
+        "'Let us turn our attention to...' is a formal, natural signposting phrase used in academic conferences.",
       points: 2,
     });
 
     const q2 = await courses.saveQuestion(adminId, created.id, null, {
       kind: "true_false",
-      prompt: "Signpost language helps the audience follow the structure and flow of your presentation.",
+      prompt:
+        "Signpost language helps the audience follow the structure and flow of your presentation.",
       options: [],
       answer: [true],
-      explanation: "Signposts act like verbal road signs guiding the audience through transitions and main ideas.",
+      explanation:
+        "Signposts act like verbal road signs guiding the audience through transitions and main ideas.",
       points: 2,
     });
 
-    const quiz = await courses.addLesson(adminId, ch2, { kind: "quiz", title: "Academic English Final Quiz" });
+    const quiz = await courses.addLesson(adminId, ch2, {
+      kind: "quiz",
+      title: "Academic English Final Quiz",
+    });
     await courses.updateLesson(adminId, quiz.id, {
       questionIds: [q1.id, q2.id],
       drawCount: 2,
@@ -529,22 +620,30 @@ Use signpost language to transition smoothly between sections:
   // KHÓA 5: SEC-101 - An toàn Thông tin & Phòng chống Tấn công Mạng (Đã cấp chứng chỉ mẫu!)
   // ---------------------------------------------------------------------------------------------------
   await deleteCourseIfExists("SEC-101");
-  console.log("\n[5/6] Tạo khóa học SEC-101: An toàn Thông tin & Phòng chống Tấn công Mạng (Có chứng chỉ)...");
+  console.log(
+    "\n[5/6] Tạo khóa học SEC-101: An toàn Thông tin & Phòng chống Tấn công Mạng (Có chứng chỉ)...",
+  );
   {
     const created = await courses.create(adminId, {
       unitId: cnttUnit.id,
       code: "SEC-101",
       title: "An toàn Thông tin & Phòng vệ Không gian số",
-      description: "Khóa đào tạo nhận thức an ninh mạng cốt lõi: Nhận diện tấn công giả mạo (Phishing), bảo vệ mật khẩu, nguyên lý bảo mật OWASP Top 10 và bảo vệ quyền riêng tư số.",
+      description:
+        "Khóa đào tạo nhận thức an ninh mạng cốt lõi: Nhận diện tấn công giả mạo (Phishing), bảo vệ mật khẩu, nguyên lý bảo mật OWASP Top 10 và bảo vệ quyền riêng tư số.",
       enrollment: "open",
     });
 
-    await courses.addChapter(adminId, created.id, { title: "Chương 1: Nhận diện nguy cơ & Phòng vệ chủ động" });
+    await courses.addChapter(adminId, created.id, {
+      title: "Chương 1: Nhận diện nguy cơ & Phòng vệ chủ động",
+    });
 
     const detail = await courses.detail(adminId, created.id);
     const [ch1] = detail.chapters.map((c) => c.id);
 
-    const l1 = await courses.addLesson(adminId, ch1, { kind: "document", title: "Bài 1: 5 Dấu hiệu nhận diện Email Lừa đảo (Phishing)" });
+    const l1 = await courses.addLesson(adminId, ch1, {
+      kind: "document",
+      title: "Bài 1: 5 Dấu hiệu nhận diện Email Lừa đảo (Phishing)",
+    });
     await courses.updateLesson(adminId, l1.id, {
       body: `# Nhận diện và Xử lý Tấn công Phishing
 
@@ -560,18 +659,23 @@ Tấn công phi kỹ thuật (Social Engineering) đặc biệt là Phishing chi
 
     const q1 = await courses.saveQuestion(adminId, created.id, null, {
       kind: "single",
-      prompt: "Khi nhận được email yêu cầu cung cấp mã OTP ngân hàng để xác thực giao dịch, bạn nên làm gì?",
+      prompt:
+        "Khi nhận được email yêu cầu cung cấp mã OTP ngân hàng để xác thực giao dịch, bạn nên làm gì?",
       options: [
         { id: "a", text: "Cung cấp ngay nếu email có logo chính thức của ngân hàng" },
         { id: "b", text: "Tuyệt đối không cung cấp mã OTP cho bất kỳ ai dưới mọi hình thức" },
         { id: "c", text: "Chuyển tiếp email cho bạn bè để kiểm tra giùm" },
       ],
       answer: ["b"],
-      explanation: "Mã OTP là lớp bảo mật cuối cùng thuộc quyền sở hữu cá nhân, ngân hàng và các tổ chức không bao giờ yêu cầu khách hàng cung cấp OTP.",
+      explanation:
+        "Mã OTP là lớp bảo mật cuối cùng thuộc quyền sở hữu cá nhân, ngân hàng và các tổ chức không bao giờ yêu cầu khách hàng cung cấp OTP.",
       points: 5,
     });
 
-    const quiz = await courses.addLesson(adminId, ch1, { kind: "quiz", title: "Kiểm tra nhận thức an toàn thông tin" });
+    const quiz = await courses.addLesson(adminId, ch1, {
+      kind: "quiz",
+      title: "Kiểm tra nhận thức an toàn thông tin",
+    });
     await courses.updateLesson(adminId, quiz.id, {
       questionIds: [q1.id],
       drawCount: 1,
@@ -589,15 +693,24 @@ Tấn công phi kỹ thuật (Social Engineering) đặc biệt là Phishing chi
       // 1. Ghi danh
       await repo.enroll(created.id, [user.id], "self", null);
       // 2. Đánh dấu hoàn thành tất cả bài học
-      await pool.query(`INSERT INTO course_lesson_progress(lesson_id, user_id) VALUES($1, $2) ON CONFLICT DO NOTHING`, [l1.id, user.id]);
-      await pool.query(`INSERT INTO course_lesson_progress(lesson_id, user_id) VALUES($1, $2) ON CONFLICT DO NOTHING`, [quiz.id, user.id]);
+      await pool.query(
+        `INSERT INTO course_lesson_progress(lesson_id, user_id) VALUES($1, $2) ON CONFLICT DO NOTHING`,
+        [l1.id, user.id],
+      );
+      await pool.query(
+        `INSERT INTO course_lesson_progress(lesson_id, user_id) VALUES($1, $2) ON CONFLICT DO NOTHING`,
+        [quiz.id, user.id],
+      );
       // 3. Đánh dấu hoàn thành khóa học
-      await pool.query(`UPDATE course_enrollments SET completed_at = now() WHERE course_id = $1 AND user_id = $2`, [created.id, user.id]);
+      await pool.query(
+        `UPDATE course_enrollments SET completed_at = now() WHERE course_id = $1 AND user_id = $2`,
+        [created.id, user.id],
+      );
       // 4. Cấp chứng chỉ chính thức
       const certCode = generateCertCode();
       await pool.query(
         `INSERT INTO course_certificates(id, course_id, user_id, code) VALUES($1, $2, $3, $4) ON CONFLICT (course_id, user_id) DO NOTHING`,
-        [randomUUID(), created.id, user.id, certCode]
+        [randomUUID(), created.id, user.id, certCode],
       );
       console.log(`    + Cấp chứng chỉ cho [${user.display_name}]: Mã xác minh = ${certCode}`);
     }
@@ -608,21 +721,29 @@ Tấn công phi kỹ thuật (Social Engineering) đặc biệt là Phishing chi
   // KHÓA 6: BA-101 - Nhập môn Phân tích Nghiệp vụ Doanh nghiệp (Khoa QTKD, Draft)
   // ---------------------------------------------------------------------------------------------------
   await deleteCourseIfExists("BA-101");
-  console.log("\n[6/6] Tạo khóa học BA-101: Nhập môn Phân tích Nghiệp vụ Doanh nghiệp (Bản nháp - Draft)...");
+  console.log(
+    "\n[6/6] Tạo khóa học BA-101: Nhập môn Phân tích Nghiệp vụ Doanh nghiệp (Bản nháp - Draft)...",
+  );
   {
     const created = await courses.create(adminId, {
       unitId: qtkdUnit.id,
       code: "BA-101",
       title: "Nhập môn Phân tích Nghiệp vụ Doanh nghiệp (BA)",
-      description: "Tài liệu đào tạo nội bộ về khảo sát quy trình kinh doanh, xây dựng sơ đồ BPMN, viết đặc tả yêu cầu người dùng (User Story) và phân tích luồng công việc.",
+      description:
+        "Tài liệu đào tạo nội bộ về khảo sát quy trình kinh doanh, xây dựng sơ đồ BPMN, viết đặc tả yêu cầu người dùng (User Story) và phân tích luồng công việc.",
       enrollment: "open",
     });
 
-    await courses.addChapter(adminId, created.id, { title: "Chương 1: Vai trò của Business Analyst trong doanh nghiệp" });
+    await courses.addChapter(adminId, created.id, {
+      title: "Chương 1: Vai trò của Business Analyst trong doanh nghiệp",
+    });
     const detail = await courses.detail(adminId, created.id);
     const [ch1] = detail.chapters.map((c) => c.id);
 
-    const l1 = await courses.addLesson(adminId, ch1, { kind: "document", title: "Bài 1: Phân biệt Yêu cầu Nghiệp vụ (Business Requirements) và Yêu cầu Hệ thống" });
+    const l1 = await courses.addLesson(adminId, ch1, {
+      kind: "document",
+      title: "Bài 1: Phân biệt Yêu cầu Nghiệp vụ (Business Requirements) và Yêu cầu Hệ thống",
+    });
     await courses.updateLesson(adminId, l1.id, {
       body: `# Tổng quan về Vai trò của Business Analyst (BA)
 

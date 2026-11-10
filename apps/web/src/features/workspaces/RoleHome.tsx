@@ -38,9 +38,12 @@ export function useRoleData(): RoleData | null {
       if (!alive) return;
       const now = Date.now();
       setData({
-        callCenter: callCenter && (callCenter.departments.length || callCenter.isAdmin) ? callCenter : null,
+        callCenter:
+          callCenter && (callCenter.departments.length || callCenter.isAdmin) ? callCenter : null,
         courses,
-        meetings: meetings.filter((item) => new Date(item.endsAt).getTime() > now).sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
+        meetings: meetings
+          .filter((item) => new Date(item.endsAt).getTime() > now)
+          .sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
       });
     });
     return () => {
@@ -57,7 +60,9 @@ export function RoleHome({ data }: { data: RoleData | null }) {
   const cc = data.callCenter;
   const isAgent = cc?.departments.some((item) => item.role === "agent");
   const supervises = cc?.isAdmin || cc?.departments.some((item) => item.role === "supervisor");
-  const learning = data.courses.filter((item) => item.enrolled && (item.progress ?? 0) < 100).sort((a, b) => (b.progress ?? 0) - (a.progress ?? 0));
+  const learning = data.courses
+    .filter((item) => item.enrolled && (item.progress ?? 0) < 100)
+    .sort((a, b) => (b.progress ?? 0) - (a.progress ?? 0));
   const teaching = data.courses.filter((item) => item.canManage);
   const next = data.meetings[0];
   const cards = [];
@@ -74,7 +79,11 @@ export function RoleHome({ data }: { data: RoleData | null }) {
               {cc.extension ? ` · máy lẻ ${cc.extension.number}` : " · chưa có máy lẻ"}
             </p>
           )}
-          {isAgent && cc.training.length > 0 && <p className="role-home__warn">Cần hoàn thành {cc.training.length} khóa đào tạo trước khi nhận cuộc gọi.</p>}
+          {isAgent && cc.training.length > 0 && (
+            <p className="role-home__warn">
+              Cần hoàn thành {cc.training.length} khóa đào tạo trước khi nhận cuộc gọi.
+            </p>
+          )}
           {supervises && <p>Theo dõi hàng đợi, nghe xen và chấm điểm chất lượng cuộc gọi.</p>}
         </div>
         <Button size="sm" variant="secondary" onClick={() => navigate({ view: "call-center" })}>
@@ -96,7 +105,11 @@ export function RoleHome({ data }: { data: RoleData | null }) {
             </p>
           ))}
         </div>
-        <Button size="sm" variant="secondary" onClick={() => navigate({ view: "elearning", query: (learning[0] ?? teaching[0]).id })}>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => navigate({ view: "elearning", query: (learning[0] ?? teaching[0]).id })}
+        >
           Mở khóa học
         </Button>
       </article>,
@@ -109,7 +122,13 @@ export function RoleHome({ data }: { data: RoleData | null }) {
         <h3>Cuộc họp</h3>
         {next ? (
           <p>
-            {next.title} · {new Date(next.startsAt).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })}
+            {next.title} ·{" "}
+            {new Date(next.startsAt).toLocaleString("vi-VN", {
+              hour: "2-digit",
+              minute: "2-digit",
+              day: "2-digit",
+              month: "2-digit",
+            })}
           </p>
         ) : (
           <p>Không có lịch họp sắp tới.</p>

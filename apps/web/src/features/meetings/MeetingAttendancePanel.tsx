@@ -28,10 +28,15 @@ export function MeetingAttendancePanel({ sessionId }: { sessionId: string }) {
       setBusy(false);
     }
   };
-  const load = () => run(async () => setAttendance(await getMeetingAttendanceApi(accessToken!, sessionId)));
+  const load = () =>
+    run(async () => setAttendance(await getMeetingAttendanceApi(accessToken!, sessionId)));
   const exportFile = () =>
     run(() =>
-      downloadMeetingAttendanceApi(accessToken!, sessionId, `tham-du-${(attendance?.startedAt ?? "").slice(0, 10)}.xlsx`),
+      downloadMeetingAttendanceApi(
+        accessToken!,
+        sessionId,
+        `tham-du-${(attendance?.startedAt ?? "").slice(0, 10)}.xlsx`,
+      ),
     );
 
   return (
@@ -42,7 +47,13 @@ export function MeetingAttendancePanel({ sessionId }: { sessionId: string }) {
           {attendance ? "Làm mới" : "Xem"}
         </Button>
         {attendance && (
-          <Button size="sm" variant="secondary" icon="download" disabled={busy} onClick={() => void exportFile()}>
+          <Button
+            size="sm"
+            variant="secondary"
+            icon="download"
+            disabled={busy}
+            onClick={() => void exportFile()}
+          >
             Xuất Excel
           </Button>
         )}

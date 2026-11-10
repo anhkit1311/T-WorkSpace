@@ -290,17 +290,23 @@ export async function saveMessage(
     .digest("hex");
 
   const result = await withTransaction(async (client) => {
-    await client.query(`SELECT w.id FROM workspaces w JOIN channels c ON c.workspace_id=w.id WHERE c.id=$1 FOR SHARE OF w`,[channelId]);
-    await client.query(`SELECT id FROM channels WHERE id=$1 FOR SHARE`,[channelId]);
+    await client.query(
+      `SELECT w.id FROM workspaces w JOIN channels c ON c.workspace_id=w.id WHERE c.id=$1 FOR SHARE OF w`,
+      [channelId],
+    );
+    await client.query(`SELECT id FROM channels WHERE id=$1 FOR SHARE`, [channelId]);
     // Hold current membership against concurrent removal until the insert commits.
     // Direct conversations have no membership; the participant pair is immutable.
-    const access = channelCheck.rows[0].kind === "direct" ? await client.query(
-      `SELECT 1 FROM channel_access WHERE channel_id=$1 AND user_id=$2 AND can_write`,
-      [channelId, userId],
-    ) : await client.query(
-      `SELECT m.user_id FROM memberships m JOIN channels c ON c.workspace_id=m.workspace_id JOIN workspaces w ON w.id=c.workspace_id WHERE c.id=$1 AND m.user_id=$2 AND EXISTS (SELECT 1 FROM channel_access access WHERE access.channel_id=c.id AND access.user_id=$2 AND access.can_write) FOR SHARE OF m`,
-      [channelId, userId],
-    );
+    const access =
+      channelCheck.rows[0].kind === "direct"
+        ? await client.query(
+            `SELECT 1 FROM channel_access WHERE channel_id=$1 AND user_id=$2 AND can_write`,
+            [channelId, userId],
+          )
+        : await client.query(
+            `SELECT m.user_id FROM memberships m JOIN channels c ON c.workspace_id=m.workspace_id JOIN workspaces w ON w.id=c.workspace_id WHERE c.id=$1 AND m.user_id=$2 AND EXISTS (SELECT 1 FROM channel_access access WHERE access.channel_id=c.id AND access.user_id=$2 AND access.can_write) FOR SHARE OF m`,
+            [channelId, userId],
+          );
     if (!access.rowCount)
       throw new HttpError(403, "FORBIDDEN", "Bạn không còn quyền gửi tin nhắn.");
     if (options.clientMessageId) {
@@ -507,22 +513,43 @@ export async function toggleReaction(
   );
   if (!access.rowCount) throw new HttpError(404, "MESSAGE_NOT_FOUND", "Không tìm thấy tin nhắn.");
   await requireChannelAccess(userId, access.rows[0].channelId, false, true);
-  await withTransaction(async client=>{
-  await client.query(`SELECT w.id FROM workspaces w JOIN channels c ON c.workspace_id=w.id WHERE c.id=$1 FOR SHARE OF w`,[access.rows[0].channelId]);
-  await client.query(`SELECT id FROM channels WHERE id=$1 FOR SHARE`,[access.rows[0].channelId]);
-  if(!(await client.query(access.rows[0].kind==='direct'?`SELECT 1 FROM channel_access WHERE user_id=$1 AND channel_id=$2 AND can_write`:`SELECT m.user_id FROM memberships m JOIN channel_access a ON a.workspace_id=m.workspace_id AND a.user_id=m.user_id AND a.can_write WHERE m.user_id=$1 AND a.channel_id=$2 FOR SHARE OF m`,[userId,access.rows[0].channelId])).rowCount)throw new HttpError(403,'FORBIDDEN','Bạn không còn quyền phản hồi.');
-  await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1,0))`,[`${userId}:${messageId}:${emoji}`]);
-  if(!(await client.query(`SELECT id FROM messages WHERE id=$1 AND deleted_at IS NULL FOR SHARE`,[messageId])).rowCount)throw new HttpError(404,'MESSAGE_NOT_FOUND','Tin nhắn đã bị xóa.');
-  const removed = await client.query(
-    `DELETE FROM message_reactions WHERE message_id=$1 AND user_id=$2 AND emoji=$3 RETURNING message_id`,
-    [messageId, userId, emoji],
-  );
-  if (!removed.rowCount)
-    await client.query(`INSERT INTO message_reactions(message_id,user_id,emoji) VALUES($1,$2,$3)`, [
-      messageId,
-      userId,
-      emoji,
+  await withTransaction(async (client) => {
+    await client.query(
+      `SELECT w.id FROM workspaces w JOIN channels c ON c.workspace_id=w.id WHERE c.id=$1 FOR SHARE OF w`,
+      [access.rows[0].channelId],
+    );
+    await client.query(`SELECT id FROM channels WHERE id=$1 FOR SHARE`, [access.rows[0].channelId]);
+    if (
+      !(
+        await client.query(
+          access.rows[0].kind === "direct"
+            ? `SELECT 1 FROM channel_access WHERE user_id=$1 AND channel_id=$2 AND can_write`
+            : `SELECT m.user_id FROM memberships m JOIN channel_access a ON a.workspace_id=m.workspace_id AND a.user_id=m.user_id AND a.can_write WHERE m.user_id=$1 AND a.channel_id=$2 FOR SHARE OF m`,
+          [userId, access.rows[0].channelId],
+        )
+      ).rowCount
+    )
+      throw new HttpError(403, "FORBIDDEN", "Bạn không còn quyền phản hồi.");
+    await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, [
+      `${userId}:${messageId}:${emoji}`,
     ]);
+    if (
+      !(
+        await client.query(`SELECT id FROM messages WHERE id=$1 AND deleted_at IS NULL FOR SHARE`, [
+          messageId,
+        ])
+      ).rowCount
+    )
+      throw new HttpError(404, "MESSAGE_NOT_FOUND", "Tin nhắn đã bị xóa.");
+    const removed = await client.query(
+      `DELETE FROM message_reactions WHERE message_id=$1 AND user_id=$2 AND emoji=$3 RETURNING message_id`,
+      [messageId, userId, emoji],
+    );
+    if (!removed.rowCount)
+      await client.query(
+        `INSERT INTO message_reactions(message_id,user_id,emoji) VALUES($1,$2,$3)`,
+        [messageId, userId, emoji],
+      );
   });
 }
 

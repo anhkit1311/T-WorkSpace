@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { LATEST_THRESHOLD, isAtLatest, jumpToLatestLabel } from "../src/features/chat/jump-latest.ts";
+import {
+  LATEST_THRESHOLD,
+  isAtLatest,
+  jumpToLatestLabel,
+} from "../src/features/chat/jump-latest.ts";
 
 test("the latest page is the bottom of the live list, never a context window", () => {
   assert.equal(isAtLatest({ inContext: false, distanceFromBottom: 0 }), true);

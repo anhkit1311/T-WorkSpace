@@ -293,7 +293,20 @@ interface IconProps extends SVGProps<SVGSVGElement> {
   size?: number;
 }
 
-export function Icon({ name, size = 18, strokeWidth = 1.7, ...props }: IconProps & { strokeWidth?: number }) {
+export function Icon({
+  name,
+  size = 18,
+  strokeWidth = 1.7,
+  ...props
+}: IconProps & { strokeWidth?: number }) {
   const Glyph = icons[name];
-  return <Glyph aria-hidden="true" size={size} strokeWidth={strokeWidth} absoluteStrokeWidth {...props} />;
+  return (
+    <Glyph
+      aria-hidden="true"
+      size={size}
+      strokeWidth={strokeWidth}
+      absoluteStrokeWidth
+      {...props}
+    />
+  );
 }

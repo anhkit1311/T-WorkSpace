@@ -16,8 +16,18 @@ interface Contact {
   state: Lamp;
 }
 
-const LAMP: Record<NonNullable<Lamp>, string> = { free: "Rảnh", ringing: "Đang đổ chuông", busy: "Đang gọi", offline: "Không trực tuyến" };
-const LAMP_TONE: Record<NonNullable<Lamp>, string> = { free: "green", ringing: "red", busy: "red", offline: "neutral" };
+const LAMP: Record<NonNullable<Lamp>, string> = {
+  free: "Rảnh",
+  ringing: "Đang đổ chuông",
+  busy: "Đang gọi",
+  offline: "Không trực tuyến",
+};
+const LAMP_TONE: Record<NonNullable<Lamp>, string> = {
+  free: "green",
+  ringing: "red",
+  busy: "red",
+  offline: "neutral",
+};
 const OUTCOME: Record<CcRecentCall["outcome"], string> = {
   answered: "Đã nghe",
   abandoned: "Gác trước khi nghe",
@@ -25,18 +35,43 @@ const OUTCOME: Record<CcRecentCall["outcome"], string> = {
   busy: "Máy bận",
   transferred: "Đã chuyển",
 };
-const KEYPAD = [["1", ""], ["2", "ABC"], ["3", "DEF"], ["4", "GHI"], ["5", "JKL"], ["6", "MNO"], ["7", "PQRS"], ["8", "TUV"], ["9", "WXYZ"], ["*", ""], ["0", "+"], ["#", ""]] as const;
+const KEYPAD = [
+  ["1", ""],
+  ["2", "ABC"],
+  ["3", "DEF"],
+  ["4", "GHI"],
+  ["5", "JKL"],
+  ["6", "MNO"],
+  ["7", "PQRS"],
+  ["8", "TUV"],
+  ["9", "WXYZ"],
+  ["*", ""],
+  ["0", "+"],
+  ["#", ""],
+] as const;
 const DTMF: Record<string, [number, number]> = {
-  "1": [697, 1209], "2": [697, 1336], "3": [697, 1477],
-  "4": [770, 1209], "5": [770, 1336], "6": [770, 1477],
-  "7": [852, 1209], "8": [852, 1336], "9": [852, 1477],
-  "*": [941, 1209], "0": [941, 1336], "#": [941, 1477],
+  "1": [697, 1209],
+  "2": [697, 1336],
+  "3": [697, 1477],
+  "4": [770, 1209],
+  "5": [770, 1336],
+  "6": [770, 1477],
+  "7": [852, 1209],
+  "8": [852, 1336],
+  "9": [852, 1477],
+  "*": [941, 1209],
+  "0": [941, 1336],
+  "#": [941, 1477],
 };
-const talkTime = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+const talkTime = (seconds: number) =>
+  `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
 function playTone(digit: string) {
   try {
-    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    const ctx = new (
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    )();
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.08, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
@@ -75,10 +110,24 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
           setContacts([
             ...directory.departments.flatMap((unit) =>
               unit.groupNumber
-                ? [{ id: `group-${unit.id}`, name: `Số chung · ${unit.name}`, department: "Đổ chuông cả đơn vị", extension: unit.groupNumber, state: null }]
+                ? [
+                    {
+                      id: `group-${unit.id}`,
+                      name: `Số chung · ${unit.name}`,
+                      department: "Đổ chuông cả đơn vị",
+                      extension: unit.groupNumber,
+                      state: null,
+                    },
+                  ]
                 : [],
             ),
-            ...directory.extensions.map((ext) => ({ id: ext.number, name: ext.name, department: ext.departmentName, extension: ext.number, state: ext.deviceState })),
+            ...directory.extensions.map((ext) => ({
+              id: ext.number,
+              name: ext.name,
+              department: ext.departmentName,
+              extension: ext.number,
+              state: ext.deviceState,
+            })),
           ]),
         () => setContacts((current) => current ?? []),
       );
@@ -92,7 +141,10 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
   useEffect(() => {
     if (!accessToken || tab !== "recent" || phone.phase !== "none") return;
     const timer = window.setTimeout(
-      () => void callCenterApi<CcRecentCall[]>(accessToken, "me/recent-calls").then(setRecent, () => setRecent([])),
+      () =>
+        void callCenterApi<CcRecentCall[]>(accessToken, "me/recent-calls").then(setRecent, () =>
+          setRecent([]),
+        ),
       loaded ? 1000 : 0,
     );
     return () => window.clearTimeout(timer);
@@ -122,7 +174,11 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
   const shown = useMemo(() => {
     const needle = search.trim().toLowerCase();
     if (!contacts || !needle) return contacts ?? [];
-    return contacts.filter((item) => [item.name, item.extension, item.department].some((value) => value.toLowerCase().includes(needle)));
+    return contacts.filter((item) =>
+      [item.name, item.extension, item.department].some((value) =>
+        value.toLowerCase().includes(needle),
+      ),
+    );
   }, [contacts, search]);
   const status =
     busy || ready
@@ -138,7 +194,13 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
       <section className="callcenter-panel cc-dialer" aria-label="Gọi nhanh">
         <div className="callcenter-panel__head">
           <h2 className="callcenter-panel__title">{inCall ? "Bàn phím DTMF" : "Gọi nhanh"}</h2>
-          <button type="button" className="cc-icon-btn" title="Kiểm tra âm thanh" aria-label="Kiểm tra âm thanh" onClick={() => playTone("5")}>
+          <button
+            type="button"
+            className="cc-icon-btn"
+            title="Kiểm tra âm thanh"
+            aria-label="Kiểm tra âm thanh"
+            onClick={() => playTone("5")}
+          >
             <Icon name="volume" size={16} />
           </button>
         </div>
@@ -159,25 +221,47 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
             onChange={(event) => setDial(event.target.value.replace(/[^0-9*#]/g, "").slice(0, 16))}
           />
           {dial && (
-            <button type="button" className="cc-icon-btn" aria-label="Xóa một số" onClick={() => setDial((value) => value.slice(0, -1))}>
+            <button
+              type="button"
+              className="cc-icon-btn"
+              aria-label="Xóa một số"
+              onClick={() => setDial((value) => value.slice(0, -1))}
+            >
               <Icon name="chevron-left" size={16} />
             </button>
           )}
         </form>
         <div className="cc-keys" role="group" aria-label={inCall ? "Bàn phím DTMF" : "Bàn phím số"}>
           {KEYPAD.map(([key, sub]) => (
-            <button key={key} type="button" className="cc-key" aria-label={key} onClick={() => press(key)}>
+            <button
+              key={key}
+              type="button"
+              className="cc-key"
+              aria-label={key}
+              onClick={() => press(key)}
+            >
               <b>{key}</b>
               {sub && <small>{sub}</small>}
             </button>
           ))}
         </div>
         {canTransfer ? (
-          <Button className="cc-dialer__go" variant="secondary" icon="share" disabled={!/^[0-9]{4,5}$/.test(dial)} onClick={() => transfer(dial)}>
+          <Button
+            className="cc-dialer__go"
+            variant="secondary"
+            icon="share"
+            disabled={!/^[0-9]{4,5}$/.test(dial)}
+            onClick={() => transfer(dial)}
+          >
             Chuyển tới số này
           </Button>
         ) : (
-          <Button className="cc-dialer__go" icon="phone" disabled={!dial || busy || !ready} onClick={dialOut}>
+          <Button
+            className="cc-dialer__go"
+            icon="phone"
+            disabled={!dial || busy || !ready}
+            onClick={dialOut}
+          >
             Gọi
           </Button>
         )}
@@ -186,25 +270,57 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
 
       <section className="callcenter-panel cc-directory" aria-label="Danh bạ">
         <div className="cc-tabs" role="tablist">
-          <button type="button" role="tab" aria-selected={tab === "contacts"} onClick={() => setTab("contacts")}>Danh bạ máy lẻ</button>
-          <button type="button" role="tab" aria-selected={tab === "recent"} onClick={() => setTab("recent")}>Gần đây</button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "contacts"}
+            onClick={() => setTab("contacts")}
+          >
+            Danh bạ máy lẻ
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "recent"}
+            onClick={() => setTab("recent")}
+          >
+            Gần đây
+          </button>
         </div>
         {tab === "contacts" ? (
           <>
             <label className="cc-search">
               <Icon name="search" size={14} />
-              <input type="search" aria-label="Tìm máy lẻ" placeholder="Tìm tên, số, đơn vị" value={search} onChange={(event) => setSearch(event.target.value)} />
+              <input
+                type="search"
+                aria-label="Tìm máy lẻ"
+                placeholder="Tìm tên, số, đơn vị"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
             </label>
             {!shown.length ? (
               <p className="desk-muted">
-                {contacts === null ? "Đang tải danh bạ…" : contacts.length ? "Không tìm thấy máy lẻ nào." : "Chưa có máy lẻ nào, hoặc tài khoản của bạn chưa được cấp máy lẻ."}
+                {contacts === null
+                  ? "Đang tải danh bạ…"
+                  : contacts.length
+                    ? "Không tìm thấy máy lẻ nào."
+                    : "Chưa có máy lẻ nào, hoặc tài khoản của bạn chưa được cấp máy lẻ."}
               </p>
             ) : (
               <ul className="cc-dir">
                 {shown.map((item) => (
                   <li key={item.id}>
-                    <span className={`cc-led tone-${item.state ? LAMP_TONE[item.state] : "group"}`} aria-hidden="true" />
-                    <button type="button" className="cc-dir__who" title="Điền số vào bàn phím" onClick={() => setDial(item.extension)}>
+                    <span
+                      className={`cc-led tone-${item.state ? LAMP_TONE[item.state] : "group"}`}
+                      aria-hidden="true"
+                    />
+                    <button
+                      type="button"
+                      className="cc-dir__who"
+                      title="Điền số vào bàn phím"
+                      onClick={() => setDial(item.extension)}
+                    >
                       <strong>{item.name}</strong>
                       <span>
                         {item.extension} · {item.department}
@@ -214,7 +330,9 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
                     <button
                       type="button"
                       className="cc-round"
-                      aria-label={canTransfer ? `Chuyển cuộc gọi tới ${item.name}` : `Gọi ${item.name}`}
+                      aria-label={
+                        canTransfer ? `Chuyển cuộc gọi tới ${item.name}` : `Gọi ${item.name}`
+                      }
                       title={canTransfer ? `Chuyển cuộc gọi tới ${item.name}` : `Gọi ${item.name}`}
                       disabled={actDisabled}
                       onClick={() => act(item.extension)}
@@ -227,24 +345,51 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
             )}
           </>
         ) : !recent?.length ? (
-          <p className="desk-muted">{recent === null ? "Đang tải lịch sử…" : "Chưa có cuộc gọi nội bộ nào."}</p>
+          <p className="desk-muted">
+            {recent === null ? "Đang tải lịch sử…" : "Chưa có cuộc gọi nội bộ nào."}
+          </p>
         ) : (
           <ul className="cc-dir">
             {recent.map((call) => (
-              <li key={call.id} className={call.way === "in" && call.outcome !== "answered" && call.outcome !== "transferred" ? "is-missed" : ""}>
-                <span className="cc-dir__way" aria-label={call.way === "out" ? "Gọi đi" : "Gọi đến"}>{call.way === "out" ? "↗" : "↙"}</span>
+              <li
+                key={call.id}
+                className={
+                  call.way === "in" && call.outcome !== "answered" && call.outcome !== "transferred"
+                    ? "is-missed"
+                    : ""
+                }
+              >
+                <span
+                  className="cc-dir__way"
+                  aria-label={call.way === "out" ? "Gọi đi" : "Gọi đến"}
+                >
+                  {call.way === "out" ? "↗" : "↙"}
+                </span>
                 <div className="cc-dir__who">
                   <strong>{call.name ?? call.number}</strong>
                   <span>
-                    {call.number} · {new Date(call.startedAt).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })} ·{" "}
-                    {call.outcome === "answered" ? talkTime(call.durationSeconds) : OUTCOME[call.outcome]}
+                    {call.number} ·{" "}
+                    {new Date(call.startedAt).toLocaleString("vi-VN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      day: "2-digit",
+                      month: "2-digit",
+                    })}{" "}
+                    ·{" "}
+                    {call.outcome === "answered"
+                      ? talkTime(call.durationSeconds)
+                      : OUTCOME[call.outcome]}
                   </span>
                 </div>
                 <button
                   type="button"
                   className="cc-round"
-                  aria-label={canTransfer ? `Chuyển cuộc gọi tới ${call.number}` : `Gọi lại ${call.number}`}
-                  title={canTransfer ? `Chuyển cuộc gọi tới ${call.number}` : `Gọi lại ${call.number}`}
+                  aria-label={
+                    canTransfer ? `Chuyển cuộc gọi tới ${call.number}` : `Gọi lại ${call.number}`
+                  }
+                  title={
+                    canTransfer ? `Chuyển cuộc gọi tới ${call.number}` : `Gọi lại ${call.number}`
+                  }
                   disabled={actDisabled}
                   onClick={() => act(call.number)}
                 >

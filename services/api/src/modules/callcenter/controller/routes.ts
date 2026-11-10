@@ -16,7 +16,12 @@ import { logMediaAccess } from "../../../infrastructure/operations/media-access.
 import { signLink, verifyLink } from "../../../shared/http/signed-link.js";
 import { sendTable } from "../../../shared/http/table-export.js";
 
-type Handler = (userId: string, match: string[], body: Body, params: URLSearchParams) => Promise<unknown>;
+type Handler = (
+  userId: string,
+  match: string[],
+  body: Body,
+  params: URLSearchParams,
+) => Promise<unknown>;
 interface Route {
   method: "GET" | "POST" | "PATCH" | "DELETE";
   pattern: RegExp;
@@ -71,7 +76,9 @@ export function callCenterRoutes(
     r("PATCH", "/departments/:id", (u, m, b) => admin.updateDepartment(u, m[1], b)),
     r("POST", "/departments/:id/hours", (u, m, b) => admin.setHours(u, m[1], b)),
     r("POST", "/departments/:id/members", (u, m, b) => admin.addMember(u, m[1], b)),
-    r("DELETE", "/departments/:id/members/:id", (u, m, _b, p) => admin.removeMember(u, m[1], m[2], p.get("role") ?? "")),
+    r("DELETE", "/departments/:id/members/:id", (u, m, _b, p) =>
+      admin.removeMember(u, m[1], m[2], p.get("role") ?? ""),
+    ),
     r("GET", "/departments/:id/live", (u, m) => agents.live(u, m[1])),
     r("GET", "/departments/:id/kpi", (u, m, _b, p) => reports.kpi(u, m[1], p)),
 
@@ -115,28 +122,47 @@ export function callCenterRoutes(
     await pipeline(Readable.fromWeb(audio.body as ReadableStream), response);
   };
 
-  return async function routesHandler({ request, response, pathname, params }: RouteContext): Promise<void> {
+  return async function routesHandler({
+    request,
+    response,
+    pathname,
+    params,
+  }: RouteContext): Promise<void> {
     if (!pathname.startsWith("/api/callcenter/")) return;
-    const audio = pathname.match(new RegExp(`^/api/callcenter/(calls|voicemails)/${uuid}/recording(/link)?$`));
+    const audio = pathname.match(
+      new RegExp(`^/api/callcenter/(calls|voicemails)/${uuid}/recording(/link)?$`),
+    );
     if (audio && request.method === "GET" && audio[3]) {
       // The signed-in user gets a one-minute link; the audio itself is served only through it.
-      sendJson(response, 200, signLink(pathname.slice(0, -"/link".length), await getAuthUserId(request), 60));
+      sendJson(
+        response,
+        200,
+        signLink(pathname.slice(0, -"/link".length), await getAuthUserId(request), 60),
+      );
       return;
     }
     if (audio && request.method === "GET") {
       const userId = verifyLink(pathname, params);
-      if (!userId) throw new HttpError(403, "LINK_EXPIRED", "Liên kết ghi âm không hợp lệ hoặc đã hết hạn.");
+      if (!userId)
+        throw new HttpError(403, "LINK_EXPIRED", "Liên kết ghi âm không hợp lệ hoặc đã hết hạn.");
       const recording =
         audio[1] === "calls"
           ? await agents.recording(userId, audio[2])
-          : ((await voip.voicemailRecording(userId, audio[2])) ?? (await tickets.voicemailRecording(userId, audio[2])));
+          : ((await voip.voicemailRecording(userId, audio[2])) ??
+            (await tickets.voicemailRecording(userId, audio[2])));
       await logMediaAccess(userId, audio[1] === "calls" ? "call" : "voicemail", audio[2]);
       await stream(response, recording);
       return;
     }
-    const csv = pathname.match(new RegExp(`^/api/callcenter/departments/${uuid}/calls(\\.csv|\\.xlsx)$`));
+    const csv = pathname.match(
+      new RegExp(`^/api/callcenter/departments/${uuid}/calls(\\.csv|\\.xlsx)$`),
+    );
     if (csv && request.method === "GET") {
-      sendTable(response, await reports.exportCsv(await getAuthUserId(request), csv[1], params), csv[2]);
+      sendTable(
+        response,
+        await reports.exportCsv(await getAuthUserId(request), csv[1], params),
+        csv[2],
+      );
       return;
     }
     const candidates = routes.filter((route) => route.pattern.test(pathname));
@@ -148,12 +174,27 @@ export function callCenterRoutes(
     if (route.method !== "GET") await limitRequest(request, `callcenter:${userId}`, 240, 60);
     const body = route.method === "GET" || route.method === "DELETE" ? {} : await readJson(request);
     try {
-      sendJson(response, route.status, (await route.handler(userId, pathname.match(route.pattern)!, body, params)) ?? { ok: true });
+      sendJson(
+        response,
+        route.status,
+        (await route.handler(userId, pathname.match(route.pattern)!, body, params)) ?? { ok: true },
+      );
     } catch (error) {
       const pg = error as { code?: string };
-      if (pg.code === "23505") throw new HttpError(409, "DUPLICATE", "Dữ liệu bị trùng (mã, số máy lẻ hoặc số đường dây).");
-      if (pg.code === "23503") throw new HttpError(400, "INVALID_REFERENCE", "Dữ liệu tham chiếu không tồn tại hoặc đang được dùng.");
-      if (pg.code === "23514") throw new HttpError(409, "RULE_VIOLATION", "Thao tác vi phạm ràng buộc nghiệp vụ.");
+      if (pg.code === "23505")
+        throw new HttpError(
+          409,
+          "DUPLICATE",
+          "Dữ liệu bị trùng (mã, số máy lẻ hoặc số đường dây).",
+        );
+      if (pg.code === "23503")
+        throw new HttpError(
+          400,
+          "INVALID_REFERENCE",
+          "Dữ liệu tham chiếu không tồn tại hoặc đang được dùng.",
+        );
+      if (pg.code === "23514")
+        throw new HttpError(409, "RULE_VIOLATION", "Thao tác vi phạm ràng buộc nghiệp vụ.");
       throw error;
     }
   };

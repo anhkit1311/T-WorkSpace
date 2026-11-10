@@ -60,7 +60,8 @@ export async function enterSession(
       await finishSession(client, session.id);
       session = null;
     }
-    let settings: { waiting_room: boolean; auto_record: boolean; mute_on_join: boolean } | undefined;
+    let settings:
+      { waiting_room: boolean; auto_record: boolean; mute_on_join: boolean } | undefined;
     if (scheduleId) {
       validateId(scheduleId);
       settings = (
@@ -69,7 +70,8 @@ export async function enterSession(
           [scheduleId, channelId],
         )
       ).rows[0];
-      if (!settings) throw new HttpError(400, "INVALID_SCHEDULE", "Lịch họp không thuộc phòng hoặc đã hủy.");
+      if (!settings)
+        throw new HttpError(400, "INVALID_SCHEDULE", "Lịch họp không thuộc phòng hoặc đã hủy.");
     }
     let autoRecord = false;
     if (!session) {
@@ -154,7 +156,12 @@ export async function enterSession(
       // Only on a person's first time in the room (after the waiting room too), so a reconnect keeps their mic choice.
       muteOnJoin:
         Boolean(session.mute_on_join && session.host_id !== userId) &&
-        !(await client.query(`SELECT 1 FROM meeting_participations WHERE session_id=$1 AND user_id=$2`, [session.id, userId])).rowCount,
+        !(
+          await client.query(
+            `SELECT 1 FROM meeting_participations WHERE session_id=$1 AND user_id=$2`,
+            [session.id, userId],
+          )
+        ).rowCount,
       autoRecord,
     };
   });

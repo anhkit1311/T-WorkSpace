@@ -1,4 +1,10 @@
-import { DIAL_ATTEMPTS, isDialCode, pressKey, type MeetingDialInPort, type PhoneLegPort } from "../domain/dial-in.js";
+import {
+  DIAL_ATTEMPTS,
+  isDialCode,
+  pressKey,
+  type MeetingDialInPort,
+  type PhoneLegPort,
+} from "../domain/dial-in.js";
 import type { Clock, Pbx, PbxEvent } from "../domain/ports.js";
 
 /** Hang up a caller who has not finished typing the code by then. */
@@ -51,7 +57,9 @@ export class MeetingDialInService {
       return true;
     }
     if (event.type === "channel_ended") {
-      const callerId = this.calls.has(event.channelId) ? event.channelId : this.byMedia.get(event.channelId);
+      const callerId = this.calls.has(event.channelId)
+        ? event.channelId
+        : this.byMedia.get(event.channelId);
       if (!callerId) return false;
       await this.end(callerId);
       return true;
@@ -96,13 +104,17 @@ export class MeetingDialInService {
     call.buffer = press.buffer;
     if (press.code === null) return;
     call.joining = true;
-    const room = isDialCode(press.code) ? await this.meetings.room(press.code).catch(() => null) : null;
+    const room = isDialCode(press.code)
+      ? await this.meetings.room(press.code).catch(() => null)
+      : null;
     if (!room) {
       call.joining = false;
       call.attempts++;
       this.log("meeting_dialin_bad_code", { channelId: call.channelId, attempts: call.attempts });
       if (call.attempts >= DIAL_ATTEMPTS) return this.goodbye(call, ["sound:conf-invalid"]);
-      return this.ask(call, ["sound:conf-invalid", "sound:conf-getconfno"]).catch((error) => this.fail(call, error));
+      return this.ask(call, ["sound:conf-invalid", "sound:conf-getconfno"]).catch((error) =>
+        this.fail(call, error),
+      );
     }
     this.clock.clearTimeout(call.timer);
     await this.join(call, room).catch((error) => this.fail(call, error));
@@ -110,20 +122,30 @@ export class MeetingDialInService {
 
   private async join(call: DialIn, room: { roomId: string; name: string }) {
     const socketId = `phone:${call.channelId}`;
-    const label = call.callerName && call.callerName !== call.callerNumber ? `${call.callerName} (điện thoại)` : `Điện thoại ${call.callerNumber || "ẩn số"}`;
+    const label =
+      call.callerName && call.callerName !== call.callerNumber
+        ? `${call.callerName} (điện thoại)`
+        : `Điện thoại ${call.callerNumber || "ẩn số"}`;
     call.roomId = room.roomId;
-    call.leg = this.meetings.open({ roomId: room.roomId, socketId, userId: "", displayName: label });
+    call.leg = this.meetings.open({
+      roomId: room.roomId,
+      socketId,
+      userId: "",
+      displayName: label,
+    });
     await this.pbx.play(call.channelId, ["sound:conf-placeintoconf"]).catch(() => undefined);
     const media = await this.pbx.externalMedia(this.meetings.mediaHost(call.leg.listenPort));
     call.mediaChannelId = media.channelId;
     this.byMedia.set(media.channelId, call.channelId);
-    if (!media.address || !media.port) throw new Error("ExternalMedia did not report its RTP address");
+    if (!media.address || !media.port)
+      throw new Error("ExternalMedia did not report its RTP address");
     call.bridgeId = await this.pbx.bridge([call.channelId, media.channelId]);
     const producer = await call.leg.connect(media);
     this.meetings.announce(room.roomId, "new_producer", producer);
     this.meetings.announce(room.roomId, "meeting_state_changed", { roomId: room.roomId });
     this.log("meeting_dialin_joined", { channelId: call.channelId, roomId: room.roomId });
-    if (!call.leg.others()) await this.pbx.play(call.channelId, ["sound:conf-onlyperson"]).catch(() => undefined);
+    if (!call.leg.others())
+      await this.pbx.play(call.channelId, ["sound:conf-onlyperson"]).catch(() => undefined);
     call.aloneSince = null;
     call.timer = this.clock.setTimeout(() => this.watchAlone(call), ALONE_CHECK_MS);
   }
@@ -132,7 +154,8 @@ export class MeetingDialInService {
     if (!this.calls.has(call.channelId) || !call.leg) return;
     const now = this.clock.now();
     call.aloneSince = call.leg.others() ? null : (call.aloneSince ?? now);
-    if (call.aloneSince !== null && now - call.aloneSince >= ALONE_LIMIT_MS) return void this.goodbye(call);
+    if (call.aloneSince !== null && now - call.aloneSince >= ALONE_LIMIT_MS)
+      return void this.goodbye(call);
     call.timer = this.clock.setTimeout(() => this.watchAlone(call), ALONE_CHECK_MS);
   }
 
@@ -140,11 +163,17 @@ export class MeetingDialInService {
     this.clock.clearTimeout(call.timer);
     await this.pbx.play(call.channelId, [...before, "sound:vm-goodbye"]).catch(() => undefined);
     // Give the prompt time to play; channel_ended then cleans up.
-    call.timer = this.clock.setTimeout(() => void this.pbx.hangup(call.channelId).catch(() => this.end(call.channelId)), 3000);
+    call.timer = this.clock.setTimeout(
+      () => void this.pbx.hangup(call.channelId).catch(() => this.end(call.channelId)),
+      3000,
+    );
   }
 
   private fail(call: DialIn, error: unknown) {
-    this.log("meeting_dialin_failed", { channelId: call.channelId, message: error instanceof Error ? error.message : String(error) });
+    this.log("meeting_dialin_failed", {
+      channelId: call.channelId,
+      message: error instanceof Error ? error.message : String(error),
+    });
     void this.pbx.hangup(call.channelId).catch(() => undefined);
     void this.end(call.channelId);
   }
@@ -162,8 +191,12 @@ export class MeetingDialInService {
     if (call.bridgeId) await this.pbx.destroyBridge(call.bridgeId).catch(() => undefined);
     if (call.leg && call.roomId) {
       const closed = await call.leg.close().catch(() => [] as string[]);
-      for (const producerId of closed) this.meetings.announce(call.roomId, "producer_closed", { producerId });
-      this.meetings.announce(call.roomId, "peer_left", { socketId: `phone:${channelId}`, userId: "" });
+      for (const producerId of closed)
+        this.meetings.announce(call.roomId, "producer_closed", { producerId });
+      this.meetings.announce(call.roomId, "peer_left", {
+        socketId: `phone:${channelId}`,
+        userId: "",
+      });
       this.meetings.announce(call.roomId, "meeting_state_changed", { roomId: call.roomId });
     }
   }

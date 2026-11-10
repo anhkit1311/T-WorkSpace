@@ -65,7 +65,9 @@ export function storeDraft<T>(key: string, value: T, generation = draftGeneratio
           transaction.onerror = () => reject(transaction.error);
         }),
     )
-    .catch(() => { /* Memory already holds the draft; restricted IndexedDB is an optional persistence fallback. */ });
+    .catch(() => {
+      /* Memory already holds the draft; restricted IndexedDB is an optional persistence fallback. */
+    });
   return true;
 }
 export async function clearAccountDrafts(userId: string) {

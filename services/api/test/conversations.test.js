@@ -48,8 +48,16 @@ test(
         mentionedUserIds: [member],
       });
       assert.equal((await listNotifications(member)).unreadCount, 1);
-      await Promise.all(Array.from({length:6},()=>toggleReaction(member,root.id,'👍')));
-      assert.equal((await pool.query(`SELECT 1 FROM message_reactions WHERE message_id=$1 AND user_id=$2`,[root.id,member])).rowCount,0);
+      await Promise.all(Array.from({ length: 6 }, () => toggleReaction(member, root.id, "👍")));
+      assert.equal(
+        (
+          await pool.query(`SELECT 1 FROM message_reactions WHERE message_id=$1 AND user_id=$2`, [
+            root.id,
+            member,
+          ])
+        ).rowCount,
+        0,
+      );
       assert.equal((await listNotifications(outsider)).unreadCount, 0);
       await assert.rejects(
         saveMessage(owner, channel.id, "wrong mention", { mentionedUserIds: [outsider] }),
@@ -155,9 +163,15 @@ test(
       );
       await deleteMessage(owner, root.id);
       await assert.rejects(getThread(member, root.id), { statusCode: 404 });
-      await assert.rejects(getMessageContext(member,reply.id),{statusCode:404});
-      assert.equal((await filteredMessageSearch(member,new URLSearchParams({q:'Thảo luận'}))).messages.length,0);
-      assert.ok(!(await listNotifications(member)).items.some(item=>item.threadRootId===root.id));
+      await assert.rejects(getMessageContext(member, reply.id), { statusCode: 404 });
+      assert.equal(
+        (await filteredMessageSearch(member, new URLSearchParams({ q: "Thảo luận" }))).messages
+          .length,
+        0,
+      );
+      assert.ok(
+        !(await listNotifications(member)).items.some((item) => item.threadRootId === root.id),
+      );
       assert.equal((await listSavedMessages(member, channel.id, "bookmarks")).length, 0);
     } finally {
       if (workspace) await pool.query(`DELETE FROM workspaces WHERE id=$1`, [workspace.id]);

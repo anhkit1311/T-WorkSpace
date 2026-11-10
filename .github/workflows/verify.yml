@@ -10,7 +10,7 @@ jobs:
           POSTGRES_DB: realtime_workspace
           POSTGRES_USER: workspace
           POSTGRES_PASSWORD: workspace
-        ports: ['5432:5432']
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U workspace -d realtime_workspace"
           --health-interval 5s --health-timeout 3s --health-retries 10

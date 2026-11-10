@@ -16,12 +16,17 @@ export interface QaScoreItem extends QaCriterion {
  * Weighted percentage of a review. Every criterion must be scored 0..10; a score for a criterion
  * that is not on the sheet is an error. Returns the snapshot kept with the review.
  */
-export function scoreReview(criteria: QaCriterion[], scores: unknown): { percent: number; items: QaScoreItem[] } | string {
+export function scoreReview(
+  criteria: QaCriterion[],
+  scores: unknown,
+): { percent: number; items: QaScoreItem[] } | string {
   if (!criteria.length) return "Phòng ban chưa có tiêu chí chấm điểm.";
-  if (typeof scores !== "object" || scores === null || Array.isArray(scores)) return "scores phải là {criterionId: điểm}.";
+  if (typeof scores !== "object" || scores === null || Array.isArray(scores))
+    return "scores phải là {criterionId: điểm}.";
   const given = scores as Record<string, unknown>;
   const known = new Set(criteria.map((criterion) => criterion.id));
-  if (Object.keys(given).some((key) => !known.has(key))) return "Có tiêu chí không thuộc phiếu chấm.";
+  if (Object.keys(given).some((key) => !known.has(key)))
+    return "Có tiêu chí không thuộc phiếu chấm.";
   const items: QaScoreItem[] = [];
   for (const criterion of criteria) {
     const score = given[criterion.id];
@@ -35,5 +40,9 @@ export function scoreReview(criteria: QaCriterion[], scores: unknown): { percent
 }
 
 /** E2: a review below the department's threshold sends the agent to the coaching course, once per review. */
-export const needsCoaching = (percent: number, threshold: number, coachingCourseId: string | null, alreadyAssigned: boolean) =>
-  coachingCourseId !== null && !alreadyAssigned && percent < threshold;
+export const needsCoaching = (
+  percent: number,
+  threshold: number,
+  coachingCourseId: string | null,
+  alreadyAssigned: boolean,
+) => coachingCourseId !== null && !alreadyAssigned && percent < threshold;

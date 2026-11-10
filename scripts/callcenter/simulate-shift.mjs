@@ -28,17 +28,21 @@ const logFile = `${out}/events.log`;
 await writeFile(logFile, "");
 const startedAt = Date.now();
 const log = (event, details = {}) =>
-  void appendFile(logFile, `${((Date.now() - startedAt) / 1000).toFixed(1).padStart(7)}s ${event} ${JSON.stringify(details)}\n`);
+  void appendFile(
+    logFile,
+    `${((Date.now() - startedAt) / 1000).toFixed(1).padStart(7)}s ${event} ${JSON.stringify(details)}\n`,
+  );
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
 // Deterministic "random" so a rerun plays the same shift.
 let seed = peak ? 20261103 : 20261104;
-const random = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+const random = () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
 const between = (min, max) => Math.round(min + random() * (max - min));
 
 const repo = new CallCenterRepository();
 const emails = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
-if (!emails.length) throw new Error("usage: node scripts/callcenter/simulate-shift.mjs agent@x.y [...]");
+if (!emails.length)
+  throw new Error("usage: node scripts/callcenter/simulate-shift.mjs agent@x.y [...]");
 const agents = [];
 for (const email of emails) {
   const user = await repo.userByEmail(email);
@@ -49,7 +53,12 @@ const hotline = (await repo.hotlines())[0];
 if (!hotline) throw new Error("Chưa có hotline: chạy scripts/callcenter/seed-demo.mjs trước.");
 const departmentId = hotline.options.find((option) => option.digit === "1").departmentId;
 const dispositions = await repo.dispositions([departmentId]);
-const supervisor = (await pool.query(`SELECT user_id FROM cc_members WHERE department_id=$1 AND role='supervisor' LIMIT 1`, [departmentId])).rows[0]?.user_id;
+const supervisor = (
+  await pool.query(
+    `SELECT user_id FROM cc_members WHERE department_id=$1 AND role='supervisor' LIMIT 1`,
+    [departmentId],
+  )
+).rows[0]?.user_id;
 if (!supervisor) throw new Error("Phòng ban cần một giám sát viên để xem KPI.");
 
 // ---- the shift --------------------------------------------------------------------------------
@@ -68,23 +77,56 @@ const TOPICS = [
 ];
 const callers = [];
 const add = (at, extra = {}) =>
-  callers.push({ at, number: `09${between(10_000_000, 99_999_999)}`, talk: between(45, 150), pickup: between(3, 9), ...extra });
+  callers.push({
+    at,
+    number: `09${between(10_000_000, 99_999_999)}`,
+    talk: between(45, 150),
+    pickup: between(3, 9),
+    ...extra,
+  });
 if (peak) {
   for (let i = 0; i < 18; i++) add(i * 90 + between(0, 30), i === 5 ? { ringOut: true } : {});
-  for (const [offset, extra] of [[0, { talk: 200 }], [4, { talk: 190 }], [8, { talk: 180 }], [12, { star: 15 }], [16, { star: 25 }], [20, { hangUp: 40 }]])
+  for (const [offset, extra] of [
+    [0, { talk: 200 }],
+    [4, { talk: 190 }],
+    [8, { talk: 180 }],
+    [12, { star: 15 }],
+    [16, { star: 25 }],
+    [20, { hangUp: 40 }],
+  ])
     add(600 + offset, extra);
-  for (const [offset, extra] of [[0, { talk: 170 }], [5, { talk: 160 }], [10, { talk: 150 }], [15, { star: 20 }]]) add(1290 + offset, extra);
+  for (const [offset, extra] of [
+    [0, { talk: 170 }],
+    [5, { talk: 160 }],
+    [10, { talk: 150 }],
+    [15, { star: 20 }],
+  ])
+    add(1290 + offset, extra);
 } else {
   for (let i = 0; i < 19; i++) add(i * 80 + between(0, 15), { talk: between(40, 110) });
-  for (const [at, last] of [[420, { star: 12 }], [900, { star: 15 }], [1340, { hangUp: 15 }]])
-    for (const [offset, extra] of [[0, { talk: between(60, 100) }], [3, { talk: between(60, 100) }], [6, last]]) add(at + offset, extra);
+  for (const [at, last] of [
+    [420, { star: 12 }],
+    [900, { star: 15 }],
+    [1340, { hangUp: 15 }],
+  ])
+    for (const [offset, extra] of [
+      [0, { talk: between(60, 100) }],
+      [3, { talk: between(60, 100) }],
+      [6, last],
+    ])
+      add(at + offset, extra);
 }
-callers.sort((a, b) => a.at - b.at).forEach((caller, index) => (caller.channel = `caller-${index}`));
+callers
+  .sort((a, b) => a.at - b.at)
+  .forEach((caller, index) => (caller.channel = `caller-${index}`));
 
 // ---- emulated PBX -----------------------------------------------------------------------------
 let acd;
 let chain = Promise.resolve();
-const emit = (event) => (chain = chain.then(() => acd.handle(event)).catch((error) => log("acd_error", { message: error.message })));
+const emit = (event) =>
+  (chain = chain
+    .then(() => acd.handle(event))
+    .catch((error) => log("acd_error", { message: error.message })));
 const later = (seconds, event) => setTimeout(() => emit(event), seconds * 1000);
 let sequence = 0;
 const ended = new Set();
@@ -139,7 +181,9 @@ function hangUp(caller) {
 // Only this shift's agents, and calls already open elsewhere stay as they are.
 const store = new Proxy(repo, {
   get: (target, name) => {
-    if (name === "agentRoster") return async () => (await target.agentRoster()).filter((agent) => agents.includes(agent.userId));
+    if (name === "agentRoster")
+      return async () =>
+        (await target.agentRoster()).filter((agent) => agents.includes(agent.userId));
     if (name === "closeDanglingCalls") return async () => 0;
     if (name === "createCall")
       return async (input) => {
@@ -166,17 +210,27 @@ log("shift_started", { callers: callers.length, agents: agents.length });
 
 for (const caller of callers) {
   setTimeout(async () => {
-    emit({ type: "call_started", channelId: caller.channel, args: ["inbound", hotline.number], callerNumber: caller.number, callerName: "", exten: hotline.number });
+    emit({
+      type: "call_started",
+      channelId: caller.channel,
+      args: ["inbound", hotline.number],
+      callerNumber: caller.number,
+      callerName: "",
+      exten: hotline.number,
+    });
     await sleep(4000); // listens to the menu, then presses 1
     emit({ type: "dtmf", channelId: caller.channel, digit: "1" });
     if (caller.star || caller.hangUp)
-      setTimeout(() => {
-        if (caller.answered || caller.gone) return;
-        if (caller.star) {
-          caller.gone = true;
-          emit({ type: "dtmf", channelId: caller.channel, digit: "*" });
-        } else hangUp(caller);
-      }, (caller.star ?? caller.hangUp) * 1000);
+      setTimeout(
+        () => {
+          if (caller.answered || caller.gone) return;
+          if (caller.star) {
+            caller.gone = true;
+            emit({ type: "dtmf", channelId: caller.channel, digit: "*" });
+          } else hangUp(caller);
+        },
+        (caller.star ?? caller.hangUp) * 1000,
+      );
   }, caller.at * 1000);
 }
 
@@ -185,10 +239,16 @@ const lastEnd = Math.max(...callers.map((caller) => caller.at + 30 + caller.talk
 const filed = new Set();
 while (Date.now() - startedAt < lastEnd * 1000) {
   await sleep(5000);
-  for (const caller of callers.filter((item) => item.answered && item.gone && item.recordId && !filed.has(item))) {
+  for (const caller of callers.filter(
+    (item) => item.answered && item.gone && item.recordId && !filed.has(item),
+  )) {
     filed.add(caller);
     const [code, note] = TOPICS[between(0, TOPICS.length - 1)];
-    await repo.saveWrapUp(caller.recordId, dispositions.find((item) => item.code === code)?.id ?? null, note);
+    await repo.saveWrapUp(
+      caller.recordId,
+      dispositions.find((item) => item.code === code)?.id ?? null,
+      note,
+    );
   }
 }
 await chain;
@@ -198,23 +258,53 @@ for (const userId of agents) await acd.requestState(userId, "offline").catch(() 
 const ids = callers.map((caller) => caller.recordId).filter(Boolean);
 // No recording exists behind the emulated PBX: keep the CDR from pointing at missing files.
 await pool.query(`UPDATE cc_calls SET recording_key=NULL WHERE id=ANY($1::uuid[])`, [ids]);
-const admin = new CallCenterAdminService(repo, () => null, async () => {}, log);
+const admin = new CallCenterAdminService(
+  repo,
+  () => null,
+  async () => {},
+  log,
+);
 const reports = new CallCenterReportService(repo, admin);
-const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(new Date(startedAt));
+const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(
+  new Date(startedAt),
+);
 const params = new URLSearchParams({ from: day, to: day, threshold: "20" });
 // The page reports whole days; the shift's own window keeps a second shift on the same day out.
 const shiftStart = new Date(startedAt);
 const shiftEnd = new Date();
 const kpi = {
   ...(await reports.kpi(supervisor, departmentId, params)),
-  ...kpiSummary(await repo.kpiCalls(departmentId, shiftStart, shiftEnd), await repo.wrapUpSeconds(departmentId, shiftStart, shiftEnd), 20),
+  ...kpiSummary(
+    await repo.kpiCalls(departmentId, shiftStart, shiftEnd),
+    await repo.wrapUpSeconds(departmentId, shiftStart, shiftEnd),
+    20,
+  ),
 };
 const table = await reports.exportCsv(supervisor, departmentId, params);
 // Rows of this shift only: same start time (as the export formats it) and caller number.
-const time = (date) => date.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour12: false });
-const own = new Set((await repo.kpiCalls(departmentId, shiftStart, shiftEnd)).map((call) => `${time(call.startedAt)}|${call.callerNumber}`));
+const time = (date) =>
+  date.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour12: false });
+const own = new Set(
+  (await repo.kpiCalls(departmentId, shiftStart, shiftEnd)).map(
+    (call) => `${time(call.startedAt)}|${call.callerNumber}`,
+  ),
+);
 const shiftRows = table.rows.filter((row, index) => index === 0 || own.has(`${row[0]}|${row[1]}`));
-await writeFile(`${out}/kpi.json`, JSON.stringify({ shift: { startedAt: new Date(startedAt).toISOString(), callers: callers.length, callIds: ids }, kpi }, null, 2));
+await writeFile(
+  `${out}/kpi.json`,
+  JSON.stringify(
+    {
+      shift: {
+        startedAt: new Date(startedAt).toISOString(),
+        callers: callers.length,
+        callIds: ids,
+      },
+      kpi,
+    },
+    null,
+    2,
+  ),
+);
 await writeFile(`${out}/cuoc-goi.csv`, `﻿${toCsv(shiftRows)}`);
 await writeFile(`${out}/cuoc-goi.xlsx`, toXlsx(shiftRows, table.name));
 console.log(JSON.stringify(kpi, null, 2));

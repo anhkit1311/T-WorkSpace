@@ -46,12 +46,7 @@ function add(
     ]),
   );
 }
-for (const name of [
-  "register",
-  "verify-otp",
-  "resend-otp",
-  "login",
-])
+for (const name of ["register", "verify-otp", "resend-otp", "login"])
   add(`/auth/${name}`, ["post"], "Auth", name, object, true);
 for (const name of ["refresh", "logout"])
   add(
@@ -282,7 +277,12 @@ add(
   "Create a Kanban task linked to the session",
   object,
 );
-add("/api/meetings/sessions/{sessionId}/council", ["get"], "Meetings", "Council (NV-MT3) of the session's schedule, or null");
+add(
+  "/api/meetings/sessions/{sessionId}/council",
+  ["get"],
+  "Meetings",
+  "Council (NV-MT3) of the session's schedule, or null",
+);
 add(
   "/api/meetings/schedules/{scheduleId}/council",
   ["get", "patch"],
@@ -290,7 +290,12 @@ add(
   "Council view / organizer replaces setup; 409 COUNCIL_LOCKED once scoring started",
   object,
 );
-add("/api/meetings/schedules/{scheduleId}/council.csv", ["get"], "Meetings", "Council results CSV for Excel");
+add(
+  "/api/meetings/schedules/{scheduleId}/council.csv",
+  ["get"],
+  "Meetings",
+  "Council results CSV for Excel",
+);
 add(
   "/api/meetings/schedules/{scheduleId}/council/members/{userId}",
   ["patch"],

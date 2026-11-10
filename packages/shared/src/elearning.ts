@@ -127,7 +127,13 @@ export interface QuizAttempt {
   startedAt: string;
   deadlineAt: string | null;
   submittedAt: string | null;
-  questions: { id: string; kind: QuestionKind; prompt: string; options: { id: string; text: string }[]; points: number }[];
+  questions: {
+    id: string;
+    kind: QuestionKind;
+    prompt: string;
+    options: { id: string; text: string }[];
+    points: number;
+  }[];
   /** The learner's answers so far (autosaved draft before submission). */
   answers: Record<string, (string | boolean)[]>;
   savedAt: string | null;
@@ -135,7 +141,9 @@ export interface QuizAttempt {
   score: number | null;
   maxScore: number | null;
   passed: boolean | null;
-  review: { questionId: string; correct: boolean; answer: (string | boolean)[]; explanation: string }[] | null;
+  review:
+    | { questionId: string; correct: boolean; answer: (string | boolean)[]; explanation: string }[]
+    | null;
 }
 
 export interface CourseProgressReport {

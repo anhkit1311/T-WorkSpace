@@ -29,7 +29,10 @@ test("RTCP feedback types are named by PT and FMT", () => {
 });
 
 test("per-SSRC loss counts sequence gaps across wrap-around; jitter is zero for paced packets", () => {
-  const rows = [row({ "stun.type": "0x0001", "frame.time_epoch": "0" }), row({ "dtls.record.content_type": "22" })];
+  const rows = [
+    row({ "stun.type": "0x0001", "frame.time_epoch": "0" }),
+    row({ "dtls.record.content_type": "22" }),
+  ];
   // 20 ms audio frames, 960 ticks each, seq 65533..65535,0..2 with seq 1 missing.
   const seqs = [65533, 65534, 65535, 0, 2];
   seqs.forEach((seq, i) => {

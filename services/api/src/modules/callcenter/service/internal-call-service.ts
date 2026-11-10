@@ -59,7 +59,10 @@ export class InternalCallLog {
       const leg = this.legs.get(event.channelId);
       // A unit's group number 1PP00 dials all its extensions at once ("PJSIP/10101&PJSIP/10102,30").
       const groupDial = /^1[0-9]{2}00$/.test(event.exten) && event.appData.startsWith("PJSIP/");
-      if (event.app === "Dial" && (groupDial || event.appData.startsWith(`PJSIP/${event.exten},`))) {
+      if (
+        event.app === "Dial" &&
+        (groupDial || event.appData.startsWith(`PJSIP/${event.exten},`))
+      ) {
         const count = this.counts.get(event.linkedId) ?? 0; // read before finish() forgets the call
         const previous = leg ? this.finish(event.channelId, "transferred") : null;
         this.counts.set(event.linkedId, count + 1);
@@ -76,7 +79,8 @@ export class InternalCallLog {
         return previous;
       }
       // Stasis(tworkspace,voicemail,<exten>,<DIALSTATUS>): the status of a dial that never rang (offline).
-      if (leg && event.app === "Stasis" && event.appData.includes(",voicemail,")) leg.status ||= event.appData.split(",")[3] ?? "";
+      if (leg && event.app === "Stasis" && event.appData.includes(",voicemail,"))
+        leg.status ||= event.appData.split(",")[3] ?? "";
       return null;
     }
     if (event.type === "dial") {
@@ -96,10 +100,20 @@ export class InternalCallLog {
   private finish(channelId: string, outcome: InternalOutcome): Promise<void> {
     const leg = this.legs.get(channelId)!;
     this.legs.delete(channelId);
-    if (![...this.legs.values()].some((other) => other.linkedId.split("#")[0] === leg.linkedId.split("#")[0]))
+    if (
+      ![...this.legs.values()].some(
+        (other) => other.linkedId.split("#")[0] === leg.linkedId.split("#")[0],
+      )
+    )
       this.counts.delete(leg.linkedId.split("#")[0]);
     return this.store
-      .saveInternalCall({ ...leg, endedAt: this.now(), outcome: outcome === "transferred" && !leg.answeredAt ? "missed" : outcome })
-      .catch((error: Error) => this.log("cc_internal_call_save_failed", { message: error.message }));
+      .saveInternalCall({
+        ...leg,
+        endedAt: this.now(),
+        outcome: outcome === "transferred" && !leg.answeredAt ? "missed" : outcome,
+      })
+      .catch((error: Error) =>
+        this.log("cc_internal_call_save_failed", { message: error.message }),
+      );
   }
 }

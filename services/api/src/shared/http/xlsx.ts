@@ -6,11 +6,13 @@ import { crc32, deflateRawSync } from "node:zlib";
  * shortcut: no column widths, dates or number formats; switch to exceljs if formatted reports are needed.
  */
 const xml = (value: string) =>
-  value.replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]!)
+  value
+    .replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]!)
     // Characters XML 1.0 cannot carry at all.
     // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
-const column = (index: number): string => (index < 26 ? "" : column(Math.floor(index / 26) - 1)) + String.fromCharCode(65 + (index % 26));
+const column = (index: number): string =>
+  (index < 26 ? "" : column(Math.floor(index / 26) - 1)) + String.fromCharCode(65 + (index % 26));
 // Plain decimals become numbers; leading zeros and "+" (student codes, phone numbers) stay text.
 const NUMBER = /^-?(0|[1-9]\d{0,14})(\.\d+)?$/;
 

@@ -1,5 +1,13 @@
-import { summarizeCall, summaryEnabled, type CallDigest } from "../../../infrastructure/ai/summarize.js";
-import { requestTranscript, transcriptionEnabled, type Segment } from "../../../infrastructure/speech/transcribe.js";
+import {
+  summarizeCall,
+  summaryEnabled,
+  type CallDigest,
+} from "../../../infrastructure/ai/summarize.js";
+import {
+  requestTranscript,
+  transcriptionEnabled,
+  type Segment,
+} from "../../../infrastructure/speech/transcribe.js";
 import type { PbxEvent } from "../domain/ports.js";
 
 // 2.1: a hotline recording ("call-<callId>", see AcdService.onAgentAnswered) is sent to the speech
@@ -9,12 +17,19 @@ import type { PbxEvent } from "../domain/ports.js";
 const CALL_RECORDING = /^call-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
 export interface CallTranscriptStore {
-  setCallTranscript(callId: string, status: "processing" | "ready" | "failed", segments: Segment[] | null): Promise<void>;
+  setCallTranscript(
+    callId: string,
+    status: "processing" | "ready" | "failed",
+    segments: Segment[] | null,
+  ): Promise<void>;
   callDispositions(callId: string): Promise<{ id: string; label: string }[]>;
   setCallSummary(callId: string, summary: string, dispositionId: string | null): Promise<void>;
 }
 
-type Summarize = (segments: Segment[], dispositions: { id: string; label: string }[]) => Promise<CallDigest>;
+type Summarize = (
+  segments: Segment[],
+  dispositions: { id: string; label: string }[],
+) => Promise<CallDigest>;
 
 export class CallTranscriptService {
   private queue: Promise<unknown> = Promise.resolve();
@@ -24,13 +39,18 @@ export class CallTranscriptService {
     private readonly fetchRecording: (name: string) => Promise<Response>,
     private readonly log: (event: string, details?: Record<string, unknown>) => void = () => {},
     private readonly enabled: () => boolean = transcriptionEnabled,
-    private readonly transcribe: (file: Buffer, name: string) => Promise<Segment[]> = (file, name) => requestTranscript(file, name, "audio/wav"),
-    private readonly summarize: () => Summarize | null = () => (summaryEnabled() ? summarizeCall : null),
+    private readonly transcribe: (file: Buffer, name: string) => Promise<Segment[]> = (
+      file,
+      name,
+    ) => requestTranscript(file, name, "audio/wav"),
+    private readonly summarize: () => Summarize | null = () =>
+      summaryEnabled() ? summarizeCall : null,
   ) {}
 
   /** Queues the transcription and returns at once: the PBX event chain must not wait on the speech service. */
   handle(event: PbxEvent): Promise<void> | null {
-    if (event.type !== "recording_finished" || event.durationSeconds <= 0 || !this.enabled()) return null;
+    if (event.type !== "recording_finished" || event.durationSeconds <= 0 || !this.enabled())
+      return null;
     const callId = CALL_RECORDING.exec(event.name)?.[1];
     if (!callId) return null;
     // One at a time: a load test ends hundreds of calls together and the speech service is the bottleneck.
@@ -48,7 +68,10 @@ export class CallTranscriptService {
       await this.store.setCallTranscript(callId, "ready", segments);
       this.log("cc_transcript_ready", { callId, segments: segments.length });
     } catch (error) {
-      this.log("cc_transcript_failed", { callId, message: error instanceof Error ? error.message : String(error) });
+      this.log("cc_transcript_failed", {
+        callId,
+        message: error instanceof Error ? error.message : String(error),
+      });
       await this.store.setCallTranscript(callId, "failed", null).catch(() => undefined);
       return;
     }
@@ -64,7 +87,10 @@ export class CallTranscriptService {
       await this.store.setCallSummary(callId, digest.summary, digest.dispositionId);
       this.log("cc_summary_ready", { callId, suggested: Boolean(digest.dispositionId) });
     } catch (error) {
-      this.log("cc_summary_failed", { callId, message: error instanceof Error ? error.message : String(error) });
+      this.log("cc_summary_failed", {
+        callId,
+        message: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 }

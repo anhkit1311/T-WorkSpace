@@ -80,7 +80,13 @@ export interface CcCallerProfile {
   student: { code: string; className: string; faculty: string } | null;
   tickets: { id: string; code: string; subject: string; status: TicketStatus; updatedAt: string }[];
   courses: { code: string; title: string; completed: boolean }[];
-  calls: { startedAt: string; outcome: CallOutcome | null; departmentName: string | null; agentName: string | null; notes: string }[];
+  calls: {
+    startedAt: string;
+    outcome: CallOutcome | null;
+    departmentName: string | null;
+    agentName: string | null;
+    notes: string;
+  }[];
 }
 
 export interface CcCallRecord {
@@ -169,7 +175,12 @@ export interface CcTransferDirectory {
 
 export interface CcLiveSnapshot {
   departmentId: string;
-  waiting: { callId: string; callerNumber: string; callerName: string | null; waitingSince: string }[];
+  waiting: {
+    callId: string;
+    callerNumber: string;
+    callerName: string | null;
+    waitingSince: string;
+  }[];
   agents: {
     userId: string;
     displayName: string;
@@ -183,7 +194,8 @@ export interface CcLiveSnapshot {
 
 export type TicketStatus = "open" | "in_progress" | "waiting" | "resolved" | "closed";
 export type TicketPriority = "low" | "normal" | "high" | "urgent";
-export type TicketSource = "call" | "missed_call" | "voicemail" | "callback" | "manual" | "elearning";
+export type TicketSource =
+  "call" | "missed_call" | "voicemail" | "callback" | "manual" | "elearning";
 
 export interface CcTicket {
   id: string;
@@ -237,7 +249,13 @@ export interface CcKpiReport {
   aht: number | null;
   abandonRate: number | null;
   serviceLevel: number | null;
-  agents: { userId: string; displayName: string; answered: number; talkSeconds: number; averageTalk: number | null }[];
+  agents: {
+    userId: string;
+    displayName: string;
+    answered: number;
+    talkSeconds: number;
+    averageTalk: number | null;
+  }[];
   hourly: { hour: number; offered: number; answered: number }[];
 }
 

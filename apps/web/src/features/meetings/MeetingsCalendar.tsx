@@ -13,7 +13,14 @@ import {
 } from "../../shared/ui/Primitives";
 import { NoGroups } from "../workspaces/GroupDialogs";
 import { cancelMeetingScheduleApi, getMeetingCalendarApi, saveMeetingScheduleApi } from "./api";
-import { calendarEvents, FIRST_HOUR, LAST_HOUR, layoutDay, weekStart, type CalendarEvent } from "./calendar";
+import {
+  calendarEvents,
+  FIRST_HOUR,
+  LAST_HOUR,
+  layoutDay,
+  weekStart,
+  type CalendarEvent,
+} from "./calendar";
 import { MeetingAttendancePanel } from "./MeetingAttendancePanel";
 import { MeetingClock } from "./MeetingClock";
 import { CouncilSetupDialog } from "./CouncilSetupDialog";
@@ -33,10 +40,15 @@ const WEEKDAYS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 
 // Day labels and times in Vietnam time, matching how the week is cut.
 const zone = { timeZone: "Asia/Ho_Chi_Minh" } as const;
 const dayMonth = (date: Date) => {
-  const [{ value: day }, , { value: month }] = new Intl.DateTimeFormat("en-GB", { ...zone, day: "2-digit", month: "2-digit" }).formatToParts(date);
+  const [{ value: day }, , { value: month }] = new Intl.DateTimeFormat("en-GB", {
+    ...zone,
+    day: "2-digit",
+    month: "2-digit",
+  }).formatToParts(date);
   return `${day}/${month}`;
 };
-const clock = (date: Date) => date.toLocaleTimeString("vi-VN", { ...zone, hour: "2-digit", minute: "2-digit" });
+const clock = (date: Date) =>
+  date.toLocaleTimeString("vi-VN", { ...zone, hour: "2-digit", minute: "2-digit" });
 
 function localDateTime(date: Date) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
@@ -75,7 +87,13 @@ function downloadCalendarEvent(item: MeetingScheduleItem) {
 }
 
 /** "Họp": meetings running now, the week's agenda as a timeline, rooms and recent minutes; or the week grid. */
-export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | null; rooms: MeetingRoom[] }) {
+export function MeetingsCalendar({
+  groups,
+  rooms,
+}: {
+  groups: WorkspaceItem[] | null;
+  rooms: MeetingRoom[];
+}) {
   const { accessToken, route, navigate, notify } = useApp();
   const [week, setWeek] = useState(() => weekStart(new Date()));
   const [data, setData] = useState<MeetingCalendar | null>(null);
@@ -107,7 +125,11 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
           setNow(new Date());
           setError("");
         })
-        .catch((reason) => active && setError(reason instanceof Error ? reason.message : "Không tải được lịch họp."));
+        .catch(
+          (reason) =>
+            active &&
+            setError(reason instanceof Error ? reason.message : "Không tải được lịch họp."),
+        );
     void load();
     const timer = window.setInterval(() => void load(), 60_000);
     return () => {
@@ -117,20 +139,35 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
   }, [accessToken, week, revision]);
 
   const events = useMemo(
-    () => (data ? calendarEvents(data, now).filter((item) => !groupId || item.workspaceId === groupId) : []),
+    () =>
+      data
+        ? calendarEvents(data, now).filter((item) => !groupId || item.workspaceId === groupId)
+        : [],
     [data, now, groupId],
   );
 
   const days = Array.from({ length: 7 }, (_, index) => new Date(week.getTime() + index * DAY));
-  const today = weekStart(now).getTime() === week.getTime() ? Math.floor((now.getTime() - week.getTime()) / DAY) : -1;
+  const today =
+    weekStart(now).getTime() === week.getTime()
+      ? Math.floor((now.getTime() - week.getTime()) / DAY)
+      : -1;
   const selected = events.find((item) => item.key === selectedKey);
-  const schedule = (item: CalendarEvent) => data?.schedules.find((entry) => entry.id === item.scheduleId);
+  const schedule = (item: CalendarEvent) =>
+    data?.schedules.find((entry) => entry.id === item.scheduleId);
   const openRoom = (item: { workspaceId: string; roomId: string; scheduleId?: string | null }) =>
-    navigate({ view: "meetings", workspaceId: item.workspaceId, channelId: item.roomId, scheduleId: item.scheduleId ?? undefined });
+    navigate({
+      view: "meetings",
+      workspaceId: item.workspaceId,
+      channelId: item.roomId,
+      scheduleId: item.scheduleId ?? undefined,
+    });
 
   // Counts & sessions
   const activeSessions = useMemo(() => data?.sessions.filter((s) => !s.endedAt) ?? [], [data]);
-  const pastSessions = useMemo(() => data?.sessions.filter((s) => Boolean(s.endedAt)).slice(0, 5) ?? [], [data]);
+  const pastSessions = useMemo(
+    () => data?.sessions.filter((s) => Boolean(s.endedAt)).slice(0, 5) ?? [],
+    [data],
+  );
 
   // Filtered rooms based on the search query
   const filteredRooms = useMemo(() => {
@@ -165,13 +202,18 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
       setRevision((value) => value + 1);
       notify("Đã huỷ lịch họp", "Lịch họp đã được gỡ khỏi lịch của nhóm.", "success");
     } catch (reason) {
-      notify("Không huỷ được lịch họp", reason instanceof Error ? reason.message : "Hãy thử lại.", "warning");
+      notify(
+        "Không huỷ được lịch họp",
+        reason instanceof Error ? reason.message : "Hãy thử lại.",
+        "warning",
+      );
     } finally {
       setCancelling(false);
     }
   };
 
-  if (groups?.length === 0) return <NoGroups text="Cuộc họp của các nhóm bạn tham gia sẽ hiện ở đây." />;
+  if (groups?.length === 0)
+    return <NoGroups text="Cuộc họp của các nhóm bạn tham gia sẽ hiện ở đây." />;
 
   const eventButton = (item: CalendarEvent, style?: React.CSSProperties) => (
     <button
@@ -194,7 +236,12 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
   const dayLabel = (date: Date) => {
     const index = dayIndex(date);
     const name = index >= 0 && index < 7 ? `${WEEKDAYS[index]}, ` : "";
-    const prefix = today >= 0 && index === today ? "Hôm nay · " : today >= 0 && index === today + 1 ? "Ngày mai · " : "";
+    const prefix =
+      today >= 0 && index === today
+        ? "Hôm nay · "
+        : today >= 0 && index === today + 1
+          ? "Ngày mai · "
+          : "";
     return `${prefix}${name}${dayMonth(date)}`;
   };
   const query = searchQuery.trim().toLowerCase();
@@ -214,7 +261,9 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
     all: filteredEvents.length,
   };
   const agendaDays = filteredEvents
-    .filter((item) => agendaFilter === "all" || (agendaFilter === "past") === (item.status === "past"))
+    .filter(
+      (item) => agendaFilter === "all" || (agendaFilter === "past") === (item.status === "past"),
+    )
     .sort((a, b) => a.start.getTime() - b.start.getTime())
     .reduce<{ label: string; items: CalendarEvent[] }[]>((list, item) => {
       const label = dayLabel(item.start);
@@ -228,9 +277,17 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
   const weekTitle = `Tuần ${dayMonth(days[0]).slice(0, 2)}–${dayMonth(days[6])}`;
   const weekNav = (
     <div className="mt-weeknav">
-      <IconButton label="Tuần trước" icon="chevron-left" onClick={() => setWeek(new Date(week.getTime() - 7 * DAY))} />
+      <IconButton
+        label="Tuần trước"
+        icon="chevron-left"
+        onClick={() => setWeek(new Date(week.getTime() - 7 * DAY))}
+      />
       <span>{weekTitle}</span>
-      <IconButton label="Tuần sau" icon="chevron-right" onClick={() => setWeek(new Date(week.getTime() + 7 * DAY))} />
+      <IconButton
+        label="Tuần sau"
+        icon="chevron-right"
+        onClick={() => setWeek(new Date(week.getTime() + 7 * DAY))}
+      />
       {today < 0 && (
         <Button size="sm" variant="secondary" onClick={() => setWeek(weekStart(new Date()))}>
           Hôm nay
@@ -242,7 +299,9 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
   const detail = selected && (
     <aside className="meeting-detail" aria-label="Chi tiết cuộc họp">
       <div className="meeting-detail__head">
-        <span className={`meeting-detail__status is-${selected.status}`}>{STATUS_LABEL[selected.status]}</span>
+        <span className={`meeting-detail__status is-${selected.status}`}>
+          {STATUS_LABEL[selected.status]}
+        </span>
         <IconButton label="Đóng chi tiết" icon="x" onClick={() => setSelectedKey("")} />
       </div>
       <h2>{selected.title}</h2>
@@ -250,15 +309,20 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
         {selected.workspaceName} · {roomOf(selected.roomId)}
       </p>
       <p className="meeting-detail__time">
-        <Icon name="clock" size={14} /> {dayMonth(selected.start)} · {clock(selected.start)}–{clock(selected.end)}
+        <Icon name="clock" size={14} /> {dayMonth(selected.start)} · {clock(selected.start)}–
+        {clock(selected.end)}
       </p>
-      {schedule(selected)?.description && <p className="meeting-detail__note">{schedule(selected)?.description}</p>}
+      {schedule(selected)?.description && (
+        <p className="meeting-detail__note">{schedule(selected)?.description}</p>
+      )}
       {selected.status !== "past" && (
         <>
           {selected.status === "live" && (
             <p className="meeting-detail__people">
               <Icon name="users" size={14} />{" "}
-              {selected.people.length ? `Đang trong phòng: ${selected.people.join(", ")}` : "Chưa có ai trong phòng"}
+              {selected.people.length
+                ? `Đang trong phòng: ${selected.people.join(", ")}`
+                : "Chưa có ai trong phòng"}
             </p>
           )}
           <div className="meeting-detail__actions">
@@ -266,19 +330,38 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
               Vào phòng
             </Button>
             {schedule(selected) && (
-              <Button variant="text" size="sm" icon="calendar" onClick={() => downloadCalendarEvent(schedule(selected)!)}>
+              <Button
+                variant="text"
+                size="sm"
+                icon="calendar"
+                onClick={() => downloadCalendarEvent(schedule(selected)!)}
+              >
                 Tải .ics
               </Button>
             )}
             {selected.canManage && schedule(selected) && (
               <>
-                <Button variant="text" size="sm" icon="edit" onClick={() => setForm({ item: schedule(selected) })}>
+                <Button
+                  variant="text"
+                  size="sm"
+                  icon="edit"
+                  onClick={() => setForm({ item: schedule(selected) })}
+                >
                   Sửa
                 </Button>
-                <Button variant="text" size="sm" icon="clipboard" onClick={() => setCouncilFor(schedule(selected)!)}>
+                <Button
+                  variant="text"
+                  size="sm"
+                  icon="clipboard"
+                  onClick={() => setCouncilFor(schedule(selected)!)}
+                >
                   Hội đồng
                 </Button>
-                <Button variant="text" size="sm" onClick={() => setCancelId(selected.scheduleId ?? "")}>
+                <Button
+                  variant="text"
+                  size="sm"
+                  onClick={() => setCancelId(selected.scheduleId ?? "")}
+                >
                   Huỷ
                 </Button>
               </>
@@ -307,17 +390,29 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
           <p className="mt-eyebrow">
             <span className={`mt-led ${activeSessions.length ? "is-pulse" : "is-off"}`} />
             Họp trực tuyến ·{" "}
-            {activeSessions.length ? `${activeSessions.length} phiên đang diễn ra` : "chưa có phiên nào đang diễn ra"}
+            {activeSessions.length
+              ? `${activeSessions.length} phiên đang diễn ra`
+              : "chưa có phiên nào đang diễn ra"}
           </p>
           <h1 id="meetings-title" className="mt-head__title">
             Họp
           </h1>
         </div>
         <div className="mt-seg" role="group" aria-label="Chế độ xem">
-          <button type="button" className={viewMode === "cards" ? "is-active" : ""} aria-pressed={viewMode === "cards"} onClick={() => setViewMode("cards")}>
+          <button
+            type="button"
+            className={viewMode === "cards" ? "is-active" : ""}
+            aria-pressed={viewMode === "cards"}
+            onClick={() => setViewMode("cards")}
+          >
             <Icon name="grid-2x2" size={13} /> Tổng quan
           </button>
-          <button type="button" className={viewMode === "calendar" ? "is-active" : ""} aria-pressed={viewMode === "calendar"} onClick={() => setViewMode("calendar")}>
+          <button
+            type="button"
+            className={viewMode === "calendar" ? "is-active" : ""}
+            aria-pressed={viewMode === "calendar"}
+            onClick={() => setViewMode("calendar")}
+          >
             <Icon name="calendar" size={13} /> Lịch tuần
           </button>
         </div>
@@ -325,7 +420,9 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
           className="mt-select"
           value={groupId}
           aria-label="Lọc theo nhóm"
-          onChange={(event) => navigate({ view: "meetings", workspaceId: event.target.value || undefined }, true)}
+          onChange={(event) =>
+            navigate({ view: "meetings", workspaceId: event.target.value || undefined }, true)
+          }
         >
           <option value="">Tất cả nhóm / Khoa</option>
           {groups?.map((group) => (
@@ -344,7 +441,13 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
             onChange={(event) => setSearchQuery(event.target.value)}
           />
         </label>
-        <Button size="sm" variant="secondary" icon="video" disabled={!rooms.length} onClick={() => setStartNow(true)}>
+        <Button
+          size="sm"
+          variant="secondary"
+          icon="video"
+          disabled={!rooms.length}
+          onClick={() => setStartNow(true)}
+        >
           Họp ngay
         </Button>
         <Button size="sm" icon="plus" disabled={!rooms.length} onClick={() => setForm({})}>
@@ -401,12 +504,20 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
                   <div className="mt-unit__foot">
                     <PeopleStack names={session.people} />
                     <span className="mt-unit__people">
-                      {session.people.length ? `${session.people.length} người trong phòng` : "Chưa có ai trong phòng"}
+                      {session.people.length
+                        ? `${session.people.length} người trong phòng`
+                        : "Chưa có ai trong phòng"}
                     </span>
                     <Button
                       size="sm"
                       icon="video"
-                      onClick={() => openRoom({ workspaceId: session.workspaceId, roomId: session.roomId, scheduleId: session.scheduleId })}
+                      onClick={() =>
+                        openRoom({
+                          workspaceId: session.workspaceId,
+                          roomId: session.roomId,
+                          scheduleId: session.scheduleId,
+                        })
+                      }
                     >
                       Vào ngay
                     </Button>
@@ -440,16 +551,29 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
                   size="sm"
                   disabled={!quickRoom}
                   onClick={() =>
-                    quickRoom && navigate({ view: "meetings", workspaceId: quickRoom.workspaceId, channelId: quickRoom.id })
+                    quickRoom &&
+                    navigate({
+                      view: "meetings",
+                      workspaceId: quickRoom.workspaceId,
+                      channelId: quickRoom.id,
+                    })
                   }
                 >
                   Vào phòng
                 </Button>
-                <Button size="sm" variant="ghost" className="mt-ghost-dark" disabled={!rooms.length} onClick={() => setStartNow(true)}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="mt-ghost-dark"
+                  disabled={!rooms.length}
+                  onClick={() => setStartNow(true)}
+                >
                   Họp ngay
                 </Button>
               </div>
-              <span className="mt-unit__hint">{readyRooms} phòng sẵn sàng · không cần đặt trước</span>
+              <span className="mt-unit__hint">
+                {readyRooms} phòng sẵn sàng · không cần đặt trước
+              </span>
             </div>
           </div>
         </section>
@@ -484,9 +608,18 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
             {agendaDays.length === 0 ? (
               <div className="mt-empty">
                 <Icon name="calendar" size={22} />
-                <p>{agendaFilter === "past" ? "Tuần này chưa có cuộc họp nào đã qua." : "Chưa có cuộc họp nào được lên lịch theo bộ lọc này."}</p>
+                <p>
+                  {agendaFilter === "past"
+                    ? "Tuần này chưa có cuộc họp nào đã qua."
+                    : "Chưa có cuộc họp nào được lên lịch theo bộ lọc này."}
+                </p>
                 {agendaFilter !== "past" && (
-                  <Button size="sm" icon="plus" disabled={!rooms.length} onClick={() => setForm({})}>
+                  <Button
+                    size="sm"
+                    icon="plus"
+                    disabled={!rooms.length}
+                    onClick={() => setForm({})}
+                  >
                     Lên lịch cuộc họp mới
                   </Button>
                 )}
@@ -498,7 +631,10 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
                   {day.items.map((item) => {
                     const isSelected = item.key === selectedKey;
                     return (
-                      <div key={item.key} className={`mt-ev is-${item.status} ${isSelected ? "is-selected" : ""}`}>
+                      <div
+                        key={item.key}
+                        className={`mt-ev is-${item.status} ${isSelected ? "is-selected" : ""}`}
+                      >
                         <div className="mt-ev__time">
                           <b>{clock(item.start)}</b>
                           <span>{clock(item.end)}</span>
@@ -509,7 +645,9 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
                         <div className="mt-ev__body">
                           <div className="mt-ev__title">
                             <span>{item.title}</span>
-                            <span className={`mt-status is-${item.status}`}>{STATUS_LABEL[item.status]}</span>
+                            <span className={`mt-status is-${item.status}`}>
+                              {STATUS_LABEL[item.status]}
+                            </span>
                           </div>
                           <div className="mt-ev__meta">
                             {item.workspaceName} · {roomOf(item.roomId)}
@@ -518,14 +656,28 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
                         <div className="mt-ev__actions">
                           <PeopleStack names={item.people} />
                           {item.status !== "past" && (
-                            <Button size="sm" variant={item.status === "live" ? "primary" : "secondary"} icon="video" onClick={() => openRoom(item)}>
+                            <Button
+                              size="sm"
+                              variant={item.status === "live" ? "primary" : "secondary"}
+                              icon="video"
+                              onClick={() => openRoom(item)}
+                            >
                               Vào họp
                             </Button>
                           )}
                           {schedule(item) && (
-                            <IconButton label="Tải lịch .ics" icon="calendar" onClick={() => downloadCalendarEvent(schedule(item)!)} />
+                            <IconButton
+                              label="Tải lịch .ics"
+                              icon="calendar"
+                              onClick={() => downloadCalendarEvent(schedule(item)!)}
+                            />
                           )}
-                          <Button size="sm" variant="ghost" aria-expanded={isSelected} onClick={() => setSelectedKey(isSelected ? "" : item.key)}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            aria-expanded={isSelected}
+                            onClick={() => setSelectedKey(isSelected ? "" : item.key)}
+                          >
                             {isSelected ? "Đóng" : "Chi tiết"}
                           </Button>
                         </div>
@@ -546,19 +698,31 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
               <div className="meeting-week__head" role="row">
                 <span />
                 {days.map((day, index) => (
-                  <span key={index} role="columnheader" className={index === today ? "is-today" : ""}>
+                  <span
+                    key={index}
+                    role="columnheader"
+                    className={index === today ? "is-today" : ""}
+                  >
                     {WEEKDAYS[index]} <strong>{dayMonth(day)}</strong>
                   </span>
                 ))}
               </div>
-              <div className="meeting-week__grid" role="row" style={{ "--hours": LAST_HOUR - FIRST_HOUR } as React.CSSProperties}>
+              <div
+                className="meeting-week__grid"
+                role="row"
+                style={{ "--hours": LAST_HOUR - FIRST_HOUR } as React.CSSProperties}
+              >
                 <div className="meeting-week__hours" aria-hidden="true">
                   {Array.from({ length: LAST_HOUR - FIRST_HOUR }, (_, index) => (
                     <span key={index}>{FIRST_HOUR + index}:00</span>
                   ))}
                 </div>
                 {days.map((day, index) => (
-                  <div key={index} role="gridcell" className={`meeting-week__day ${index === today ? "is-today" : ""}`}>
+                  <div
+                    key={index}
+                    role="gridcell"
+                    className={`meeting-week__day ${index === today ? "is-today" : ""}`}
+                  >
                     {layoutDay(events, day).map(({ event, top, height, column, columns }) =>
                       eventButton(event, {
                         top: `${top}%`,
@@ -579,7 +743,11 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
                     <h3>
                       {WEEKDAYS[index]} {dayMonth(day)}
                     </h3>
-                    {items.length ? items.map((item) => eventButton(item)) : <p>Không có cuộc họp</p>}
+                    {items.length ? (
+                      items.map((item) => eventButton(item))
+                    ) : (
+                      <p>Không có cuộc họp</p>
+                    )}
                   </li>
                 );
               })}
@@ -594,7 +762,11 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
                 <section className="mt-card" aria-labelledby="mt-week-title">
                   <div className="mt-card__head">
                     <h2 id="mt-week-title">{weekTitle}</h2>
-                    <button type="button" className="mt-link" onClick={() => setViewMode("calendar")}>
+                    <button
+                      type="button"
+                      className="mt-link"
+                      onClick={() => setViewMode("calendar")}
+                    >
                       Xem lịch tuần
                     </button>
                   </div>
@@ -609,7 +781,9 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
                           title={`${WEEKDAYS[index]} ${dayMonth(day)} · ${count} cuộc họp`}
                           onClick={() => setViewMode("calendar")}
                         >
-                          <small>{WEEKDAYS[index].replace("Thứ ", "T").replace("Chủ nhật", "CN")}</small>
+                          <small>
+                            {WEEKDAYS[index].replace("Thứ ", "T").replace("Chủ nhật", "CN")}
+                          </small>
                           <b>{dayMonth(day).slice(0, 2)}</b>
                           <i className={count ? "" : "is-empty"} />
                         </button>
@@ -622,11 +796,14 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
                   <div className="mt-card__head">
                     <h2 id="mt-rooms-title">Phòng họp</h2>
                     <span className="mt-card__meta">
-                      {filteredRooms.length} phòng · {filteredRooms.filter((room) => liveIn(room.id)).length} đang dùng
+                      {filteredRooms.length} phòng ·{" "}
+                      {filteredRooms.filter((room) => liveIn(room.id)).length} đang dùng
                     </span>
                   </div>
                   {filteredRooms.length === 0 ? (
-                    <p className="mt-muted">Không tìm thấy phòng họp phù hợp với bộ lọc hiện tại.</p>
+                    <p className="mt-muted">
+                      Không tìm thấy phòng họp phù hợp với bộ lọc hiện tại.
+                    </p>
                   ) : (
                     <ul className="mt-rooms">
                       {filteredRooms.map((room) => {
@@ -637,14 +814,21 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
                             <div>
                               <b title={room.name}>{room.name}</b>
                               <small title={room.workspace}>
-                                {live ? `Đang họp · ${live.people.length} người` : "Sẵn sàng"} · {room.workspace}
+                                {live ? `Đang họp · ${live.people.length} người` : "Sẵn sàng"} ·{" "}
+                                {room.workspace}
                               </small>
                             </div>
                             <button
                               type="button"
                               className="mt-link"
                               aria-label={`Vào ${room.name}`}
-                              onClick={() => navigate({ view: "meetings", workspaceId: room.workspaceId, channelId: room.id })}
+                              onClick={() =>
+                                navigate({
+                                  view: "meetings",
+                                  workspaceId: room.workspaceId,
+                                  channelId: room.id,
+                                })
+                              }
                             >
                               Vào
                             </button>
@@ -665,7 +849,12 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
                         <li key={session.id}>
                           <button
                             type="button"
-                            onClick={() => setSelectedKey(events.find((item) => item.sessionId === session.id)?.key ?? session.id)}
+                            onClick={() =>
+                              setSelectedKey(
+                                events.find((item) => item.sessionId === session.id)?.key ??
+                                  session.id,
+                              )
+                            }
                           >
                             <span className="mt-minutes__icon">
                               <Icon name="file" size={15} />
@@ -702,12 +891,21 @@ export function MeetingsCalendar({ groups, rooms }: { groups: WorkspaceItem[] | 
               setWeek(weekStart(new Date(saved.startsAt)));
               setSelectedKey(saved.id);
               setRevision((value) => value + 1);
-              notify("Đã lưu lịch họp", `${saved.title} · ${new Date(saved.startsAt).toLocaleString("vi-VN")}`, "success");
+              notify(
+                "Đã lưu lịch họp",
+                `${saved.title} · ${new Date(saved.startsAt).toLocaleString("vi-VN")}`,
+                "success",
+              );
             }}
           />
         )}
         {startNow && groups && (
-          <StartNowDialog groups={groups} rooms={rooms} defaultGroupId={groupId} onClose={() => setStartNow(false)} />
+          <StartNowDialog
+            groups={groups}
+            rooms={rooms}
+            defaultGroupId={groupId}
+            onClose={() => setStartNow(false)}
+          />
         )}
         {councilFor && (
           <CouncilSetupDialog
@@ -748,9 +946,12 @@ function PeopleStack({ names, max = 3 }: { names: string[]; max?: number }) {
   );
 }
 
-const roomsOf = (rooms: MeetingRoom[], groupId: string) => rooms.filter((room) => room.workspaceId === groupId);
+const roomsOf = (rooms: MeetingRoom[], groupId: string) =>
+  rooms.filter((room) => room.workspaceId === groupId);
 const meetingGroups = (groups: WorkspaceItem[], rooms: MeetingRoom[]) =>
-  groups.filter((group) => !group.archivedAt && rooms.some((room) => room.workspaceId === group.id));
+  groups.filter(
+    (group) => !group.archivedAt && rooms.some((room) => room.workspaceId === group.id),
+  );
 const firstGroup = (choices: WorkspaceItem[], ...preferred: (string | null)[]) =>
   preferred.find((id) => id && choices.some((group) => group.id === id)) ?? choices[0]?.id ?? "";
 function lastWorkspace() {
@@ -779,7 +980,9 @@ function ScheduleDialog({
 }) {
   const { accessToken } = useApp();
   const choices = meetingGroups(groups, rooms);
-  const [groupId, setGroupId] = useState(() => item?.workspaceId ?? firstGroup(choices, defaultGroupId, lastWorkspace()));
+  const [groupId, setGroupId] = useState(
+    () => item?.workspaceId ?? firstGroup(choices, defaultGroupId, lastWorkspace()),
+  );
   const [roomId, setRoomId] = useState(() => item?.roomId ?? roomsOf(rooms, groupId)[0]?.id ?? "");
   const [title, setTitle] = useState(item?.title ?? "");
   const [description, setDescription] = useState(item?.description ?? "");
@@ -791,7 +994,11 @@ function ScheduleDialog({
     if (next.getTime() < Date.now() + 60_000) next.setHours(next.getHours() + 1);
     return localDateTime(next);
   });
-  const [end, setEnd] = useState(() => (item ? localDateTime(new Date(item.endsAt)) : localDateTime(new Date(new Date(start).getTime() + 3_600_000))));
+  const [end, setEnd] = useState(() =>
+    item
+      ? localDateTime(new Date(item.endsAt))
+      : localDateTime(new Date(new Date(start).getTime() + 3_600_000)),
+  );
   const [settings, setSettings] = useState({
     waitingRoom: item?.waitingRoom ?? false,
     autoRecord: item?.autoRecord ?? false,
@@ -853,15 +1060,29 @@ function ScheduleDialog({
           <Button variant="ghost" disabled={saving} onClick={onClose}>
             Hủy
           </Button>
-          <Button loading={saving} disabled={!roomId || title.trim().length < 3} onClick={() => void submit()}>
+          <Button
+            loading={saving}
+            disabled={!roomId || title.trim().length < 3}
+            onClick={() => void submit()}
+          >
             {item ? "Lưu thay đổi" : "Tạo lịch họp"}
           </Button>
         </div>
       }
     >
-      <form className="ws-modal-form meeting-schedule-dialog" onSubmit={(event) => void submit(event)}>
+      <form
+        className="ws-modal-form meeting-schedule-dialog"
+        onSubmit={(event) => void submit(event)}
+      >
         <Field label="Tên cuộc họp" error={error}>
-          <input required minLength={3} maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ví dụ: Họp tiến độ đồ án" />
+          <input
+            required
+            minLength={3}
+            maxLength={120}
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="Ví dụ: Họp tiến độ đồ án"
+          />
         </Field>
         <Field label="Nhóm">
           <select
@@ -892,19 +1113,45 @@ function ScheduleDialog({
         )}
         <div className="meeting-schedule-dialog__times">
           <Field label="Bắt đầu">
-            <input required type="datetime-local" value={start} onChange={(event) => setStart(event.target.value)} />
+            <input
+              required
+              type="datetime-local"
+              value={start}
+              onChange={(event) => setStart(event.target.value)}
+            />
           </Field>
           <Field label="Kết thúc">
-            <input required type="datetime-local" value={end} onChange={(event) => setEnd(event.target.value)} />
+            <input
+              required
+              type="datetime-local"
+              value={end}
+              onChange={(event) => setEnd(event.target.value)}
+            />
           </Field>
         </div>
         <Field label="Nội dung chuẩn bị">
-          <textarea rows={2} maxLength={1000} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Nội dung, tài liệu cần chuẩn bị…" />
+          <textarea
+            rows={2}
+            maxLength={1000}
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder="Nội dung, tài liệu cần chuẩn bị…"
+          />
         </Field>
         <Field label="Agenda (mỗi dòng một mục)" hint="Thời gian theo múi giờ của thiết bị bạn.">
-          <textarea rows={3} value={agenda} onChange={(event) => setAgenda(event.target.value)} placeholder={"Báo cáo tiến độ\nPhân công tuần tới"} />
+          <textarea
+            rows={3}
+            value={agenda}
+            onChange={(event) => setAgenda(event.target.value)}
+            placeholder={"Báo cáo tiến độ\nPhân công tuần tới"}
+          />
         </Field>
-        <ScheduleInviteFields workspaceId={groupId} groups={groups} value={invite} onChange={setInvite} />
+        <ScheduleInviteFields
+          workspaceId={groupId}
+          groups={groups}
+          value={invite}
+          onChange={setInvite}
+        />
         <fieldset className="meeting-room-settings">
           <legend>Cấu hình phòng</legend>
           {(
@@ -915,7 +1162,11 @@ function ScheduleDialog({
             ] as const
           ).map(([key, label]) => (
             <label key={key}>
-              <input type="checkbox" checked={settings[key]} onChange={(event) => setSettings({ ...settings, [key]: event.target.checked })} />
+              <input
+                type="checkbox"
+                checked={settings[key]}
+                onChange={(event) => setSettings({ ...settings, [key]: event.target.checked })}
+              />
               {label}
             </label>
           ))}
@@ -939,9 +1190,12 @@ function StartNowDialog({
 }) {
   const { navigate } = useApp();
   const choices = meetingGroups(groups, rooms);
-  const [groupId, setGroupId] = useState(() => firstGroup(choices, lastWorkspace(), defaultGroupId));
+  const [groupId, setGroupId] = useState(() =>
+    firstGroup(choices, lastWorkspace(), defaultGroupId),
+  );
   const [roomId, setRoomId] = useState(() => roomsOf(rooms, groupId)[0]?.id ?? "");
-  const go = () => roomId && navigate({ view: "meetings", workspaceId: groupId, channelId: roomId });
+  const go = () =>
+    roomId && navigate({ view: "meetings", workspaceId: groupId, channelId: roomId });
   return (
     <Modal
       title="Họp ngay"

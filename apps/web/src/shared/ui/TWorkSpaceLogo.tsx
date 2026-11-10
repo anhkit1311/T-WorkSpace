@@ -10,7 +10,11 @@ export interface TWorkSpaceLogoProps {
 const MARK_HEIGHTS = { sm: 24, md: 30, lg: 40 };
 
 /** T-WorkSpace lockup: the official TDTU "TDT" mark beside the product name. */
-export function TWorkSpaceLogo({ size = "md", showText = true, className = "" }: TWorkSpaceLogoProps) {
+export function TWorkSpaceLogo({
+  size = "md",
+  showText = true,
+  className = "",
+}: TWorkSpaceLogoProps) {
   const height = MARK_HEIGHTS[size];
   return (
     <span className={`t-workspace-logo t-workspace-logo--${size} ${className}`.trim()}>

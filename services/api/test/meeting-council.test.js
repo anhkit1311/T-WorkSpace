@@ -3,7 +3,11 @@ import { randomUUID } from "node:crypto";
 import { test } from "node:test";
 process.env.JWT_SECRET = "meeting-council-secret-at-least-32-characters";
 import { pool } from "../../../dist/api/infrastructure/database/db.js";
-import { createWorkspace, addWorkspaceMember, getWorkspaceChannels } from "../../../dist/api/modules/workspaces/service.js";
+import {
+  createWorkspace,
+  addWorkspaceMember,
+  getWorkspaceChannels,
+} from "../../../dist/api/modules/workspaces/service.js";
 import { createMeetingSchedule } from "../../../dist/api/modules/meetings/schedules.js";
 import {
   exportCouncil,
@@ -30,7 +34,9 @@ test(
   "Council (NV-MT3, BR-12): setup, private sheets, chair finalizes only with every present member's sheet",
   { skip: process.env.RUN_DB_TESTS !== "1", timeout: 30000 },
   async () => {
-    const [owner, chair, member, student, student2, outsider] = Array.from({ length: 6 }, () => randomUUID());
+    const [owner, chair, member, student, student2, outsider] = Array.from({ length: 6 }, () =>
+      randomUUID(),
+    );
     const everyone = [owner, chair, member, student, student2, outsider];
     let workspace;
     try {
@@ -40,8 +46,11 @@ test(
           [id, `test-${id}@example.test`, `Council QA ${id.slice(0, 4)}`],
         );
       workspace = await createWorkspace(owner, "Council test");
-      for (const id of [chair, member, student, student2]) await addWorkspaceMember(workspace.id, id);
-      const room = (await getWorkspaceChannels(owner, workspace.id)).find((c) => c.type === "video");
+      for (const id of [chair, member, student, student2])
+        await addWorkspaceMember(workspace.id, id);
+      const room = (await getWorkspaceChannels(owner, workspace.id)).find(
+        (c) => c.type === "video",
+      );
       const schedule = await createMeetingSchedule(owner, {
         roomId: room.id,
         title: "Hội đồng QA",
@@ -64,11 +73,17 @@ test(
       assert.equal(await getCouncil(owner, schedule.id), null, "No council until set up");
       await assert.rejects(saveCouncil(member, schedule.id, setup), { statusCode: 403 });
       await assert.rejects(
-        saveCouncil(owner, schedule.id, { ...setup, criteria: [{ label: "Nội dung", weight: 90 }] }),
+        saveCouncil(owner, schedule.id, {
+          ...setup,
+          criteria: [{ label: "Nội dung", weight: 90 }],
+        }),
         { code: "INVALID_COUNCIL" },
       );
       await assert.rejects(
-        saveCouncil(owner, schedule.id, { ...setup, presenters: [{ userId: outsider, topic: "x" }] }),
+        saveCouncil(owner, schedule.id, {
+          ...setup,
+          presenters: [{ userId: outsider, topic: "x" }],
+        }),
         { code: "INVALID_COUNCIL" },
         "Presenters must belong to the room's group",
       );
@@ -89,17 +104,32 @@ test(
       await startPresenter(chair, first.id);
       await assert.rejects(saveCouncil(owner, schedule.id, setup), { code: "COUNCIL_LOCKED" });
 
-      await assert.rejects(submitSheet(student, first.id, { scores: { [content]: 8, [delivery]: 7 } }), {
-        code: "COUNCIL_ONLY",
-      });
-      await assert.rejects(submitSheet(member, first.id, { scores: { [content]: 11, [delivery]: 7 } }), {
+      await assert.rejects(
+        submitSheet(student, first.id, { scores: { [content]: 8, [delivery]: 7 } }),
+        {
+          code: "COUNCIL_ONLY",
+        },
+      );
+      await assert.rejects(
+        submitSheet(member, first.id, { scores: { [content]: 11, [delivery]: 7 } }),
+        {
+          code: "INVALID_COUNCIL",
+        },
+      );
+      await assert.rejects(submitSheet(member, first.id, { scores: { [content]: 8 } }), {
         code: "INVALID_COUNCIL",
       });
-      await assert.rejects(submitSheet(member, first.id, { scores: { [content]: 8 } }), { code: "INVALID_COUNCIL" });
-      await submitSheet(member, first.id, { scores: { [content]: 8, [delivery]: 7 }, comment: "Tốt" });
+      await submitSheet(member, first.id, {
+        scores: { [content]: 8, [delivery]: 7 },
+        comment: "Tốt",
+      });
 
       view = await getCouncil(member, schedule.id);
-      assert.equal(view.presenters[0].sheets, null, "A member does not see others' sheets before finalizing");
+      assert.equal(
+        view.presenters[0].sheets,
+        null,
+        "A member does not see others' sheets before finalizing",
+      );
       assert.deepEqual(view.presenters[0].mySheet.scores, { [content]: 8, [delivery]: 7 });
       assert.deepEqual(view.presenters[0].submittedBy, [member]);
       view = await getCouncil(chair, schedule.id);
@@ -110,9 +140,12 @@ test(
       await assert.rejects(finalizePresenter(chair, first.id, {}), { code: "SHEETS_MISSING" });
       await submitSheet(chair, first.id, { scores: { [content]: 9, [delivery]: 8 } });
       await finalizePresenter(chair, first.id, { conclusion: "Đạt" });
-      await assert.rejects(submitSheet(member, first.id, { scores: { [content]: 1, [delivery]: 1 } }), {
-        code: "COUNCIL_FINALIZED",
-      });
+      await assert.rejects(
+        submitSheet(member, first.id, { scores: { [content]: 1, [delivery]: 1 } }),
+        {
+          code: "COUNCIL_FINALIZED",
+        },
+      );
 
       view = await getCouncil(student, schedule.id);
       assert.equal(view.presenters[0].finalScore, 8.1, "(7.6 + 8.6) / 2");
@@ -125,12 +158,17 @@ test(
       assert.equal(view.presenters[0].sheets.length, 2, "Members see the sheets once final");
 
       // An absent member is not waited for.
-      await assert.rejects(setMemberAbsent(member, schedule.id, member, true), { code: "CHAIR_ONLY" });
+      await assert.rejects(setMemberAbsent(member, schedule.id, member, true), {
+        code: "CHAIR_ONLY",
+      });
       await assert.rejects(setMemberAbsent(chair, schedule.id, chair, true), { statusCode: 404 });
       await setMemberAbsent(chair, schedule.id, member, true);
-      await assert.rejects(submitSheet(member, second.id, { scores: { [content]: 5, [delivery]: 5 } }), {
-        code: "MEMBER_ABSENT",
-      });
+      await assert.rejects(
+        submitSheet(member, second.id, { scores: { [content]: 5, [delivery]: 5 } }),
+        {
+          code: "MEMBER_ABSENT",
+        },
+      );
       await submitSheet(chair, second.id, { scores: { [content]: 7, [delivery]: 6 } });
       await finalizePresenter(chair, second.id, {});
       view = await getCouncil(owner, schedule.id);

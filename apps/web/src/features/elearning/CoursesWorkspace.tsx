@@ -8,7 +8,8 @@ import { CourseView } from "./CourseView";
 import "./courses.css";
 
 /** A stable hue per course code, so each card keeps its colour without stored artwork. */
-const hueOf = (code: string) => [...code].reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) % 360, 7);
+const hueOf = (code: string) =>
+  [...code].reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) % 360, 7);
 
 type Filter = "all" | "learning" | "managing";
 const FILTERS: [Filter, string][] = [
@@ -16,7 +17,11 @@ const FILTERS: [Filter, string][] = [
   ["learning", "Đang học"],
   ["managing", "Tôi phụ trách"],
 ];
-export const STATUS_LABEL = { draft: "Nháp", published: "Đã xuất bản", archived: "Lưu trữ" } as const;
+export const STATUS_LABEL = {
+  draft: "Nháp",
+  published: "Đã xuất bản",
+  archived: "Lưu trữ",
+} as const;
 
 /** EL-1..EL-6: course catalogue; opening a course shows its outline, lessons and (for staff) admin. */
 export function CoursesWorkspace() {
@@ -24,7 +29,9 @@ export function CoursesWorkspace() {
   const [courses, setCourses] = useState<CourseSummary[] | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   // ?q=<courseId> opens a course directly (from the call center's required-training banner).
-  const [openId, setOpenId] = useState<string | null>(/^[0-9a-f-]{36}$/i.test(route.query ?? "") ? route.query! : null);
+  const [openId, setOpenId] = useState<string | null>(
+    /^[0-9a-f-]{36}$/i.test(route.query ?? "") ? route.query! : null,
+  );
   const [units, setUnits] = useState<{ id: string; code: string; name: string }[]>([]);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
@@ -73,8 +80,18 @@ export function CoursesWorkspace() {
       </header>
       <div className="courses-filters" role="tablist" aria-label="Lọc khóa học">
         {/* Learners never manage a course: "Tôi phụ trách" is only for staff who can. */}
-        {FILTERS.filter(([id]) => id !== "managing" || units.length > 0 || courses?.some((course) => course.canManage)).map(([id, label]) => (
-          <button key={id} type="button" role="tab" aria-selected={filter === id} className={filter === id ? "is-active" : ""} onClick={() => setFilter(id)}>
+        {FILTERS.filter(
+          ([id]) =>
+            id !== "managing" || units.length > 0 || courses?.some((course) => course.canManage),
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={filter === id}
+            className={filter === id ? "is-active" : ""}
+            onClick={() => setFilter(id)}
+          >
             {label}
           </button>
         ))}
@@ -83,7 +100,15 @@ export function CoursesWorkspace() {
         <p role="alert" className="courses-error">
           {error}{" "}
           {!courses && (
-            <Button size="sm" variant="ghost" icon="refresh" onClick={() => { setError(""); void load(); }}>
+            <Button
+              size="sm"
+              variant="ghost"
+              icon="refresh"
+              onClick={() => {
+                setError("");
+                void load();
+              }}
+            >
               Thử lại
             </Button>
           )}
@@ -93,14 +118,24 @@ export function CoursesWorkspace() {
       {courses && !visible.length && (
         <div className="courses-empty">
           <Icon name="graduation-cap" size={28} />
-          <p>{filter === "learning" ? "Bạn chưa ghi danh khóa học nào." : filter === "managing" ? "Bạn chưa phụ trách khóa học nào." : "Chưa có khóa học nào được xuất bản."}</p>
+          <p>
+            {filter === "learning"
+              ? "Bạn chưa ghi danh khóa học nào."
+              : filter === "managing"
+                ? "Bạn chưa phụ trách khóa học nào."
+                : "Chưa có khóa học nào được xuất bản."}
+          </p>
         </div>
       )}
       <ul className="courses-grid">
         {visible.map((course) => (
           <li key={course.id}>
             <button type="button" className="course-card" onClick={() => setOpenId(course.id)}>
-              <span className="course-card__cover" style={{ "--course-hue": hueOf(course.code) } as CSSProperties} aria-hidden="true">
+              <span
+                className="course-card__cover"
+                style={{ "--course-hue": hueOf(course.code) } as CSSProperties}
+                aria-hidden="true"
+              >
                 <Icon name="graduation-cap" size={22} />
               </span>
               <span className="course-card__code">{course.code}</span>
@@ -109,13 +144,25 @@ export function CoursesWorkspace() {
                 {course.unitName} · {course.ownerName}
               </span>
               <span className="course-card__meta">
-                {course.lessonCount} bài học{course.canManage ? ` · ${course.learnerCount} học viên` : ""}
+                {course.lessonCount} bài học
+                {course.canManage ? ` · ${course.learnerCount} học viên` : ""}
               </span>
               <span className="course-card__badges">
-                {course.canManage && <Badge tone={course.status === "published" ? "green" : "amber"}>{STATUS_LABEL[course.status]}</Badge>}
-                {course.enrolled && (course.progress === 100 ? <Badge tone="green">Đã hoàn thành</Badge> : <Badge tone="blue">Đang học</Badge>)}
+                {course.canManage && (
+                  <Badge tone={course.status === "published" ? "green" : "amber"}>
+                    {STATUS_LABEL[course.status]}
+                  </Badge>
+                )}
+                {course.enrolled &&
+                  (course.progress === 100 ? (
+                    <Badge tone="green">Đã hoàn thành</Badge>
+                  ) : (
+                    <Badge tone="blue">Đang học</Badge>
+                  ))}
                 {course.enrollment === "assigned" && <Badge>Theo chỉ định</Badge>}
-                {course.enrollment === "approval" && <Badge>{course.requested ? "Chờ duyệt" : "Cần duyệt"}</Badge>}
+                {course.enrollment === "approval" && (
+                  <Badge>{course.requested ? "Chờ duyệt" : "Cần duyệt"}</Badge>
+                )}
               </span>
               {course.progress !== null && (
                 <span className="course-card__progress">
@@ -144,7 +191,15 @@ export function CoursesWorkspace() {
   );
 }
 
-function CreateCourse({ units, onClose, onCreated }: { units: { id: string; code: string; name: string }[]; onClose: () => void; onCreated: (id: string) => void }) {
+function CreateCourse({
+  units,
+  onClose,
+  onCreated,
+}: {
+  units: { id: string; code: string; name: string }[];
+  onClose: () => void;
+  onCreated: (id: string) => void;
+}) {
   const { accessToken } = useApp();
   const [unitId, setUnitId] = useState(units[0]?.id ?? "");
   const [code, setCode] = useState("");
@@ -160,7 +215,17 @@ function CreateCourse({ units, onClose, onCreated }: { units: { id: string; code
     setBusy(true);
     setError("");
     try {
-      onCreated((await coursesApi.create(accessToken, { unitId, code: code.trim().toUpperCase(), title: title.trim(), description: description.trim(), enrollment })).id);
+      onCreated(
+        (
+          await coursesApi.create(accessToken, {
+            unitId,
+            code: code.trim().toUpperCase(),
+            title: title.trim(),
+            description: description.trim(),
+            enrollment,
+          })
+        ).id,
+      );
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Không tạo được khóa học.");
     } finally {
@@ -174,8 +239,12 @@ function CreateCourse({ units, onClose, onCreated }: { units: { id: string; code
       onClose={onClose}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>Hủy</Button>
-          <Button type="submit" form="create-course" disabled={busy}>Tạo</Button>
+          <Button variant="ghost" onClick={onClose}>
+            Hủy
+          </Button>
+          <Button type="submit" form="create-course" disabled={busy}>
+            Tạo
+          </Button>
         </>
       }
     >
@@ -183,27 +252,51 @@ function CreateCourse({ units, onClose, onCreated }: { units: { id: string; code
         <Field label="Đơn vị phụ trách">
           <select value={unitId} onChange={(event) => setUnitId(event.target.value)} required>
             {units.map((unit) => (
-              <option key={unit.id} value={unit.id}>{unit.name}</option>
+              <option key={unit.id} value={unit.id}>
+                {unit.name}
+              </option>
             ))}
           </select>
         </Field>
         <Field label="Mã khóa học" hint="2–20 ký tự in hoa, số, - hoặc _, ví dụ CC-101">
-          <input value={code} onChange={(event) => setCode(event.target.value)} required pattern="[A-Za-z0-9_-]{2,20}" />
+          <input
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            required
+            pattern="[A-Za-z0-9_-]{2,20}"
+          />
         </Field>
         <Field label="Tên khóa học">
-          <input value={title} onChange={(event) => setTitle(event.target.value)} required maxLength={160} />
+          <input
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            required
+            maxLength={160}
+          />
         </Field>
         <Field label="Mô tả">
-          <textarea rows={3} value={description} onChange={(event) => setDescription(event.target.value)} maxLength={4000} />
+          <textarea
+            rows={3}
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            maxLength={4000}
+          />
         </Field>
         <Field label="Ghi danh">
-          <select value={enrollment} onChange={(event) => setEnrollment(event.target.value as CourseEnrollmentMode)}>
+          <select
+            value={enrollment}
+            onChange={(event) => setEnrollment(event.target.value as CourseEnrollmentMode)}
+          >
             <option value="open">Mở: học viên tự đăng ký</option>
             <option value="assigned">Chỉ định: giảng viên gán học viên</option>
             <option value="approval">Cần duyệt: học viên gửi yêu cầu, giảng viên duyệt</option>
           </select>
         </Field>
-        {error && <p role="alert" className="courses-error">{error}</p>}
+        {error && (
+          <p role="alert" className="courses-error">
+            {error}
+          </p>
+        )}
       </form>
     </Modal>
   );

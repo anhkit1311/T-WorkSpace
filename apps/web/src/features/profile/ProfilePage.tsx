@@ -129,19 +129,15 @@ export function ProfilePage() {
   const username = user?.userCode
     ? user.userCode
     : user?.email
-    ? user.email.split("@")[0]
-    : user?.id
-      ? user.id.slice(0, 8)
-      : "—";
+      ? user.email.split("@")[0]
+      : user?.id
+        ? user.id.slice(0, 8)
+        : "—";
 
   // Any email domain: a student is told apart by the mã số (khóa + mã định danh + STT, digits first).
   const isStudent = /^[0-9]/.test(user?.userCode ?? "");
   const isAdmin = user?.email?.toLowerCase().includes("admin");
-  const roleLabel = isStudent
-    ? "Sinh viên"
-    : isAdmin
-      ? "Quản trị viên"
-      : "Cán bộ / Giảng viên";
+  const roleLabel = isStudent ? "Sinh viên" : isAdmin ? "Quản trị viên" : "Cán bộ / Giảng viên";
 
   return (
     <div className="profile-page">
@@ -151,7 +147,11 @@ export function ProfilePage() {
           <p>Quản lý thông tin cá nhân và bảo mật tài khoản người dùng.</p>
         </div>
         <Chip icon="check">
-          {isStudent ? "Tài khoản sinh viên" : isAdmin ? "Tài khoản quản trị" : "Tài khoản người dùng"}
+          {isStudent
+            ? "Tài khoản sinh viên"
+            : isAdmin
+              ? "Tài khoản quản trị"
+              : "Tài khoản người dùng"}
         </Chip>
       </header>
 
@@ -192,7 +192,9 @@ export function ProfilePage() {
           <div className="profile-meta-tags">
             <div className="profile-meta-tag">
               <Icon name="profile" size={14} />
-              <span>Tên đăng nhập: <strong>{username}</strong></span>
+              <span>
+                Tên đăng nhập: <strong>{username}</strong>
+              </span>
             </div>
             <div className="profile-meta-tag">
               <Icon name="mail" size={14} />
@@ -220,7 +222,11 @@ export function ProfilePage() {
           <Icon name="profile" size={16} /> Thông tin cá nhân
         </h3>
         <form onSubmit={handleUpdateProfile} className="profile-form" onInput={() => setError("")}>
-          {error && errorField === "profile" && <p className="field__error" role="alert">{error}</p>}
+          {error && errorField === "profile" && (
+            <p className="field__error" role="alert">
+              {error}
+            </p>
+          )}
 
           <div className="profile-form-grid">
             <Field
@@ -269,10 +275,7 @@ export function ProfilePage() {
               />
             </Field>
 
-            <Field
-              label="Số điện thoại"
-              hint="Số điện thoại liên lạc cá nhân."
-            >
+            <Field label="Số điện thoại" hint="Số điện thoại liên lạc cá nhân.">
               <input
                 type="tel"
                 className="profile-field-input"
@@ -324,7 +327,11 @@ export function ProfilePage() {
         <p className="profile-password-hint">
           Sau khi đổi mật khẩu, phiên đăng nhập hiện tại sẽ được làm mới để đảm bảo an toàn.
         </p>
-        <form onSubmit={handleChangePassword} className="profile-form profile-password-form" onInput={() => setPasswordError("")}>
+        <form
+          onSubmit={handleChangePassword}
+          className="profile-form profile-password-form"
+          onInput={() => setPasswordError("")}
+        >
           <Field label="Mật khẩu hiện tại">
             <input
               className="profile-field-input"
@@ -413,7 +420,9 @@ export function ProfilePage() {
       {/* Danger Zone */}
       <section className="profile-card profile-danger-zone">
         <h3 className="profile-section-title">Đăng xuất tài khoản</h3>
-        <p style={{ fontSize: "14px", color: "var(--tws-text-muted, #8A8780)", margin: "0 0 16px" }}>
+        <p
+          style={{ fontSize: "14px", color: "var(--tws-text-muted, #8A8780)", margin: "0 0 16px" }}
+        >
           Đăng xuất sẽ kết thúc phiên làm việc hiện tại trên trình duyệt này.
         </p>
         <Button variant="secondary" icon="logout" onClick={() => setLogoutConfirmOpen(true)}>

@@ -1,8 +1,23 @@
 import { randomUUID } from "node:crypto";
 import type { LessonDetail, QuizAttempt } from "@doan/shared";
 import { query, withTransaction } from "../../../infrastructure/database/db.js";
-import { conflict, forbidden, id, integer, invalid, notFound, text, type Body } from "../../callcenter/service/input.js";
-import { draftProblem, drawQuestions, gradeAttempt, isLate, shuffledOptions } from "../domain/quiz.js";
+import {
+  conflict,
+  forbidden,
+  id,
+  integer,
+  invalid,
+  notFound,
+  text,
+  type Body,
+} from "../../callcenter/service/input.js";
+import {
+  draftProblem,
+  drawQuestions,
+  gradeAttempt,
+  isLate,
+  shuffledOptions,
+} from "../domain/quiz.js";
 import { addWatched, maxReportSeconds, watchedEnough, watchedSeconds } from "../domain/watch.js";
 import type { ElearningRepository } from "../repository/elearning-repository.js";
 import type { CourseService } from "./course-service.js";
@@ -16,11 +31,16 @@ export class LearningService {
 
   async lesson(userId: string, lessonId: string): Promise<LessonDetail> {
     const { lesson, manages, enrolled } = await this.courses.lessonCourse(userId, lessonId, "see");
-    const completed = (await this.repo.lessons(lesson.courseId, userId)).find((item) => item.id === lesson.id)?.completed ?? false;
+    const completed =
+      (await this.repo.lessons(lesson.courseId, userId)).find((item) => item.id === lesson.id)
+        ?.completed ?? false;
     let watch: LessonDetail["watch"] = null;
     if (enrolled && lesson.kind === "video" && lesson.durationSeconds) {
       const row = await this.repo.videoWatch(null, lesson.id, userId);
-      watch = { watchedSeconds: Math.round(watchedSeconds(row?.ranges ?? [])), positionSeconds: row?.positionSeconds ?? 0 };
+      watch = {
+        watchedSeconds: Math.round(watchedSeconds(row?.ranges ?? [])),
+        positionSeconds: row?.positionSeconds ?? 0,
+      };
     }
     let quiz: LessonDetail["quiz"] = null;
     if (lesson.kind === "quiz") {
@@ -36,8 +56,12 @@ export class LearningService {
         drawCount: lesson.drawCount,
         shuffle: lesson.shuffle,
         maxAttempts: lesson.maxAttempts,
-        attemptsLeft: lesson.maxAttempts === null ? null : Math.max(0, lesson.maxAttempts - (best?.used ?? 0)),
-        bestPercent: best?.best === null || best?.best === undefined ? null : Math.round(best.best * 100) / 100,
+        attemptsLeft:
+          lesson.maxAttempts === null ? null : Math.max(0, lesson.maxAttempts - (best?.used ?? 0)),
+        bestPercent:
+          best?.best === null || best?.best === undefined
+            ? null
+            : Math.round(best.best * 100) / 100,
         passed: Boolean(best?.passed),
         openAttemptId,
       };
@@ -84,9 +108,20 @@ export class LearningService {
   async complete(userId: string, lessonId: string) {
     const { lesson, enrolled } = await this.courses.lessonCourse(userId, lessonId, "see");
     if (!enrolled) throw forbidden();
-    if (lesson.kind !== "video" && lesson.kind !== "document") throw conflict("NOT_SELF_COMPLETED", "Bài này hoàn thành theo kết quả kiểm tra hoặc điểm danh.");
+    if (lesson.kind !== "video" && lesson.kind !== "document")
+      throw conflict(
+        "NOT_SELF_COMPLETED",
+        "Bài này hoàn thành theo kết quả kiểm tra hoặc điểm danh.",
+      );
     // A video of known length is done by watching it (see watch); one without a length is marked by hand.
-    if (lesson.kind === "video" && lesson.durationSeconds && !watchedEnough((await this.repo.videoWatch(null, lesson.id, userId))?.ranges ?? [], lesson.durationSeconds))
+    if (
+      lesson.kind === "video" &&
+      lesson.durationSeconds &&
+      !watchedEnough(
+        (await this.repo.videoWatch(null, lesson.id, userId))?.ranges ?? [],
+        lesson.durationSeconds,
+      )
+    )
       throw conflict("NOT_WATCHED", "Xem ít nhất 90% video để hoàn thành bài học.");
     await this.repo.complete(null, lesson.id, userId);
     return { ok: true };
@@ -97,7 +132,8 @@ export class LearningService {
     const { lesson, enrolled } = await this.courses.lessonCourse(userId, lessonId, "see");
     if (!enrolled) throw forbidden();
     const duration = lesson.durationSeconds;
-    if (lesson.kind !== "video" || !duration) throw conflict("NOT_TRACKED", "Bài này không theo dõi thời gian xem.");
+    if (lesson.kind !== "video" || !duration)
+      throw conflict("NOT_TRACKED", "Bài này không theo dõi thời gian xem.");
     const from = integer(body, "from", 0, 86400);
     const to = integer(body, "to", 0, 86400);
     const position = Math.min(integer(body, "position", 0, 86400), duration);
@@ -108,7 +144,11 @@ export class LearningService {
       await this.repo.saveVideoWatch(client, lesson.id, userId, ranges, position);
       const completed = watchedEnough(ranges, duration);
       if (completed) await this.repo.complete(client, lesson.id, userId);
-      return { watchedSeconds: Math.round(watchedSeconds(ranges)), positionSeconds: position, completed };
+      return {
+        watchedSeconds: Math.round(watchedSeconds(ranges)),
+        positionSeconds: position,
+        completed,
+      };
     });
   }
 
@@ -119,27 +159,45 @@ export class LearningService {
     const { lesson, enrolled, manages } = await this.courses.lessonCourse(userId, lessonId, "see");
     if (lesson.kind !== "quiz") throw invalid("Bài này không phải bài kiểm tra.");
     if (!enrolled && !manages) throw forbidden();
-    if (!(await this.repo.quizQuestionIds(lesson.id)).length) throw conflict("NOT_READY", "Bài kiểm tra chưa có câu hỏi.");
+    if (!(await this.repo.quizQuestionIds(lesson.id)).length)
+      throw conflict("NOT_READY", "Bài kiểm tra chưa có câu hỏi.");
     const open = await this.repo.openAttempt(lesson.id, userId);
     // Staff try their own quiz freely; learners get the attempts the quiz allows.
-    if (!open && !manages && lesson.maxAttempts !== null && (await this.repo.bestQuiz(lesson.id, userId)).used >= lesson.maxAttempts)
+    if (
+      !open &&
+      !manages &&
+      lesson.maxAttempts !== null &&
+      (await this.repo.bestQuiz(lesson.id, userId)).used >= lesson.maxAttempts
+    )
       throw conflict("NO_ATTEMPTS_LEFT", "Bạn đã dùng hết số lần làm bài kiểm tra này.");
     const attemptId =
       open ??
       (await this.repo
-        .startAttempt(lesson.id, userId, lesson.timeLimitSeconds, drawQuestions(await this.repo.quizQuestionIds(lesson.id), lesson.drawCount, lesson.shuffle))
+        .startAttempt(
+          lesson.id,
+          userId,
+          lesson.timeLimitSeconds,
+          drawQuestions(
+            await this.repo.quizQuestionIds(lesson.id),
+            lesson.drawCount,
+            lesson.shuffle,
+          ),
+        )
         .catch(async (error: { code?: string }) => {
-        // Two tabs starting at once: the unique index keeps one open attempt.
-        if (error.code === "23505") return (await this.repo.openAttempt(lesson.id, userId))!;
-        throw error;
-      }));
+          // Two tabs starting at once: the unique index keeps one open attempt.
+          if (error.code === "23505") return (await this.repo.openAttempt(lesson.id, userId))!;
+          throw error;
+        }));
     return this.attempt(userId, attemptId);
   }
 
   async attempt(userId: string, attemptId: string): Promise<QuizAttempt> {
     const attempt = await this.repo.attempt(id(attemptId));
     if (!attempt || attempt.userId !== userId) throw notFound("Không tìm thấy lượt làm bài.");
-    const [questions, lesson] = await Promise.all([this.attemptQuestions(attempt), this.repo.lesson(attempt.lessonId)]);
+    const [questions, lesson] = await Promise.all([
+      this.attemptQuestions(attempt),
+      this.repo.lesson(attempt.lessonId),
+    ]);
     const submitted = Boolean(attempt.submittedAt);
     return {
       id: attempt.id,
@@ -162,10 +220,12 @@ export class LearningService {
       maxScore: submitted ? Number(attempt.maxScore) : null,
       passed: submitted ? attempt.passed : null,
       review: submitted
-        ? gradeAttempt(questions, attempt.answers ?? {}, lesson?.passPercent ?? 0).results.map((result) => {
-            const question = questions.find((item) => item.id === result.questionId)!;
-            return { ...result, answer: question.answer, explanation: question.explanation };
-          })
+        ? gradeAttempt(questions, attempt.answers ?? {}, lesson?.passPercent ?? 0).results.map(
+            (result) => {
+              const question = questions.find((item) => item.id === result.questionId)!;
+              return { ...result, answer: question.answer, explanation: question.explanation };
+            },
+          )
         : null,
     };
   }
@@ -178,12 +238,22 @@ export class LearningService {
     if (!lesson) throw notFound("Không tìm thấy bài học.");
     const questions = await this.attemptQuestions(attempt);
     const raw = body.answers ?? {};
-    const problem = draftProblem(raw, questions.map((question) => question.id));
+    const problem = draftProblem(
+      raw,
+      questions.map((question) => question.id),
+    );
     if (problem) throw invalid(problem);
     // Past the deadline (plus grace) the attempt still closes, counting only what was autosaved in time.
-    const answers = isLate(attempt.deadlineAt, new Date()) ? (attempt.answers ?? {}) : (raw as Record<string, unknown>);
+    const answers = isLate(attempt.deadlineAt, new Date())
+      ? (attempt.answers ?? {})
+      : (raw as Record<string, unknown>);
     const graded = gradeAttempt(questions, answers, lesson.passPercent);
-    await this.repo.submitAttempt(attempt.id, { answers, score: graded.score, maxScore: graded.maxScore, passed: graded.passed });
+    await this.repo.submitAttempt(attempt.id, {
+      answers,
+      score: graded.score,
+      maxScore: graded.maxScore,
+      passed: graded.passed,
+    });
     return this.attempt(userId, attempt.id);
   }
 
@@ -194,14 +264,20 @@ export class LearningService {
     if (attempt.submittedAt) throw conflict("SUBMITTED", "Bài đã nộp.");
     if (isLate(attempt.deadlineAt, new Date())) throw conflict("TIME_UP", "Đã hết giờ làm bài.");
     const answers = body.answers ?? {};
-    const problem = draftProblem(answers, (await this.attemptQuestions(attempt)).map((question) => question.id));
+    const problem = draftProblem(
+      answers,
+      (await this.attemptQuestions(attempt)).map((question) => question.id),
+    );
     if (problem) throw invalid(problem);
-    if (!(await this.repo.saveDraft(attempt.id, answers as Record<string, unknown>))) throw conflict("SUBMITTED", "Bài đã nộp.");
+    if (!(await this.repo.saveDraft(attempt.id, answers as Record<string, unknown>)))
+      throw conflict("SUBMITTED", "Bài đã nộp.");
     return { savedAt: new Date().toISOString() };
   }
 
   private attemptQuestions(attempt: { lessonId: string; questionIds: string[] | null }) {
-    return attempt.questionIds ? this.repo.questionsByIds(attempt.questionIds) : this.repo.quizQuestions(attempt.lessonId);
+    return attempt.questionIds
+      ? this.repo.questionsByIds(attempt.questionIds)
+      : this.repo.quizQuestions(attempt.lessonId);
   }
 
   // ---- LT-1 ------------------------------------------------------------------------------------------
@@ -211,12 +287,21 @@ export class LearningService {
    * lesson, and returns the hotline to call. The agent finds the context on the ticket.
    */
   async requestSupport(userId: string, lessonId: string, body: Body) {
-    const { lesson, course, enrolled, manages } = await this.courses.lessonCourse(userId, lessonId, "see");
+    const { lesson, course, enrolled, manages } = await this.courses.lessonCourse(
+      userId,
+      lessonId,
+      "see",
+    );
     if (!enrolled && !manages) throw forbidden();
     if (!(await this.repo.hasSupportDepartment(course.unitId)))
       throw conflict("NO_SUPPORT_DEPARTMENT", "Đơn vị phụ trách khóa học chưa có tổng đài hỗ trợ.");
     const message = text(body, "message", 2000, { optional: true });
-    const learner = (await query<{ display_name: string; email: string; phone: string | null }>(`SELECT display_name,email,phone FROM users WHERE id=$1`, [userId])).rows[0];
+    const learner = (
+      await query<{ display_name: string; email: string; phone: string | null }>(
+        `SELECT display_name,email,phone FROM users WHERE id=$1`,
+        [userId],
+      )
+    ).rows[0];
     const ticketId = randomUUID();
     const created = await query<{ number: string }>(
       `INSERT INTO cc_tickets(id,department_id,source,caller_number,caller_user_id,subject,description,created_by,lesson_id)
@@ -232,7 +317,9 @@ export class LearningService {
           `Khóa học: ${course.code} · ${course.title}`,
           `Bài học: ${lesson.title}`,
           message ? `Nội dung: ${message}` : "",
-        ].filter(Boolean).join("\n"),
+        ]
+          .filter(Boolean)
+          .join("\n"),
         lesson.id,
       ],
     );

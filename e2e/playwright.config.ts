@@ -17,6 +17,8 @@ export default defineConfig({
     locale: "vi-VN",
     trace: "retain-on-failure",
     permissions: ["camera", "microphone"],
-    launchOptions: { args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"] },
+    launchOptions: {
+      args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"],
+    },
   },
 });

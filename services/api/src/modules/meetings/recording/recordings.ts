@@ -10,7 +10,11 @@ import { config } from "../../../config/config.js";
 import { roomManager } from "../media/room-manager.js";
 import { enqueueMedia, joinPlaylists, transcodeToHls } from "./ffmpeg.js";
 import { RoomRecorder, type Manifest } from "./recorder.js";
-import { transcribeDir, transcriptionEnabled, type Segment } from "../../../infrastructure/speech/transcribe.js";
+import {
+  transcribeDir,
+  transcriptionEnabled,
+  type Segment,
+} from "../../../infrastructure/speech/transcribe.js";
 import { summarizeMeeting, summaryEnabled } from "../../../infrastructure/ai/summarize.js";
 import { enqueueJob, registerJob } from "../../../infrastructure/jobs/queue.js";
 import { archiveQuietly } from "../../../infrastructure/media-storage.js";
@@ -57,7 +61,14 @@ const toRecording = (row: Row): MeetingRecording => ({
 /** The viewer's standing in a session: host/co-host manage, admitted attendees watch. */
 async function standing(userId: string, sessionId: string) {
   const session = (
-    await query<{ id: string; channel_id: string; host_id: string; ended_at: Date | null; role: string | null; state: string | null }>(
+    await query<{
+      id: string;
+      channel_id: string;
+      host_id: string;
+      ended_at: Date | null;
+      role: string | null;
+      state: string | null;
+    }>(
       `SELECT s.id,s.channel_id,s.host_id,s.ended_at,a.role,a.state FROM meeting_sessions s
        LEFT JOIN meeting_attendees a ON a.session_id=s.id AND a.user_id=$2 WHERE s.id=$1`,
       [sessionId, userId],
@@ -65,13 +76,17 @@ async function standing(userId: string, sessionId: string) {
   ).rows[0];
   if (!session) throw new HttpError(404, "SESSION_NOT_FOUND", "Phiên họp không tồn tại.");
   await requireChannelAccess(userId, session.channel_id);
-  const manages = session.host_id === userId || session.role === "host" || session.role === "cohost";
+  const manages =
+    session.host_id === userId || session.role === "host" || session.role === "cohost";
   return { session, manages, attended: manages || session.state === "admitted" };
 }
 
 const forbidden = () => new HttpError(403, "FORBIDDEN", "Bạn không có quyền với bản ghi này.");
 
-export async function listRecordings(userId: string, sessionId: unknown): Promise<MeetingRecordings> {
+export async function listRecordings(
+  userId: string,
+  sessionId: unknown,
+): Promise<MeetingRecordings> {
   validateId(sessionId);
   const { session, manages, attended } = await standing(userId, sessionId);
   const rows = await query<Row>(
@@ -85,18 +100,23 @@ export async function listRecordings(userId: string, sessionId: unknown): Promis
 export async function startRecording(userId: string, sessionId: unknown, changed: Changed) {
   validateId(sessionId);
   const { session, manages } = await standing(userId, sessionId);
-  if (!manages) throw new HttpError(403, "FORBIDDEN", "Chỉ chủ trì hoặc đồng chủ trì được ghi hình.");
+  if (!manages)
+    throw new HttpError(403, "FORBIDDEN", "Chỉ chủ trì hoặc đồng chủ trì được ghi hình.");
   if (session.ended_at) throw new HttpError(409, "SESSION_ENDED", "Phiên họp đã kết thúc.");
   if (!roomManager.recordingSource(session.channel_id))
     throw new HttpError(409, "ROOM_NOT_HERE", "Phòng họp chưa có ai kết nối trên máy chủ này.");
   const id = randomUUID();
-  await query(`INSERT INTO meeting_recordings(id,session_id,channel_id,started_by) VALUES($1,$2,$3,$4)`, [
-    id, session.id, session.channel_id, userId,
-  ]).catch((error: { code?: string }) => {
-    if (error.code === "23505") throw new HttpError(409, "ALREADY_RECORDING", "Phiên họp đang được ghi hình.");
+  await query(
+    `INSERT INTO meeting_recordings(id,session_id,channel_id,started_by) VALUES($1,$2,$3,$4)`,
+    [id, session.id, session.channel_id, userId],
+  ).catch((error: { code?: string }) => {
+    if (error.code === "23505")
+      throw new HttpError(409, "ALREADY_RECORDING", "Phiên họp đang được ghi hình.");
     throw error;
   });
-  const recorder = new RoomRecorder(dirOf(id), () => roomManager.recordingSource(session.channel_id));
+  const recorder = new RoomRecorder(dirOf(id), () =>
+    roomManager.recordingSource(session.channel_id),
+  );
   recorders.set(id, { recorder, roomId: session.channel_id, sessionId: session.id });
   // The recorder also ends by itself when the room empties.
   void recorder.done.then((manifest) => finishRecording(id, manifest, changed));
@@ -112,7 +132,11 @@ export async function startRecording(userId: string, sessionId: unknown, changed
 
 export async function stopRecording(userId: string, recordingId: unknown) {
   validateId(recordingId);
-  const row = (await query<{ session_id: string }>(`SELECT session_id FROM meeting_recordings WHERE id=$1`, [recordingId])).rows[0];
+  const row = (
+    await query<{ session_id: string }>(`SELECT session_id FROM meeting_recordings WHERE id=$1`, [
+      recordingId,
+    ])
+  ).rows[0];
   if (!row) throw new HttpError(404, "RECORDING_NOT_FOUND", "Không tìm thấy bản ghi.");
   if (!(await standing(userId, row.session_id)).manages) throw forbidden();
   const live = recorders.get(recordingId);
@@ -123,8 +147,14 @@ export async function stopRecording(userId: string, recordingId: unknown) {
 
 export async function shareRecording(userId: string, recordingId: unknown, shared: unknown) {
   validateId(recordingId);
-  if (typeof shared !== "boolean") throw new HttpError(400, "INVALID_INPUT", "shared phải là true hoặc false.");
-  const row = (await query<{ session_id: string; channel_id: string }>(`SELECT session_id,channel_id FROM meeting_recordings WHERE id=$1`, [recordingId])).rows[0];
+  if (typeof shared !== "boolean")
+    throw new HttpError(400, "INVALID_INPUT", "shared phải là true hoặc false.");
+  const row = (
+    await query<{ session_id: string; channel_id: string }>(
+      `SELECT session_id,channel_id FROM meeting_recordings WHERE id=$1`,
+      [recordingId],
+    )
+  ).rows[0];
   if (!row) throw new HttpError(404, "RECORDING_NOT_FOUND", "Không tìm thấy bản ghi.");
   if (!(await standing(userId, row.session_id)).manages) throw forbidden();
   await query(`UPDATE meeting_recordings SET shared=$2 WHERE id=$1`, [recordingId, shared]);
@@ -135,12 +165,22 @@ export async function shareRecording(userId: string, recordingId: unknown, share
 export async function recordingFile(userId: string, recordingId: unknown, name: string) {
   validateId(recordingId);
   const caption = name === "captions.vtt" || name === "transcript.json";
-  if (name !== "index.m3u8" && !caption && !/^p\d{4}_\d{5}\.ts$/.test(name)) throw new HttpError(404, "NOT_FOUND", "Không tìm thấy tệp.");
-  const row = (await query<{ session_id: string; status: string; shared: boolean; transcript_status: string | null }>(
-    `SELECT session_id,status,shared,transcript_status FROM meeting_recordings WHERE id=$1`, [recordingId],
-  )).rows[0];
-  if (!row || row.status !== "ready") throw new HttpError(404, "RECORDING_NOT_FOUND", "Bản ghi chưa sẵn sàng.");
-  if (caption && row.transcript_status !== "ready") throw new HttpError(404, "NOT_FOUND", "Bản ghi chưa có phụ đề.");
+  if (name !== "index.m3u8" && !caption && !/^p\d{4}_\d{5}\.ts$/.test(name))
+    throw new HttpError(404, "NOT_FOUND", "Không tìm thấy tệp.");
+  const row = (
+    await query<{
+      session_id: string;
+      status: string;
+      shared: boolean;
+      transcript_status: string | null;
+    }>(`SELECT session_id,status,shared,transcript_status FROM meeting_recordings WHERE id=$1`, [
+      recordingId,
+    ])
+  ).rows[0];
+  if (!row || row.status !== "ready")
+    throw new HttpError(404, "RECORDING_NOT_FOUND", "Bản ghi chưa sẵn sàng.");
+  if (caption && row.transcript_status !== "ready")
+    throw new HttpError(404, "NOT_FOUND", "Bản ghi chưa có phụ đề.");
   const { attended } = await standing(userId, row.session_id);
   if (!attended && !row.shared) throw forbidden();
   // The playlist is fetched once per playback; segments and captions are not separate views.
@@ -162,13 +202,31 @@ function finishRecording(id: string, manifest: Manifest, changed: Changed) {
     try {
       const seconds = await processRecording(dirOf(id), manifest);
       await archiveQuietly(dirOf(id));
-      await query(`UPDATE meeting_recordings SET status='ready',duration_seconds=$2,error=NULL WHERE id=$1`, [id, Math.round(seconds)]);
+      await query(
+        `UPDATE meeting_recordings SET status='ready',duration_seconds=$2,error=NULL WHERE id=$1`,
+        [id, Math.round(seconds)],
+      );
       if (transcriptionEnabled()) await transcribe(id, changed);
     } catch (error) {
-      console.error(JSON.stringify({ level: "error", event: "recording_processing_failed", id, message: String(error) }));
-      await query(`UPDATE meeting_recordings SET status='failed',error=$2 WHERE id=$1`, [id, String(error).slice(0, 500)]);
+      console.error(
+        JSON.stringify({
+          level: "error",
+          event: "recording_processing_failed",
+          id,
+          message: String(error),
+        }),
+      );
+      await query(`UPDATE meeting_recordings SET status='failed',error=$2 WHERE id=$1`, [
+        id,
+        String(error).slice(0, 500),
+      ]);
     }
-    const row = (await query<{ channel_id: string; session_id: string }>(`SELECT channel_id,session_id FROM meeting_recordings WHERE id=$1`, [id])).rows[0];
+    const row = (
+      await query<{ channel_id: string; session_id: string }>(
+        `SELECT channel_id,session_id FROM meeting_recordings WHERE id=$1`,
+        [id],
+      )
+    ).rows[0];
     if (row) changed(row.channel_id, row.session_id);
   });
 }
@@ -176,7 +234,12 @@ function finishRecording(id: string, manifest: Manifest, changed: Changed) {
 // Set by the first caller that has the socket server; the queue's handler has no request context.
 let announce: Changed = () => {};
 const notify = async (id: string) => {
-  const row = (await query<{ channel_id: string; session_id: string }>(`SELECT channel_id,session_id FROM meeting_recordings WHERE id=$1`, [id])).rows[0];
+  const row = (
+    await query<{ channel_id: string; session_id: string }>(
+      `SELECT channel_id,session_id FROM meeting_recordings WHERE id=$1`,
+      [id],
+    )
+  ).rows[0];
   if (row) announce(row.channel_id, row.session_id);
 };
 
@@ -196,7 +259,15 @@ registerJob("recording_transcript", async (id, last) => {
     await digest(id);
     await query(`UPDATE meeting_recordings SET transcript_status='ready' WHERE id=$1`, [id]);
   } catch (error) {
-    console.error(JSON.stringify({ level: "warn", event: "recording_transcript_failed", id, message: String(error), last }));
+    console.error(
+      JSON.stringify({
+        level: "warn",
+        event: "recording_transcript_failed",
+        id,
+        message: String(error),
+        last,
+      }),
+    );
     if (!last) throw error;
     await query(`UPDATE meeting_recordings SET transcript_status='failed' WHERE id=$1`, [id]);
   }
@@ -207,26 +278,52 @@ registerJob("recording_transcript", async (id, last) => {
 async function digest(id: string) {
   if (!summaryEnabled()) return;
   try {
-    const { segments } = JSON.parse(await readFile(path.join(config.mediaDir, dirOf(id), "transcript.json"), "utf8")) as { segments: Segment[] };
+    const { segments } = JSON.parse(
+      await readFile(path.join(config.mediaDir, dirOf(id), "transcript.json"), "utf8"),
+    ) as { segments: Segment[] };
     if (!segments.length) return;
     const result = await summarizeMeeting(segments);
-    await query(`UPDATE meeting_recordings SET ai_summary=$2, ai_actions=$3 WHERE id=$1`, [id, result.summary, JSON.stringify(result.actions)]);
+    await query(`UPDATE meeting_recordings SET ai_summary=$2, ai_actions=$3 WHERE id=$1`, [
+      id,
+      result.summary,
+      JSON.stringify(result.actions),
+    ]);
   } catch (error) {
-    console.error(JSON.stringify({ level: "warn", event: "recording_summary_failed", id, message: String(error) }));
+    console.error(
+      JSON.stringify({
+        level: "warn",
+        event: "recording_summary_failed",
+        id,
+        message: String(error),
+      }),
+    );
   }
 }
 
 /** Host/co-host asks for captions again (first time for older recordings, or after a failure). */
-export async function requestRecordingTranscript(userId: string, recordingId: unknown, changed: Changed) {
+export async function requestRecordingTranscript(
+  userId: string,
+  recordingId: unknown,
+  changed: Changed,
+) {
   validateId(recordingId);
-  if (!transcriptionEnabled()) throw new HttpError(409, "TRANSCRIPTION_OFF", "Chưa cấu hình dịch vụ nhận dạng giọng nói (TRANSCRIBE_URL).");
-  const row = (await query<{ session_id: string; status: string; transcript_status: string | null }>(
-    `SELECT session_id,status,transcript_status FROM meeting_recordings WHERE id=$1`, [recordingId],
-  )).rows[0];
+  if (!transcriptionEnabled())
+    throw new HttpError(
+      409,
+      "TRANSCRIPTION_OFF",
+      "Chưa cấu hình dịch vụ nhận dạng giọng nói (TRANSCRIBE_URL).",
+    );
+  const row = (
+    await query<{ session_id: string; status: string; transcript_status: string | null }>(
+      `SELECT session_id,status,transcript_status FROM meeting_recordings WHERE id=$1`,
+      [recordingId],
+    )
+  ).rows[0];
   if (!row) throw new HttpError(404, "RECORDING_NOT_FOUND", "Không tìm thấy bản ghi.");
   if (!(await standing(userId, row.session_id)).manages) throw forbidden();
   if (row.status !== "ready") throw new HttpError(409, "NOT_READY", "Bản ghi chưa sẵn sàng.");
-  if (row.transcript_status === "processing") throw new HttpError(409, "PROCESSING", "Phụ đề đang được tạo.");
+  if (row.transcript_status === "processing")
+    throw new HttpError(409, "PROCESSING", "Phụ đề đang được tạo.");
   await transcribe(recordingId as string, changed);
   return { transcriptStatus: "processing" as const };
 }
@@ -242,10 +339,23 @@ export async function processRecording(dir: string, manifest: Manifest) {
     const duration = end ? Math.max(0.5, (end - part.startedAt) / 1000) : undefined;
     const out = `p${String(index + 1).padStart(4, "0")}`;
     try {
-      await transcodeToHls({ input: `${dir}/${part.file}`, out: `${dir}/${out}`, video: part.video, audio: part.audio, duration });
+      await transcodeToHls({
+        input: `${dir}/${part.file}`,
+        out: `${dir}/${out}`,
+        video: part.video,
+        audio: part.audio,
+        duration,
+      });
     } catch (error) {
       // A part cut off by a crash may be unreadable; the rest of the meeting is still worth keeping.
-      console.error(JSON.stringify({ level: "warn", event: "recording_part_skipped", file: part.file, message: String(error) }));
+      console.error(
+        JSON.stringify({
+          level: "warn",
+          event: "recording_part_skipped",
+          file: part.file,
+          message: String(error),
+        }),
+      );
       continue;
     }
     playlists.push(await readFile(path.join(config.mediaDir, dir, `${out}.m3u8`), "utf8"));
@@ -255,17 +365,23 @@ export async function processRecording(dir: string, manifest: Manifest) {
   // Each part playlist names its segments relative to itself, which is the same folder.
   await writeFile(path.join(config.mediaDir, dir, "index.m3u8"), joinPlaylists(playlists));
   for (const part of manifest.parts)
-    for (const file of [part.file, part.file.replace(/\.mkv$/, ".sdp")]) await rm(path.join(config.mediaDir, dir, file), { force: true });
+    for (const file of [part.file, part.file.replace(/\.mkv$/, ".sdp")])
+      await rm(path.join(config.mediaDir, dir, file), { force: true });
   return seconds;
 }
 
 /** After a restart: recordings cut off mid-way are processed from what reached the disk. */
 export async function recoverRecordings(changed: Changed) {
   announce = changed; // pending caption jobs live in the queue and resume on their own
-  const rows = await query<{ id: string }>(`SELECT id FROM meeting_recordings WHERE status IN ('recording','processing')`);
+  const rows = await query<{ id: string }>(
+    `SELECT id FROM meeting_recordings WHERE status IN ('recording','processing')`,
+  );
   for (const { id } of rows.rows) {
     if (recorders.has(id)) continue;
-    const manifest: Manifest = await readFile(path.join(config.mediaDir, dirOf(id), "manifest.json"), "utf8")
+    const manifest: Manifest = await readFile(
+      path.join(config.mediaDir, dirOf(id), "manifest.json"),
+      "utf8",
+    )
       .then((text) => JSON.parse(text) as Manifest)
       .catch(() => ({ parts: [] }));
     finishRecording(id, manifest, changed);

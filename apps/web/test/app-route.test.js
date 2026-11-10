@@ -34,19 +34,39 @@ test("entering the app resyncs the route from the current URL", () => {
 test("old workspace links open the function pages", () => {
   const channelId = "22222222-2222-4222-8222-222222222222";
   const otherId = "33333333-3333-4333-8333-333333333333";
-  assert.deepEqual(plain(readAppRoute(at(`/app/workspace?workspace=${workspaceId}`))), { view: "chat", workspaceId });
-  assert.deepEqual(plain(readAppRoute(at(`/app/chat?workspace=${workspaceId}&channel=${channelId}&message=${otherId}`))), {
+  assert.deepEqual(plain(readAppRoute(at(`/app/workspace?workspace=${workspaceId}`))), {
     view: "chat",
     workspaceId,
-    channelId,
-    messageId: otherId,
   });
-  assert.deepEqual(plain(readAppRoute(at(`/app/meetings?workspace=${workspaceId}&channel=${channelId}&schedule=${otherId}`))), {
-    view: "meetings",
+  assert.deepEqual(
+    plain(
+      readAppRoute(
+        at(`/app/chat?workspace=${workspaceId}&channel=${channelId}&message=${otherId}`),
+      ),
+    ),
+    {
+      view: "chat",
+      workspaceId,
+      channelId,
+      messageId: otherId,
+    },
+  );
+  assert.deepEqual(
+    plain(
+      readAppRoute(
+        at(`/app/meetings?workspace=${workspaceId}&channel=${channelId}&schedule=${otherId}`),
+      ),
+    ),
+    {
+      view: "meetings",
+      workspaceId,
+      channelId,
+      scheduleId: otherId,
+    },
+  );
+  assert.deepEqual(plain(readAppRoute(at(`/app/files?workspace=${workspaceId}`))), {
+    view: "files",
     workspaceId,
-    channelId,
-    scheduleId: otherId,
   });
-  assert.deepEqual(plain(readAppRoute(at(`/app/files?workspace=${workspaceId}`))), { view: "files", workspaceId });
   assert.deepEqual(plain(readAppRoute(at("/app/groups"))), { view: "groups" });
 });

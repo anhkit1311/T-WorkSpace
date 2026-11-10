@@ -7,7 +7,8 @@ import { forbidden, id, integer, invalid } from "./input.js";
 import type { Table } from "../../../shared/http/table-export.js";
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
-const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: CALL_CENTER_TIME_ZONE }).format(new Date());
+const today = () =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: CALL_CENTER_TIME_ZONE }).format(new Date());
 const OUTCOMES: Record<string, string> = {
   answered: "Đã nghe",
   abandoned: "Bỏ máy",
@@ -30,10 +31,13 @@ export class CallCenterReportService {
     if (!(await this.admin.access(userId)).supervises(id(departmentId))) throw forbidden();
     const from = params.get("from") || today();
     const to = params.get("to") || from;
-    if (!DAY.test(from) || !DAY.test(to) || to < from) throw invalid("Khoảng thời gian không hợp lệ.");
+    if (!DAY.test(from) || !DAY.test(to) || to < from)
+      throw invalid("Khoảng thời gian không hợp lệ.");
     const { start, end } = periodBounds(from, to);
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) throw invalid("Ngày không hợp lệ.");
-    if (end.getTime() - start.getTime() > 92 * 86_400_000) throw invalid("Chỉ xem tối đa 92 ngày một lần.");
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()))
+      throw invalid("Ngày không hợp lệ.");
+    if (end.getTime() - start.getTime() > 92 * 86_400_000)
+      throw invalid("Chỉ xem tối đa 92 ngày một lần.");
     return { from, to, start, end };
   }
 
@@ -44,7 +48,13 @@ export class CallCenterReportService {
       this.repo.kpiCalls(departmentId, start, end),
       this.repo.wrapUpSeconds(departmentId, start, end),
     ]);
-    return { departmentId, from, to, serviceLevelSeconds: threshold, ...kpiSummary(calls, wrapUps, threshold) };
+    return {
+      departmentId,
+      from,
+      to,
+      serviceLevelSeconds: threshold,
+      ...kpiSummary(calls, wrapUps, threshold),
+    };
   }
 
   /**
@@ -56,9 +66,19 @@ export class CallCenterReportService {
     const calls = await this.repo.kpiCalls(departmentId, start, end);
     const time = (date: Date | null) =>
       date ? date.toLocaleString("vi-VN", { timeZone: CALL_CENTER_TIME_ZONE, hour12: false }) : "";
-    const span = (a: Date | null, b: Date | null) => (a && b ? String(Math.round((b.getTime() - a.getTime()) / 1000)) : "");
+    const span = (a: Date | null, b: Date | null) =>
+      a && b ? String(Math.round((b.getTime() - a.getTime()) / 1000)) : "";
     const rows = [
-      ["Bắt đầu", "Số gọi đến", "Kết quả", "Chờ (giây)", "Đàm thoại (giây)", "Tổng đài viên", "Phân loại", "Ghi chú"],
+      [
+        "Bắt đầu",
+        "Số gọi đến",
+        "Kết quả",
+        "Chờ (giây)",
+        "Đàm thoại (giây)",
+        "Tổng đài viên",
+        "Phân loại",
+        "Ghi chú",
+      ],
       ...calls.map((call) => [
         time(call.startedAt),
         call.callerNumber,

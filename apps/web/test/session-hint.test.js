@@ -31,9 +31,15 @@ test("the hint is set on sign-in and cleared on logout or a failed refresh", () 
 
 test("blocked storage never throws", () => {
   const blocked = {
-    getItem() { throw new Error("SecurityError"); },
-    setItem() { throw new Error("SecurityError"); },
-    removeItem() { throw new Error("SecurityError"); },
+    getItem() {
+      throw new Error("SecurityError");
+    },
+    setItem() {
+      throw new Error("SecurityError");
+    },
+    removeItem() {
+      throw new Error("SecurityError");
+    },
   };
   assert.equal(readSessionHint(blocked), false);
   assert.doesNotThrow(() => writeSessionHint(true, blocked));

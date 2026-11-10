@@ -8,12 +8,7 @@ import { ApiError } from "../auth/api";
 
 const base = () => `${import.meta.env.VITE_API_URL ?? ""}/api/announcements`;
 
-async function request<T>(
-  token: string,
-  path: string,
-  method = "GET",
-  body?: object,
-): Promise<T> {
+async function request<T>(token: string, path: string, method = "GET", body?: object): Promise<T> {
   // A query string ("?category=…") attaches to the collection itself: /api/announcements/ is not a route.
   const url = path ? `${base()}${/^[/?]/.test(path) ? "" : "/"}${path}` : base();
   const response = await fetch(url, {
@@ -42,10 +37,7 @@ export async function getAnnouncementsApi(
   category?: string,
 ): Promise<{ items: PortalAnnouncement[]; canPublish: boolean; role: string }> {
   const query = category && category !== "all" ? `?category=${category}` : "";
-  return request<{ items: PortalAnnouncement[]; canPublish: boolean; role: string }>(
-    token,
-    query,
-  );
+  return request<{ items: PortalAnnouncement[]; canPublish: boolean; role: string }>(token, query);
 }
 
 export async function createAnnouncementApi(
@@ -63,20 +55,14 @@ export async function updateAnnouncementApi(
   return request<{ item: PortalAnnouncement }>(token, `/${id}`, "PATCH", input);
 }
 
-export async function deleteAnnouncementApi(
-  token: string,
-  id: string,
-): Promise<{ ok: boolean }> {
+export async function deleteAnnouncementApi(token: string, id: string): Promise<{ ok: boolean }> {
   return request<{ ok: boolean }>(token, `/${id}`, "DELETE");
 }
 
 export async function getPublishersApi(
   token: string,
 ): Promise<{ publishers: AnnouncementPublisher[]; canManage: boolean }> {
-  return request<{ publishers: AnnouncementPublisher[]; canManage: boolean }>(
-    token,
-    "/publishers",
-  );
+  return request<{ publishers: AnnouncementPublisher[]; canManage: boolean }>(token, "/publishers");
 }
 
 export async function grantPublisherApi(

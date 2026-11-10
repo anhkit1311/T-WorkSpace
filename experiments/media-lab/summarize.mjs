@@ -12,7 +12,12 @@ const figureDir = join(root, "docs/thesis/figures");
 const SERIES = [
   { label: "mesh-norender", name: "Mesh P2P", color: "#2a78d6", marker: "circle" },
   { label: "sfu-norender", name: "SFU + simulcast", color: "#eb6834", marker: "square" },
-  { label: "sfu-nosimulcast-norender", name: "SFU, 1 encoding", color: "#1baf7a", marker: "triangle" },
+  {
+    label: "sfu-nosimulcast-norender",
+    name: "SFU, 1 encoding",
+    color: "#1baf7a",
+    marker: "triangle",
+  },
 ];
 const EXTRA = [{ label: "sfu-layer0-norender", name: "SFU, mọi ô lớp 0" }];
 // Stream-selection experiment (scripted talkers, --selection=..., --speak=5).
@@ -52,7 +57,8 @@ const stats = (values) => {
   const v = values.filter((x) => typeof x === "number" && Number.isFinite(x));
   if (!v.length) return null;
   const mean = v.reduce((a, b) => a + b, 0) / v.length;
-  const sd = v.length > 1 ? Math.sqrt(v.reduce((a, b) => a + (b - mean) ** 2, 0) / (v.length - 1)) : null;
+  const sd =
+    v.length > 1 ? Math.sqrt(v.reduce((a, b) => a + (b - mean) ** 2, 0) / (v.length - 1)) : null;
   return { mean, sd };
 };
 function rowsOf(label) {
@@ -77,9 +83,15 @@ function rowsOf(label) {
 }
 
 const fmt = (v, digits = 0) =>
-  v === null || v === undefined ? "–" : Number(v).toLocaleString("vi-VN", { maximumFractionDigits: digits });
+  v === null || v === undefined
+    ? "–"
+    : Number(v).toLocaleString("vi-VN", { maximumFractionDigits: digits });
 const cell = (st, digits = 0) =>
-  !st ? "–" : st.sd === null ? fmt(st.mean, digits) : `${fmt(st.mean, digits)} ± ${fmt(st.sd, digits)}`;
+  !st
+    ? "–"
+    : st.sd === null
+      ? fmt(st.mean, digits)
+      : `${fmt(st.mean, digits)} ± ${fmt(st.sd, digits)}`;
 
 // ---------- tables ----------
 const header =
@@ -97,16 +109,24 @@ function table(label) {
 
 // ---------- SVG line chart (one axis, direct labels, shaped markers) ----------
 function chart({ title, unit, metric, log = false, file, lines = SERIES }) {
-  const W = 640, H = 360, L = 64, R = 140, T = 44, B = 48;
-  const series = lines.map((s) => ({
-    ...s,
-    points: rowsOf(s.label)
-      .filter((r) => r.runs && r.m[metric])
-      .map((r) => ({ x: r.clients, y: r.m[metric].mean, sd: r.m[metric].sd ?? 0 })),
-  })).filter((s) => s.points.length);
+  const W = 640,
+    H = 360,
+    L = 64,
+    R = 140,
+    T = 44,
+    B = 48;
+  const series = lines
+    .map((s) => ({
+      ...s,
+      points: rowsOf(s.label)
+        .filter((r) => r.runs && r.m[metric])
+        .map((r) => ({ x: r.clients, y: r.m[metric].mean, sd: r.m[metric].sd ?? 0 })),
+    }))
+    .filter((s) => s.points.length);
   const xs = series.flatMap((s) => s.points.map((p) => p.x));
   const ys = series.flatMap((s) => s.points.map((p) => p.y + p.sd));
-  const xMin = Math.min(...xs), xMax = Math.max(...xs);
+  const xMin = Math.min(...xs),
+    xMax = Math.max(...xs);
   const yMinRaw = log ? Math.max(0.1, Math.min(...ys.filter((y) => y > 0))) : 0;
   const yMaxRaw = Math.max(...ys);
   const niceMax = (v) => {
@@ -119,7 +139,11 @@ function chart({ title, unit, metric, log = false, file, lines = SERIES }) {
   const sx = (x) => L + ((x - xMin) / Math.max(1, xMax - xMin)) * (W - L - R);
   const sy = (y) =>
     log
-      ? T + (1 - (Math.log10(Math.max(y, yMin)) - Math.log10(yMin)) / (Math.log10(yMax) - Math.log10(yMin))) * (H - T - B)
+      ? T +
+        (1 -
+          (Math.log10(Math.max(y, yMin)) - Math.log10(yMin)) /
+            (Math.log10(yMax) - Math.log10(yMin))) *
+          (H - T - B)
       : T + (1 - y / yMax) * (H - T - B);
   const ticks = log
     ? Array.from({ length: Math.log10(yMax) - Math.log10(yMin) + 1 }, (_, i) => yMin * 10 ** i)
@@ -134,7 +158,8 @@ function chart({ title, unit, metric, log = false, file, lines = SERIES }) {
   const ends = series
     .map((s) => ({ s, y: sy(s.points.at(-1).y), x: sx(s.points.at(-1).x) }))
     .sort((a, b) => a.y - b.y);
-  for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 16) ends[i].y = ends[i - 1].y + 16;
+  for (let i = 1; i < ends.length; i++)
+    if (ends[i].y - ends[i - 1].y < 16) ends[i].y = ends[i - 1].y + 16;
   const xTicks = [...new Set(xs)].sort((a, b) => a - b);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="Inter, Segoe UI, Arial, sans-serif" role="img" aria-label="${title}">
 <rect width="${W}" height="${H}" fill="#fcfcfb"/>
@@ -169,11 +194,37 @@ ${ends.map(({ s, x, y }) => `<text x="${x + 10}" y="${y + 4}" font-size="11" fil
 
 await mkdir(figureDir, { recursive: true });
 const figures = [
-  await chart({ title: "Uplink mỗi client theo số người", unit: "kbps (trung bình các client)", metric: "upKbps", file: "fig-5-uplink.svg" }),
-  await chart({ title: "Downlink mỗi client theo số người", unit: "kbps (trung bình các client)", metric: "downKbps", file: "fig-5-downlink.svg" }),
-  await chart({ title: "CPU mỗi client theo số người", unit: "% của một lõi (100% = 1 lõi)", metric: "clientCpuPct", file: "fig-5-cpu.svg" }),
-  await chart({ title: "RTT theo số người", unit: "ms", metric: "rttMs", log: true, file: "fig-5-rtt.svg" }),
-  await chart({ title: "Tốc độ khung hình nhận theo số người", unit: "khung/giây (nguồn phát 20 fps)", metric: "recvFps", file: "fig-5-fps.svg" }),
+  await chart({
+    title: "Uplink mỗi client theo số người",
+    unit: "kbps (trung bình các client)",
+    metric: "upKbps",
+    file: "fig-5-uplink.svg",
+  }),
+  await chart({
+    title: "Downlink mỗi client theo số người",
+    unit: "kbps (trung bình các client)",
+    metric: "downKbps",
+    file: "fig-5-downlink.svg",
+  }),
+  await chart({
+    title: "CPU mỗi client theo số người",
+    unit: "% của một lõi (100% = 1 lõi)",
+    metric: "clientCpuPct",
+    file: "fig-5-cpu.svg",
+  }),
+  await chart({
+    title: "RTT theo số người",
+    unit: "ms",
+    metric: "rttMs",
+    log: true,
+    file: "fig-5-rtt.svg",
+  }),
+  await chart({
+    title: "Tốc độ khung hình nhận theo số người",
+    unit: "khung/giây (nguồn phát 20 fps)",
+    metric: "recvFps",
+    file: "fig-5-fps.svg",
+  }),
 ];
 const policyRuns = POLICIES.filter((s) => runsByLabel.has(s.label));
 if (policyRuns.length)
@@ -237,7 +288,9 @@ if (policyRuns.length)
 Sinh tự động bởi \`node experiments/media-lab/summarize.mjs\`. Mỗi client phát một giọng tổng hợp và lần lượt nói 5 s theo vòng tròn; chính sách chạy trên lưới ảo 1280×720 với tối đa 9 ô; mỗi lượt khởi động ${env.warmupSeconds ?? "?"} s, đo ${env.measureSeconds ?? "?"} s; mọi client và SFU trên một máy.
 
 Nguồn: ${policyRuns
-      .flatMap((s) => runsByLabel.get(s.label).map(({ file }) => `[${file}](../evidence/media-lab/${file})`))
+      .flatMap((s) =>
+        runsByLabel.get(s.label).map(({ file }) => `[${file}](../evidence/media-lab/${file})`),
+      )
       .join(", ")}
 
 ${policyTable()}

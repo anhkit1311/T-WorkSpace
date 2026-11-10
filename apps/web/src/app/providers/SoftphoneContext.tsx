@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { AgentState, CcAgentProfile, CcSipAccount } from "@doan/shared";
 import { useApp } from "./AppContext";
 import { useSocket } from "./SocketContext";
@@ -34,7 +42,9 @@ export function SoftphoneProvider({ children }: { children: ReactNode }) {
       (data) => {
         const next = data.number ? (data as CcSipAccount) : null;
         setAccount((current) =>
-          next && current && current.number === next.number && current.secret === next.secret ? current : next,
+          next && current && current.number === next.number && current.secret === next.secret
+            ? current
+            : next,
         );
       },
       () => setAccount(null),
@@ -42,12 +52,17 @@ export function SoftphoneProvider({ children }: { children: ReactNode }) {
   }, []);
   // Only on sign-in/out: the token itself refreshes without changing the extension.
   useEffect(refresh, [refresh, signedIn]);
-  const phone = useSoftphone(account, (message) => notifyRef.current("Tổng đài", message, "warning"));
+  const phone = useSoftphone(account, (message) =>
+    notifyRef.current("Tổng đài", message, "warning"),
+  );
   const [agentState, setAgentState] = useState<AgentState | null>(null);
   useEffect(() => {
     if (!account || !token.current) return setAgentState(null);
     callCenterApi<CcAgentProfile>(token.current, "me").then(
-      (me) => setAgentState(me.departments.some((department) => department.role === "agent") ? me.state : null),
+      (me) =>
+        setAgentState(
+          me.departments.some((department) => department.role === "agent") ? me.state : null,
+        ),
       () => setAgentState(null),
     );
   }, [account]);
@@ -60,12 +75,19 @@ export function SoftphoneProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!socket) return;
     const onVoicemail = (data: { from: string; durationSeconds: number }) =>
-      notifyRef.current("Thư thoại mới", `${data.from} để lại lời nhắn ${data.durationSeconds} giây.`, "info", {
-        label: "Nghe",
-        onClick: () => navigateRef.current({ view: "call-center" }),
-      });
-    const onTicket = (data: { message: string }) => notifyRef.current("Phiếu hỗ trợ", data.message, "info");
-    const onAgent = (data: { state: AgentState }) => setAgentState((current) => current && data.state);
+      notifyRef.current(
+        "Thư thoại mới",
+        `${data.from} để lại lời nhắn ${data.durationSeconds} giây.`,
+        "info",
+        {
+          label: "Nghe",
+          onClick: () => navigateRef.current({ view: "call-center" }),
+        },
+      );
+    const onTicket = (data: { message: string }) =>
+      notifyRef.current("Phiếu hỗ trợ", data.message, "info");
+    const onAgent = (data: { state: AgentState }) =>
+      setAgentState((current) => current && data.state);
     socket.on("callcenter_voicemail", onVoicemail);
     socket.on("callcenter_ticket", onTicket);
     socket.on("callcenter_agent", onAgent);
@@ -83,7 +105,14 @@ export function SoftphoneProvider({ children }: { children: ReactNode }) {
     const onKey = (event: KeyboardEvent) => {
       if (!event.altKey || event.ctrlKey || event.metaKey) return;
       const key = event.key.toLowerCase();
-      const action = key === "a" && phase === "incoming" ? answer : key === "h" ? hangup : key === "m" && phase === "active" ? toggleMute : null;
+      const action =
+        key === "a" && phase === "incoming"
+          ? answer
+          : key === "h"
+            ? hangup
+            : key === "m" && phase === "active"
+              ? toggleMute
+              : null;
       if (!action) return;
       event.preventDefault();
       action();
@@ -92,7 +121,13 @@ export function SoftphoneProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [phase, answer, hangup, toggleMute]);
 
-  return <SoftphoneContext.Provider value={{ ...phone, refresh, hasExtension: Boolean(account), agentState }}>{children}</SoftphoneContext.Provider>;
+  return (
+    <SoftphoneContext.Provider
+      value={{ ...phone, refresh, hasExtension: Boolean(account), agentState }}
+    >
+      {children}
+    </SoftphoneContext.Provider>
+  );
 }
 
 export function useGlobalSoftphone() {

@@ -2,7 +2,12 @@ import { randomUUID } from "node:crypto";
 import type { Pbx, PbxEvent } from "../domain/ports.js";
 
 export interface MailboxStore {
-  mailbox(number: string): Promise<{ id: string; user_id: string | null; display_name: string | null; email: string | null } | null>;
+  mailbox(number: string): Promise<{
+    id: string;
+    user_id: string | null;
+    display_name: string | null;
+    email: string | null;
+  } | null>;
   callerName(number: string): Promise<string | null>;
   savePersonalVoicemail(input: {
     extensionId: string;
@@ -69,7 +74,13 @@ export class PersonalVoicemailService {
     switch (event.type) {
       case "call_started":
         if (event.args[0] !== "voicemail") return false;
-        await this.start(event.channelId, event.args[1] ?? "", event.args[2] ?? "", event.callerNumber, event.callerName);
+        await this.start(
+          event.channelId,
+          event.args[1] ?? "",
+          event.args[2] ?? "",
+          event.callerNumber,
+          event.callerName,
+        );
         return true;
       case "playback_finished":
         return this.recordAfterGreeting(event.playbackId);
@@ -91,7 +102,13 @@ export class PersonalVoicemailService {
     }
   }
 
-  private async start(channelId: string, extension: string, status: string, callerNumber: string, callerName: string) {
+  private async start(
+    channelId: string,
+    extension: string,
+    status: string,
+    callerNumber: string,
+    callerName: string,
+  ) {
     const mailbox = /^[0-9]{3,6}$/.test(extension) ? await this.store.mailbox(extension) : null;
     if (!mailbox?.user_id) {
       // Nobody owns the number: nothing to leave a message for.
@@ -105,7 +122,9 @@ export class PersonalVoicemailService {
       ownerId: mailbox.user_id,
       ownerEmail: mailbox.email,
       callerNumber: callerNumber || "anonymous",
-      callerName: callerName || (callerNumber ? await this.store.callerName(callerNumber).catch(() => null) : null),
+      callerName:
+        callerName ||
+        (callerNumber ? await this.store.callerName(callerNumber).catch(() => null) : null),
       playbackId: null,
       recording: null,
       gone: false,

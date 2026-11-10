@@ -105,4 +105,3 @@ export async function logoutApi(): Promise<void> {
   });
   await handleResponse<void>(response);
 }
-

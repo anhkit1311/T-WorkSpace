@@ -104,7 +104,12 @@ export function MeetingCouncilPanel({ sessionId, live }: { sessionId: string; li
                 disabled={busy}
                 onClick={() =>
                   void run(() =>
-                    setCouncilMemberAbsentApi(accessToken!, council.scheduleId, member.userId, !member.absent),
+                    setCouncilMemberAbsentApi(
+                      accessToken!,
+                      council.scheduleId,
+                      member.userId,
+                      !member.absent,
+                    ),
                   )
                 }
               >
@@ -125,12 +130,18 @@ export function MeetingCouncilPanel({ sessionId, live }: { sessionId: string; li
                   {presenter.studentCode && ` (${presenter.studentCode})`} — {presenter.topic}
                 </span>
                 <Badge tone={presenter.finalizedAt ? "violet" : STATUS[presenter.status].tone}>
-                  {presenter.finalScore !== null ? `Điểm ${score(presenter.finalScore)}` : STATUS[presenter.status].label}
+                  {presenter.finalScore !== null
+                    ? `Điểm ${score(presenter.finalScore)}`
+                    : STATUS[presenter.status].label}
                 </Badge>
                 {council.myRole && (
                   <small>
-                    Phiếu {presenter.submittedBy.filter((id) => present.some((m) => m.userId === id)).length}/
-                    {present.length}
+                    Phiếu{" "}
+                    {
+                      presenter.submittedBy.filter((id) => present.some((m) => m.userId === id))
+                        .length
+                    }
+                    /{present.length}
                   </small>
                 )}
               </summary>
@@ -178,12 +189,25 @@ function PresenterDetail({
   return (
     <div className="meeting-council__detail">
       {chair && !final && presenter.status !== "presenting" && (
-        <Button size="sm" variant="secondary" disabled={busy} onClick={() => void run(() => startPresenterApi(accessToken, presenter.id))}>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={busy}
+          onClick={() => void run(() => startPresenterApi(accessToken, presenter.id))}
+        >
           Mời trình bày
         </Button>
       )}
 
-      {council.myRole && !final && !absent && <SheetForm council={council} presenter={presenter} busy={busy} run={run} accessToken={accessToken} />}
+      {council.myRole && !final && !absent && (
+        <SheetForm
+          council={council}
+          presenter={presenter}
+          busy={busy}
+          run={run}
+          accessToken={accessToken}
+        />
+      )}
 
       {presenter.sheets && presenter.sheets.length > 0 && (
         <table>
@@ -233,11 +257,15 @@ function PresenterDetail({
             placeholder="Kết luận của hội đồng"
             aria-label="Kết luận của hội đồng"
           />
-          {missing.length > 0 && <small>Chờ phiếu: {missing.map((member) => member.displayName).join(", ")}</small>}
+          {missing.length > 0 && (
+            <small>Chờ phiếu: {missing.map((member) => member.displayName).join(", ")}</small>
+          )}
           <Button
             size="sm"
             disabled={busy || missing.length > 0}
-            onClick={() => void run(() => finalizePresenterApi(accessToken, presenter.id, conclusion.trim()))}
+            onClick={() =>
+              void run(() => finalizePresenterApi(accessToken, presenter.id, conclusion.trim()))
+            }
           >
             Chốt kết luận
           </Button>
@@ -268,22 +296,42 @@ function SheetForm({
   accessToken: string;
 }) {
   const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(council.criteria.map((criterion) => [criterion.id, String(presenter.mySheet?.scores[criterion.id] ?? "")])),
+    Object.fromEntries(
+      council.criteria.map((criterion) => [
+        criterion.id,
+        String(presenter.mySheet?.scores[criterion.id] ?? ""),
+      ]),
+    ),
   );
   const [comment, setComment] = useState(presenter.mySheet?.comment ?? "");
-  const scores = Object.fromEntries(Object.entries(values).map(([id, value]) => [id, Number(value)]));
-  const complete = Object.values(values).every((value) => value !== "" && Number(value) >= 0 && Number(value) <= 10);
-  const total = council.criteria.reduce((sum, criterion) => sum + (scores[criterion.id] || 0) * criterion.weight, 0) / 100;
+  const scores = Object.fromEntries(
+    Object.entries(values).map(([id, value]) => [id, Number(value)]),
+  );
+  const complete = Object.values(values).every(
+    (value) => value !== "" && Number(value) >= 0 && Number(value) <= 10,
+  );
+  const total =
+    council.criteria.reduce(
+      (sum, criterion) => sum + (scores[criterion.id] || 0) * criterion.weight,
+      0,
+    ) / 100;
 
   return (
     <form
       className="meeting-council__sheet"
       onSubmit={(event) => {
         event.preventDefault();
-        if (complete) void run(() => submitCouncilSheetApi(accessToken, presenter.id, { scores, comment: comment.trim() }));
+        if (complete)
+          void run(() =>
+            submitCouncilSheetApi(accessToken, presenter.id, { scores, comment: comment.trim() }),
+          );
       }}
     >
-      <p>{presenter.mySheet ? "Phiếu của bạn đã nộp — có thể sửa đến khi chủ tịch chốt." : "Phiếu chấm của bạn (thang 10)"}</p>
+      <p>
+        {presenter.mySheet
+          ? "Phiếu của bạn đã nộp — có thể sửa đến khi chủ tịch chốt."
+          : "Phiếu chấm của bạn (thang 10)"}
+      </p>
       {council.criteria.map((criterion) => (
         <label key={criterion.id}>
           <span>
@@ -296,7 +344,9 @@ function SheetForm({
             step={0.25}
             required
             value={values[criterion.id]}
-            onChange={(event) => setValues((old) => ({ ...old, [criterion.id]: event.target.value }))}
+            onChange={(event) =>
+              setValues((old) => ({ ...old, [criterion.id]: event.target.value }))
+            }
           />
         </label>
       ))}

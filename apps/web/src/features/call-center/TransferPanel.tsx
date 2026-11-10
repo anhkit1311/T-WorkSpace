@@ -5,7 +5,14 @@ import { Icon } from "../../shared/ui/Icon";
 
 type Api = <T>(path: string, method?: string, body?: object) => Promise<T>;
 
-const STATE: Record<string, string> = { ready: "sẵn sàng", not_ready: "tạm nghỉ", offline: "ngoại tuyến", ringing: "đang đổ chuông", on_call: "đang bận", wrap_up: "đang hoàn tất" };
+const STATE: Record<string, string> = {
+  ready: "sẵn sàng",
+  not_ready: "tạm nghỉ",
+  offline: "ngoại tuyến",
+  ringing: "đang đổ chuông",
+  on_call: "đang bận",
+  wrap_up: "đang hoàn tất",
+};
 
 /** CC-10: transfer the current call to a department queue or an extension, blind or after consulting. */
 export function TransferPanel({
@@ -45,11 +52,27 @@ export function TransferPanel({
       <div className="desk-transfer" role="status">
         <Icon name="phone-call" size={16} />
         <span>
-          {transfer.answered ? `Máy lẻ ${transfer.target} đã nghe máy — khách đang chờ.` : `Đang gọi máy lẻ ${transfer.target}…`}
+          {transfer.answered
+            ? `Máy lẻ ${transfer.target} đã nghe máy — khách đang chờ.`
+            : `Đang gọi máy lẻ ${transfer.target}…`}
         </span>
         <div className="desk-actions">
-          <Button size="sm" variant="ghost" disabled={busy} onClick={() => run("me/transfer/cancel")}>Quay lại với khách</Button>
-          <Button size="sm" icon="check" disabled={busy || !transfer.answered} onClick={() => run("me/transfer/complete")}>Hoàn tất chuyển</Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={busy}
+            onClick={() => run("me/transfer/cancel")}
+          >
+            Quay lại với khách
+          </Button>
+          <Button
+            size="sm"
+            icon="check"
+            disabled={busy || !transfer.answered}
+            onClick={() => run("me/transfer/complete")}
+          >
+            Hoàn tất chuyển
+          </Button>
         </div>
       </div>
     );
@@ -68,33 +91,54 @@ export function TransferPanel({
       onSubmit={(event) => {
         event.preventDefault();
         if (!value) return;
-        run("me/transfer", kind === "dept" ? { departmentId: value } : { extension: value, attended });
+        run(
+          "me/transfer",
+          kind === "dept" ? { departmentId: value } : { extension: value, attended },
+        );
       }}
     >
-      <select aria-label="Chuyển đến" value={target} onChange={(event) => setTarget(event.target.value)} required>
+      <select
+        aria-label="Chuyển đến"
+        value={target}
+        onChange={(event) => setTarget(event.target.value)}
+        required
+      >
         <option value="">— Chọn nơi nhận —</option>
         <optgroup label="Phòng ban (qua hàng đợi)">
           {directory?.departments
             .filter((department) => department.id !== offer.departmentId)
-            .map((department) => <option key={department.id} value={`dept:${department.id}`}>{department.name}</option>)}
+            .map((department) => (
+              <option key={department.id} value={`dept:${department.id}`}>
+                {department.name}
+              </option>
+            ))}
         </optgroup>
         <optgroup label="Máy lẻ">
           {directory?.extensions.map((extension) => (
             <option key={extension.number} value={`ext:${extension.number}`}>
-              {extension.number} · {extension.name} ({extension.departmentName}{extension.state ? `, ${STATE[extension.state]}` : ""})
+              {extension.number} · {extension.name} ({extension.departmentName}
+              {extension.state ? `, ${STATE[extension.state]}` : ""})
             </option>
           ))}
         </optgroup>
       </select>
       {kind === "ext" && (
         <label className="desk-check">
-          <input type="checkbox" checked={attended} onChange={(event) => setAttended(event.target.checked)} />
+          <input
+            type="checkbox"
+            checked={attended}
+            onChange={(event) => setAttended(event.target.checked)}
+          />
           Hỏi ý người nhận trước khi chuyển
         </label>
       )}
       <div className="desk-actions">
-        <Button size="sm" variant="ghost" type="button" onClick={() => setOpen(false)}>Hủy</Button>
-        <Button size="sm" type="submit" icon="share" disabled={busy || !value}>{kind === "ext" && attended ? "Gọi hỏi ý" : "Chuyển thẳng"}</Button>
+        <Button size="sm" variant="ghost" type="button" onClick={() => setOpen(false)}>
+          Hủy
+        </Button>
+        <Button size="sm" type="submit" icon="share" disabled={busy || !value}>
+          {kind === "ext" && attended ? "Gọi hỏi ý" : "Chuyển thẳng"}
+        </Button>
       </div>
     </form>
   );

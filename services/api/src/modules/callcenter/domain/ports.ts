@@ -25,7 +25,16 @@ export type PbxEvent =
   | { type: "recording_finished"; name: string; durationSeconds: number }
   | { type: "recording_failed"; name: string }
   // Channels outside the ARI app too (subscribeAll): extension-to-extension calls run Dial() in the dialplan.
-  | { type: "dialplan"; channelId: string; linkedId: string; context: string; exten: string; app: string; appData: string; callerNumber: string }
+  | {
+      type: "dialplan";
+      channelId: string;
+      linkedId: string;
+      context: string;
+      exten: string;
+      app: string;
+      appData: string;
+      callerNumber: string;
+    }
   | { type: "dial"; callerChannelId: string; status: string };
 
 /** Adapter boundary to Asterisk (ARI). The ACD never talks HTTP or SIP itself. */
@@ -61,7 +70,14 @@ export interface Pbx {
   /** Hangs up channels and destroys bridges a previous run of the app left behind; returns how many. */
   releaseOrphans(): Promise<number>;
   /** `context` overrides the dialplan entry (browser call sessions); otherwise it follows canCallOut. */
-  pushExtension(input: { number: string; secret: string; transport: ExtensionTransport; callerName: string; canCallOut?: boolean; context?: string }): Promise<void>;
+  pushExtension(input: {
+    number: string;
+    secret: string;
+    transport: ExtensionTransport;
+    callerName: string;
+    canCallOut?: boolean;
+    context?: string;
+  }): Promise<void>;
   removeExtension(number: string): Promise<void>;
   /** BR-17: removes a stored recording (call or voicemail); a missing one is not an error. */
   deleteRecording(name: string): Promise<void>;
@@ -107,7 +123,8 @@ export interface CallPatch {
   queuedAt?: Date;
   answeredAt?: Date;
   endedAt?: Date;
-  outcome?: "answered" | "abandoned" | "missed" | "voicemail" | "callback" | "failed" | "transferred";
+  outcome?:
+    "answered" | "abandoned" | "missed" | "voicemail" | "callback" | "failed" | "transferred";
   agentUserId?: string | null;
   recordingKey?: string;
 }
@@ -140,11 +157,26 @@ export interface AcdStore {
     recordingKey: string;
   }): Promise<void>;
   /** A caller hung up while queued: opens (or extends) a call-back ticket (CC-8). */
-  missedCall(input: { callId: string; departmentId: string; callerNumber: string; callerUserId: string | null }): Promise<void>;
+  missedCall(input: {
+    callId: string;
+    departmentId: string;
+    callerNumber: string;
+    callerUserId: string | null;
+  }): Promise<void>;
   /** 2.4: a waiting caller pressed the callback key: a high-priority call-back ticket. */
-  callbackRequested(input: { callId: string; departmentId: string; callerNumber: string; callerUserId: string | null }): Promise<void>;
+  callbackRequested(input: {
+    callId: string;
+    departmentId: string;
+    callerNumber: string;
+    callerUserId: string | null;
+  }): Promise<void>;
   agentRoster(): Promise<AgentRecord[]>;
-  recordAgentState(userId: string, state: AgentState, reason: string, callId: string | null): Promise<void>;
+  recordAgentState(
+    userId: string,
+    state: AgentState,
+    reason: string,
+    callId: string | null,
+  ): Promise<void>;
   /** Calls left open by a crash or restart: their channels are gone, so they end as failed. */
   closeDanglingCalls(): Promise<number>;
 }

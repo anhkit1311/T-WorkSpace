@@ -7,7 +7,12 @@ import { AnimatePresence } from "motion/react";
 import "./meeting-controls.css";
 import { hostActionToast } from "./host-action-toast";
 
-export type MeetingConfirmation = { name: string; target?: string; label: string; description: string };
+export type MeetingConfirmation = {
+  name: string;
+  target?: string;
+  label: string;
+  description: string;
+};
 
 /** The server's view of the session (people, roles, hands, lock) and the host actions on it. */
 export function useMeetingControl(roomId: string) {
@@ -86,7 +91,18 @@ export function useMeetingControl(roomId: string) {
       )}
     </AnimatePresence>
   );
-  return { state, me, isHost, canManage, admitted, error, busy, action, setConfirmation, confirmDialog };
+  return {
+    state,
+    me,
+    isHost,
+    canManage,
+    admitted,
+    error,
+    busy,
+    action,
+    setConfirmation,
+    confirmDialog,
+  };
 }
 
 /** Waiting room card shown before the host lets the user in. */

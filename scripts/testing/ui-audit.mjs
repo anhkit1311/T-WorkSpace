@@ -11,12 +11,21 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pool } from "../../dist/api/infrastructure/database/db.js";
 import { hashPassword } from "../../dist/api/modules/auth/password.js";
-import { createWorkspace, getWorkspaceChannels, saveMessage } from "../../dist/api/modules/workspaces/service.js";
+import {
+  createWorkspace,
+  getWorkspaceChannels,
+  saveMessage,
+} from "../../dist/api/modules/workspaces/service.js";
 
 const mode = process.argv[2];
-if (!["zoom", "perf", "probe"].includes(mode)) throw new Error("Usage: ui-audit.mjs zoom|perf|probe");
+if (!["zoom", "perf", "probe"].includes(mode))
+  throw new Error("Usage: ui-audit.mjs zoom|perf|probe");
 const arg = (name, fallback) =>
-  process.argv.find((a) => a.startsWith(`--${name}=`))?.split("=").slice(1).join("=") ?? fallback;
+  process.argv
+    .find((a) => a.startsWith(`--${name}=`))
+    ?.split("=")
+    .slice(1)
+    .join("=") ?? fallback;
 const web = arg("web", "http://localhost:5176");
 const api = arg("api", "http://localhost:3001");
 const chrome = arg("chrome", "C:/Program Files/Google/Chrome/Application/chrome.exe");
@@ -42,7 +51,8 @@ const samples = [
   "Tên-tệp-rất-dài-không-có-khoảng-trắng-để-kiểm-tra-việc-cắt-chữ-trong-bong-bóng-tin-nhắn.docx",
   "Tin ngắn.",
 ];
-for (const content of samples) await saveMessage(userId, text.id, content, { clientMessageId: randomUUID() });
+for (const content of samples)
+  await saveMessage(userId, text.id, content, { clientMessageId: randomUUID() });
 
 const routes = [
   ["overview", "/app/overview"],
@@ -56,8 +66,19 @@ const routes = [
 
 // ---------- Chrome + CDP ----------
 const profile = join(tmpdir(), `ui-audit-${process.pid}`);
-const browser = spawn(chrome, ["--headless=new", "--remote-debugging-port=0", `--user-data-dir=${profile}`,
-  "--no-first-run", "--no-default-browser-check", "--hide-scrollbars", "about:blank"], { stdio: ["ignore", "ignore", "pipe"] });
+const browser = spawn(
+  chrome,
+  [
+    "--headless=new",
+    "--remote-debugging-port=0",
+    `--user-data-dir=${profile}`,
+    "--no-first-run",
+    "--no-default-browser-check",
+    "--hide-scrollbars",
+    "about:blank",
+  ],
+  { stdio: ["ignore", "ignore", "pipe"] },
+);
 const wsUrl = await new Promise((resolve, reject) => {
   let buf = "";
   browser.stderr.on("data", (d) => {
@@ -68,7 +89,9 @@ const wsUrl = await new Promise((resolve, reject) => {
   setTimeout(() => reject(new Error("Chrome did not start")), 20000);
 });
 const port = new URL(wsUrl).port;
-const page = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find((t) => t.type === "page");
+const page = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find(
+  (t) => t.type === "page",
+);
 const ws = new WebSocket(page.webSocketDebuggerUrl);
 await new Promise((r) => ws.addEventListener("open", r, { once: true }));
 let seq = 0;
@@ -89,7 +112,8 @@ const send = (method, params = {}) =>
     ws.send(JSON.stringify({ id, method, params }));
   });
 const evaluate = async (expression) =>
-  (await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true })).result.value;
+  (await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true })).result
+    .value;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const navigate = async (url) => {
   const loaded = new Promise((resolve) => {
@@ -104,7 +128,8 @@ await send("Runtime.enable");
 
 // Sign in once: the refresh cookie lives on the API origin and is reused by every page load.
 await navigate(`${web}/`);
-const signIn = await evaluate(`fetch(${JSON.stringify(api + "/auth/login")}, {method:"POST",credentials:"include",
+const signIn =
+  await evaluate(`fetch(${JSON.stringify(api + "/auth/login")}, {method:"POST",credentials:"include",
   headers:{"Content-Type":"application/json"},body:JSON.stringify(${JSON.stringify({ email, password })})}).then(r=>r.status)`);
 if (signIn !== 200) throw new Error(`login failed with HTTP ${signIn}`);
 
@@ -113,7 +138,12 @@ try {
   if (mode === "probe") {
     // Debug helper: --route=chat --size=640x400x2 --expr="<js returning JSON-serialisable value>"
     const [w, h, dpr] = arg("size", "640x400x2").split("x").map(Number);
-    await send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: dpr, mobile: false });
+    await send("Emulation.setDeviceMetricsOverride", {
+      width: w,
+      height: h,
+      deviceScaleFactor: dpr,
+      mobile: false,
+    });
     await navigate(web + routes.find(([n]) => n === arg("route", "chat"))[1]);
     await sleep(2500);
     console.log(JSON.stringify(await evaluate(arg("expr", "document.title")), null, 1));
@@ -168,23 +198,41 @@ try {
       return { viewport: vw, docOverflow, offenders: [...offenders].slice(0, 8), covered: [...new Set(covered)].slice(0, 8) };
     })()`;
     for (const c of cases) {
-      await send("Emulation.setDeviceMetricsOverride", { width: c.width, height: c.height, deviceScaleFactor: c.scale, mobile: false });
+      await send("Emulation.setDeviceMetricsOverride", {
+        width: c.width,
+        height: c.height,
+        deviceScaleFactor: c.scale,
+        mobile: false,
+      });
       for (const [name, path] of routes) {
         await navigate(web + path);
         await sleep(2500);
         const m = await evaluate(probe);
         const shot = await send("Page.captureScreenshot", { format: "png" });
-        await writeFile(join(outDir, `${name}-${c.zoom.replace("%", "")}.png`), Buffer.from(shot.data, "base64"));
+        await writeFile(
+          join(outDir, `${name}-${c.zoom.replace("%", "")}.png`),
+          Buffer.from(shot.data, "base64"),
+        );
         results.push({ page: name, zoom: c.zoom, ...m });
-        console.log(`${c.zoom.padEnd(5)} ${name.padEnd(14)} overflow=${m.docOverflow}px offenders=${m.offenders.length} covered=${m.covered.length} ${m.covered.join("; ")}`);
+        console.log(
+          `${c.zoom.padEnd(5)} ${name.padEnd(14)} overflow=${m.docOverflow}px offenders=${m.offenders.length} covered=${m.covered.length} ${m.covered.join("; ")}`,
+        );
       }
     }
   } else {
-    await send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
+    await send("Emulation.setDeviceMetricsOverride", {
+      width: 1280,
+      height: 800,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
     await send("Network.enable");
     await send("Performance.enable");
     const reduced = arg("reducedMotion", "0") === "1";
-    if (reduced) await send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
+    if (reduced)
+      await send("Emulation.setEmulatedMedia", {
+        features: [{ name: "prefers-reduced-motion", value: "reduce" }],
+      });
     const measure = `new Promise((resolve) => {
       const out = { lcp: null, tbt: 0, longTasks: 0 };
       new PerformanceObserver((l) => { for (const e of l.getEntries()) out.lcp = e.startTime; })
@@ -199,7 +247,10 @@ try {
         resolve(out);
       }, 6000);
     })`;
-    const readySelector = { overview: "main h1, main h2", chat: "textarea, [contenteditable=true]" };
+    const readySelector = {
+      overview: "main h1, main h2",
+      chat: "textarea, [contenteditable=true]",
+    };
     for (const rate of [1, 4, 6]) {
       await send("Emulation.setCPUThrottlingRate", { rate });
       for (const [name, path] of routes.filter(([n]) => n in readySelector)) {
@@ -211,16 +262,32 @@ try {
             const tick = () => document.querySelector(${JSON.stringify(readySelector[name])}) ? resolve(performance.now()) :
               (performance.now() - t > 30000 ? resolve(null) : requestAnimationFrame(tick)); tick(); })`);
           const m = await evaluate(measure);
-          const heap = (await send("Performance.getMetrics")).metrics.find((x) => x.name === "JSHeapUsedSize").value / 1048576;
-          results.push({ page: name, cpuSlowdown: rate, reducedMotion: reduced, run, appReadyMs: ready, ...m, heapMiB: heap, wallMs: Date.now() - t0 });
-          console.log(`x${rate} ${name.padEnd(9)} run${run} ready=${Math.round(ready)}ms lcp=${Math.round(m.lcp)}ms tbt=${Math.round(m.tbt)}ms heap=${heap.toFixed(1)}MiB`);
+          const heap =
+            (await send("Performance.getMetrics")).metrics.find((x) => x.name === "JSHeapUsedSize")
+              .value / 1048576;
+          results.push({
+            page: name,
+            cpuSlowdown: rate,
+            reducedMotion: reduced,
+            run,
+            appReadyMs: ready,
+            ...m,
+            heapMiB: heap,
+            wallMs: Date.now() - t0,
+          });
+          console.log(
+            `x${rate} ${name.padEnd(9)} run${run} ready=${Math.round(ready)}ms lcp=${Math.round(m.lcp)}ms tbt=${Math.round(m.tbt)}ms heap=${heap.toFixed(1)}MiB`,
+          );
         }
       }
     }
   }
   const suffix = arg("reducedMotion", "0") === "1" ? "-reduced-motion" : "";
-  if (mode !== "probe") await writeFile(join(outDir, `${mode}${suffix}-results.json`),
-    JSON.stringify({ date: new Date().toISOString(), web, chrome, results }, null, 2));
+  if (mode !== "probe")
+    await writeFile(
+      join(outDir, `${mode}${suffix}-results.json`),
+      JSON.stringify({ date: new Date().toISOString(), web, chrome, results }, null, 2),
+    );
   console.log(`results: ${join(outDir, `${mode}${suffix}-results.json`)}`);
 } finally {
   ws.close();

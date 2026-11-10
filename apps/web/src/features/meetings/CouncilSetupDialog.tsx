@@ -6,7 +6,8 @@ import { getWorkspaceMembersApi } from "../chat/api";
 import { getCouncilApi, saveCouncilApi } from "./api";
 import "./meeting-council.css";
 
-const DEFAULT_CRITERIA = "Nội dung và kết quả | 40\nTrình bày | 20\nTrả lời câu hỏi | 30\nHình thức báo cáo | 10";
+const DEFAULT_CRITERIA =
+  "Nội dung và kết quả | 40\nTrình bày | 20\nTrả lời câu hỏi | 30\nHình thức báo cáo | 10";
 
 /** "Tên tiêu chí | trọng số" per line; null when a line does not parse. */
 function parseCriteria(text: string) {
@@ -54,7 +55,11 @@ export function CouncilSetupDialog({
         setPeople(members.filter((member) => member.status === "active"));
         if (!council) return;
         setChairId(council.members.find((member) => member.role === "chair")?.userId ?? "");
-        setMemberIds(council.members.filter((member) => member.role === "member").map((member) => member.userId));
+        setMemberIds(
+          council.members
+            .filter((member) => member.role === "member")
+            .map((member) => member.userId),
+        );
         setPresenters(council.presenters.map(({ userId, topic }) => ({ userId, topic })));
         setCriteria(council.criteria.map((item) => `${item.label} | ${item.weight}`).join("\n"));
         setLocked(council.locked);
@@ -78,7 +83,9 @@ export function CouncilSetupDialog({
   const toggleMember = (userId: string, on: boolean) =>
     setMemberIds((old) => (on ? [...old, userId] : old.filter((id) => id !== userId)));
   const togglePresenter = (userId: string, on: boolean) =>
-    setPresenters((old) => (on ? [...old, { userId, topic: "" }] : old.filter((item) => item.userId !== userId)));
+    setPresenters((old) =>
+      on ? [...old, { userId, topic: "" }] : old.filter((item) => item.userId !== userId),
+    );
 
   const save = async () => {
     if (!accessToken || !ready || !parsed) return;
@@ -122,7 +129,11 @@ export function CouncilSetupDialog({
         ) : (
           <>
             <Field label="Chủ tịch hội đồng">
-              <select value={chairId} disabled={locked} onChange={(event) => setChairId(event.target.value)}>
+              <select
+                value={chairId}
+                disabled={locked}
+                onChange={(event) => setChairId(event.target.value)}
+              >
                 <option value="">Chọn chủ tịch</option>
                 {people
                   .filter((person) => !presenters.some((item) => item.userId === person.userId))
@@ -136,7 +147,11 @@ export function CouncilSetupDialog({
             <Field label="Thành viên hội đồng" hint="Cùng chủ tịch: 2–7 người.">
               <div className="meeting-council-setup__people">
                 {people
-                  .filter((person) => person.userId !== chairId && !presenters.some((item) => item.userId === person.userId))
+                  .filter(
+                    (person) =>
+                      person.userId !== chairId &&
+                      !presenters.some((item) => item.userId === person.userId),
+                  )
                   .map((person) => (
                     <label key={person.userId}>
                       <input
@@ -150,7 +165,10 @@ export function CouncilSetupDialog({
                   ))}
               </div>
             </Field>
-            <Field label="Người trình bày" hint="Thứ tự trình bày theo thứ tự chọn; nhập tên đề tài cho từng người.">
+            <Field
+              label="Người trình bày"
+              hint="Thứ tự trình bày theo thứ tự chọn; nhập tên đề tài cho từng người."
+            >
               <div className="meeting-council-setup__people">
                 {people
                   .filter((person) => !council.has(person.userId))
@@ -176,7 +194,11 @@ export function CouncilSetupDialog({
                             aria-label={`Đề tài của ${person.displayName}`}
                             onChange={(event) =>
                               setPresenters((old) =>
-                                old.map((item) => (item.userId === person.userId ? { ...item, topic: event.target.value } : item)),
+                                old.map((item) =>
+                                  item.userId === person.userId
+                                    ? { ...item, topic: event.target.value }
+                                    : item,
+                                ),
                               )
                             }
                           />
@@ -188,9 +210,21 @@ export function CouncilSetupDialog({
             </Field>
             <Field
               label="Tiêu chí chấm (mỗi dòng: tên | trọng số %)"
-              error={!parsed ? "Mỗi dòng có dạng: Trình bày | 20" : weight !== 100 ? `Tổng trọng số đang là ${weight}, cần bằng 100.` : undefined}
+              error={
+                !parsed
+                  ? "Mỗi dòng có dạng: Trình bày | 20"
+                  : weight !== 100
+                    ? `Tổng trọng số đang là ${weight}, cần bằng 100.`
+                    : undefined
+              }
             >
-              <textarea className="meeting-council-setup__criteria" rows={4} disabled={locked} value={criteria} onChange={(event) => setCriteria(event.target.value)} />
+              <textarea
+                className="meeting-council-setup__criteria"
+                rows={4}
+                disabled={locked}
+                value={criteria}
+                onChange={(event) => setCriteria(event.target.value)}
+              />
             </Field>
           </>
         )}

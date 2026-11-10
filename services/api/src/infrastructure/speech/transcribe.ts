@@ -20,19 +20,42 @@ const stamp = (seconds: number) => {
 
 /** WebVTT cues; "-->" inside the text would end the cue line, so it is defused. */
 export const toVtt = (segments: Segment[]) =>
-  ["WEBVTT", "", ...segments.flatMap((item, i) => [String(i + 1), `${stamp(item.start)} --> ${stamp(item.end)}`, item.text.replace(/-->/g, "→"), ""])].join("\n");
+  [
+    "WEBVTT",
+    "",
+    ...segments.flatMap((item, i) => [
+      String(i + 1),
+      `${stamp(item.start)} --> ${stamp(item.end)}`,
+      item.text.replace(/-->/g, "→"),
+      "",
+    ]),
+  ].join("\n");
 
 /** Keeps well-formed, non-empty segments from a verbose_json response. */
 export function parseSegments(body: unknown): Segment[] {
   const segments = (body as { segments?: unknown })?.segments;
   if (!Array.isArray(segments)) throw new Error("Dịch vụ nhận dạng không trả về segments.");
   return segments
-    .map((item: { start?: unknown; end?: unknown; text?: unknown }) => ({ start: Number(item.start), end: Number(item.end), text: String(item.text ?? "").trim() }))
-    .filter((item) => Number.isFinite(item.start) && Number.isFinite(item.end) && item.end >= item.start && item.text);
+    .map((item: { start?: unknown; end?: unknown; text?: unknown }) => ({
+      start: Number(item.start),
+      end: Number(item.end),
+      text: String(item.text ?? "").trim(),
+    }))
+    .filter(
+      (item) =>
+        Number.isFinite(item.start) &&
+        Number.isFinite(item.end) &&
+        item.end >= item.start &&
+        item.text,
+    );
 }
 
 /** Sends one audio file to the speech service. */
-export async function requestTranscript(file: Buffer, name: string, type = "audio/mpeg"): Promise<Segment[]> {
+export async function requestTranscript(
+  file: Buffer,
+  name: string,
+  type = "audio/mpeg",
+): Promise<Segment[]> {
   const form = new FormData();
   form.append("file", new Blob([new Uint8Array(file)], { type }), name);
   form.append("model", config.transcribeModel);
@@ -45,7 +68,10 @@ export async function requestTranscript(file: Buffer, name: string, type = "audi
     body: form,
     signal: AbortSignal.timeout(30 * 60_000),
   });
-  if (!response.ok) throw new Error(`Dịch vụ nhận dạng trả lỗi ${response.status}: ${(await response.text()).slice(0, 200)}`);
+  if (!response.ok)
+    throw new Error(
+      `Dịch vụ nhận dạng trả lỗi ${response.status}: ${(await response.text()).slice(0, 200)}`,
+    );
   return parseSegments(await response.json());
 }
 
@@ -60,10 +86,30 @@ export function transcribeDir(dir: string): Promise<number> {
     // 16 kHz mono at 32 kbit/s keeps about 1h40 under the 25 MB upload limit of hosted Whisper.
     const audio = `${dir}/speech.mp3`;
     try {
-      await runFfmpeg(["-y", "-i", `${dir}/index.m3u8`, "-vn", "-ac", "1", "-ar", "16000", "-c:a", "libmp3lame", "-b:a", "32k", audio]);
-      const segments = await requestTranscript(await readFile(path.join(config.mediaDir, audio)), "speech.mp3");
+      await runFfmpeg([
+        "-y",
+        "-i",
+        `${dir}/index.m3u8`,
+        "-vn",
+        "-ac",
+        "1",
+        "-ar",
+        "16000",
+        "-c:a",
+        "libmp3lame",
+        "-b:a",
+        "32k",
+        audio,
+      ]);
+      const segments = await requestTranscript(
+        await readFile(path.join(config.mediaDir, audio)),
+        "speech.mp3",
+      );
       await writeFile(path.join(config.mediaDir, dir, "captions.vtt"), toVtt(segments));
-      await writeFile(path.join(config.mediaDir, dir, "transcript.json"), JSON.stringify({ language: config.transcribeLanguage, segments }));
+      await writeFile(
+        path.join(config.mediaDir, dir, "transcript.json"),
+        JSON.stringify({ language: config.transcribeLanguage, segments }),
+      );
       return segments.length;
     } finally {
       await rm(path.join(config.mediaDir, audio), { force: true });

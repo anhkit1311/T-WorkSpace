@@ -135,13 +135,11 @@ test(
       b.on("new_message", () => {
         leaked = true;
       });
-      const sent = await a
-        .timeout(3000)
-        .emitWithAck("send_message", {
-          channelId: privateChannel.id,
-          content: "socket private",
-          clientMessageId: randomUUID(),
-        });
+      const sent = await a.timeout(3000).emitWithAck("send_message", {
+        channelId: privateChannel.id,
+        content: "socket private",
+        clientMessageId: randomUUID(),
+      });
       assert.equal(sent.success, true);
       await delay(50);
       assert.equal(leaked, false);

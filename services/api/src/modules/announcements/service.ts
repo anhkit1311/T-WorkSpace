@@ -9,7 +9,10 @@ import type {
   UpdateAnnouncementInput,
 } from "@doan/shared";
 
-export async function checkCanPublish(client: PoolClient, userId: string): Promise<{ canPublish: boolean; role: string }> {
+export async function checkCanPublish(
+  client: PoolClient,
+  userId: string,
+): Promise<{ canPublish: boolean; role: string }> {
   // 1. Check academic role grants (system_admin, unit_admin, unit_head)
   const roleGrants = await client.query<{ role: string }>(
     `SELECT role FROM academic_role_grants WHERE user_id=$1`,
@@ -120,7 +123,8 @@ export async function createAnnouncement(
 
     let authorTitle = "Phòng Công tác Sinh viên";
     if (perm.role === "system_admin") authorTitle = "Ban Quản trị Cổng TDTU";
-    else if (perm.role === "unit_admin" || perm.role === "unit_head") authorTitle = "Văn phòng Khoa";
+    else if (perm.role === "unit_admin" || perm.role === "unit_head")
+      authorTitle = "Văn phòng Khoa";
     else if (perm.role === "lecturer") authorTitle = "Giảng viên / Học vụ";
     else if (perm.role === "publisher") authorTitle = "Ban Truyền thông & Sự kiện";
 
@@ -142,7 +146,19 @@ export async function createAnnouncement(
         author_id AS "authorId", author_name AS "authorName", author_title AS "authorTitle",
         unit_id AS "unitId", created_at AS "createdAt", updated_at AS "updatedAt"
       `,
-      [id, title, category, badge, summary, content, scope, pinned, userId, authorName, authorTitle],
+      [
+        id,
+        title,
+        category,
+        badge,
+        summary,
+        content,
+        scope,
+        pinned,
+        userId,
+        authorName,
+        authorTitle,
+      ],
     );
 
     return { ...insertRes.rows[0], canManage: true };
@@ -229,10 +245,9 @@ export async function deleteAnnouncement(userId: string, announcementId: string)
       throw new HttpError(403, "FORBIDDEN", "Bạn không có quyền xóa thông báo.");
     }
 
-    const res = await client.query(
-      `DELETE FROM portal_announcements WHERE id=$1`,
-      [announcementId],
-    );
+    const res = await client.query(`DELETE FROM portal_announcements WHERE id=$1`, [
+      announcementId,
+    ]);
     if (!res.rowCount) {
       throw new HttpError(404, "NOT_FOUND", "Không tìm thấy thông báo để xóa.");
     }
@@ -270,8 +285,16 @@ export async function listPublishers(userId: string) {
 export async function grantPublisher(adminId: string, email: string) {
   return withTransaction(async (client) => {
     const perm = await checkCanPublish(client, adminId);
-    if (perm.role !== "system_admin" && perm.role !== "unit_admin" && perm.role !== "workspace_admin") {
-      throw new HttpError(403, "FORBIDDEN", "Chỉ quản trị viên mới có quyền cấp quyền đăng thông báo.");
+    if (
+      perm.role !== "system_admin" &&
+      perm.role !== "unit_admin" &&
+      perm.role !== "workspace_admin"
+    ) {
+      throw new HttpError(
+        403,
+        "FORBIDDEN",
+        "Chỉ quản trị viên mới có quyền cấp quyền đăng thông báo.",
+      );
     }
 
     const target = await client.query<{ id: string; display_name: string }>(
@@ -299,14 +322,19 @@ export async function grantPublisher(adminId: string, email: string) {
 export async function revokePublisher(adminId: string, targetUserId: string) {
   return withTransaction(async (client) => {
     const perm = await checkCanPublish(client, adminId);
-    if (perm.role !== "system_admin" && perm.role !== "unit_admin" && perm.role !== "workspace_admin") {
-      throw new HttpError(403, "FORBIDDEN", "Chỉ quản trị viên mới có quyền thu hồi quyền đăng thông báo.");
+    if (
+      perm.role !== "system_admin" &&
+      perm.role !== "unit_admin" &&
+      perm.role !== "workspace_admin"
+    ) {
+      throw new HttpError(
+        403,
+        "FORBIDDEN",
+        "Chỉ quản trị viên mới có quyền thu hồi quyền đăng thông báo.",
+      );
     }
 
-    await client.query(
-      `DELETE FROM announcement_publishers WHERE user_id = $1`,
-      [targetUserId],
-    );
+    await client.query(`DELETE FROM announcement_publishers WHERE user_id = $1`, [targetUserId]);
 
     return { success: true };
   });

@@ -1,4 +1,12 @@
-import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type RefObject } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+  type RefObject,
+} from "react";
 import { AnimatePresence } from "motion/react";
 import { useApp } from "../providers/AppContext";
 import { useSocket } from "../providers/SocketContext";
@@ -29,20 +37,46 @@ function lazyPage<P extends object>(load: () => Promise<ComponentType<P>>) {
   };
 }
 
-const WorkspaceHomePage = lazyPage(() => import("../../features/workspaces/WorkspaceHomePage").then((m) => m.WorkspaceHomePage));
+const WorkspaceHomePage = lazyPage(() =>
+  import("../../features/workspaces/WorkspaceHomePage").then((m) => m.WorkspaceHomePage),
+);
 const FilesPage = lazyPage(() => import("../../features/files/FilesPage").then((m) => m.FilesPage));
-const MeetingPage = lazyPage(() => import("../../features/meetings/MeetingPage").then((m) => m.MeetingPage));
-const GroupsPage = lazyPage(() => import("../../features/workspaces/GroupsPage").then((m) => m.GroupsPage));
-const MessagesPage = lazyPage(() => import("../../features/chat/MessagesPage").then((m) => m.MessagesPage));
-const ProfilePage = lazyPage(() => import("../../features/profile/ProfilePage").then((m) => m.ProfilePage));
-const WorkspaceAdminPage = lazyPage(() => import("../../features/workspaces/WorkspaceAdminPage").then((m) => m.WorkspaceAdminPage));
-const InvitationPage = lazyPage(() => import("../../features/workspaces/InvitationPage").then((m) => m.InvitationPage));
-const NotificationsPage = lazyPage(() => import("../../features/notifications/NotificationsPage").then((m) => m.NotificationsPage));
-const CallCenterWorkspace = lazyPage(() => import("../../features/call-center/CallCenterWorkspace").then((m) => m.CallCenterWorkspace));
-const AccessPage = lazyPage(() => import("../../features/admin/AccessPage").then((m) => m.AccessPage));
-const UnitReportsPage = lazyPage(() => import("../../features/reports/UnitReportsPage").then((m) => m.UnitReportsPage));
-const ELearningPage = lazyPage(() => import("../../features/elearning/ELearningPage").then((m) => m.ELearningPage));
-const StaffDirectoryPage = lazyPage(() => import("../../features/staff/StaffDirectoryPage").then((m) => m.StaffDirectoryPage));
+const MeetingPage = lazyPage(() =>
+  import("../../features/meetings/MeetingPage").then((m) => m.MeetingPage),
+);
+const GroupsPage = lazyPage(() =>
+  import("../../features/workspaces/GroupsPage").then((m) => m.GroupsPage),
+);
+const MessagesPage = lazyPage(() =>
+  import("../../features/chat/MessagesPage").then((m) => m.MessagesPage),
+);
+const ProfilePage = lazyPage(() =>
+  import("../../features/profile/ProfilePage").then((m) => m.ProfilePage),
+);
+const WorkspaceAdminPage = lazyPage(() =>
+  import("../../features/workspaces/WorkspaceAdminPage").then((m) => m.WorkspaceAdminPage),
+);
+const InvitationPage = lazyPage(() =>
+  import("../../features/workspaces/InvitationPage").then((m) => m.InvitationPage),
+);
+const NotificationsPage = lazyPage(() =>
+  import("../../features/notifications/NotificationsPage").then((m) => m.NotificationsPage),
+);
+const CallCenterWorkspace = lazyPage(() =>
+  import("../../features/call-center/CallCenterWorkspace").then((m) => m.CallCenterWorkspace),
+);
+const AccessPage = lazyPage(() =>
+  import("../../features/admin/AccessPage").then((m) => m.AccessPage),
+);
+const UnitReportsPage = lazyPage(() =>
+  import("../../features/reports/UnitReportsPage").then((m) => m.UnitReportsPage),
+);
+const ELearningPage = lazyPage(() =>
+  import("../../features/elearning/ELearningPage").then((m) => m.ELearningPage),
+);
+const StaffDirectoryPage = lazyPage(() =>
+  import("../../features/staff/StaffDirectoryPage").then((m) => m.StaffDirectoryPage),
+);
 
 function ViewFallback() {
   return (
@@ -75,7 +109,14 @@ const SIDEBAR_MENU_ITEMS: SidebarMenuItem[] = [
   { id: "staff", label: "Danh sách nhân sự", short: "Nhân sự", icon: "users", targetView: "staff" },
   // Mục dành riêng cho lãnh đạo đơn vị và Admin (menu "Quản lý"); "Cài đặt" nằm trong menu tài khoản.
   { id: "reports", label: "Báo cáo đơn vị", icon: "dashboard", targetView: "reports" },
-  { id: "notifications", label: "Quản lý thông báo", icon: "bell", targetView: "notifications", badgeKey: "notifications", adminOnly: true },
+  {
+    id: "notifications",
+    label: "Quản lý thông báo",
+    icon: "bell",
+    targetView: "notifications",
+    badgeKey: "notifications",
+    adminOnly: true,
+  },
   { id: "access", label: "Quản trị hệ thống", icon: "lock", targetView: "access", adminOnly: true },
 ];
 
@@ -90,7 +131,11 @@ const MANAGE_ITEMS = new Set(["reports", "notifications", "access"]);
 const RESTRICTED_MENU_ITEMS: Record<string, keyof MenuAccess> = { reports: "unitReports" };
 
 /** Header popovers close on an outside press or Escape (focus returns to the trigger). */
-function useDismiss(open: boolean, ref: RefObject<HTMLElement | null>, setOpen: (open: boolean) => void) {
+function useDismiss(
+  open: boolean,
+  ref: RefObject<HTMLElement | null>,
+  setOpen: (open: boolean) => void,
+) {
   useEffect(() => {
     if (!open) return;
     const onPointer = (event: PointerEvent) => {
@@ -111,15 +156,8 @@ function useDismiss(open: boolean, ref: RefObject<HTMLElement | null>, setOpen: 
 }
 
 export function AppShell() {
-  const {
-    activeView,
-    route,
-    setActiveView,
-    user,
-    accessToken,
-    openChatSearchResult,
-    openChannel,
-  } = useApp();
+  const { activeView, route, setActiveView, user, accessToken, openChatSearchResult, openChannel } =
+    useApp();
   const { connectionStatus, reconnect, unreadCount, groupUnreadCount, socket } = useSocket();
   const meeting = useMeetingStatus();
   const phone = useGlobalSoftphone();
@@ -128,7 +166,8 @@ export function AppShell() {
   const [meetingWorkspaceId, setMeetingWorkspaceId] = useState("");
   useEffect(() => {
     if (!meeting.inCall) setMeetingWorkspaceId("");
-    else if (activeView === "meetings" && route.workspaceId) setMeetingWorkspaceId(route.workspaceId);
+    else if (activeView === "meetings" && route.workspaceId)
+      setMeetingWorkspaceId(route.workspaceId);
   }, [meeting.inCall, activeView, route.workspaceId]);
   const showMeetingStrip = meeting.inCall && activeView !== "meetings";
 
@@ -195,11 +234,13 @@ export function AppShell() {
 
   const visibleItems = SIDEBAR_MENU_ITEMS.filter((item) => {
     if (item.adminOnly && !isUserAdmin) return false;
-    if (RESTRICTED_MENU_ITEMS[item.id] && !menuAccess?.[RESTRICTED_MENU_ITEMS[item.id]]) return false;
+    if (RESTRICTED_MENU_ITEMS[item.id] && !menuAccess?.[RESTRICTED_MENU_ITEMS[item.id]])
+      return false;
     return true;
   });
   const isCallView = activeView.startsWith("call-");
-  const isItemActive = (item: SidebarMenuItem) => item.targetView === activeView || (item.id === "switchboard" && isCallView);
+  const isItemActive = (item: SidebarMenuItem) =>
+    item.targetView === activeView || (item.id === "switchboard" && isCallView);
   const badgeFor = (item: SidebarMenuItem) =>
     item.badgeKey === "notifications"
       ? unreadNotifications
@@ -240,7 +281,11 @@ export function AppShell() {
   const renderPage = () => {
     if (route.invalid)
       return (
-        <section className="page-load-error" role="alert" style={{ padding: 40, textAlign: "center" }}>
+        <section
+          className="page-load-error"
+          role="alert"
+          style={{ padding: 40, textAlign: "center" }}
+        >
           <h2>Đường dẫn không hợp lệ</h2>
           <p>Trang hoặc mã tài nguyên trong liên kết không tồn tại.</p>
           <button className="button button--primary" onClick={() => setActiveView("overview")}>
@@ -251,8 +296,10 @@ export function AppShell() {
     let Component;
     if (activeView === "overview") Component = <WorkspaceHomePage />;
     else if (activeView === "call-center") Component = <CallCenterWorkspace initialTab="desk" />;
-    else if (activeView === "call-directory") Component = <CallCenterWorkspace initialTab="history" />;
-    else if (activeView === "call-monitoring") Component = <CallCenterWorkspace initialTab="live" />;
+    else if (activeView === "call-directory")
+      Component = <CallCenterWorkspace initialTab="history" />;
+    else if (activeView === "call-monitoring")
+      Component = <CallCenterWorkspace initialTab="live" />;
     else if (activeView === "chat") Component = <MessagesPage />;
     else if (activeView === "files") Component = <FilesPage />;
     else if (activeView === "meetings") Component = <MeetingPage />;
@@ -270,9 +317,7 @@ export function AppShell() {
     return (
       // The call views share one instance: the desk's wrap-up and a browser call survive switching tabs.
       <PageErrorBoundary key={isCallView ? "call-center" : activeView}>
-        <Suspense fallback={<ViewFallback />}>
-          {Component}
-        </Suspense>
+        <Suspense fallback={<ViewFallback />}>{Component}</Suspense>
       </PageErrorBoundary>
     );
   };
@@ -291,12 +336,17 @@ export function AppShell() {
         </button>
 
         {/* Top tabs on desktop; on phones the same list is a bottom bar whose "Thêm" opens the rest. */}
-        <nav ref={navRef} className={`tdtu-nav ${moreOpen ? "is-more-open" : ""}`} aria-label="Menu chức năng chính">
+        <nav
+          ref={navRef}
+          className={`tdtu-nav ${moreOpen ? "is-more-open" : ""}`}
+          aria-label="Menu chức năng chính"
+        >
           {visibleItems.map((item) => {
             const isSelected = isItemActive(item);
             const badgeCount = badgeFor(item);
             const live =
-              (item.id === "switchboard" && phone.phase !== "none") || (item.id === "meetings" && meeting.inCall);
+              (item.id === "switchboard" && phone.phase !== "none") ||
+              (item.id === "meetings" && meeting.inCall);
             return (
               <button
                 key={item.id}
@@ -306,14 +356,17 @@ export function AppShell() {
                 title={item.label}
                 onClick={() => {
                   // The switchboard tab keeps its current sub-page; everything else opens its page.
-                  if (item.targetView && !(item.id === "switchboard" && isSelected)) setActiveView(item.targetView);
+                  if (item.targetView && !(item.id === "switchboard" && isSelected))
+                    setActiveView(item.targetView);
                   setMoreOpen(false);
                 }}
               >
                 <Icon name={item.icon} size={17} strokeWidth={isSelected ? 2.1 : 1.8} />
                 <span className="tdtu-nav__label">{item.short ?? item.label}</span>
                 {live && <span className="tdtu-nav__live" role="img" aria-label="đang diễn ra" />}
-                {badgeCount > 0 && <span className="tdtu-nav__badge">{badgeCount > 99 ? "99+" : badgeCount}</span>}
+                {badgeCount > 0 && (
+                  <span className="tdtu-nav__badge">{badgeCount > 99 ? "99+" : badgeCount}</span>
+                )}
               </button>
             );
           })}
@@ -343,7 +396,9 @@ export function AppShell() {
               >
                 <Icon name="dashboard" size={16} />
                 <span className="tdtu-menu__label">Quản lý</span>
-                {manageBadge > 0 && <span className="tdtu-nav__badge">{manageBadge > 99 ? "99+" : manageBadge}</span>}
+                {manageBadge > 0 && (
+                  <span className="tdtu-nav__badge">{manageBadge > 99 ? "99+" : manageBadge}</span>
+                )}
                 <Icon name="chevron-down" size={14} className="tdtu-menu__chevron" />
               </button>
               {manageOpen && (
@@ -363,7 +418,11 @@ export function AppShell() {
                       >
                         <Icon name={item.icon} size={15} />
                         <span>{item.label}</span>
-                        {badgeCount > 0 && <span className="tdtu-nav__badge">{badgeCount > 99 ? "99+" : badgeCount}</span>}
+                        {badgeCount > 0 && (
+                          <span className="tdtu-nav__badge">
+                            {badgeCount > 99 ? "99+" : badgeCount}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -381,7 +440,9 @@ export function AppShell() {
           >
             <Icon name="search" size={15} />
             <span className="tdtu-search-btn__label">Tìm kiếm</span>
-            <kbd className="tdtu-search-btn__kbd" aria-hidden="true">Ctrl K</kbd>
+            <kbd className="tdtu-search-btn__kbd" aria-hidden="true">
+              Ctrl K
+            </kbd>
           </button>
 
           {phone.agentState && (
@@ -400,12 +461,16 @@ export function AppShell() {
             type="button"
             className="tdtu-icon-btn"
             title="Thông báo"
-            aria-label={unreadNotifications ? `Thông báo (${unreadNotifications} chưa đọc)` : "Thông báo"}
+            aria-label={
+              unreadNotifications ? `Thông báo (${unreadNotifications} chưa đọc)` : "Thông báo"
+            }
             onClick={() => setActiveView("notifications")}
           >
             <Icon name="bell" size={17} />
             {unreadNotifications > 0 && (
-              <span className="tdtu-badge-num">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>
+              <span className="tdtu-badge-num">
+                {unreadNotifications > 99 ? "99+" : unreadNotifications}
+              </span>
             )}
           </button>
 
@@ -427,7 +492,13 @@ export function AppShell() {
               )}
               <span
                 className={`tdtu-online-dot is-${presence}`}
-                title={presence === "online" ? "Đang trực tuyến" : presence === "connecting" ? "Đang kết nối lại" : "Ngoại tuyến"}
+                title={
+                  presence === "online"
+                    ? "Đang trực tuyến"
+                    : presence === "connecting"
+                      ? "Đang kết nối lại"
+                      : "Ngoại tuyến"
+                }
               />
             </button>
 
@@ -437,7 +508,9 @@ export function AppShell() {
                   {user?.avatarUrl ? (
                     <img src={user.avatarUrl} alt="" className="tdtu-avatar-img is-lg" />
                   ) : (
-                    <span className="tdtu-avatar-img is-lg">{displayName.charAt(0).toUpperCase()}</span>
+                    <span className="tdtu-avatar-img is-lg">
+                      {displayName.charAt(0).toUpperCase()}
+                    </span>
                   )}
                   <div>
                     <strong>{displayName}</strong>
@@ -508,8 +581,10 @@ export function AppShell() {
               <span className="network-reconnect-dot" />
               <span className="network-reconnect-text">
                 {connectionStatus === "connecting" && "Đang kết nối tới máy chủ thời gian thực..."}
-                {connectionStatus === "reconnecting" && "Mất kết nối mạng. Đang tự động kết nối lại..."}
-                {connectionStatus === "disconnected" && "Mất kết nối với máy chủ. Vui lòng kiểm tra mạng."}
+                {connectionStatus === "reconnecting" &&
+                  "Mất kết nối mạng. Đang tự động kết nối lại..."}
+                {connectionStatus === "disconnected" &&
+                  "Mất kết nối với máy chủ. Vui lòng kiểm tra mạng."}
               </span>
               <button
                 type="button"
@@ -526,9 +601,7 @@ export function AppShell() {
             id="main-content"
             className={`editorial-main-content view-${activeView} ${isWorkspaceScope ? "is-workspace-scope" : ""}`}
           >
-            <div className="view-transition-wrapper">
-              {renderPage()}
-            </div>
+            <div className="view-transition-wrapper">{renderPage()}</div>
           </main>
         </div>
       </div>

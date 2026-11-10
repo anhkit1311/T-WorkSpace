@@ -67,7 +67,11 @@ export type MeetingScheduleItem = {
 };
 
 /** Who to invite when saving a schedule: people of the group, a whole class (group) or unit. */
-export type MeetingInviteInput = { userIds?: string[]; workspaceIds?: string[]; unitIds?: string[] };
+export type MeetingInviteInput = {
+  userIds?: string[];
+  workspaceIds?: string[];
+  unitIds?: string[];
+};
 
 /** A meeting that ran or is running (ended_at null), for the "Họp" week view. */
 export type MeetingCalendarSession = {
@@ -85,7 +89,10 @@ export type MeetingCalendarSession = {
   people: string[];
 };
 
-export type MeetingCalendar = { schedules: MeetingScheduleItem[]; sessions: MeetingCalendarSession[] };
+export type MeetingCalendar = {
+  schedules: MeetingScheduleItem[];
+  sessions: MeetingCalendarSession[];
+};
 
 /** NV-MT1: invitation, change, cancellation or 15-minute reminder of a scheduled meeting. */
 export type MeetingScheduleNotice = {
@@ -164,7 +171,12 @@ export type ChannelItem = {
   kind?: "workspace" | "direct";
 };
 
-export type DirectUserItem = { userId: string; displayName: string; email: string; userCode?: string | null };
+export type DirectUserItem = {
+  userId: string;
+  displayName: string;
+  email: string;
+  userCode?: string | null;
+};
 
 /** A file sent in a direct conversation, newest first, for the contact panel. */
 export type DirectFileItem = {
@@ -269,13 +281,13 @@ export type ConsumerOptions = {
 };
 
 export type QosMetrics = {
-  sendBitrate?:number|null;
-  receiveBitrate?:number|null;
-  selectedCandidatePairs?:string[];
+  sendBitrate?: number | null;
+  receiveBitrate?: number | null;
+  selectedCandidatePairs?: string[];
   /** Selected path, e.g. "udp", "tcp", "relay/tls": TCP or relay makes voice choppy. */
-  transportPath?:string|null;
+  transportPath?: string | null;
   /** % of received audio the browser had to conceal (the audible choppiness). */
-  audioConcealed?:number|null;
+  audioConcealed?: number | null;
   rtt: number | null;
   packetLoss: number | null;
   bitrate: number | null;
@@ -325,7 +337,7 @@ export interface TaskDetail extends TaskItem {
     createdAt: string;
   }[];
 }
-export type {ClientToServerEvents,ServerToClientEvents} from './socket.js';
+export type { ClientToServerEvents, ServerToClientEvents } from "./socket.js";
 export interface MeetingState {
   id: string;
   channelId: string;
@@ -386,12 +398,28 @@ export interface MeetingOutcomes {
   summaryMessageId: string | null;
 }
 export interface HomeSummary {
- tasks:{id:string;title:string;status:'todo'|'doing';priority:'low'|'normal'|'high'|'urgent';dueAt:string|null;channelId:string;channelName:string;workspaceId:string}[];
- meetings:MeetingScheduleItem[];
- unreadNotifications:number;
- /** Unread messages in text channels (same rule as the channel list badge). */
- unreadMessages:number;
- unreadChannels:{channelId:string;channelName:string;workspaceId:string;workspaceName:string;unreadCount:number;lastMessageAt:string}[];
+  tasks: {
+    id: string;
+    title: string;
+    status: "todo" | "doing";
+    priority: "low" | "normal" | "high" | "urgent";
+    dueAt: string | null;
+    channelId: string;
+    channelName: string;
+    workspaceId: string;
+  }[];
+  meetings: MeetingScheduleItem[];
+  unreadNotifications: number;
+  /** Unread messages in text channels (same rule as the channel list badge). */
+  unreadMessages: number;
+  unreadChannels: {
+    channelId: string;
+    channelName: string;
+    workspaceId: string;
+    workspaceName: string;
+    unreadCount: number;
+    lastMessageAt: string;
+  }[];
 }
 
 export interface WorkspaceFileItem {
@@ -499,4 +527,3 @@ export interface AnnouncementPublisher {
   grantedAt: string;
   grantedBy?: string | null;
 }
-

@@ -6,7 +6,12 @@ import { useSocket } from "../../app/providers/SocketContext";
 import { formatFileSize } from "../../shared/lib/file-size";
 import { Icon } from "../../shared/ui/Icon";
 import { Button, Field, Modal } from "../../shared/ui/Primitives";
-import { getAttachmentBlobApi, getChannelsApi, getWorkspacesApi, uploadAttachmentApi } from "../chat/api";
+import {
+  getAttachmentBlobApi,
+  getChannelsApi,
+  getWorkspacesApi,
+  uploadAttachmentApi,
+} from "../chat/api";
 import { governanceApi } from "../workspaces/api";
 import { NoGroups } from "../workspaces/GroupDialogs";
 import "./files-page.css";
@@ -56,12 +61,22 @@ export function FilesPage() {
     const controller = new AbortController();
     setLoading(true);
     setError("");
-    governanceApi<{ files: WorkspaceFileItem[]; hasMore: boolean }>(accessToken, path(), "GET", undefined, controller.signal)
+    governanceApi<{ files: WorkspaceFileItem[]; hasMore: boolean }>(
+      accessToken,
+      path(),
+      "GET",
+      undefined,
+      controller.signal,
+    )
       .then((page) => {
         setFiles(page.files);
         setHasMore(page.hasMore);
       })
-      .catch((reason) => !controller.signal.aborted && setError(reason instanceof Error ? reason.message : "Không tải được tài liệu."))
+      .catch(
+        (reason) =>
+          !controller.signal.aborted &&
+          setError(reason instanceof Error ? reason.message : "Không tải được tài liệu."),
+      )
       .finally(() => !controller.signal.aborted && setLoading(false));
     return () => controller.abort();
   }, [accessToken, groupId, query, revision]);
@@ -70,7 +85,10 @@ export function FilesPage() {
     if (!accessToken || loadingMore || !files.length) return;
     setLoadingMore(true);
     try {
-      const page = await governanceApi<{ files: WorkspaceFileItem[]; hasMore: boolean }>(accessToken, path(files[files.length - 1].id));
+      const page = await governanceApi<{ files: WorkspaceFileItem[]; hasMore: boolean }>(
+        accessToken,
+        path(files[files.length - 1].id),
+      );
       setFiles((previous) => [...previous, ...page.files]);
       setHasMore(page.hasMore);
     } catch (reason) {
@@ -84,7 +102,8 @@ export function FilesPage() {
     if (!accessToken) return;
     try {
       const url = URL.createObjectURL(await getAttachmentBlobApi(accessToken, file.id));
-      if (file.mimeType.startsWith("image/") || file.mimeType === "application/pdf") window.open(url, "_blank", "noopener,noreferrer");
+      if (file.mimeType.startsWith("image/") || file.mimeType === "application/pdf")
+        window.open(url, "_blank", "noopener,noreferrer");
       else {
         const link = document.createElement("a");
         link.href = url;
@@ -95,19 +114,30 @@ export function FilesPage() {
       }
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (reason) {
-      notify("Không tải được tài liệu", reason instanceof Error ? reason.message : "Vui lòng thử lại.", "warning");
+      notify(
+        "Không tải được tài liệu",
+        reason instanceof Error ? reason.message : "Vui lòng thử lại.",
+        "warning",
+      );
     }
   };
 
   const visible = useMemo(
     () =>
       files.filter((file) =>
-        kind === "pinned" ? file.pinned : kind === "images" ? file.mimeType.startsWith("image/") : kind === "docs" ? !file.mimeType.startsWith("image/") : true,
+        kind === "pinned"
+          ? file.pinned
+          : kind === "images"
+            ? file.mimeType.startsWith("image/")
+            : kind === "docs"
+              ? !file.mimeType.startsWith("image/")
+              : true,
       ),
     [files, kind],
   );
 
-  if (groups?.length === 0) return <NoGroups text="Tài liệu gửi trong các nhóm của bạn sẽ hiện ở đây." />;
+  if (groups?.length === 0)
+    return <NoGroups text="Tài liệu gửi trong các nhóm của bạn sẽ hiện ở đây." />;
 
   return (
     <section className="ws-files-tab files-page" aria-labelledby="files-title">
@@ -119,11 +149,22 @@ export function FilesPage() {
         <div className="ws-files-toolbar__controls">
           <div className="ws-files-search">
             <Icon name="search" size={15} />
-            <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm theo tên tệp…" aria-label="Tìm tệp" />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Tìm theo tên tệp…"
+              aria-label="Tìm tệp"
+            />
           </div>
           <label className="files-page__group">
             <span className="sr-only">Nhóm</span>
-            <select value={groupId} onChange={(event) => navigate({ view: "files", workspaceId: event.target.value || undefined }, true)}>
+            <select
+              value={groupId}
+              onChange={(event) =>
+                navigate({ view: "files", workspaceId: event.target.value || undefined }, true)
+              }
+            >
               <option value="">Nhóm: Tất cả</option>
               {groups?.map((group) => (
                 <option key={group.id} value={group.id}>
@@ -141,12 +182,22 @@ export function FilesPage() {
                 ["images", "Hình ảnh"],
               ] as const
             ).map(([key, label]) => (
-              <button key={key} type="button" className={`ws-files-filter-btn ${kind === key ? "is-active" : ""}`} aria-pressed={kind === key} onClick={() => setKind(key)}>
+              <button
+                key={key}
+                type="button"
+                className={`ws-files-filter-btn ${kind === key ? "is-active" : ""}`}
+                aria-pressed={kind === key}
+                onClick={() => setKind(key)}
+              >
                 {label}
               </button>
             ))}
           </div>
-          <Button icon="upload" onClick={() => setUploading(true)} disabled={!groups?.some((group) => !group.archivedAt)}>
+          <Button
+            icon="upload"
+            onClick={() => setUploading(true)}
+            disabled={!groups?.some((group) => !group.archivedAt)}
+          >
             Tải lên
           </Button>
         </div>
@@ -165,7 +216,11 @@ export function FilesPage() {
         <div className="ws-files-empty-wrap">
           <div className="ws-files-empty">
             <Icon name="folder" size={28} />
-            <h3>{files.length === 0 && !query ? "Chưa có tài liệu nào" : "Không tìm thấy tài liệu phù hợp"}</h3>
+            <h3>
+              {files.length === 0 && !query
+                ? "Chưa có tài liệu nào"
+                : "Không tìm thấy tài liệu phù hợp"}
+            </h3>
             <p>Tệp đính kèm trong kênh hoặc thẻ công việc sẽ tự động tập hợp tại đây.</p>
           </div>
         </div>
@@ -195,7 +250,13 @@ export function FilesPage() {
                     <span>{file.uploaderName}</span>
                     <span>{formatFileSize(file.fileSize)}</span>
                     <time dateTime={file.createdAt}>
-                      {new Date(file.createdAt).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" })}
+                      {new Date(file.createdAt).toLocaleString("vi-VN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })}
                     </time>
                   </div>
                 </div>
@@ -204,11 +265,23 @@ export function FilesPage() {
                     size="sm"
                     variant="text"
                     icon="message"
-                    onClick={() => navigate({ view: "chat", workspaceId: file.workspaceId, channelId: file.channelId, messageId: file.messageId ?? undefined })}
+                    onClick={() =>
+                      navigate({
+                        view: "chat",
+                        workspaceId: file.workspaceId,
+                        channelId: file.channelId,
+                        messageId: file.messageId ?? undefined,
+                      })
+                    }
                   >
                     Xem trong kênh
                   </Button>
-                  <Button size="sm" variant="secondary" icon="download" onClick={() => void open(file)}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    icon="download"
+                    onClick={() => void open(file)}
+                  >
                     Mở / Tải
                   </Button>
                 </div>
@@ -217,7 +290,12 @@ export function FilesPage() {
           </div>
           {hasMore && (
             <div className="ws-files-more">
-              <Button variant="secondary" size="sm" loading={loadingMore} onClick={() => void loadMore()}>
+              <Button
+                variant="secondary"
+                size="sm"
+                loading={loadingMore}
+                onClick={() => void loadMore()}
+              >
                 Xem thêm
               </Button>
             </div>
@@ -256,7 +334,9 @@ function UploadDialog({
 }) {
   const { accessToken } = useApp();
   const { sendMessage } = useSocket();
-  const [groupId, setGroupId] = useState(() => (groups.some((group) => group.id === defaultGroupId) ? defaultGroupId : (groups[0]?.id ?? "")));
+  const [groupId, setGroupId] = useState(() =>
+    groups.some((group) => group.id === defaultGroupId) ? defaultGroupId : (groups[0]?.id ?? ""),
+  );
   const [channels, setChannels] = useState<ChannelItem[]>([]);
   const [channelId, setChannelId] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -278,7 +358,10 @@ function UploadDialog({
         setChannels(text);
         setChannelId(text[0]?.id ?? "");
       })
-      .catch((reason) => active && setError(reason instanceof Error ? reason.message : "Không tải được kênh."));
+      .catch(
+        (reason) =>
+          active && setError(reason instanceof Error ? reason.message : "Không tải được kênh."),
+      );
     return () => {
       active = false;
     };
@@ -291,8 +374,13 @@ function UploadDialog({
     setProgress(0);
     try {
       // Retrying after a failed send reuses the uploaded file and message id, so nothing is posted twice.
-      attachmentId.current ??= (await uploadAttachmentApi(accessToken, channelId, file, setProgress)).id;
-      await sendMessage(channelId, "", { attachmentId: attachmentId.current, clientMessageId: clientMessageId.current });
+      attachmentId.current ??= (
+        await uploadAttachmentApi(accessToken, channelId, file, setProgress)
+      ).id;
+      await sendMessage(channelId, "", {
+        attachmentId: attachmentId.current,
+        clientMessageId: clientMessageId.current,
+      });
       onUploaded();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Không tải được tệp lên.");
@@ -315,7 +403,12 @@ function UploadDialog({
           <Button variant="ghost" disabled={busy} onClick={onClose}>
             Hủy
           </Button>
-          <Button icon="upload" loading={busy} disabled={!channelId || !file} onClick={() => void submit()}>
+          <Button
+            icon="upload"
+            loading={busy}
+            disabled={!channelId || !file}
+            onClick={() => void submit()}
+          >
             {busy && progress ? `Tải lên ${progress}%` : "Tải lên"}
           </Button>
         </div>
@@ -323,7 +416,11 @@ function UploadDialog({
     >
       <form className="ws-modal-form" onSubmit={(event) => void submit(event)}>
         <Field label="Nhóm">
-          <select value={groupId} disabled={busy} onChange={(event) => pick(() => setGroupId(event.target.value))}>
+          <select
+            value={groupId}
+            disabled={busy}
+            onChange={(event) => pick(() => setGroupId(event.target.value))}
+          >
             {groups.map((group) => (
               <option key={group.id} value={group.id}>
                 {group.name}
@@ -332,7 +429,11 @@ function UploadDialog({
           </select>
         </Field>
         <Field label="Kênh" hint="Tệp được gửi vào kênh này như một tin nhắn.">
-          <select value={channelId} disabled={busy || !channels.length} onChange={(event) => pick(() => setChannelId(event.target.value))}>
+          <select
+            value={channelId}
+            disabled={busy || !channels.length}
+            onChange={(event) => pick(() => setChannelId(event.target.value))}
+          >
             {channels.map((channel) => (
               <option key={channel.id} value={channel.id}>
                 #{channel.name}
@@ -341,7 +442,11 @@ function UploadDialog({
           </select>
         </Field>
         <Field label="Tệp" error={error}>
-          <input type="file" disabled={busy} onChange={(event) => pick(() => setFile(event.target.files?.[0] ?? null))} />
+          <input
+            type="file"
+            disabled={busy}
+            onChange={(event) => pick(() => setFile(event.target.files?.[0] ?? null))}
+          />
         </Field>
       </form>
     </Modal>

@@ -1,5 +1,10 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { AnnouncementCategory, CreateAnnouncementInput, HomeSummary, PortalAnnouncement } from "@doan/shared";
+import type {
+  AnnouncementCategory,
+  CreateAnnouncementInput,
+  HomeSummary,
+  PortalAnnouncement,
+} from "@doan/shared";
 import { governanceApi } from "../workspaces/api";
 import { Avatar } from "../../shared/ui/Primitives";
 import { Icon, type IconName } from "../../shared/ui/Icon";
@@ -14,7 +19,13 @@ import {
   getPublishersApi,
 } from "../announcements/api";
 import { AnnouncementDetailModal } from "../announcements/AnnouncementDetailModal";
-import { AnnouncementComposer, CATEGORIES, CATEGORY_META, FeatureCard, formatStamp } from "../announcements/AnnouncementComposer";
+import {
+  AnnouncementComposer,
+  CATEGORIES,
+  CATEGORY_META,
+  FeatureCard,
+  formatStamp,
+} from "../announcements/AnnouncementComposer";
 import { PublisherManagementModal } from "../announcements/PublisherManagementModal";
 import "./notifications.css";
 
@@ -51,7 +62,10 @@ const KINDS: { key: Kind; label: string; icon: IconName; action: string }[] = [
   { key: "meeting", label: "Họp", icon: "video", action: "Mở họp" },
   { key: "course", label: "Khóa học", icon: "graduation-cap", action: "Mở khóa học" },
 ];
-const KIND = Object.fromEntries(KINDS.map((kind) => [kind.key, kind])) as Record<Kind, (typeof KINDS)[number]>;
+const KIND = Object.fromEntries(KINDS.map((kind) => [kind.key, kind])) as Record<
+  Kind,
+  (typeof KINDS)[number]
+>;
 
 const ROLE_LABEL: Record<string, string> = {
   system_admin: "Quản trị hệ thống",
@@ -88,7 +102,8 @@ function byDay<T extends { createdAt: string }>(items: T[]) {
   return [...groups];
 }
 
-const badgeTone = (badge: string) => (badge === "Khẩn" ? "is-urgent" : badge === "Quan trọng" ? "is-important" : "is-new");
+const badgeTone = (badge: string) =>
+  badge === "Khẩn" ? "is-urgent" : badge === "Quan trọng" ? "is-important" : "is-new";
 
 export function NotificationsPage() {
   const { accessToken, navigate, notify, user } = useApp();
@@ -135,7 +150,10 @@ export function NotificationsPage() {
         setAnnError("");
       })
       .catch((reason) => {
-        if (active) setAnnError(reason instanceof Error ? reason.message : "Không thể tải danh sách thông báo.");
+        if (active)
+          setAnnError(
+            reason instanceof Error ? reason.message : "Không thể tải danh sách thông báo.",
+          );
       })
       .finally(() => {
         if (active) setAnnLoaded(true);
@@ -200,7 +218,8 @@ export function NotificationsPage() {
           }
         })
         .catch((reason) => {
-          if (active) setError(reason instanceof Error ? reason.message : "Không tải được thông báo.");
+          if (active)
+            setError(reason instanceof Error ? reason.message : "Không tải được thông báo.");
         })
         .finally(() => {
           if (active) setLoading(false);
@@ -232,11 +251,18 @@ export function NotificationsPage() {
     if (category !== "all" && item.category !== category) return false;
     if (mineOnly && item.authorId !== user?.id) return false;
     const q = query.trim().toLowerCase();
-    return !q || [item.title, item.summary, item.authorName, item.authorTitle ?? "", item.scope].some((text) => text.toLowerCase().includes(q));
+    return (
+      !q ||
+      [item.title, item.summary, item.authorName, item.authorTitle ?? "", item.scope].some((text) =>
+        text.toLowerCase().includes(q),
+      )
+    );
   });
   const selected = filtered.find((item) => item.id === selectedId) ?? filtered[0] ?? null;
   const urgent = sorted.filter((item) => item.category === "urgent");
-  const weekCount = sorted.filter((item) => Date.now() - new Date(item.createdAt).getTime() < 7 * DAY).length;
+  const weekCount = sorted.filter(
+    (item) => Date.now() - new Date(item.createdAt).getTime() < 7 * DAY,
+  ).length;
   const pinnedTop = featured?.pinned ? featured : null;
 
   const save = async (input: CreateAnnouncementInput) => {
@@ -247,7 +273,11 @@ export function NotificationsPage() {
       const res = editing
         ? await updateAnnouncementApi(accessToken, editing.id, input)
         : await createAnnouncementApi(accessToken, input);
-      notify(editing ? "Đã cập nhật thông báo" : "Đã đăng thông báo", editing ? res.item.title : "Tin đã lên Bảng tin của mọi tài khoản.", "success");
+      notify(
+        editing ? "Đã cập nhật thông báo" : "Đã đăng thông báo",
+        editing ? res.item.title : "Tin đã lên Bảng tin của mọi tài khoản.",
+        "success",
+      );
       setComposing(null);
       setSelectedId(res.item.id);
       setCategory("all");
@@ -258,13 +288,18 @@ export function NotificationsPage() {
   };
 
   const remove = async (item: PortalAnnouncement) => {
-    if (!accessToken || !window.confirm(`Xóa thông báo “${item.title}”? Không thể hoàn tác.`)) return;
+    if (!accessToken || !window.confirm(`Xóa thông báo “${item.title}”? Không thể hoàn tác.`))
+      return;
     try {
       await deleteAnnouncementApi(accessToken, item.id);
       notify("Đã xóa thông báo", item.title, "info");
       reloadAnnouncements();
     } catch (reason) {
-      notify("Không xóa được", reason instanceof Error ? reason.message : "Thử lại sau.", "warning");
+      notify(
+        "Không xóa được",
+        reason instanceof Error ? reason.message : "Thử lại sau.",
+        "warning",
+      );
     }
   };
 
@@ -275,7 +310,11 @@ export function NotificationsPage() {
       notify(item.pinned ? "Đã bỏ ghim" : "Đã ghim lên đầu Trang chủ", item.title, "info");
       reloadAnnouncements();
     } catch (reason) {
-      notify("Không cập nhật được ghim", reason instanceof Error ? reason.message : "Thử lại sau.", "warning");
+      notify(
+        "Không cập nhật được ghim",
+        reason instanceof Error ? reason.message : "Thử lại sau.",
+        "warning",
+      );
     }
   };
 
@@ -291,22 +330,34 @@ export function NotificationsPage() {
     setPage((prev) => ({
       ...prev,
       unreadCount: 0,
-      items: prev.items.map((item) => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })),
+      items: prev.items.map((item) => ({
+        ...item,
+        readAt: item.readAt ?? new Date().toISOString(),
+      })),
     }));
   };
 
   const openNote = (item: NotificationItem) => {
     if (!item.readAt && accessToken) {
-      void governanceApi(accessToken, "notifications/read", "POST", { id: item.id }).catch(() => undefined);
+      void governanceApi(accessToken, "notifications/read", "POST", { id: item.id }).catch(
+        () => undefined,
+      );
       setPage((prev) => ({
         ...prev,
         unreadCount: Math.max(0, prev.unreadCount - 1),
-        items: prev.items.map((note) => (note.id === item.id ? { ...note, readAt: new Date().toISOString() } : note)),
+        items: prev.items.map((note) =>
+          note.id === item.id ? { ...note, readAt: new Date().toISOString() } : note,
+        ),
       }));
     }
     if (item.link) navigate(item.link);
     else if (item.workspaceId && item.channelId && item.messageId)
-      navigate({ view: "chat", workspaceId: item.workspaceId, channelId: item.channelId, messageId: item.messageId });
+      navigate({
+        view: "chat",
+        workspaceId: item.workspaceId,
+        channelId: item.channelId,
+        messageId: item.messageId,
+      });
   };
 
   const loadMore = async () => {
@@ -314,10 +365,17 @@ export function NotificationsPage() {
     if (!accessToken || !last) return;
     setLoadingMore(true);
     try {
-      const next = await governanceApi<NotificationPage>(accessToken, `notifications?before=${last.id}`);
+      const next = await governanceApi<NotificationPage>(
+        accessToken,
+        `notifications?before=${last.id}`,
+      );
       setPage((prev) => ({ ...next, items: [...prev.items, ...next.items] }));
     } catch (reason) {
-      notify("Không tải thêm được", reason instanceof Error ? reason.message : "Thử lại sau.", "warning");
+      notify(
+        "Không tải thêm được",
+        reason instanceof Error ? reason.message : "Thử lại sau.",
+        "warning",
+      );
     } finally {
       setLoadingMore(false);
     }
@@ -339,9 +397,16 @@ export function NotificationsPage() {
     );
 
   const notes = page.items.filter((item) =>
-    inboxFilter === "all" ? true : inboxFilter === "unread" ? !item.readAt : item.kind === inboxFilter,
+    inboxFilter === "all"
+      ? true
+      : inboxFilter === "unread"
+        ? !item.readAt
+        : item.kind === inboxFilter,
   );
-  const latestNews = [...urgent.slice(0, 1), ...sorted.filter((item) => item.category !== "urgent")].slice(0, 2);
+  const latestNews = [
+    ...urgent.slice(0, 1),
+    ...sorted.filter((item) => item.category !== "urgent"),
+  ].slice(0, 2);
   const unreadMessages = unreadChannels.reduce((sum, channel) => sum + channel.unreadCount, 0);
 
   return (
@@ -350,16 +415,20 @@ export function NotificationsPage() {
         <div className="nf-head__title">
           <div className="nf-eyebrow">
             <span className="nf-led" />
-            {view === "board" ? "Bảng tin toàn trường · cập nhật tức thì" : "Cá nhân · nhắc tên, tin riêng, họp, khóa học"}
+            {view === "board"
+              ? "Bảng tin toàn trường · cập nhật tức thì"
+              : "Cá nhân · nhắc tên, tin riêng, họp, khóa học"}
           </div>
           <h1>Thông báo</h1>
         </div>
         <div className="nf-seg" role="group" aria-label="Khu vực">
           <button type="button" aria-pressed={view === "board"} onClick={() => setTab("board")}>
-            {canPublish ? "Bảng tin đã đăng" : "Bảng tin trường"} <small>{announcements.length}</small>
+            {canPublish ? "Bảng tin đã đăng" : "Bảng tin trường"}{" "}
+            <small>{announcements.length}</small>
           </button>
           <button type="button" aria-pressed={view === "inbox"} onClick={() => setTab("inbox")}>
-            Hộp thông báo của tôi {page.unreadCount > 0 && <small className="is-hot">{page.unreadCount}</small>}
+            Hộp thông báo của tôi{" "}
+            {page.unreadCount > 0 && <small className="is-hot">{page.unreadCount}</small>}
           </button>
         </div>
         {view === "board" ? (
@@ -371,14 +440,23 @@ export function NotificationsPage() {
               </button>
             )}
             {canPublish && (
-              <button type="button" className="nf-btn is-primary" onClick={() => setComposing({ item: null })}>
+              <button
+                type="button"
+                className="nf-btn is-primary"
+                onClick={() => setComposing({ item: null })}
+              >
                 <Icon name="plus" size={15} />
                 Đăng thông báo
               </button>
             )}
           </>
         ) : (
-          <button type="button" className="nf-btn" disabled={!page.unreadCount} onClick={() => void markAllRead()}>
+          <button
+            type="button"
+            className="nf-btn"
+            disabled={!page.unreadCount}
+            onClick={() => void markAllRead()}
+          >
             <Icon name="check" size={15} />
             Đánh dấu đã đọc tất cả
           </button>
@@ -411,7 +489,11 @@ export function NotificationsPage() {
                   <span className="nf-chip is-dark">{CATEGORY_META[pinnedTop.category].short}</span>
                   <b>{pinnedTop.title}</b>
                   {pinnedTop.canManage && (
-                    <button type="button" className="nf-btn is-dark is-sm" onClick={() => void togglePin(pinnedTop)}>
+                    <button
+                      type="button"
+                      className="nf-btn is-dark is-sm"
+                      onClick={() => void togglePin(pinnedTop)}
+                    >
                       Bỏ ghim
                     </button>
                   )}
@@ -420,13 +502,21 @@ export function NotificationsPage() {
                 <b className="nf-pinned is-empty">Chưa ghim tin nào</b>
               )}
               <span className="nf-unit__sub">
-                {pinnedTop ? "Tin ghim mới nhất hiện ở ô nổi bật trên Bảng tin của mọi tài khoản" : "Ô nổi bật đang hiện tin mới nhất"}
+                {pinnedTop
+                  ? "Tin ghim mới nhất hiện ở ô nổi bật trên Bảng tin của mọi tài khoản"
+                  : "Ô nổi bật đang hiện tin mới nhất"}
               </span>
             </div>
             <div className="nf-unit">
-              <span className="nf-unit__label">{canPublish ? "Được cấp quyền đăng" : "Quyền của bạn"}</span>
+              <span className="nf-unit__label">
+                {canPublish ? "Được cấp quyền đăng" : "Quyền của bạn"}
+              </span>
               <b className="nf-big">{canPublish ? (publisherCount ?? "–") : "Chỉ xem"}</b>
-              <span className="nf-unit__sub">{canPublish ? "Ngoài Quản trị và Giáo vụ khoa" : "Tài khoản của bạn chỉ xem bảng tin"}</span>
+              <span className="nf-unit__sub">
+                {canPublish
+                  ? "Ngoài Quản trị và Giáo vụ khoa"
+                  : "Tài khoản của bạn chỉ xem bảng tin"}
+              </span>
             </div>
           </section>
 
@@ -434,7 +524,12 @@ export function NotificationsPage() {
             <section className="nf-card nf-list" aria-label="Danh sách thông báo">
               <div className="nf-toolbar">
                 <div className="nf-filters" role="group" aria-label="Lọc theo danh mục">
-                  <button type="button" className="nf-fchip" aria-pressed={category === "all"} onClick={() => setCategory("all")}>
+                  <button
+                    type="button"
+                    className="nf-fchip"
+                    aria-pressed={category === "all"}
+                    onClick={() => setCategory("all")}
+                  >
                     Tất cả <small>{announcements.length}</small>
                   </button>
                   {CATEGORIES.map((key) => (
@@ -446,13 +541,19 @@ export function NotificationsPage() {
                       onClick={() => setCategory(key)}
                     >
                       <i />
-                      {CATEGORY_META[key].short} <small>{announcements.filter((item) => item.category === key).length}</small>
+                      {CATEGORY_META[key].short}{" "}
+                      <small>{announcements.filter((item) => item.category === key).length}</small>
                     </button>
                   ))}
                   {canPublish && (
                     <>
                       <span className="nf-sep" aria-hidden="true" />
-                      <button type="button" className="nf-fchip" aria-pressed={mineOnly} onClick={() => setMineOnly((value) => !value)}>
+                      <button
+                        type="button"
+                        className="nf-fchip"
+                        aria-pressed={mineOnly}
+                        onClick={() => setMineOnly((value) => !value)}
+                      >
                         Tôi đăng
                       </button>
                     </>
@@ -479,8 +580,16 @@ export function NotificationsPage() {
               ) : !filtered.length ? (
                 <div className="nf-empty">
                   <Icon name="megaphone" size={26} />
-                  <b>{announcements.length ? "Không có thông báo khớp bộ lọc" : "Chưa có thông báo nào"}</b>
-                  <span>{canPublish ? "Bấm “Đăng thông báo” để gửi tin lên Bảng tin." : "Thông báo mới của Nhà trường sẽ hiện ở đây."}</span>
+                  <b>
+                    {announcements.length
+                      ? "Không có thông báo khớp bộ lọc"
+                      : "Chưa có thông báo nào"}
+                  </b>
+                  <span>
+                    {canPublish
+                      ? "Bấm “Đăng thông báo” để gửi tin lên Bảng tin."
+                      : "Thông báo mới của Nhà trường sẽ hiện ở đây."}
+                  </span>
                 </div>
               ) : (
                 <div className="nf-rows">
@@ -488,7 +597,10 @@ export function NotificationsPage() {
                     <Fragment key={label}>
                       <div className="nf-group">{label}</div>
                       {items.map((item) => (
-                        <div key={item.id} className={`nf-row${selected?.id === item.id ? " is-selected" : ""}`}>
+                        <div
+                          key={item.id}
+                          className={`nf-row${selected?.id === item.id ? " is-selected" : ""}`}
+                        >
                           <span className={`nf-dot is-${item.category}`} />
                           <button
                             type="button"
@@ -499,12 +611,20 @@ export function NotificationsPage() {
                             <span className="nf-row__title">
                               {item.pinned && <Icon name="pin" size={13} />}
                               <b>{item.title}</b>
-                              <span className={`nf-chip is-${item.category}`}>{CATEGORY_META[item.category].short}</span>
-                              {item.badge && <span className={`nf-chip ${badgeTone(item.badge)}`}>{item.badge}</span>}
+                              <span className={`nf-chip is-${item.category}`}>
+                                {CATEGORY_META[item.category].short}
+                              </span>
+                              {item.badge && (
+                                <span className={`nf-chip ${badgeTone(item.badge)}`}>
+                                  {item.badge}
+                                </span>
+                              )}
                             </span>
                             <span className="nf-row__summary">{item.summary}</span>
                             <span className="nf-row__meta">
-                              {[item.authorName, item.authorTitle, `Phạm vi: ${item.scope}`].filter(Boolean).join(" · ")}
+                              {[item.authorName, item.authorTitle, `Phạm vi: ${item.scope}`]
+                                .filter(Boolean)
+                                .join(" · ")}
                             </span>
                           </button>
                           <div className="nf-row__side">
@@ -517,8 +637,17 @@ export function NotificationsPage() {
                                   active={item.pinned}
                                   onClick={() => void togglePin(item)}
                                 />
-                                <IconButton icon="edit" label="Sửa" onClick={() => setComposing({ item })} />
-                                <IconButton icon="trash" label="Xóa" danger onClick={() => void remove(item)} />
+                                <IconButton
+                                  icon="edit"
+                                  label="Sửa"
+                                  onClick={() => setComposing({ item })}
+                                />
+                                <IconButton
+                                  icon="trash"
+                                  label="Xóa"
+                                  danger
+                                  onClick={() => void remove(item)}
+                                />
                               </div>
                             )}
                           </div>
@@ -536,7 +665,11 @@ export function NotificationsPage() {
                   <div className="nf-side__head">
                     <h2>Trên Trang chủ</h2>
                     <span className="nf-mono">
-                      {selected.id === featured?.id ? (selected.pinned ? "Ô nổi bật · đang ghim" : "Ô nổi bật · tin mới nhất") : "Xem trước thẻ"}
+                      {selected.id === featured?.id
+                        ? selected.pinned
+                          ? "Ô nổi bật · đang ghim"
+                          : "Ô nổi bật · tin mới nhất"
+                        : "Xem trước thẻ"}
                     </span>
                   </div>
                   <FeatureCard item={selected} onOpen={() => setDetail(selected)} />
@@ -564,7 +697,11 @@ export function NotificationsPage() {
                   </dl>
                   <div className="nf-details__actions">
                     {selected.canManage && (
-                      <button type="button" className="nf-btn is-ink" onClick={() => setComposing({ item: selected })}>
+                      <button
+                        type="button"
+                        className="nf-btn is-ink"
+                        onClick={() => setComposing({ item: selected })}
+                      >
                         <Icon name="edit" size={14} />
                         Sửa
                       </button>
@@ -573,7 +710,13 @@ export function NotificationsPage() {
                       Xem toàn văn
                     </button>
                     {selected.canManage && (
-                      <button type="button" className="nf-btn is-danger" aria-label="Xóa thông báo" title="Xóa thông báo" onClick={() => void remove(selected)}>
+                      <button
+                        type="button"
+                        className="nf-btn is-danger"
+                        aria-label="Xóa thông báo"
+                        title="Xóa thông báo"
+                        onClick={() => void remove(selected)}
+                      >
                         <Icon name="trash" size={14} />
                       </button>
                     )}
@@ -586,8 +729,21 @@ export function NotificationsPage() {
       ) : (
         <div className="nf-inbox">
           <nav className="nf-kinds" aria-label="Lọc thông báo">
-            <KindButton icon="bell" label="Tất cả" count={`${page.items.length}${page.hasMore ? "+" : ""}`} active={inboxFilter === "all"} onClick={() => setInboxFilter("all")} />
-            <KindButton icon="eye" label="Chưa đọc" count={page.unreadCount || ""} hot active={inboxFilter === "unread"} onClick={() => setInboxFilter("unread")} />
+            <KindButton
+              icon="bell"
+              label="Tất cả"
+              count={`${page.items.length}${page.hasMore ? "+" : ""}`}
+              active={inboxFilter === "all"}
+              onClick={() => setInboxFilter("all")}
+            />
+            <KindButton
+              icon="eye"
+              label="Chưa đọc"
+              count={page.unreadCount || ""}
+              hot
+              active={inboxFilter === "unread"}
+              onClick={() => setInboxFilter("unread")}
+            />
             <div className="nf-kinds__label">Theo loại</div>
             {KINDS.map((kind) => (
               <KindButton
@@ -599,13 +755,20 @@ export function NotificationsPage() {
                 onClick={() => setInboxFilter(kind.key)}
               />
             ))}
-            <p className="nf-kinds__note">Mở một thông báo sẽ đưa bạn tới đúng tin nhắn, cuộc họp hoặc khóa học và đánh dấu đã đọc.</p>
+            <p className="nf-kinds__note">
+              Mở một thông báo sẽ đưa bạn tới đúng tin nhắn, cuộc họp hoặc khóa học và đánh dấu đã
+              đọc.
+            </p>
           </nav>
 
           <section className="nf-card nf-feed" aria-label="Danh sách thông báo cá nhân">
             <div className="nf-feed__head">
               <h2>
-                {inboxFilter === "all" ? "Tất cả" : inboxFilter === "unread" ? "Chưa đọc" : KIND[inboxFilter].label}
+                {inboxFilter === "all"
+                  ? "Tất cả"
+                  : inboxFilter === "unread"
+                    ? "Chưa đọc"
+                    : KIND[inboxFilter].label}
                 <span className="nf-mono"> · {page.unreadCount} chưa đọc</span>
               </h2>
             </div>
@@ -618,8 +781,15 @@ export function NotificationsPage() {
             ) : !notes.length ? (
               <div className="nf-empty">
                 <Icon name="check" size={26} />
-                <b>{inboxFilter === "all" ? "Bạn đã xem hết thông báo" : "Không có thông báo nào ở mục này"}</b>
-                <span>Khi ai đó nhắc tên, trả lời bạn, mời họp hoặc ghi danh bạn vào khóa học, thông báo sẽ hiện ở đây.</span>
+                <b>
+                  {inboxFilter === "all"
+                    ? "Bạn đã xem hết thông báo"
+                    : "Không có thông báo nào ở mục này"}
+                </b>
+                <span>
+                  Khi ai đó nhắc tên, trả lời bạn, mời họp hoặc ghi danh bạn vào khóa học, thông báo
+                  sẽ hiện ở đây.
+                </span>
               </div>
             ) : (
               <div className="nf-rows">
@@ -630,8 +800,16 @@ export function NotificationsPage() {
                       const kind = KIND[item.kind];
                       const chat = !item.title;
                       return (
-                        <button key={item.id} type="button" className={`nf-note${item.readAt ? "" : " is-unread"}`} onClick={() => openNote(item)}>
-                          <span className="nf-note__dot" aria-label={item.readAt ? undefined : "Chưa đọc"} />
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={`nf-note${item.readAt ? "" : " is-unread"}`}
+                          onClick={() => openNote(item)}
+                        >
+                          <span
+                            className="nf-note__dot"
+                            aria-label={item.readAt ? undefined : "Chưa đọc"}
+                          />
                           <span className={`nf-note__kind is-${item.kind}`}>
                             <Icon name={kind.icon} size={17} />
                             {chat && item.authorName && <Avatar name={item.authorName} size="xs" />}
@@ -644,7 +822,8 @@ export function NotificationsPage() {
                                 </>
                               ) : item.kind === "thread" ? (
                                 <>
-                                  <b>{item.authorName}</b> trả lời trong luồng ở <b>#{item.channelName}</b>
+                                  <b>{item.authorName}</b> trả lời trong luồng ở{" "}
+                                  <b>#{item.channelName}</b>
                                 </>
                               ) : item.kind === "direct" ? (
                                 <>
@@ -654,12 +833,24 @@ export function NotificationsPage() {
                                 <b>{item.title}</b>
                               )}
                             </span>
-                            {item.content && <span className={chat ? "nf-note__quote" : "nf-note__text"}>{item.content}</span>}
-                            <span className="nf-note__meta">{chat && item.channelName && item.kind !== "direct" ? `${kind.label} · #${item.channelName}` : kind.label}</span>
+                            {item.content && (
+                              <span className={chat ? "nf-note__quote" : "nf-note__text"}>
+                                {item.content}
+                              </span>
+                            )}
+                            <span className="nf-note__meta">
+                              {chat && item.channelName && item.kind !== "direct"
+                                ? `${kind.label} · #${item.channelName}`
+                                : kind.label}
+                            </span>
                           </span>
                           <span className="nf-note__side">
                             <time dateTime={item.createdAt}>{timeLabel(item.createdAt)}</time>
-                            <span className={`nf-btn is-sm${!item.readAt && item.kind === "meeting" ? " is-primary" : ""}`}>{kind.action}</span>
+                            <span
+                              className={`nf-btn is-sm${!item.readAt && item.kind === "meeting" ? " is-primary" : ""}`}
+                            >
+                              {kind.action}
+                            </span>
                           </span>
                         </button>
                       );
@@ -667,7 +858,12 @@ export function NotificationsPage() {
                   </Fragment>
                 ))}
                 {page.hasMore && (
-                  <button type="button" className="nf-more" disabled={loadingMore} onClick={() => void loadMore()}>
+                  <button
+                    type="button"
+                    className="nf-more"
+                    disabled={loadingMore}
+                    onClick={() => void loadMore()}
+                  >
                     {loadingMore ? "Đang tải…" : "Tải thêm thông báo cũ hơn"}
                   </button>
                 )}
@@ -688,7 +884,13 @@ export function NotificationsPage() {
                     key={channel.channelId}
                     type="button"
                     className="nf-channel"
-                    onClick={() => navigate({ view: "chat", workspaceId: channel.workspaceId, channelId: channel.channelId })}
+                    onClick={() =>
+                      navigate({
+                        view: "chat",
+                        workspaceId: channel.workspaceId,
+                        channelId: channel.channelId,
+                      })
+                    }
                   >
                     <span>
                       #{channel.channelName}
@@ -700,7 +902,11 @@ export function NotificationsPage() {
               ) : (
                 <p className="nf-rack__empty">Không còn tin nhắn nhóm chưa đọc.</p>
               )}
-              <button type="button" className="nf-btn is-dark is-sm" onClick={() => navigate({ view: "chat" })}>
+              <button
+                type="button"
+                className="nf-btn is-dark is-sm"
+                onClick={() => navigate({ view: "chat" })}
+              >
                 Mở Tin nhắn →
               </button>
             </section>
@@ -712,7 +918,12 @@ export function NotificationsPage() {
               </div>
               {latestNews.length ? (
                 latestNews.map((item) => (
-                  <button key={item.id} type="button" className={`nf-news__item is-${item.category}`} onClick={() => setDetail(item)}>
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`nf-news__item is-${item.category}`}
+                    onClick={() => setDetail(item)}
+                  >
                     <span className={`nf-led is-${item.category}`} />
                     <span>
                       <b>
@@ -748,7 +959,19 @@ export function NotificationsPage() {
   );
 }
 
-function IconButton({ icon, label, active, danger, onClick }: { icon: IconName; label: string; active?: boolean; danger?: boolean; onClick: () => void }) {
+function IconButton({
+  icon,
+  label,
+  active,
+  danger,
+  onClick,
+}: {
+  icon: IconName;
+  label: string;
+  active?: boolean;
+  danger?: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
@@ -763,7 +986,21 @@ function IconButton({ icon, label, active, danger, onClick }: { icon: IconName; 
   );
 }
 
-function KindButton({ icon, label, count, hot, active, onClick }: { icon: IconName; label: string; count: ReactNode; hot?: boolean; active: boolean; onClick: () => void }) {
+function KindButton({
+  icon,
+  label,
+  count,
+  hot,
+  active,
+  onClick,
+}: {
+  icon: IconName;
+  label: string;
+  count: ReactNode;
+  hot?: boolean;
+  active: boolean;
+  onClick: () => void;
+}) {
   return (
     <button type="button" aria-pressed={active} onClick={onClick}>
       <Icon name={icon} size={16} />

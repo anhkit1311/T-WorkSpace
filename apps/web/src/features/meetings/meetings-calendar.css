@@ -5,17 +5,17 @@
 
 /* Tokens on the page wrapper: the hub, the pre-join screen and the room all use the LEDs. */
 .meetings-page {
-  --mt-ink: #22272E;
-  --mt-rack: #1B1F24;
-  --mt-unit: #2D333B;
-  --mt-line: #3A424C;
-  --mt-on-ink: #E6EDF3;
-  --mt-ink-soft: #C9D1D9;
-  --mt-ink-muted: #9DA7B3;
+  --mt-ink: #22272e;
+  --mt-rack: #1b1f24;
+  --mt-unit: #2d333b;
+  --mt-line: #3a424c;
+  --mt-on-ink: #e6edf3;
+  --mt-ink-soft: #c9d1d9;
+  --mt-ink-muted: #9da7b3;
   --led-green: #059669;
-  --led-red: #C8102E;
-  --led-amber: #D97706;
-  --led-off: #9CA3AF;
+  --led-red: #c8102e;
+  --led-amber: #d97706;
+  --led-off: #9ca3af;
 }
 .meetings-calendar {
   --hour-height: 40px;
@@ -29,10 +29,10 @@
 .pj-stage,
 .pj-checks,
 .meeting-room-active {
-  --led-green: #34D399;
-  --led-red: #F87171;
-  --led-amber: #FBBF24;
-  --led-off: #8B949E;
+  --led-green: #34d399;
+  --led-red: #f87171;
+  --led-amber: #fbbf24;
+  --led-off: #8b949e;
 }
 
 .mt-led {
@@ -45,8 +45,12 @@
   background: var(--led);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--led) 20%, transparent);
 }
-.mt-led.tone-red { --led: var(--led-red); }
-.mt-led.tone-amber { --led: var(--led-amber); }
+.mt-led.tone-red {
+  --led: var(--led-red);
+}
+.mt-led.tone-amber {
+  --led: var(--led-amber);
+}
 .mt-led.is-off {
   --led: var(--led-off);
   box-shadow: none;
@@ -55,11 +59,17 @@
   animation: mt-pulse 1.6s ease-out infinite;
 }
 @keyframes mt-pulse {
-  from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--led) 55%, transparent); }
-  to { box-shadow: 0 0 0 7px transparent; }
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--led) 55%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 7px transparent;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .mt-led.is-pulse { animation: none; }
+  .mt-led.is-pulse {
+    animation: none;
+  }
 }
 
 /* Page head */
@@ -189,7 +199,7 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #6EE7B7;
+  color: #6ee7b7;
 }
 .mt-rack__head span {
   font-family: var(--font-mono);
@@ -439,7 +449,7 @@
   color: #fff;
 }
 .mt-chip-btn.is-active small {
-  color: #6EE7B7;
+  color: #6ee7b7;
 }
 .mt-weeknav {
   display: flex;
@@ -487,11 +497,11 @@
   border-radius: 10px;
 }
 .mt-ev:hover {
-  background: var(--surface-soft, #F6F8FA);
+  background: var(--surface-soft, #f6f8fa);
 }
 .mt-ev.is-selected {
   background: var(--tint-green-bg);
-  box-shadow: inset 0 0 0 1px #A7F3D0;
+  box-shadow: inset 0 0 0 1px #a7f3d0;
 }
 .mt-ev__time b {
   display: block;
@@ -683,7 +693,7 @@
   color: var(--mt-ink-muted);
 }
 .mt-cal__day.is-today i:not(.is-empty) {
-  background: #6EE7B7;
+  background: #6ee7b7;
 }
 .mt-rooms,
 .mt-minutes {
@@ -759,7 +769,7 @@
   place-items: center;
   border-radius: 9px;
   background: var(--mt-ink);
-  color: #6EE7B7;
+  color: #6ee7b7;
 }
 .mt-empty {
   display: grid;
@@ -840,7 +850,11 @@
 .meeting-week__day {
   position: relative;
   border-left: 1px solid var(--border);
-  background: repeating-linear-gradient(to bottom, var(--border) 0 1px, transparent 1px var(--hour-height));
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--border) 0 1px,
+    transparent 1px var(--hour-height)
+  );
 }
 
 .meeting-week__day.is-today {
@@ -1045,7 +1059,6 @@
 }
 
 @media (max-width: 768px) {
-
   .meeting-week {
     display: none;
   }

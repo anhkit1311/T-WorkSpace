@@ -43,20 +43,45 @@ export class LessonMediaService {
 
   async upload(userId: string, lessonId: string, request: IncomingMessage) {
     const { lesson } = await this.courses.lessonCourse(userId, lessonId, "manage");
-    if (lesson.kind !== "video" && lesson.kind !== "document") throw invalid("Chỉ bài video hoặc tài liệu có tệp đính kèm.");
-    if (lesson.recordingId) throw conflict("RECORDING_LESSON", "Bài xem lại dùng bản ghi của buổi live.");
-    if (lesson.mediaStatus === "processing") throw conflict("PROCESSING", "Video trước vẫn đang được xử lý.");
-    const type = String(request.headers["content-type"] ?? "").split(";")[0].trim().toLowerCase();
-    if (lesson.kind === "video" ? !type.startsWith("video/") && !type.startsWith("audio/") : type !== "application/pdf")
-      throw new HttpError(415, "UNSUPPORTED_TYPE", lesson.kind === "video" ? "Hãy tải lên một tệp video hoặc âm thanh." : "Tài liệu phải là tệp PDF.");
+    if (lesson.kind !== "video" && lesson.kind !== "document")
+      throw invalid("Chỉ bài video hoặc tài liệu có tệp đính kèm.");
+    if (lesson.recordingId)
+      throw conflict("RECORDING_LESSON", "Bài xem lại dùng bản ghi của buổi live.");
+    if (lesson.mediaStatus === "processing")
+      throw conflict("PROCESSING", "Video trước vẫn đang được xử lý.");
+    const type = String(request.headers["content-type"] ?? "")
+      .split(";")[0]
+      .trim()
+      .toLowerCase();
+    if (
+      lesson.kind === "video"
+        ? !type.startsWith("video/") && !type.startsWith("audio/")
+        : type !== "application/pdf"
+    )
+      throw new HttpError(
+        415,
+        "UNSUPPORTED_TYPE",
+        lesson.kind === "video"
+          ? "Hãy tải lên một tệp video hoặc âm thanh."
+          : "Tài liệu phải là tệp PDF.",
+      );
     const limit = LIMITS[lesson.kind];
-    if (Number(request.headers["content-length"] ?? 0) > limit) throw new HttpError(413, "FILE_TOO_LARGE", "Tệp quá lớn.");
-    const name = decodeURIComponent(String(request.headers["x-file-name"] ?? "")).replace(/[\\/\r\n]/g, "").slice(0, 200) || null;
+    if (Number(request.headers["content-length"] ?? 0) > limit)
+      throw new HttpError(413, "FILE_TOO_LARGE", "Tệp quá lớn.");
+    const name =
+      decodeURIComponent(String(request.headers["x-file-name"] ?? ""))
+        .replace(/[\\/\r\n]/g, "")
+        .slice(0, 200) || null;
 
     const dir = path.join(config.mediaDir, dirOf(lesson.id));
     await rm(dir, { recursive: true, force: true });
     await mkdir(dir, { recursive: true });
-    const file = lesson.kind === "document" ? "document.pdf" : type.startsWith("audio/") ? "source.audio" : "source";
+    const file =
+      lesson.kind === "document"
+        ? "document.pdf"
+        : type.startsWith("audio/")
+          ? "source.audio"
+          : "source";
     let size = 0;
     const limiter = new Transform({
       transform(chunk: Buffer, _encoding, callback) {
@@ -91,17 +116,30 @@ export class LessonMediaService {
       try {
         const source = await this.sourceOf(lessonId);
         if (!source) throw new Error("source missing");
-        await transcodeToHls({ input: `${dir}/${source}`, out: `${dir}/index`, video: source === "source", audio: "auto" });
-        const seconds = playlistSeconds(await readFile(path.join(config.mediaDir, dir, "index.m3u8"), "utf8"));
+        await transcodeToHls({
+          input: `${dir}/${source}`,
+          out: `${dir}/index`,
+          video: source === "source",
+          audio: "auto",
+        });
+        const seconds = playlistSeconds(
+          await readFile(path.join(config.mediaDir, dir, "index.m3u8"), "utf8"),
+        );
         await rm(path.join(config.mediaDir, dir, source), { force: true });
         await archiveQuietly(dir);
-        await this.repo.setMedia(lessonId, { status: "ready", durationSeconds: Math.round(seconds) });
+        await this.repo.setMedia(lessonId, {
+          status: "ready",
+          durationSeconds: Math.round(seconds),
+        });
         this.log("lesson_video_ready", { lessonId, seconds: Math.round(seconds) });
         if (transcriptionEnabled()) await this.transcribe(lessonId);
       } catch (error) {
         this.log("lesson_video_failed", { lessonId, message: String(error), last });
         if (last || !(await this.sourceOf(lessonId)))
-          await this.repo.setMedia(lessonId, { status: "failed", error: "Không chuyển được video sang HLS; hãy thử tệp khác." });
+          await this.repo.setMedia(lessonId, {
+            status: "failed",
+            error: "Không chuyển được video sang HLS; hãy thử tệp khác.",
+          });
         else throw error; // retried from the queue
       }
     });
@@ -129,17 +167,30 @@ export class LessonMediaService {
   /** An instructor asks for captions (older videos, or after a failure). */
   async requestTranscript(userId: string, lessonId: string) {
     const { lesson } = await this.courses.lessonCourse(userId, lessonId, "manage");
-    if (!transcriptionEnabled()) throw conflict("TRANSCRIPTION_OFF", "Chưa cấu hình dịch vụ nhận dạng giọng nói (TRANSCRIBE_URL).");
-    if (lesson.kind !== "video" || lesson.mediaStatus !== "ready") throw conflict("NOT_READY", "Video chưa sẵn sàng.");
-    if (lesson.recordingId) throw conflict("RECORDING_LESSON", "Bài xem lại lấy phụ đề từ bản ghi buổi họp.");
-    if (lesson.transcriptStatus === "processing") throw conflict("PROCESSING", "Phụ đề đang được tạo.");
+    if (!transcriptionEnabled())
+      throw conflict(
+        "TRANSCRIPTION_OFF",
+        "Chưa cấu hình dịch vụ nhận dạng giọng nói (TRANSCRIBE_URL).",
+      );
+    if (lesson.kind !== "video" || lesson.mediaStatus !== "ready")
+      throw conflict("NOT_READY", "Video chưa sẵn sàng.");
+    if (lesson.recordingId)
+      throw conflict("RECORDING_LESSON", "Bài xem lại lấy phụ đề từ bản ghi buổi họp.");
+    if (lesson.transcriptStatus === "processing")
+      throw conflict("PROCESSING", "Phụ đề đang được tạo.");
     await this.transcribe(lesson.id);
     return { transcriptStatus: "processing" as const };
   }
 
   private async sourceOf(lessonId: string) {
     for (const name of SOURCES)
-      if (await stat(path.join(config.mediaDir, dirOf(lessonId), name)).then(() => true, () => false)) return name;
+      if (
+        await stat(path.join(config.mediaDir, dirOf(lessonId), name)).then(
+          () => true,
+          () => false,
+        )
+      )
+        return name;
     return null;
   }
 
@@ -149,14 +200,21 @@ export class LessonMediaService {
    */
   async importCallRecording(userId: string, chapterId: string, body: Record<string, unknown>) {
     if (!this.callRecording) throw conflict("CALL_CENTER_OFFLINE", "Tổng đài chưa kết nối.");
-    if (body.consent !== true) throw invalid("Cần xác nhận người gọi đã đồng ý hoặc ghi âm không chứa thông tin cá nhân.");
-    const { id: lessonId } = await this.courses.addLesson(userId, chapterId, { kind: "video", title: body.title });
+    if (body.consent !== true)
+      throw invalid("Cần xác nhận người gọi đã đồng ý hoặc ghi âm không chứa thông tin cá nhân.");
+    const { id: lessonId } = await this.courses.addLesson(userId, chapterId, {
+      kind: "video",
+      title: body.title,
+    });
     try {
       const audio = await this.callRecording(userId, String(body.callId ?? ""));
       if (!audio.body) throw invalid("Ghi âm rỗng.");
       const dir = path.join(config.mediaDir, dirOf(lessonId));
       await mkdir(dir, { recursive: true });
-      await pipeline(Readable.fromWeb(audio.body as ReadableStream), createWriteStream(path.join(dir, "source.audio")));
+      await pipeline(
+        Readable.fromWeb(audio.body as ReadableStream),
+        createWriteStream(path.join(dir, "source.audio")),
+      );
     } catch (error) {
       await this.repo.deleteLesson(lessonId);
       throw error;
@@ -168,10 +226,16 @@ export class LessonMediaService {
 
   /** Lessons left "processing" by a version without the job queue get a job (no-op when one exists). */
   async recover() {
-    const rows = await query<{ id: string }>(`SELECT id FROM course_lessons WHERE kind='video' AND media_status='processing' AND recording_id IS NULL`);
+    const rows = await query<{ id: string }>(
+      `SELECT id FROM course_lessons WHERE kind='video' AND media_status='processing' AND recording_id IS NULL`,
+    );
     for (const { id } of rows.rows) {
       if (await this.sourceOf(id)) await this.transcode(id);
-      else await this.repo.setMedia(id, { status: "failed", error: "Tệp tải lên bị mất khi máy chủ khởi động lại." });
+      else
+        await this.repo.setMedia(id, {
+          status: "failed",
+          error: "Tệp tải lên bị mất khi máy chủ khởi động lại.",
+        });
     }
   }
 
@@ -179,15 +243,22 @@ export class LessonMediaService {
   async file(userId: string, lessonId: string, name: string) {
     const { lesson } = await this.courses.lessonCourse(userId, lessonId, "see");
     if (lesson.mediaStatus !== "ready") throw notFound("Bài học chưa có tệp.");
-    if (lesson.kind === "document" && name === "document.pdf") return { file: path.join(config.mediaDir, dirOf(lesson.id), name), type: "application/pdf" };
+    if (lesson.kind === "document" && name === "document.pdf")
+      return { file: path.join(config.mediaDir, dirOf(lesson.id), name), type: "application/pdf" };
     if (lesson.kind !== "video") throw notFound("Không tìm thấy tệp.");
     const dir = lesson.recordingId ? `recordings/${lesson.recordingId}` : dirOf(lesson.id);
     const segment = lesson.recordingId ? /^p\d{4}_\d{5}\.ts$/ : /^index_\d{5}\.ts$/;
     if (name === "captions.vtt" || name === "transcript.json") {
       if (lesson.transcriptStatus !== "ready") throw notFound("Bài học chưa có phụ đề.");
-      return { file: path.join(config.mediaDir, dir, name), type: name.endsWith(".vtt") ? "text/vtt; charset=utf-8" : "application/json; charset=utf-8" };
+      return {
+        file: path.join(config.mediaDir, dir, name),
+        type: name.endsWith(".vtt") ? "text/vtt; charset=utf-8" : "application/json; charset=utf-8",
+      };
     }
     if (name !== "index.m3u8" && !segment.test(name)) throw notFound("Không tìm thấy tệp.");
-    return { file: path.join(config.mediaDir, dir, name), type: name.endsWith(".m3u8") ? "application/vnd.apple.mpegurl" : "video/mp2t" };
+    return {
+      file: path.join(config.mediaDir, dir, name),
+      type: name.endsWith(".m3u8") ? "application/vnd.apple.mpegurl" : "video/mp2t",
+    };
   }
 }

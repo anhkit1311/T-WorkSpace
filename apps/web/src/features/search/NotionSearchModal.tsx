@@ -32,8 +32,14 @@ const termKey = (value: string) => value.trim();
 // The fading surface must release input immediately so fast reopen clicks reach the trigger.
 function SearchBackdrop(props: HTMLMotionProps<"div">) {
   const present = useIsPresent();
-  return <motion.div {...props} inert={!present} aria-hidden={!present || undefined}
-    style={{...props.style, pointerEvents: present ? undefined : "none"}} />;
+  return (
+    <motion.div
+      {...props}
+      inert={!present}
+      aria-hidden={!present || undefined}
+      style={{ ...props.style, pointerEvents: present ? undefined : "none" }}
+    />
+  );
 }
 
 // Titles match the dock labels; descriptions carry synonyms so either wording is searchable.
@@ -202,11 +208,13 @@ export function NotionSearchModal({
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const frame = window.requestAnimationFrame(() => inputRef.current?.focus({preventScroll: true}));
+    const frame = window.requestAnimationFrame(() =>
+      inputRef.current?.focus({ preventScroll: true }),
+    );
     return () => {
       window.cancelAnimationFrame(frame);
       document.body.style.overflow = previousOverflow;
-      if (previousFocus?.isConnected) previousFocus.focus({preventScroll: true});
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
     };
   }, [isOpen]);
 
@@ -243,7 +251,10 @@ export function NotionSearchModal({
       .then((items) => {
         if (active) setWorkspaces(items);
       })
-      .catch(reason => {if(active)setError(reason instanceof Error ? reason.message : "Không tải được nhóm tìm kiếm.");});
+      .catch((reason) => {
+        if (active)
+          setError(reason instanceof Error ? reason.message : "Không tải được nhóm tìm kiếm.");
+      });
     return () => {
       active = false;
     };
@@ -266,7 +277,10 @@ export function NotionSearchModal({
           setMembers(people);
         }
       })
-      .catch(reason => {if(active)setError(reason instanceof Error ? reason.message : "Không tải được bộ lọc tìm kiếm.");});
+      .catch((reason) => {
+        if (active)
+          setError(reason instanceof Error ? reason.message : "Không tải được bộ lọc tìm kiếm.");
+      });
     return () => {
       active = false;
     };
@@ -354,7 +368,11 @@ export function NotionSearchModal({
             onClick={(event) => event.stopPropagation()}
             initial={safe.reduced ? false : { opacity: 0, scale: 0.96, y: -16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: safe.reduced ? 1 : 0, scale: safe.reduced ? 1 : 0.96, y: safe.reduced ? 0 : -12 }}
+            exit={{
+              opacity: safe.reduced ? 1 : 0,
+              scale: safe.reduced ? 1 : 0.96,
+              y: safe.reduced ? 0 : -12,
+            }}
             transition={{ duration: safe.duration(0.22), ease: [0.16, 1, 0.3, 1] }}
           >
             {/* Search Header Bar */}
@@ -365,9 +383,17 @@ export function NotionSearchModal({
                   ref={inputRef}
                   type="text"
                   value={query}
-                  role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="global-search-results"
-                  aria-activedescendant={visibleResults.length + matchingPages.length > selectedIndex ? `global-search-option-${selectedIndex}` : undefined}
-                  name="globalSearch" autoComplete="off"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded="true"
+                  aria-controls="global-search-results"
+                  aria-activedescendant={
+                    visibleResults.length + matchingPages.length > selectedIndex
+                      ? `global-search-option-${selectedIndex}`
+                      : undefined
+                  }
+                  name="globalSearch"
+                  autoComplete="off"
                   onChange={(event) => {
                     setQuery(event.target.value);
                     setResults([]);
@@ -531,8 +557,15 @@ export function NotionSearchModal({
             </AnimatePresence>
 
             {/* Scrollable Results Body */}
-            <span className="sr-only" role="status" aria-live="polite">{loading ? "Đang tìm…" : `${visibleResults.length + matchingPages.length} kết quả`}</span>
-            <div className="notion-search-body" id="global-search-results" role="listbox" aria-label="Kết quả tìm kiếm">
+            <span className="sr-only" role="status" aria-live="polite">
+              {loading ? "Đang tìm…" : `${visibleResults.length + matchingPages.length} kết quả`}
+            </span>
+            <div
+              className="notion-search-body"
+              id="global-search-results"
+              role="listbox"
+              aria-label="Kết quả tìm kiếm"
+            >
               {/* Message Search Results */}
               {term.length >= 2 && (
                 <div className="notion-search-group">
@@ -568,7 +601,9 @@ export function NotionSearchModal({
                       return (
                         <button
                           key={message.id}
-                          role="option" id={`global-search-option-${index}`} aria-selected={isSelected}
+                          role="option"
+                          id={`global-search-option-${index}`}
+                          aria-selected={isSelected}
                           ref={(el) => {
                             if (el) rowRefs.current.set(index, el);
                             else rowRefs.current.delete(index);
@@ -584,7 +619,9 @@ export function NotionSearchModal({
                                 {message.workspaceName}
                               </span>
                               <span className="notion-search-channel-pill">
-                                {message.workspaceId ? `#${message.channelName}` : message.channelName}
+                                {message.workspaceId
+                                  ? `#${message.channelName}`
+                                  : message.channelName}
                               </span>
                             </div>
                             <div className="notion-search-message-meta">
@@ -660,7 +697,9 @@ export function NotionSearchModal({
                       return (
                         <button
                           key={page.id}
-                          role="option" id={`global-search-option-${globalIndex}`} aria-selected={isSelected}
+                          role="option"
+                          id={`global-search-option-${globalIndex}`}
+                          aria-selected={isSelected}
                           ref={(el) => {
                             if (el) rowRefs.current.set(globalIndex, el);
                             else rowRefs.current.delete(globalIndex);

@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import type { CcAgentProfile, CcCallTranscript, CcQaCriterion, CcQaReview, CourseDetail, CourseSummary } from "@doan/shared";
+import type {
+  CcAgentProfile,
+  CcCallTranscript,
+  CcQaCriterion,
+  CcQaReview,
+  CourseDetail,
+  CourseSummary,
+} from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import { coursesApi } from "../elearning/courses-api";
 import { Badge, Button, Field, FilterPills, Modal } from "../../shared/ui/Primitives";
@@ -9,13 +16,22 @@ import "./quality.css";
 type Api = <T>(path: string, method?: string, body?: object) => Promise<T>;
 type Draft = { id: string | null; label: string; weight: number };
 
-export const qaTone = (percent: number, threshold = 70) => (percent >= 85 ? "green" : percent >= threshold ? "blue" : "red");
+export const qaTone = (percent: number, threshold = 70) =>
+  percent >= 85 ? "green" : percent >= threshold ? "blue" : "red";
 
 /**
  * V7 / E2: scorecard per department and the reviews. Supervisors edit the sheet and see their
  * departments; an agent sees the reviews of their own calls.
  */
-export function QaPanel({ me, api, fail }: { me: CcAgentProfile; api: Api; fail: (error: unknown) => void }) {
+export function QaPanel({
+  me,
+  api,
+  fail,
+}: {
+  me: CcAgentProfile;
+  api: Api;
+  fail: (error: unknown) => void;
+}) {
   const supervised = me.departments.filter((department) => department.role === "supervisor");
   const [departments, setDepartments] = useState(supervised);
   const [departmentId, setDepartmentId] = useState(supervised[0]?.id ?? "");
@@ -32,27 +48,44 @@ export function QaPanel({ me, api, fail }: { me: CcAgentProfile; api: Api; fail:
     }, fail);
   }, [api, fail, me.isAdmin]);
   const load = useCallback(() => {
-    api<CcQaReview[]>(`qa-reviews${manages && departmentId ? `?departmentId=${departmentId}` : ""}`).then(setReviews, fail);
-    if (manages && departmentId) api<CcQaCriterion[]>(`departments/${departmentId}/qa-criteria`).then(setCriteria, fail);
+    api<CcQaReview[]>(
+      `qa-reviews${manages && departmentId ? `?departmentId=${departmentId}` : ""}`,
+    ).then(setReviews, fail);
+    if (manages && departmentId)
+      api<CcQaCriterion[]>(`departments/${departmentId}/qa-criteria`).then(setCriteria, fail);
   }, [api, departmentId, fail, manages]);
   useEffect(load, [load]);
 
   const save = () =>
-    api<CcQaCriterion[]>(`departments/${departmentId}/qa-criteria`, "POST", { criteria: criteria.filter((item) => item.label.trim()) }).then(setCriteria, fail);
-  const average = reviews?.length ? Math.round(reviews.reduce((sum, review) => sum + review.percent, 0) / reviews.length) : null;
+    api<CcQaCriterion[]>(`departments/${departmentId}/qa-criteria`, "POST", {
+      criteria: criteria.filter((item) => item.label.trim()),
+    }).then(setCriteria, fail);
+  const average = reviews?.length
+    ? Math.round(reviews.reduce((sum, review) => sum + review.percent, 0) / reviews.length)
+    : null;
 
   return (
     <div className="qa-panel">
       {manages && departments.length > 1 && (
-        <FilterPills options={departments.map((item) => ({ key: item.id, label: item.name }))} activeKey={departmentId} onChange={setDepartmentId} />
+        <FilterPills
+          options={departments.map((item) => ({ key: item.id, label: item.name }))}
+          activeKey={departmentId}
+          onChange={setDepartmentId}
+        />
       )}
       <div className="qa-grid">
         {manages && (
           <section className="callcenter-panel">
             <div className="callcenter-panel__head">
-              <h2 className="callcenter-panel__title"><Icon name="clipboard" size={18} /><span>Phiếu chấm điểm cuộc gọi</span></h2>
+              <h2 className="callcenter-panel__title">
+                <Icon name="clipboard" size={18} />
+                <span>Phiếu chấm điểm cuộc gọi</span>
+              </h2>
             </div>
-            <p className="desk-muted">Mỗi tiêu chí chấm 0–10 điểm, nhân trọng số. Điểm dưới ngưỡng của phòng ban sẽ tự gán khóa bồi dưỡng.</p>
+            <p className="desk-muted">
+              Mỗi tiêu chí chấm 0–10 điểm, nhân trọng số. Điểm dưới ngưỡng của phòng ban sẽ tự gán
+              khóa bồi dưỡng.
+            </p>
             <ol className="qa-criteria">
               {criteria.map((item, index) => (
                 <li key={item.id ?? `new-${index}`}>
@@ -61,7 +94,13 @@ export function QaPanel({ me, api, fail }: { me: CcAgentProfile; api: Api; fail:
                     value={item.label}
                     maxLength={160}
                     placeholder="Ví dụ: Chào hỏi đúng mẫu"
-                    onChange={(event) => setCriteria(criteria.map((other, at) => (at === index ? { ...other, label: event.target.value } : other)))}
+                    onChange={(event) =>
+                      setCriteria(
+                        criteria.map((other, at) =>
+                          at === index ? { ...other, label: event.target.value } : other,
+                        ),
+                      )
+                    }
                   />
                   <label className="qa-weight">
                     Trọng số
@@ -70,36 +109,79 @@ export function QaPanel({ me, api, fail }: { me: CcAgentProfile; api: Api; fail:
                       min={1}
                       max={10}
                       value={item.weight}
-                      onChange={(event) => setCriteria(criteria.map((other, at) => (at === index ? { ...other, weight: Number(event.target.value) || 1 } : other)))}
+                      onChange={(event) =>
+                        setCriteria(
+                          criteria.map((other, at) =>
+                            at === index
+                              ? { ...other, weight: Number(event.target.value) || 1 }
+                              : other,
+                          ),
+                        )
+                      }
                     />
                   </label>
-                  <Button size="sm" variant="ghost" type="button" icon="x" aria-label={`Bỏ tiêu chí ${index + 1}`} onClick={() => setCriteria(criteria.filter((_, at) => at !== index))} />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    type="button"
+                    icon="x"
+                    aria-label={`Bỏ tiêu chí ${index + 1}`}
+                    onClick={() => setCriteria(criteria.filter((_, at) => at !== index))}
+                  />
                 </li>
               ))}
             </ol>
             <div className="desk-actions">
-              <Button size="sm" variant="ghost" type="button" icon="plus" disabled={criteria.length >= 20} onClick={() => setCriteria([...criteria, { id: null, label: "", weight: 1 }])}>
+              <Button
+                size="sm"
+                variant="ghost"
+                type="button"
+                icon="plus"
+                disabled={criteria.length >= 20}
+                onClick={() => setCriteria([...criteria, { id: null, label: "", weight: 1 }])}
+              >
                 Thêm tiêu chí
               </Button>
-              <Button size="sm" type="button" icon="check" disabled={!criteria.some((item) => item.label.trim())} onClick={() => void save()}>Lưu phiếu chấm</Button>
+              <Button
+                size="sm"
+                type="button"
+                icon="check"
+                disabled={!criteria.some((item) => item.label.trim())}
+                onClick={() => void save()}
+              >
+                Lưu phiếu chấm
+              </Button>
             </div>
           </section>
         )}
         <section className="callcenter-panel">
           <div className="callcenter-panel__head">
-            <h2 className="callcenter-panel__title"><Icon name="star" size={18} /><span>{manages ? "Đánh giá gần đây" : "Đánh giá cuộc gọi của tôi"}</span></h2>
+            <h2 className="callcenter-panel__title">
+              <Icon name="star" size={18} />
+              <span>{manages ? "Đánh giá gần đây" : "Đánh giá cuộc gọi của tôi"}</span>
+            </h2>
             {average !== null && <Badge tone={qaTone(average)}>Trung bình {average}%</Badge>}
           </div>
           {!reviews?.length ? (
-            <p className="desk-muted">{manages ? "Chưa có cuộc gọi nào được chấm. Chấm từ tab “Lịch sử cuộc gọi”." : "Chưa có cuộc gọi nào của bạn được chấm."}</p>
+            <p className="desk-muted">
+              {manages
+                ? "Chưa có cuộc gọi nào được chấm. Chấm từ tab “Lịch sử cuộc gọi”."
+                : "Chưa có cuộc gọi nào của bạn được chấm."}
+            </p>
           ) : (
             reviews.map((review) => (
               <div key={review.id} className="call-item-card qa-review">
-                <button type="button" className="qa-review__head" aria-expanded={open === review.id} onClick={() => setOpen(open === review.id ? null : review.id)}>
+                <button
+                  type="button"
+                  className="qa-review__head"
+                  aria-expanded={open === review.id}
+                  onClick={() => setOpen(open === review.id ? null : review.id)}
+                >
                   <span className="call-item-info">
                     <span className="call-item-caller">{review.agentName}</span>
                     <span className="call-item-meta">
-                      {new Date(review.callStartedAt).toLocaleString("vi-VN")} · {review.callerNumber} · chấm bởi {review.reviewerName ?? "—"}
+                      {new Date(review.callStartedAt).toLocaleString("vi-VN")} ·{" "}
+                      {review.callerNumber} · chấm bởi {review.reviewerName ?? "—"}
                     </span>
                   </span>
                   <Badge tone={qaTone(review.percent)}>{review.percent}%</Badge>
@@ -109,7 +191,10 @@ export function QaPanel({ me, api, fail }: { me: CcAgentProfile; api: Api; fail:
                   <div className="qa-review__body">
                     <ul>
                       {review.items.map((item) => (
-                        <li key={item.id}>{item.label} <small>(×{item.weight})</small>: <strong>{item.score}/10</strong></li>
+                        <li key={item.id}>
+                          {item.label} <small>(×{item.weight})</small>:{" "}
+                          <strong>{item.score}/10</strong>
+                        </li>
                       ))}
                     </ul>
                     {review.comment && <p>{review.comment}</p>}
@@ -144,15 +229,26 @@ export function QaReviewDialog({
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    Promise.all([api<CcQaCriterion[]>(`departments/${call.departmentId}/qa-criteria`), api<{ review: CcQaReview | null }>(`calls/${call.id}/qa`)]).then(([sheet, { review: existing }]) => {
+    Promise.all([
+      api<CcQaCriterion[]>(`departments/${call.departmentId}/qa-criteria`),
+      api<{ review: CcQaReview | null }>(`calls/${call.id}/qa`),
+    ]).then(([sheet, { review: existing }]) => {
       setCriteria(sheet);
-      setScores(Object.fromEntries(sheet.map((item) => [item.id, existing?.items.find((scored) => scored.id === item.id)?.score ?? 5])));
+      setScores(
+        Object.fromEntries(
+          sheet.map((item) => [
+            item.id,
+            existing?.items.find((scored) => scored.id === item.id)?.score ?? 5,
+          ]),
+        ),
+      );
       setComment(existing?.comment ?? "");
     }, fail);
   }, [api, call.departmentId, call.id, fail]);
 
   const total = criteria?.reduce((sum, item) => sum + item.weight * 10, 0) ?? 0;
-  const earned = criteria?.reduce((sum, item) => sum + item.weight * (scores[item.id] ?? 0), 0) ?? 0;
+  const earned =
+    criteria?.reduce((sum, item) => sum + item.weight * (scores[item.id] ?? 0), 0) ?? 0;
   const percent = total ? Math.round((earned / total) * 100) : 0;
   const save = () => {
     setBusy(true);
@@ -168,26 +264,48 @@ export function QaReviewDialog({
       onClose={onClose}
       footer={
         <>
-          <Button variant="ghost" type="button" onClick={onClose}>Hủy</Button>
-          <Button type="button" icon="check" disabled={busy || !criteria?.length} onClick={save}>Lưu đánh giá · {percent}%</Button>
+          <Button variant="ghost" type="button" onClick={onClose}>
+            Hủy
+          </Button>
+          <Button type="button" icon="check" disabled={busy || !criteria?.length} onClick={save}>
+            Lưu đánh giá · {percent}%
+          </Button>
         </>
       }
     >
       {!criteria ? (
         <p className="desk-muted">Đang tải phiếu chấm…</p>
       ) : !criteria.length ? (
-        <p className="desk-warning">Phòng ban chưa có phiếu chấm. Tạo tiêu chí ở tab “Chất lượng”.</p>
+        <p className="desk-warning">
+          Phòng ban chưa có phiếu chấm. Tạo tiêu chí ở tab “Chất lượng”.
+        </p>
       ) : (
         <div className="qa-sheet">
           {criteria.map((item) => (
             <label key={item.id} className="qa-score">
-              <span>{item.label} <small>(trọng số {item.weight})</small></span>
-              <input type="range" min={0} max={10} step={1} value={scores[item.id] ?? 0} onChange={(event) => setScores({ ...scores, [item.id]: Number(event.target.value) })} />
+              <span>
+                {item.label} <small>(trọng số {item.weight})</small>
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={10}
+                step={1}
+                value={scores[item.id] ?? 0}
+                onChange={(event) =>
+                  setScores({ ...scores, [item.id]: Number(event.target.value) })
+                }
+              />
               <output>{scores[item.id] ?? 0}/10</output>
             </label>
           ))}
           <Field label="Nhận xét cho tổng đài viên">
-            <textarea rows={3} maxLength={2000} value={comment} onChange={(event) => setComment(event.target.value)} />
+            <textarea
+              rows={3}
+              maxLength={2000}
+              value={comment}
+              onChange={(event) => setComment(event.target.value)}
+            />
           </Field>
         </div>
       )}
@@ -199,7 +317,13 @@ export function QaReviewDialog({
  * E2: a supervisor turns a good (or instructive) call into a draft audio lesson of a course they
  * manage, after confirming consent. The lesson opens for review in Khóa học.
  */
-export function CallLessonDialog({ call, onClose }: { call: { id: string; title: string }; onClose: () => void }) {
+export function CallLessonDialog({
+  call,
+  onClose,
+}: {
+  call: { id: string; title: string };
+  onClose: () => void;
+}) {
   const { accessToken, notify, navigate } = useApp();
   const token = accessToken!;
   const [courses, setCourses] = useState<CourseSummary[] | null>(null);
@@ -211,16 +335,22 @@ export function CallLessonDialog({ call, onClose }: { call: { id: string; title:
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    coursesApi.list(token).then((list) => setCourses(list.filter((item) => item.canManage)), (failure) => setError(failure.message));
+    coursesApi.list(token).then(
+      (list) => setCourses(list.filter((item) => item.canManage)),
+      (failure) => setError(failure.message),
+    );
   }, [token]);
   const pick = (courseId: string) => {
     setCourse(null);
     setChapterId("");
     if (courseId)
-      coursesApi.detail(token, courseId).then((detail) => {
-        setCourse(detail);
-        setChapterId(detail.chapters[0]?.id ?? "");
-      }, (failure) => setError(failure.message));
+      coursesApi.detail(token, courseId).then(
+        (detail) => {
+          setCourse(detail);
+          setChapterId(detail.chapters[0]?.id ?? "");
+        },
+        (failure) => setError(failure.message),
+      );
   };
   const save = () => {
     setBusy(true);
@@ -229,7 +359,11 @@ export function CallLessonDialog({ call, onClose }: { call: { id: string; title:
       .importCall(token, chapterId, { callId: call.id, title: title.trim(), consent })
       .then(
         () => {
-          notify("Đã tạo bài học từ ghi âm", "Bài ở trạng thái nháp, đang chuyển định dạng.", "success");
+          notify(
+            "Đã tạo bài học từ ghi âm",
+            "Bài ở trạng thái nháp, đang chuyển định dạng.",
+            "success",
+          );
           onClose();
           navigate({ view: "elearning", query: course!.id });
         },
@@ -245,23 +379,46 @@ export function CallLessonDialog({ call, onClose }: { call: { id: string; title:
       onClose={onClose}
       footer={
         <>
-          <Button variant="ghost" type="button" onClick={onClose}>Hủy</Button>
-          <Button type="button" icon="book" disabled={busy || !chapterId || !consent || !title.trim()} onClick={save}>Tạo bài học</Button>
+          <Button variant="ghost" type="button" onClick={onClose}>
+            Hủy
+          </Button>
+          <Button
+            type="button"
+            icon="book"
+            disabled={busy || !chapterId || !consent || !title.trim()}
+            onClick={save}
+          >
+            Tạo bài học
+          </Button>
         </>
       }
     >
       <div className="qa-sheet">
         <Field label="Khóa học">
           <select value={course?.id ?? ""} onChange={(event) => pick(event.target.value)}>
-            <option value="">{courses ? (courses.length ? "— Chọn khóa học bạn phụ trách —" : "Bạn chưa phụ trách khóa học nào") : "Đang tải…"}</option>
-            {courses?.map((item) => <option key={item.id} value={item.id}>{item.code} — {item.title}</option>)}
+            <option value="">
+              {courses
+                ? courses.length
+                  ? "— Chọn khóa học bạn phụ trách —"
+                  : "Bạn chưa phụ trách khóa học nào"
+                : "Đang tải…"}
+            </option>
+            {courses?.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.code} — {item.title}
+              </option>
+            ))}
           </select>
         </Field>
         {course && (
           <Field label="Chương">
             <select value={chapterId} onChange={(event) => setChapterId(event.target.value)}>
               {!course.chapters.length && <option value="">Khóa học chưa có chương</option>}
-              {course.chapters.map((chapter) => <option key={chapter.id} value={chapter.id}>{chapter.title}</option>)}
+              {course.chapters.map((chapter) => (
+                <option key={chapter.id} value={chapter.id}>
+                  {chapter.title}
+                </option>
+              ))}
             </select>
           </Field>
         )}
@@ -269,16 +426,26 @@ export function CallLessonDialog({ call, onClose }: { call: { id: string; title:
           <input value={title} maxLength={160} onChange={(event) => setTitle(event.target.value)} />
         </Field>
         <label className="qa-check">
-          <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />
-          Tôi xác nhận người gọi đã đồng ý, hoặc ghi âm không chứa thông tin cá nhân (Nghị định 13/2023).
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={(event) => setConsent(event.target.checked)}
+          />
+          Tôi xác nhận người gọi đã đồng ý, hoặc ghi âm không chứa thông tin cá nhân (Nghị định
+          13/2023).
         </label>
-        {error && <p className="desk-warning" role="alert">{error}</p>}
+        {error && (
+          <p className="desk-warning" role="alert">
+            {error}
+          </p>
+        )}
       </div>
     </Modal>
   );
 }
 
-const minuteSecond = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+const minuteSecond = (seconds: number) =>
+  `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
 
 /** 2.1: the automatic speech-to-text of a call recording. */
 export function CallTranscriptDialog({
@@ -299,10 +466,15 @@ export function CallTranscriptDialog({
   const [error, setError] = useState("");
   const [applied, setApplied] = useState(false);
   useEffect(() => {
-    api<CcCallTranscript>(`calls/${call.id}/transcript`).then(setTranscript, (failure: Error) => setError(failure.message));
+    api<CcCallTranscript>(`calls/${call.id}/transcript`).then(setTranscript, (failure: Error) =>
+      setError(failure.message),
+    );
   }, [api, call.id]);
   const apply = (summary: string, dispositionId: string | null) =>
-    onApply?.(summary, dispositionId).then(() => setApplied(true), (failure: Error) => setError(failure.message));
+    onApply?.(summary, dispositionId).then(
+      () => setApplied(true),
+      (failure: Error) => setError(failure.message),
+    );
   return (
     <Modal title="Lời thoại cuộc gọi" eyebrow={call.title} onClose={onClose}>
       <div className="qa-sheet">
@@ -310,21 +482,40 @@ export function CallTranscriptDialog({
           <section className="call-ai-summary" aria-label="Tóm tắt bằng AI">
             <strong>Tóm tắt (AI, cần kiểm tra lại)</strong>
             <p>{transcript.aiSummary}</p>
-            {transcript.aiDispositionId && <p className="desk-muted">Gợi ý mã kết quả: {labelOf(transcript.aiDispositionId) || "—"}</p>}
+            {transcript.aiDispositionId && (
+              <p className="desk-muted">
+                Gợi ý mã kết quả: {labelOf(transcript.aiDispositionId) || "—"}
+              </p>
+            )}
             {onApply && (
-              <Button size="sm" variant="secondary" disabled={applied} onClick={() => void apply(transcript.aiSummary!, transcript.aiDispositionId)}>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={applied}
+                onClick={() => void apply(transcript.aiSummary!, transcript.aiDispositionId)}
+              >
                 {applied ? "Đã áp dụng" : "Áp dụng vào ghi nhận"}
               </Button>
             )}
           </section>
         )}
-        {error ? <p className="desk-warning" role="alert">{error}</p> : !transcript ? <p className="desk-muted">Đang tải…</p> : transcript.segments.length ? (
+        {error ? (
+          <p className="desk-warning" role="alert">
+            {error}
+          </p>
+        ) : !transcript ? (
+          <p className="desk-muted">Đang tải…</p>
+        ) : transcript.segments.length ? (
           <ol className="call-transcript">
             {transcript.segments.map((segment, index) => (
-              <li key={index}><span className="desk-muted">{minuteSecond(segment.start)}</span> {segment.text}</li>
+              <li key={index}>
+                <span className="desk-muted">{minuteSecond(segment.start)}</span> {segment.text}
+              </li>
             ))}
           </ol>
-        ) : <p className="desk-muted">Không nhận dạng được lời nói trong ghi âm.</p>}
+        ) : (
+          <p className="desk-muted">Không nhận dạng được lời nói trong ghi âm.</p>
+        )}
       </div>
     </Modal>
   );

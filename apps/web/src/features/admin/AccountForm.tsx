@@ -20,7 +20,15 @@ interface Enrolled {
  * an existing one moves there. The mã số is issued by the server from the unit's mã định danh; the
  * preview shows the next one before saving.
  */
-export function AccountForm({ token, run, onSaved }: { token: string; run: Run; onSaved: () => void }) {
+export function AccountForm({
+  token,
+  run,
+  onSaved,
+}: {
+  token: string;
+  run: Run;
+  onSaved: () => void;
+}) {
   const [units, setUnits] = useState<DepartmentUnit[]>([]);
   const [unitId, setUnitId] = useState("");
   const [departments, setDepartments] = useState<{ id: string; code: string; name: string }[]>([]);
@@ -44,7 +52,10 @@ export function AccountForm({ token, run, onSaved }: { token: string; run: Run; 
   useEffect(() => {
     setDepartments([]);
     if (!unitId) return;
-    academicApi<{ departments: { id: string; code: string; name: string }[] }>(token, `units/${unitId}/staff`).then(
+    academicApi<{ departments: { id: string; code: string; name: string }[] }>(
+      token,
+      `units/${unitId}/staff`,
+    ).then(
       (data) => setDepartments(data.departments || []),
       () => setDepartments([]),
     );
@@ -53,7 +64,10 @@ export function AccountForm({ token, run, onSaved }: { token: string; run: Run; 
   useEffect(() => {
     setNextCode(null);
     if (!unit?.idPrefix || !cohortOk) return;
-    const query = new URLSearchParams({ kind: form.kind, ...(form.kind === "student" ? { cohort: form.cohort } : {}) });
+    const query = new URLSearchParams({
+      kind: form.kind,
+      ...(form.kind === "student" ? { cohort: form.cohort } : {}),
+    });
     academicApi<{ codes: string[] }>(token, `units/${unit.id}/next-codes?${query}`).then(
       (data) => setNextCode(data.codes[0] ?? null),
       () => setNextCode(null),
@@ -87,7 +101,8 @@ export function AccountForm({ token, run, onSaved }: { token: string; run: Run; 
         <div>
           <h4>Tạo tài khoản</h4>
           <span style={{ fontSize: 13, color: "#64748b" }}>
-            Email chưa có sẽ được tạo tài khoản kèm máy lẻ của đơn vị; email đã có sẽ được chuyển vào đơn vị đã chọn.
+            Email chưa có sẽ được tạo tài khoản kèm máy lẻ của đơn vị; email đã có sẽ được chuyển
+            vào đơn vị đã chọn.
           </span>
         </div>
       </div>
@@ -105,7 +120,11 @@ export function AccountForm({ token, run, onSaved }: { token: string; run: Run; 
               const picked = units.find((item) => item.id === e.target.value);
               setUnitId(e.target.value);
               // Faculties mostly enrol students, offices staff.
-              setForm({ ...form, kind: picked?.kind === "office" ? "staff" : "student", departmentId: "" });
+              setForm({
+                ...form,
+                kind: picked?.kind === "office" ? "staff" : "student",
+                departmentId: "",
+              });
             }}
             required
           >
@@ -176,7 +195,9 @@ export function AccountForm({ token, run, onSaved }: { token: string; run: Run; 
                 pattern="[0-9]{2}"
                 maxLength={2}
                 value={form.cohort}
-                onChange={(e) => setForm({ ...form, cohort: e.target.value.replace(/[^0-9]/g, "") })}
+                onChange={(e) =>
+                  setForm({ ...form, cohort: e.target.value.replace(/[^0-9]/g, "") })
+                }
                 required
               />
             </div>
@@ -226,15 +247,20 @@ export function AccountForm({ token, run, onSaved }: { token: string; run: Run; 
           <Icon name="info" size={16} className="staff-code-hint-icon" />
           <div className="staff-code-hint-text">
             {!unit ? (
-              <span>Chọn khoa / phòng ban: mã số sẽ được cấp tự động theo mã định danh của đơn vị.</span>
+              <span>
+                Chọn khoa / phòng ban: mã số sẽ được cấp tự động theo mã định danh của đơn vị.
+              </span>
             ) : !unit.idPrefix ? (
               <span className="is-warning">
-                Đơn vị chưa có mã định danh 2 số: đặt ở tab <strong>Khoa & Phòng ban</strong> (nút Sửa) rồi mới cấp được mã số.
+                Đơn vị chưa có mã định danh 2 số: đặt ở tab <strong>Khoa & Phòng ban</strong> (nút
+                Sửa) rồi mới cấp được mã số.
               </span>
             ) : nextCode ? (
               <span>
                 Mã số sẽ cấp: <code className="staff-code-pill">{nextCode}</code>{" "}
-                <span className="staff-code-sub">(tài khoản đã có mã đúng mẫu của đơn vị thì giữ nguyên)</span>
+                <span className="staff-code-sub">
+                  (tài khoản đã có mã đúng mẫu của đơn vị thì giữ nguyên)
+                </span>
               </span>
             ) : (
               <span>Đang lấy mã số…</span>
@@ -254,15 +280,27 @@ export function AccountForm({ token, run, onSaved }: { token: string; run: Run; 
             <Icon name="check" size={18} className="staff-saved-icon" />
             <div className="staff-saved-body">
               <div className="staff-saved-title">
-                {saved.status === "created" ? "Đã tạo tài khoản mới thành công!" : "Đã chuyển tài khoản vào đơn vị thành công!"}
+                {saved.status === "created"
+                  ? "Đã tạo tài khoản mới thành công!"
+                  : "Đã chuyển tài khoản vào đơn vị thành công!"}
               </div>
               <div className="staff-saved-grid">
-                <div>Email: <strong>{saved.email}</strong></div>
-                <div>Mã số: <code className="staff-code-pill">{saved.userCode}</code></div>
-                {saved.extension && <div>Máy lẻ Softphone: <strong>{saved.extension}</strong></div>}
+                <div>
+                  Email: <strong>{saved.email}</strong>
+                </div>
+                <div>
+                  Mã số: <code className="staff-code-pill">{saved.userCode}</code>
+                </div>
+                {saved.extension && (
+                  <div>
+                    Máy lẻ Softphone: <strong>{saved.extension}</strong>
+                  </div>
+                )}
                 {saved.password ? (
                   <div className="staff-saved-pwd">
-                    <span>Mật khẩu: <code className="staff-code-pill">{saved.password}</code></span>
+                    <span>
+                      Mật khẩu: <code className="staff-code-pill">{saved.password}</code>
+                    </span>
                     <button
                       type="button"
                       className="staff-copy-btn"

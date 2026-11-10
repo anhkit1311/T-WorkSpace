@@ -1,5 +1,13 @@
 import { randomBytes } from "node:crypto";
-import type { CcContactDepartment, CcPersonalVoicemail, CcRecentCall, CcTicket, CcTicketEvent, CcWebCallAccount, TicketStatus } from "@doan/shared";
+import type {
+  CcContactDepartment,
+  CcPersonalVoicemail,
+  CcRecentCall,
+  CcTicket,
+  CcTicketEvent,
+  CcWebCallAccount,
+  TicketStatus,
+} from "@doan/shared";
 import { HttpError } from "../../../shared/http/http-error.js";
 import { getIceServers } from "../../meetings/media/ice.js";
 import { isOpen } from "../domain/business-hours.js";
@@ -18,7 +26,12 @@ const STATUS_LABEL: Record<TicketStatus, string> = {
 };
 
 /** Delivers a notice to one user (socket now, e-mail when configured). */
-export type UserNotice = (userId: string, event: string, data: Record<string, unknown>, email?: { subject: string; text: string }) => void;
+export type UserNotice = (
+  userId: string,
+  event: string,
+  data: Record<string, unknown>,
+  email?: { subject: string; text: string },
+) => void;
 
 /**
  * What every signed-in user does with the call center, agent or not: their extension's voicemail
@@ -69,7 +82,10 @@ export class CallCenterVoipService {
     const voicemail = await this.ownVoicemail(userId, voicemailId);
     if (!voicemail) throw notFound("Không tìm thấy thư thoại.");
     await this.repo.deleteVoicemail(voicemail.id);
-    if (voicemail.recording_key) await this.pbx()?.deleteRecording(voicemail.recording_key).catch(() => undefined);
+    if (voicemail.recording_key)
+      await this.pbx()
+        ?.deleteRecording(voicemail.recording_key)
+        .catch(() => undefined);
     return { ok: true };
   }
 
@@ -90,7 +106,12 @@ export class CallCenterVoipService {
    */
   async startWebCall(userId: string, body: Body): Promise<CcWebCallAccount> {
     const pbx = this.pbx();
-    if (!pbx) throw new HttpError(503, "CALL_CENTER_OFFLINE", "Tổng đài chưa kết nối, vui lòng thử lại sau.");
+    if (!pbx)
+      throw new HttpError(
+        503,
+        "CALL_CENTER_OFFLINE",
+        "Tổng đài chưa kết nối, vui lòng thử lại sau.",
+      );
     const departmentId = id(body.departmentId);
     const department = (await this.contacts()).find((item) => item.id === departmentId);
     if (!department) throw notFound("Phòng ban không nhận cuộc gọi.");
@@ -98,7 +119,13 @@ export class CallCenterVoipService {
     const endpoint = `web${randomBytes(6).toString("hex")}`;
     const secret = randomBytes(18).toString("base64url");
     const callerName = (await this.repo.displayName(userId)) ?? "Người gọi";
-    await pbx.pushExtension({ number: endpoint, secret, transport: "webrtc", callerName, context: "from-web" });
+    await pbx.pushExtension({
+      number: endpoint,
+      secret,
+      transport: "webrtc",
+      callerName,
+      context: "from-web",
+    });
     const expiresAt = new Date(Date.now() + WEB_CALL_MINUTES * 60_000);
     await this.repo.createWebCall({ endpoint, userId, departmentId, context, expiresAt });
     return {
@@ -114,16 +141,22 @@ export class CallCenterVoipService {
   }
 
   async endWebCall(userId: string, endpoint: string) {
-    const session = await this.repo.webCall(text({ endpoint }, "endpoint", 40, { pattern: /^web[0-9a-f]{12}$/ }));
+    const session = await this.repo.webCall(
+      text({ endpoint }, "endpoint", 40, { pattern: /^web[0-9a-f]{12}$/ }),
+    );
     if (session && session.user_id !== userId) throw forbidden();
-    for (const name of await this.repo.takeWebCalls([endpoint])) await this.pbx()?.removeExtension(name).catch(() => undefined);
+    for (const name of await this.repo.takeWebCalls([endpoint]))
+      await this.pbx()
+        ?.removeExtension(name)
+        .catch(() => undefined);
     return { ok: true };
   }
 
   /** Removes expired browser endpoints from Asterisk (sessions the browser never closed). */
   async sweepWebCalls() {
     const pbx = this.pbx();
-    for (const name of await this.repo.takeWebCalls()) await pbx?.removeExtension(name).catch(() => undefined);
+    for (const name of await this.repo.takeWebCalls())
+      await pbx?.removeExtension(name).catch(() => undefined);
   }
 
   // ---- the requester's tickets ---------------------------------------------------------------
@@ -139,17 +172,23 @@ export class CallCenterVoipService {
     return owner;
   }
 
-  async myTicket(userId: string, ticketId: string): Promise<{ ticket: CcTicket; events: CcTicketEvent[] }> {
+  async myTicket(
+    userId: string,
+    ticketId: string,
+  ): Promise<{ ticket: CcTicket; events: CcTicketEvent[] }> {
     const owner = await this.ownTicket(userId, ticketId);
     const ticket = (await this.cc.ticket(owner.id))!;
     // The requester sees the conversation and the status history, not internal call-back notes.
-    const events = (await this.cc.ticketEvents(owner.id)).filter((event) => event.kind === "comment" || event.kind === "status");
+    const events = (await this.cc.ticketEvents(owner.id)).filter(
+      (event) => event.kind === "comment" || event.kind === "status",
+    );
     return { ticket: { ...ticket, satisfaction: owner.satisfaction, callerNumber: null }, events };
   }
 
   async createMyTicket(userId: string, body: Body) {
     const departmentId = id(body.departmentId);
-    if (!(await this.contacts()).some((item) => item.id === departmentId)) throw notFound("Phòng ban không nhận yêu cầu.");
+    if (!(await this.contacts()).some((item) => item.id === departmentId))
+      throw notFound("Phòng ban không nhận yêu cầu.");
     const ticketId = await this.repo.createOwnTicket({
       userId,
       departmentId,
@@ -161,7 +200,8 @@ export class CallCenterVoipService {
 
   async reply(userId: string, ticketId: string, body: Body) {
     const owner = await this.ownTicket(userId, ticketId);
-    if (owner.status === "closed") throw new HttpError(409, "TICKET_CLOSED", "Phiếu đã đóng, hãy tạo phiếu mới.");
+    if (owner.status === "closed")
+      throw new HttpError(409, "TICKET_CLOSED", "Phiếu đã đóng, hãy tạo phiếu mới.");
     await this.repo.reply(owner.id, userId, text(body, "body", 4000));
     return this.myTicket(userId, owner.id);
   }
@@ -186,7 +226,10 @@ export class CallCenterVoipService {
       owner.caller_user_id,
       "callcenter_ticket",
       { ticketId, code: ticket.code, status, message: line },
-      { subject: `[TDTU] ${ticket.code}: ${STATUS_LABEL[status]}`, text: `${line}\nXem và trả lời trong mục "Phiếu hỗ trợ của tôi".` },
+      {
+        subject: `[TDTU] ${ticket.code}: ${STATUS_LABEL[status]}`,
+        text: `${line}\nXem và trả lời trong mục "Phiếu hỗ trợ của tôi".`,
+      },
     );
   }
 }

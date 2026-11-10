@@ -4,20 +4,30 @@ import type { MediaTranscript } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import "./hls-player.css";
 
-const mmss = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+const mmss = (seconds: number) =>
+  `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
 
 /** M3: captions.vtt and transcript.json sit beside index.m3u8 and need the token too. */
 function useTranscript(src: string, enabled: boolean, token: string | null) {
-  const [state, setState] = useState<{ vtt: string | null; transcript: MediaTranscript | null }>({ vtt: null, transcript: null });
+  const [state, setState] = useState<{ vtt: string | null; transcript: MediaTranscript | null }>({
+    vtt: null,
+    transcript: null,
+  });
   useEffect(() => {
     if (!enabled || !token) return;
     let vtt: string | null = null;
     let alive = true;
     const get = (name: string) =>
-      fetch(src.replace(/index\.m3u8(\?.*)?$/, name), { credentials: "include", headers: { Authorization: `Bearer ${token}` } }).then((response) =>
+      fetch(src.replace(/index\.m3u8(\?.*)?$/, name), {
+        credentials: "include",
+        headers: { Authorization: `Bearer ${token}` },
+      }).then((response) =>
         response.ok ? response : Promise.reject(new Error(String(response.status))),
       );
-    Promise.all([get("captions.vtt").then((response) => response.blob()), get("transcript.json").then((response) => response.json())]).then(
+    Promise.all([
+      get("captions.vtt").then((response) => response.blob()),
+      get("transcript.json").then((response) => response.json()),
+    ]).then(
       ([blob, transcript]: [Blob, MediaTranscript]) => {
         if (!alive) return;
         vtt = URL.createObjectURL(blob);
@@ -92,7 +102,9 @@ export function HlsPlayer({
   const [search, setSearch] = useState("");
   const shown = useMemo(() => {
     const needle = search.trim().toLocaleLowerCase("vi");
-    return (transcript?.segments ?? []).filter((item) => !needle || item.text.toLocaleLowerCase("vi").includes(needle));
+    return (transcript?.segments ?? []).filter(
+      (item) => !needle || item.text.toLocaleLowerCase("vi").includes(needle),
+    );
   }, [transcript, search]);
 
   useEffect(() => {
@@ -117,7 +129,8 @@ export function HlsPlayer({
     hls.attachMedia(element);
     // Resume where the learner stopped, unless that was the very start or the end.
     const resume = () => {
-      if (startRef.current > 5 && startRef.current < element.duration - 10) element.currentTime = startRef.current;
+      if (startRef.current > 5 && startRef.current < element.duration - 10)
+        element.currentTime = startRef.current;
     };
     element.addEventListener("loadedmetadata", resume, { once: true });
     return () => {
@@ -153,13 +166,27 @@ export function HlsPlayer({
           }
         }}
       >
-        {vtt && <track kind="captions" src={vtt} srcLang={transcript?.language ?? "vi"} label="Phụ đề tự động" default />}
+        {vtt && (
+          <track
+            kind="captions"
+            src={vtt}
+            srcLang={transcript?.language ?? "vi"}
+            label="Phụ đề tự động"
+            default
+          />
+        )}
       </video>
       {error && <p role="alert">{error}</p>}
       {transcript && (
         <details className="hls-transcript">
           <summary>Bản chép lời ({transcript.segments.length} đoạn)</summary>
-          <input type="search" placeholder="Tìm trong lời nói…" aria-label="Tìm trong bản chép lời" value={search} onChange={(event) => setSearch(event.target.value)} />
+          <input
+            type="search"
+            placeholder="Tìm trong lời nói…"
+            aria-label="Tìm trong bản chép lời"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
           <ol>
             {shown.map((item) => (
               <li key={item.start}>

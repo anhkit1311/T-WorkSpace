@@ -19,7 +19,9 @@ if (motionDebugEnabled) {
 }
 
 // EL-8: the QR code on a certificate opens this public page; it needs no session or app shell.
-const VerifyCertificatePage = lazy(() => import("./features/elearning/Certificate").then((m) => ({ default: m.VerifyCertificatePage })));
+const VerifyCertificatePage = lazy(() =>
+  import("./features/elearning/Certificate").then((m) => ({ default: m.VerifyCertificatePage })),
+);
 const verifyCode = window.location.pathname.match(/^\/verify\/([A-Za-z0-9-]{1,32})\/?$/)?.[1];
 
 createRoot(document.getElementById("root")!).render(

@@ -15,7 +15,13 @@ export function maxReportSeconds(sinceLastReportMs: number | null): number {
 }
 
 /** Adds the played stretch [from, to] (clamped to the video and to `cap` seconds) and merges overlaps. */
-export function addWatched(ranges: WatchRange[], from: number, to: number, duration: number, cap: number): WatchRange[] {
+export function addWatched(
+  ranges: WatchRange[],
+  from: number,
+  to: number,
+  duration: number,
+  cap: number,
+): WatchRange[] {
   const start = Math.max(0, Math.min(from, duration));
   const end = Math.min(to, duration, start + cap);
   const all = end > start ? [...ranges, [start, end] as WatchRange] : [...ranges];
@@ -28,6 +34,8 @@ export function addWatched(ranges: WatchRange[], from: number, to: number, durat
   return merged;
 }
 
-export const watchedSeconds = (ranges: WatchRange[]) => ranges.reduce((sum, [a, b]) => sum + (b - a), 0);
+export const watchedSeconds = (ranges: WatchRange[]) =>
+  ranges.reduce((sum, [a, b]) => sum + (b - a), 0);
 
-export const watchedEnough = (ranges: WatchRange[], duration: number) => duration > 0 && watchedSeconds(ranges) >= duration * WATCH_REQUIRED;
+export const watchedEnough = (ranges: WatchRange[], duration: number) =>
+  duration > 0 && watchedSeconds(ranges) >= duration * WATCH_REQUIRED;

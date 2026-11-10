@@ -57,7 +57,9 @@ export function Button({
   const widthRef = useRef<number | undefined>(undefined);
   useLayoutEffect(() => {
     if (loading || !buttonRef.current) return;
-    const rememberWidth = () => { widthRef.current = buttonRef.current?.getBoundingClientRect().width; };
+    const rememberWidth = () => {
+      widthRef.current = buttonRef.current?.getBoundingClientRect().width;
+    };
     rememberWidth();
     const observer = new ResizeObserver(rememberWidth);
     observer.observe(buttonRef.current);
@@ -71,16 +73,42 @@ export function Button({
       {...props}
       data-motion-control
       ref={control.setRef}
-      onPointerEnter={event => { control.handlers.onPointerEnter(event); props.onPointerEnter?.(event); }}
-      onPointerLeave={event => { control.handlers.onPointerLeave(); props.onPointerLeave?.(event); }}
-      onPointerDown={event => { control.handlers.onPointerDown(); props.onPointerDown?.(event); }}
-      onPointerUp={event => { control.handlers.onPointerUp(); props.onPointerUp?.(event); }}
-      onPointerCancel={event => { control.handlers.onPointerCancel(); props.onPointerCancel?.(event); }}
-      onBlur={event => { control.handlers.onBlur(); props.onBlur?.(event); }}
-      onKeyDown={event => { control.handlers.onKeyDown(event); props.onKeyDown?.(event); }}
-      onKeyUp={event => { control.handlers.onKeyUp(); props.onKeyUp?.(event); }}
+      onPointerEnter={(event) => {
+        control.handlers.onPointerEnter(event);
+        props.onPointerEnter?.(event);
+      }}
+      onPointerLeave={(event) => {
+        control.handlers.onPointerLeave();
+        props.onPointerLeave?.(event);
+      }}
+      onPointerDown={(event) => {
+        control.handlers.onPointerDown();
+        props.onPointerDown?.(event);
+      }}
+      onPointerUp={(event) => {
+        control.handlers.onPointerUp();
+        props.onPointerUp?.(event);
+      }}
+      onPointerCancel={(event) => {
+        control.handlers.onPointerCancel();
+        props.onPointerCancel?.(event);
+      }}
+      onBlur={(event) => {
+        control.handlers.onBlur();
+        props.onBlur?.(event);
+      }}
+      onKeyDown={(event) => {
+        control.handlers.onKeyDown(event);
+        props.onKeyDown?.(event);
+      }}
+      onKeyUp={(event) => {
+        control.handlers.onKeyUp();
+        props.onKeyUp?.(event);
+      }}
       aria-busy={loading || undefined}
-      style={loading && widthRef.current ? { ...props.style, width: widthRef.current } : props.style}
+      style={
+        loading && widthRef.current ? { ...props.style, width: widthRef.current } : props.style
+      }
     >
       {loading ? (
         <svg
@@ -155,7 +183,9 @@ export function ListItem({
         {(metaPrimary || metaSecondary) && (
           <span className="tws-list-item__meta">
             {metaPrimary && <strong className="tws-list-item__meta-primary">{metaPrimary}</strong>}
-            {metaSecondary && <span className="tws-list-item__meta-secondary">{metaSecondary}</span>}
+            {metaSecondary && (
+              <span className="tws-list-item__meta-secondary">{metaSecondary}</span>
+            )}
           </span>
         )}
       </span>
@@ -177,14 +207,38 @@ export function ListItem({
       {...props}
       data-motion-control
       ref={control.setRef}
-      onPointerEnter={event => { control.handlers.onPointerEnter(event); props.onPointerEnter?.(event); }}
-      onPointerLeave={event => { control.handlers.onPointerLeave(); props.onPointerLeave?.(event); }}
-      onPointerDown={event => { control.handlers.onPointerDown(); props.onPointerDown?.(event); }}
-      onPointerUp={event => { control.handlers.onPointerUp(); props.onPointerUp?.(event); }}
-      onPointerCancel={event => { control.handlers.onPointerCancel(); props.onPointerCancel?.(event); }}
-      onBlur={event => { control.handlers.onBlur(); props.onBlur?.(event); }}
-      onKeyDown={event => { control.handlers.onKeyDown(event); props.onKeyDown?.(event); }}
-      onKeyUp={event => { control.handlers.onKeyUp(); props.onKeyUp?.(event); }}
+      onPointerEnter={(event) => {
+        control.handlers.onPointerEnter(event);
+        props.onPointerEnter?.(event);
+      }}
+      onPointerLeave={(event) => {
+        control.handlers.onPointerLeave();
+        props.onPointerLeave?.(event);
+      }}
+      onPointerDown={(event) => {
+        control.handlers.onPointerDown();
+        props.onPointerDown?.(event);
+      }}
+      onPointerUp={(event) => {
+        control.handlers.onPointerUp();
+        props.onPointerUp?.(event);
+      }}
+      onPointerCancel={(event) => {
+        control.handlers.onPointerCancel();
+        props.onPointerCancel?.(event);
+      }}
+      onBlur={(event) => {
+        control.handlers.onBlur();
+        props.onBlur?.(event);
+      }}
+      onKeyDown={(event) => {
+        control.handlers.onKeyDown(event);
+        props.onKeyDown?.(event);
+      }}
+      onKeyUp={(event) => {
+        control.handlers.onKeyUp();
+        props.onKeyUp?.(event);
+      }}
     >
       {body}
     </button>
@@ -199,32 +253,75 @@ export function IconButton({
   shortcut,
   ref: externalRef,
   ...props
-}: ComponentProps<"button"> & { label: string; icon: IconName; active?: boolean; shortcut?: string }) {
+}: ComponentProps<"button"> & {
+  label: string;
+  icon: IconName;
+  active?: boolean;
+  shortcut?: string;
+}) {
   const control = useControlMotion(props.disabled);
   const tooltip = useControlTooltip(control.ref, label, shortcut);
   return (
     <>
-    <button
-      aria-label={label}
-      title={tooltip.id ? undefined : label}
-      className={`icon-button button--icon ${active ? "is-active" : ""} ${className}`.trim()}
-      {...props}
-      data-motion-control
-      ref={node => { control.setRef(node); if(typeof externalRef === "function") externalRef(node); else if(externalRef) externalRef.current=node; }}
-      aria-describedby={tooltip.id ?? props["aria-describedby"]}
-      onPointerEnter={event => { control.handlers.onPointerEnter(event); tooltip.handlers.onPointerEnter(); props.onPointerEnter?.(event); }}
-      onPointerLeave={event => { control.handlers.onPointerLeave(); tooltip.handlers.onPointerLeave(); props.onPointerLeave?.(event); }}
-      onPointerDown={event => { control.handlers.onPointerDown(); tooltip.handlers.onPointerDown(); props.onPointerDown?.(event); }}
-      onPointerUp={event => { control.handlers.onPointerUp(); tooltip.handlers.onPointerUp(); props.onPointerUp?.(event); }}
-      onPointerCancel={event => { control.handlers.onPointerCancel(); tooltip.handlers.onPointerCancel(); props.onPointerCancel?.(event); }}
-      onFocus={event => { tooltip.handlers.onFocus(); props.onFocus?.(event); }}
-      onBlur={event => { control.handlers.onBlur(); tooltip.handlers.onBlur(); props.onBlur?.(event); }}
-      onKeyDown={event => { control.handlers.onKeyDown(event); tooltip.handlers.onKeyDown(event); props.onKeyDown?.(event); }}
-      onKeyUp={event => { control.handlers.onKeyUp(); props.onKeyUp?.(event); }}
-    >
-      <Icon name={icon} />
-    </button>
-    {tooltip.tooltip}
+      <button
+        aria-label={label}
+        title={tooltip.id ? undefined : label}
+        className={`icon-button button--icon ${active ? "is-active" : ""} ${className}`.trim()}
+        {...props}
+        data-motion-control
+        ref={(node) => {
+          control.setRef(node);
+          if (typeof externalRef === "function") externalRef(node);
+          else if (externalRef) externalRef.current = node;
+        }}
+        aria-describedby={tooltip.id ?? props["aria-describedby"]}
+        onPointerEnter={(event) => {
+          control.handlers.onPointerEnter(event);
+          tooltip.handlers.onPointerEnter();
+          props.onPointerEnter?.(event);
+        }}
+        onPointerLeave={(event) => {
+          control.handlers.onPointerLeave();
+          tooltip.handlers.onPointerLeave();
+          props.onPointerLeave?.(event);
+        }}
+        onPointerDown={(event) => {
+          control.handlers.onPointerDown();
+          tooltip.handlers.onPointerDown();
+          props.onPointerDown?.(event);
+        }}
+        onPointerUp={(event) => {
+          control.handlers.onPointerUp();
+          tooltip.handlers.onPointerUp();
+          props.onPointerUp?.(event);
+        }}
+        onPointerCancel={(event) => {
+          control.handlers.onPointerCancel();
+          tooltip.handlers.onPointerCancel();
+          props.onPointerCancel?.(event);
+        }}
+        onFocus={(event) => {
+          tooltip.handlers.onFocus();
+          props.onFocus?.(event);
+        }}
+        onBlur={(event) => {
+          control.handlers.onBlur();
+          tooltip.handlers.onBlur();
+          props.onBlur?.(event);
+        }}
+        onKeyDown={(event) => {
+          control.handlers.onKeyDown(event);
+          tooltip.handlers.onKeyDown(event);
+          props.onKeyDown?.(event);
+        }}
+        onKeyUp={(event) => {
+          control.handlers.onKeyUp();
+          props.onKeyUp?.(event);
+        }}
+      >
+        <Icon name={icon} />
+      </button>
+      {tooltip.tooltip}
     </>
   );
 }
@@ -311,10 +408,12 @@ export function Modal({
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     document.body.style.overflow = "hidden";
     const focusFrame = window.requestAnimationFrame(() => {
-      const first = (initialFocus ? dialogRef.current?.querySelector<HTMLElement>(initialFocus) : null) ?? dialogRef.current?.querySelector<HTMLElement>(
-        "button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [href]",
-      );
-      (first ?? dialogRef.current)?.focus({preventScroll: true});
+      const first =
+        (initialFocus ? dialogRef.current?.querySelector<HTMLElement>(initialFocus) : null) ??
+        dialogRef.current?.querySelector<HTMLElement>(
+          "button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [href]",
+        );
+      (first ?? dialogRef.current)?.focus({ preventScroll: true });
     });
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -348,7 +447,7 @@ export function Modal({
       window.cancelAnimationFrame(focusFrame);
       document.body.style.overflow = originalOverflow;
       document.removeEventListener("keydown", handleKey);
-      if (previouslyFocused?.isConnected) previouslyFocused.focus({preventScroll: true});
+      if (previouslyFocused?.isConnected) previouslyFocused.focus({ preventScroll: true });
     };
   }, [isPresent]);
 
@@ -356,7 +455,7 @@ export function Modal({
     <motion.div
       className="modal-backdrop"
       inert={!isPresent}
-      style={isPresent ? undefined : {pointerEvents:"none"}}
+      style={isPresent ? undefined : { pointerEvents: "none" }}
       role="presentation"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -373,7 +472,12 @@ export function Modal({
         tabIndex={-1}
         initial={safe.reduced ? false : { opacity: 0, scale: 0.98, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: safe.reduced ? 1 : 0, scale: safe.reduced ? 1 : 0.98, y: safe.reduced ? 0 : 6, transition: {duration: safe.duration(DURATION.panelExit)} }}
+        exit={{
+          opacity: safe.reduced ? 1 : 0,
+          scale: safe.reduced ? 1 : 0.98,
+          y: safe.reduced ? 0 : 6,
+          transition: { duration: safe.duration(DURATION.panelExit) },
+        }}
         transition={{ duration: safe.duration(DURATION.overlay), ease: EASE.out }}
       >
         <header className="modal__header">
@@ -406,9 +510,14 @@ export function Field({
   const previousError = useRef(error);
   const safe = useMotionSafe();
   useEffect(() => {
-    if (safe.reduced && fieldRef.current) void animateField(fieldRef.current, {x:0}, {duration:0});
+    if (safe.reduced && fieldRef.current)
+      void animateField(fieldRef.current, { x: 0 }, { duration: 0 });
     if (error && error !== previousError.current && fieldRef.current && !safe.reduced) {
-      void animateField(fieldRef.current, {x:[0,-4,4,-2,0]}, {duration:DURATION.page,ease:EASE.inOut});
+      void animateField(
+        fieldRef.current,
+        { x: [0, -4, 4, -2, 0] },
+        { duration: DURATION.page, ease: EASE.inOut },
+      );
     }
     previousError.current = error;
   }, [error, safe.reduced, animateField, fieldRef]);
@@ -416,30 +525,45 @@ export function Field({
   let firstId: string | undefined;
   const messageId = `${generatedId}-message`;
   // Keep the incumbent label/span/control DOM: CSS depends on its exact shape.
-  const attach = (nodes: ReactNode): ReactNode => Children.map(nodes, (node) => {
-    if (!isValidElement<Record<string, unknown>>(node)) return node;
-    if (typeof node.type === "string" && ["input", "textarea", "select"].includes(node.type)) {
-      const id = String(node.props.id || `${generatedId}-${controlIndex++}`);
-      firstId ??= id;
-      const describedBy = [node.props["aria-describedby"], error || hint ? messageId : null].filter(Boolean).join(" ");
-      return cloneElement(node, {
-        id,
-        name: node.props.name || id,
-        autoComplete: node.props.autoComplete || (node.props.type === "email" ? "email" : node.props.type === "password" ? "new-password" : "off"),
-        "aria-invalid": error ? true : node.props["aria-invalid"],
-        "aria-labelledby": node.props["aria-label"] ? node.props["aria-labelledby"] : node.props["aria-labelledby"] || `${generatedId}-label`,
-        "aria-describedby": describedBy || undefined,
-      });
-    }
-    return node.props.children ? cloneElement(node, { children: attach(node.props.children as ReactNode) }) : node;
-  });
+  const attach = (nodes: ReactNode): ReactNode =>
+    Children.map(nodes, (node) => {
+      if (!isValidElement<Record<string, unknown>>(node)) return node;
+      if (typeof node.type === "string" && ["input", "textarea", "select"].includes(node.type)) {
+        const id = String(node.props.id || `${generatedId}-${controlIndex++}`);
+        firstId ??= id;
+        const describedBy = [node.props["aria-describedby"], error || hint ? messageId : null]
+          .filter(Boolean)
+          .join(" ");
+        return cloneElement(node, {
+          id,
+          name: node.props.name || id,
+          autoComplete:
+            node.props.autoComplete ||
+            (node.props.type === "email"
+              ? "email"
+              : node.props.type === "password"
+                ? "new-password"
+                : "off"),
+          "aria-invalid": error ? true : node.props["aria-invalid"],
+          "aria-labelledby": node.props["aria-label"]
+            ? node.props["aria-labelledby"]
+            : node.props["aria-labelledby"] || `${generatedId}-label`,
+          "aria-describedby": describedBy || undefined,
+        });
+      }
+      return node.props.children
+        ? cloneElement(node, { children: attach(node.props.children as ReactNode) })
+        : node;
+    });
   const controls = attach(children);
   return (
     <label ref={fieldRef} className="field" htmlFor={firstId}>
       <span id={`${generatedId}-label`}>{label}</span>
       {controls}
       {error ? (
-        <small className="field__error" id={messageId} role="alert">{error}</small>
+        <small className="field__error" id={messageId} role="alert">
+          {error}
+        </small>
       ) : hint ? (
         <small id={messageId}>{hint}</small>
       ) : null}
@@ -450,7 +574,9 @@ export function Field({
 export function ToastViewport() {
   const { toasts, dismissToast, route } = useApp();
   return (
-    <div className={`toast-viewport ${route.view === "chat" || route.view === "meetings" ? "toast-viewport--raised" : ""}`}>
+    <div
+      className={`toast-viewport ${route.view === "chat" || route.view === "meetings" ? "toast-viewport--raised" : ""}`}
+    >
       <AnimatePresence>
         {toasts.map((toast) => (
           <TimedToast key={toast.id} toast={toast} dismiss={() => dismissToast(toast.id)} />
@@ -460,7 +586,13 @@ export function ToastViewport() {
   );
 }
 
-function TimedToast({ toast, dismiss }: {toast: ReturnType<typeof useApp>["toasts"][number]; dismiss: () => void}) {
+function TimedToast({
+  toast,
+  dismiss,
+}: {
+  toast: ReturnType<typeof useApp>["toasts"][number];
+  dismiss: () => void;
+}) {
   const safe = useMotionSafe();
   const remaining = useRef(toastDuration(toast.tone));
   const started = useRef(0);
@@ -480,36 +612,119 @@ function TimedToast({ toast, dismiss }: {toast: ReturnType<typeof useApp>["toast
     started.current = performance.now();
     timer.current = setTimeout(() => dismissRef.current(), remaining.current);
   };
-  useEffect(() => { resume(); return pause; }, []);
-  return <motion.article layout="position" className={`toast toast--${toast.tone}`}
-    role={toast.tone === "warning" ? "alert" : "status"} aria-atomic="true"
-    initial={safe.reduced ? false : {opacity:0,x:20}} animate={{opacity:1,x:0,scale:1}} exit={{opacity:safe.reduced?1:0,x:safe.reduced?0:16}}
-    transition={{duration:safe.duration(DURATION.overlay),ease:EASE.out}}
-    drag={safe.reduced ? false : "x"} dragConstraints={{left:0,right:0}} dragElastic={0.15} dragSnapToOrigin
-    onDragEnd={(_event, info) => { if(Math.abs(info.offset.x)>100 || Math.abs(info.velocity.x)>600) dismiss(); }}
-    onMouseEnter={() => {hovered.current=true; pause();}} onMouseLeave={() => {hovered.current=false; resume();}}
-    onFocusCapture={() => {focused.current=true; pause();}}
-    onBlurCapture={e => {if(!e.currentTarget.contains(e.relatedTarget)){focused.current=false;resume();}}}>
-    <span className="toast__icon"><Icon name={toast.icon ?? (toast.tone === "warning" ? "warning" : toast.tone === "success" ? "check" : "info")} size={18} /></span>
-    {toast.onOpen ? (
-      <button type="button" className="toast__open" onClick={() => { toast.onOpen?.(); dismiss(); }}>
-        <strong>{toast.title}</strong>{toast.description && <p>{toast.description}</p>}
-      </button>
-    ) : (
-      <div><strong>{toast.title}</strong>{toast.description && <p>{toast.description}</p>}</div>
-    )}
-    {toast.action && <Button size="sm" variant="ghost" onClick={toast.action.onClick}>{toast.action.label}</Button>}
-    <IconButton className="toast-close" icon="x" label="Đóng thông báo" onClick={dismiss} />
-  </motion.article>;
+  useEffect(() => {
+    resume();
+    return pause;
+  }, []);
+  return (
+    <motion.article
+      layout="position"
+      className={`toast toast--${toast.tone}`}
+      role={toast.tone === "warning" ? "alert" : "status"}
+      aria-atomic="true"
+      initial={safe.reduced ? false : { opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0, scale: 1 }}
+      exit={{ opacity: safe.reduced ? 1 : 0, x: safe.reduced ? 0 : 16 }}
+      transition={{ duration: safe.duration(DURATION.overlay), ease: EASE.out }}
+      drag={safe.reduced ? false : "x"}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.15}
+      dragSnapToOrigin
+      onDragEnd={(_event, info) => {
+        if (Math.abs(info.offset.x) > 100 || Math.abs(info.velocity.x) > 600) dismiss();
+      }}
+      onMouseEnter={() => {
+        hovered.current = true;
+        pause();
+      }}
+      onMouseLeave={() => {
+        hovered.current = false;
+        resume();
+      }}
+      onFocusCapture={() => {
+        focused.current = true;
+        pause();
+      }}
+      onBlurCapture={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) {
+          focused.current = false;
+          resume();
+        }
+      }}
+    >
+      <span className="toast__icon">
+        <Icon
+          name={
+            toast.icon ??
+            (toast.tone === "warning" ? "warning" : toast.tone === "success" ? "check" : "info")
+          }
+          size={18}
+        />
+      </span>
+      {toast.onOpen ? (
+        <button
+          type="button"
+          className="toast__open"
+          onClick={() => {
+            toast.onOpen?.();
+            dismiss();
+          }}
+        >
+          <strong>{toast.title}</strong>
+          {toast.description && <p>{toast.description}</p>}
+        </button>
+      ) : (
+        <div>
+          <strong>{toast.title}</strong>
+          {toast.description && <p>{toast.description}</p>}
+        </div>
+      )}
+      {toast.action && (
+        <Button size="sm" variant="ghost" onClick={toast.action.onClick}>
+          {toast.action.label}
+        </Button>
+      )}
+      <IconButton className="toast-close" icon="x" label="Đóng thông báo" onClick={dismiss} />
+    </motion.article>
+  );
 }
 
-export function ConfirmDialog({title,description,confirmLabel,onConfirm,onClose,loading=false}: {
-  title:string; description:string; confirmLabel:string; onConfirm:()=>void; onClose:()=>void; loading?:boolean;
+export function ConfirmDialog({
+  title,
+  description,
+  confirmLabel,
+  onConfirm,
+  onClose,
+  loading = false,
+}: {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+  onClose: () => void;
+  loading?: boolean;
 }) {
-  return <Modal title={title} onClose={() => {if(!loading)onClose();}} initialFocus="[data-cancel]"
-    footer={<><Button variant="ghost" data-cancel disabled={loading} onClick={onClose}>Hủy</Button><Button variant="danger" loading={loading} onClick={onConfirm}>{confirmLabel}</Button></>}>
-    <p>{description}</p>
-  </Modal>;
+  return (
+    <Modal
+      title={title}
+      onClose={() => {
+        if (!loading) onClose();
+      }}
+      initialFocus="[data-cancel]"
+      footer={
+        <>
+          <Button variant="ghost" data-cancel disabled={loading} onClick={onClose}>
+            Hủy
+          </Button>
+          <Button variant="danger" loading={loading} onClick={onConfirm}>
+            {confirmLabel}
+          </Button>
+        </>
+      }
+    >
+      <p>{description}</p>
+    </Modal>
+  );
 }
 
 export interface FilterPillOption {
@@ -538,7 +753,9 @@ export function FilterPills({ options, activeKey, onChange, className = "" }: Fi
             onClick={() => onChange(opt.key)}
           >
             {opt.label}
-            {typeof opt.count === "number" && <span className="filter-pill-btn__count">{opt.count}</span>}
+            {typeof opt.count === "number" && (
+              <span className="filter-pill-btn__count">{opt.count}</span>
+            )}
           </button>
         );
       })}
@@ -629,4 +846,3 @@ export function KpiStatCard({
     </div>
   );
 }
-

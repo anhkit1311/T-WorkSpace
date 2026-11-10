@@ -12,7 +12,11 @@ interface ActivityItem {
   target: string | null;
 }
 
-const SOURCE_LABEL: Record<Source, string> = { media: "Ghi âm / ghi hình", workspace: "Nhóm làm việc", academic: "Tổ chức" };
+const SOURCE_LABEL: Record<Source, string> = {
+  media: "Ghi âm / ghi hình",
+  workspace: "Nhóm làm việc",
+  academic: "Tổ chức",
+};
 const ACTION_LABEL: Record<string, string> = {
   "media.call": "Nghe ghi âm cuộc gọi",
   "media.voicemail": "Nghe tin nhắn thoại",
@@ -51,7 +55,8 @@ export function ActivityPanel({ token }: { token: string }) {
       setError("");
       try {
         const query = new URLSearchParams({ ...(source && { source }), ...(before && { before }) });
-        const page = (await academicApi<{ items: ActivityItem[] }>(token, `activity?${query}`)).items;
+        const page = (await academicApi<{ items: ActivityItem[] }>(token, `activity?${query}`))
+          .items;
         setItems((old) => (before ? [...(old ?? []), ...page] : page));
         setMore(page.length === 100);
       } catch (failure) {
@@ -66,14 +71,24 @@ export function ActivityPanel({ token }: { token: string }) {
     <section>
       <div className="admin-activity__tools">
         <h2>Nhật ký hoạt động</h2>
-        <select value={source} onChange={(event) => setSource(event.target.value as Source | "")} aria-label="Lọc theo nguồn">
+        <select
+          value={source}
+          onChange={(event) => setSource(event.target.value as Source | "")}
+          aria-label="Lọc theo nguồn"
+        >
           <option value="">Tất cả</option>
           {(Object.keys(SOURCE_LABEL) as Source[]).map((key) => (
-            <option key={key} value={key}>{SOURCE_LABEL[key]}</option>
+            <option key={key} value={key}>
+              {SOURCE_LABEL[key]}
+            </option>
           ))}
         </select>
       </div>
-      {error && <p role="alert" className="admin-note">{error}</p>}
+      {error && (
+        <p role="alert" className="admin-note">
+          {error}
+        </p>
+      )}
       {items && (
         <table className="admin-table">
           <thead>
@@ -90,7 +105,8 @@ export function ActivityPanel({ token }: { token: string }) {
                 <td>{new Date(item.at).toLocaleString("vi-VN")}</td>
                 <td>{item.actorName ?? "—"}</td>
                 <td>
-                  <Badge>{SOURCE_LABEL[item.source]}</Badge> {ACTION_LABEL[item.action] ?? item.action}
+                  <Badge>{SOURCE_LABEL[item.source]}</Badge>{" "}
+                  {ACTION_LABEL[item.action] ?? item.action}
                 </td>
                 <td>{item.target ?? "—"}</td>
               </tr>

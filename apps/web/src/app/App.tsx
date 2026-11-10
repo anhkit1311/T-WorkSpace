@@ -11,8 +11,7 @@ const LoginPage = lazy(() =>
 );
 const AppShell = lazy(() => import("./layout/AppShell").then((m) => ({ default: m.AppShell })));
 // DEV diagnostics are entirely absent from the production dependency graph.
-const MotionDebug = motionDebugEnabled
-  ? lazy(() => import("../shared/motion/MotionDebug")) : null;
+const MotionDebug = motionDebugEnabled ? lazy(() => import("../shared/motion/MotionDebug")) : null;
 
 function ScreenFallback() {
   return (
@@ -59,7 +58,11 @@ export function App() {
       </div>
       <ToastViewport />
       {screen === "app" && <MeetingInviteListener />}
-      {MotionDebug && <Suspense fallback={null}><MotionDebug /></Suspense>}
+      {MotionDebug && (
+        <Suspense fallback={null}>
+          <MotionDebug />
+        </Suspense>
+      )}
     </>
   );
 }

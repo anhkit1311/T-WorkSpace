@@ -22,7 +22,6 @@
   font-size: 12px;
 }
 
-
 .live-chat :is(button, input, textarea, select):focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 1px;
@@ -41,10 +40,14 @@
   border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-muted);
-  transition: background-color 0.12s ease, color 0.12s ease;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
 }
 
-:is(.chat-icon-btn, .chat-nav-compose-btn, .chat-info-close-btn, .chat-dock-icon-btn):hover:not(:disabled) {
+:is(.chat-icon-btn, .chat-nav-compose-btn, .chat-info-close-btn, .chat-dock-icon-btn):hover:not(
+    :disabled
+  ) {
   background: var(--chat-subtle);
   color: var(--text);
 }
@@ -1041,7 +1044,9 @@
   border-radius: 12px;
   background: var(--surface);
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .chat-floating-dock-form:focus-within {
@@ -1776,7 +1781,6 @@
     visibility: visible;
     box-shadow: none;
   }
-
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1786,4 +1790,3 @@
     animation: none;
   }
 }
-

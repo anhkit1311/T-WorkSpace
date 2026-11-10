@@ -5,7 +5,12 @@ import { renderMetrics } from "../../../dist/api/infrastructure/operations/prome
 test("Prometheus text format: HELP/TYPE lines, escaped labels, no NaN", () => {
   const text = renderMetrics([
     { name: "tws_x_total", help: "Things.", type: "counter", samples: [{ value: 3 }] },
-    { name: "tws_y", help: "By label.", type: "gauge", samples: [{ labels: { department: 'Phòng "A"\n' }, value: Number.NaN }] },
+    {
+      name: "tws_y",
+      help: "By label.",
+      type: "gauge",
+      samples: [{ labels: { department: 'Phòng "A"\n' }, value: Number.NaN }],
+    },
   ]);
   assert.equal(
     text,

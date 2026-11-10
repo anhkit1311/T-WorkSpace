@@ -3,7 +3,7 @@ import type { PoolClient } from "pg";
 import { query, withTransaction } from "../../infrastructure/database/db.js";
 import { HttpError } from "../../shared/http/http-error.js";
 import { membershipEvents, validateId } from "./service.js";
-import {config} from '../../config/config.js';
+import { config } from "../../config/config.js";
 
 export async function audit(
   client: PoolClient,

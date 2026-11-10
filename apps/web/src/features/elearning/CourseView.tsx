@@ -31,7 +31,9 @@ export function CourseView({ courseId, onBack }: { courseId: string; onBack: () 
     try {
       const next = await coursesApi.detail(accessToken, courseId);
       setCourse(next);
-      setLessonId((current) => current ?? next.chapters.flatMap((chapter) => chapter.lessons)[0]?.id ?? null);
+      setLessonId(
+        (current) => current ?? next.chapters.flatMap((chapter) => chapter.lessons)[0]?.id ?? null,
+      );
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Không tải được khóa học.");
     }
@@ -42,7 +44,8 @@ export function CourseView({ courseId, onBack }: { courseId: string; onBack: () 
     setError("");
     try {
       const result = await action();
-      if (result && typeof result === "object" && "chapters" in result) setCourse(result as CourseDetail);
+      if (result && typeof result === "object" && "chapters" in result)
+        setCourse(result as CourseDetail);
       else await load();
       notify(label);
       return true;
@@ -55,30 +58,46 @@ export function CourseView({ courseId, onBack }: { courseId: string; onBack: () 
   if (!course)
     return (
       <div className="courses">
-        <Button variant="ghost" icon="chevron-left" onClick={onBack}>Khóa học</Button>
+        <Button variant="ghost" icon="chevron-left" onClick={onBack}>
+          Khóa học
+        </Button>
         <p role={error ? "alert" : "status"}>{error || "Đang tải…"}</p>
       </div>
     );
 
   const token = accessToken!;
   const tabs: [Tab, string][] = course.canManage
-    ? [["content", "Nội dung"], ["learners", "Học viên & tiến độ"], ["questions", "Ngân hàng câu hỏi"], ["settings", "Thiết lập"]]
+    ? [
+        ["content", "Nội dung"],
+        ["learners", "Học viên & tiến độ"],
+        ["questions", "Ngân hàng câu hỏi"],
+        ["settings", "Thiết lập"],
+      ]
     : [];
 
   return (
     <div className="courses course-view">
-      <Button variant="ghost" icon="chevron-left" onClick={onBack}>Khóa học</Button>
+      <Button variant="ghost" icon="chevron-left" onClick={onBack}>
+        Khóa học
+      </Button>
       <header className="courses-head">
         <div>
-          <span className="course-card__code">{course.code} · {course.unitName}</span>
+          <span className="course-card__code">
+            {course.code} · {course.unitName}
+          </span>
           <h1>{course.title}</h1>
           {course.description && <p>{course.description}</p>}
           <p className="course-card__meta">
-            Giảng viên: {[course.ownerName, ...course.instructors.map((item) => item.displayName)].join(", ")}
+            Giảng viên:{" "}
+            {[course.ownerName, ...course.instructors.map((item) => item.displayName)].join(", ")}
           </p>
         </div>
         <div className="course-actions">
-          {course.canManage && <Badge tone={course.status === "published" ? "green" : "amber"}>{STATUS_LABEL[course.status]}</Badge>}
+          {course.canManage && (
+            <Badge tone={course.status === "published" ? "green" : "amber"}>
+              {STATUS_LABEL[course.status]}
+            </Badge>
+          )}
           {course.progress !== null && <Badge tone="blue">Hoàn thành {course.progress}%</Badge>}
           {(course.enrolled || course.canManage) && (
             <Button
@@ -86,7 +105,12 @@ export function CourseView({ courseId, onBack }: { courseId: string; onBack: () 
               icon="message"
               onClick={() =>
                 void coursesApi.discussion(token, course.id).then(
-                  (space) => navigate({ view: "chat", workspaceId: space.workspaceId, ...(space.channelId ? { channelId: space.channelId } : {}) }),
+                  (space) =>
+                    navigate({
+                      view: "chat",
+                      workspaceId: space.workspaceId,
+                      ...(space.channelId ? { channelId: space.channelId } : {}),
+                    }),
                   (failure) => notify("Không mở được thảo luận", failure.message, "warning"),
                 )
               }
@@ -95,17 +119,33 @@ export function CourseView({ courseId, onBack }: { courseId: string; onBack: () 
             </Button>
           )}
           {course.enrolled && course.progress === 100 && (
-            <Button icon="star" onClick={() => setCertificateOpen(true)}>Nhận chứng nhận</Button>
+            <Button icon="star" onClick={() => setCertificateOpen(true)}>
+              Nhận chứng nhận
+            </Button>
           )}
           {course.canEnroll && (
-            <Button icon="user-plus" onClick={() => void run(course.enrollment === "approval" ? "Đã gửi yêu cầu ghi danh" : "Đã ghi danh", () => coursesApi.enroll(token, course.id))}>
+            <Button
+              icon="user-plus"
+              onClick={() =>
+                void run(
+                  course.enrollment === "approval" ? "Đã gửi yêu cầu ghi danh" : "Đã ghi danh",
+                  () => coursesApi.enroll(token, course.id),
+                )
+              }
+            >
               {course.enrollment === "approval" ? "Gửi yêu cầu ghi danh" : "Ghi danh"}
             </Button>
           )}
           {course.requested && <Badge tone="amber">Đang chờ giảng viên duyệt</Badge>}
         </div>
       </header>
-      {certificateOpen && <CertificateDialog token={token} courseId={course.id} onClose={() => setCertificateOpen(false)} />}
+      {certificateOpen && (
+        <CertificateDialog
+          token={token}
+          courseId={course.id}
+          onClose={() => setCertificateOpen(false)}
+        />
+      )}
       {course.progress !== null && (
         <span className="course-progress" aria-hidden="true">
           <span style={{ width: `${course.progress}%` }} />
@@ -114,13 +154,24 @@ export function CourseView({ courseId, onBack }: { courseId: string; onBack: () 
       {tabs.length > 0 && (
         <div className="courses-filters" role="tablist" aria-label="Quản lý khóa học">
           {tabs.map(([id, label]) => (
-            <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? "is-active" : ""} onClick={() => setTab(id)}>
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={tab === id}
+              className={tab === id ? "is-active" : ""}
+              onClick={() => setTab(id)}
+            >
               {label}
             </button>
           ))}
         </div>
       )}
-      {error && <p role="alert" className="courses-error">{error}</p>}
+      {error && (
+        <p role="alert" className="courses-error">
+          {error}
+        </p>
+      )}
 
       {tab === "content" && (
         <div className="course-layout">
@@ -138,7 +189,11 @@ export function CourseView({ courseId, onBack }: { courseId: string; onBack: () 
                 }}
               />
             ) : (
-              <p className="courses-empty">{course.enrolled || course.canManage ? "Chọn một bài học." : "Ghi danh để bắt đầu học."}</p>
+              <p className="courses-empty">
+                {course.enrolled || course.canManage
+                  ? "Chọn một bài học."
+                  : "Ghi danh để bắt đầu học."}
+              </p>
             )}
           </div>
         </div>
@@ -152,7 +207,17 @@ export function CourseView({ courseId, onBack }: { courseId: string; onBack: () 
 
 type Run = (label: string, action: () => Promise<unknown>) => Promise<boolean>;
 
-function Outline({ course, lessonId, onOpen, run }: { course: CourseDetail; lessonId: string | null; onOpen: (id: string) => void; run: Run }) {
+function Outline({
+  course,
+  lessonId,
+  onOpen,
+  run,
+}: {
+  course: CourseDetail;
+  lessonId: string | null;
+  onOpen: (id: string) => void;
+  run: Run;
+}) {
   const { accessToken } = useApp();
   const token = accessToken!;
   const [chapterTitle, setChapterTitle] = useState("");
@@ -163,12 +228,19 @@ function Outline({ course, lessonId, onOpen, run }: { course: CourseDetail; less
       {course.chapters.map((chapter, index) => (
         <section key={chapter.id}>
           <h3>
-            {/^chương\s*\d/i.test(chapter.title) ? chapter.title : `Chương ${index + 1}. ${chapter.title}`}
+            {/^chương\s*\d/i.test(chapter.title)
+              ? chapter.title
+              : `Chương ${index + 1}. ${chapter.title}`}
           </h3>
           <ol>
             {chapter.lessons.map((lesson) => (
               <li key={lesson.id}>
-                <button type="button" disabled={!canOpen} aria-current={lesson.id === lessonId} onClick={() => onOpen(lesson.id)}>
+                <button
+                  type="button"
+                  disabled={!canOpen}
+                  aria-current={lesson.id === lessonId}
+                  onClick={() => onOpen(lesson.id)}
+                >
                   <Icon name={lesson.completed ? "check" : KIND[lesson.kind][1]} size={14} />
                   <span>{lesson.title}</span>
                   {lesson.status === "draft" && <Badge tone="amber">Nháp</Badge>}
@@ -178,12 +250,28 @@ function Outline({ course, lessonId, onOpen, run }: { course: CourseDetail; less
           </ol>
           {course.canManage &&
             (adding === chapter.id ? (
-              <NewLesson chapterId={chapter.id} onDone={(id) => { setAdding(null); if (id) onOpen(id); }} run={run} />
+              <NewLesson
+                chapterId={chapter.id}
+                onDone={(id) => {
+                  setAdding(null);
+                  if (id) onOpen(id);
+                }}
+                run={run}
+              />
             ) : (
               <div className="course-outline__tools">
-                <Button size="sm" variant="ghost" icon="plus" onClick={() => setAdding(chapter.id)}>Bài học</Button>
+                <Button size="sm" variant="ghost" icon="plus" onClick={() => setAdding(chapter.id)}>
+                  Bài học
+                </Button>
                 {!chapter.lessons.length && (
-                  <Button size="sm" variant="ghost" icon="trash" onClick={() => void run("Đã xóa chương", () => coursesApi.deleteChapter(token, chapter.id))}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    icon="trash"
+                    onClick={() =>
+                      void run("Đã xóa chương", () => coursesApi.deleteChapter(token, chapter.id))
+                    }
+                  >
                     Xóa chương
                   </Button>
                 )}
@@ -196,11 +284,22 @@ function Outline({ course, lessonId, onOpen, run }: { course: CourseDetail; less
           className="course-inline-form"
           onSubmit={(event) => {
             event.preventDefault();
-            void run("Đã thêm chương", () => coursesApi.addChapter(token, course.id, chapterTitle.trim())).then((ok) => ok && setChapterTitle(""));
+            void run("Đã thêm chương", () =>
+              coursesApi.addChapter(token, course.id, chapterTitle.trim()),
+            ).then((ok) => ok && setChapterTitle(""));
           }}
         >
-          <input value={chapterTitle} onChange={(event) => setChapterTitle(event.target.value)} placeholder="Tên chương mới" aria-label="Tên chương mới" maxLength={160} required />
-          <Button size="sm" type="submit" icon="plus">Chương</Button>
+          <input
+            value={chapterTitle}
+            onChange={(event) => setChapterTitle(event.target.value)}
+            placeholder="Tên chương mới"
+            aria-label="Tên chương mới"
+            maxLength={160}
+            required
+          />
+          <Button size="sm" type="submit" icon="plus">
+            Chương
+          </Button>
         </form>
       )}
       {!course.chapters.length && <p className="courses-empty">Khóa học chưa có nội dung.</p>}
@@ -209,7 +308,15 @@ function Outline({ course, lessonId, onOpen, run }: { course: CourseDetail; less
 }
 
 /** Video, document and quiz lessons start empty; a live lesson picks one of the lecturer's meeting schedules (EL-6). */
-function NewLesson({ chapterId, onDone, run }: { chapterId: string; onDone: (id: string | null) => void; run: Run }) {
+function NewLesson({
+  chapterId,
+  onDone,
+  run,
+}: {
+  chapterId: string;
+  onDone: (id: string | null) => void;
+  run: Run;
+}) {
   const { accessToken } = useApp();
   const [kind, setKind] = useState<LessonKind>("video");
   const [title, setTitle] = useState("");
@@ -217,7 +324,10 @@ function NewLesson({ chapterId, onDone, run }: { chapterId: string; onDone: (id:
   const [scheduleId, setScheduleId] = useState("");
   useEffect(() => {
     if (kind === "live" && !schedules && accessToken)
-      void getMeetingSchedulesApi(accessToken).then((items) => setSchedules(items.filter((item) => item.canManage)), () => setSchedules([]));
+      void getMeetingSchedulesApi(accessToken).then(
+        (items) => setSchedules(items.filter((item) => item.canManage)),
+        () => setSchedules([]),
+      );
   }, [kind, schedules, accessToken]);
 
   return (
@@ -229,31 +339,61 @@ function NewLesson({ chapterId, onDone, run }: { chapterId: string; onDone: (id:
         void run("Đã thêm bài học", async () => {
           created = (
             kind === "live"
-              ? await coursesApi.addLive(accessToken!, chapterId, { title: title.trim(), scheduleId })
+              ? await coursesApi.addLive(accessToken!, chapterId, {
+                  title: title.trim(),
+                  scheduleId,
+                })
               : await coursesApi.addLesson(accessToken!, chapterId, { title: title.trim(), kind })
           ).id;
         }).then((ok) => ok && onDone(created));
       }}
     >
-      <select value={kind} onChange={(event) => setKind(event.target.value as LessonKind)} aria-label="Loại bài">
+      <select
+        value={kind}
+        onChange={(event) => setKind(event.target.value as LessonKind)}
+        aria-label="Loại bài"
+      >
         {(Object.keys(KIND) as LessonKind[]).map((value) => (
-          <option key={value} value={value}>{KIND[value][0]}</option>
+          <option key={value} value={value}>
+            {KIND[value][0]}
+          </option>
         ))}
       </select>
-      <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Tên bài học" aria-label="Tên bài học" maxLength={160} required />
+      <input
+        value={title}
+        onChange={(event) => setTitle(event.target.value)}
+        placeholder="Tên bài học"
+        aria-label="Tên bài học"
+        maxLength={160}
+        required
+      />
       {kind === "live" && (
-        <select value={scheduleId} onChange={(event) => setScheduleId(event.target.value)} required aria-label="Lịch họp">
-          <option value="">{schedules?.length ? "— Chọn lịch họp —" : "Chưa có lịch họp sắp tới (tạo trong Họp trực tuyến)"}</option>
+        <select
+          value={scheduleId}
+          onChange={(event) => setScheduleId(event.target.value)}
+          required
+          aria-label="Lịch họp"
+        >
+          <option value="">
+            {schedules?.length
+              ? "— Chọn lịch họp —"
+              : "Chưa có lịch họp sắp tới (tạo trong Họp trực tuyến)"}
+          </option>
           {schedules?.map((item) => (
             <option key={item.id} value={item.id}>
-              {new Date(item.startsAt).toLocaleString("vi-VN", { hour12: false })} · {item.title} ({item.roomName})
+              {new Date(item.startsAt).toLocaleString("vi-VN", { hour12: false })} · {item.title} (
+              {item.roomName})
             </option>
           ))}
         </select>
       )}
       <div className="course-outline__tools">
-        <Button size="sm" variant="ghost" type="button" onClick={() => onDone(null)}>Hủy</Button>
-        <Button size="sm" type="submit">Thêm</Button>
+        <Button size="sm" variant="ghost" type="button" onClick={() => onDone(null)}>
+          Hủy
+        </Button>
+        <Button size="sm" type="submit">
+          Thêm
+        </Button>
       </div>
     </form>
   );
@@ -272,14 +412,39 @@ function CourseSettings({ course, run }: { course: CourseDetail; run: Run }) {
         className="courses-form"
         onSubmit={(event) => {
           event.preventDefault();
-          void run("Đã lưu khóa học", () => coursesApi.update(token, course.id, { title: title.trim(), description: description.trim(), enrollment }));
+          void run("Đã lưu khóa học", () =>
+            coursesApi.update(token, course.id, {
+              title: title.trim(),
+              description: description.trim(),
+              enrollment,
+            }),
+          );
         }}
       >
-        <label>Tên khóa học<input value={title} onChange={(event) => setTitle(event.target.value)} required maxLength={160} /></label>
-        <label>Mô tả<textarea rows={3} value={description} onChange={(event) => setDescription(event.target.value)} maxLength={4000} /></label>
+        <label>
+          Tên khóa học
+          <input
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            required
+            maxLength={160}
+          />
+        </label>
+        <label>
+          Mô tả
+          <textarea
+            rows={3}
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            maxLength={4000}
+          />
+        </label>
         <label>
           Ghi danh
-          <select value={enrollment} onChange={(event) => setEnrollment(event.target.value as typeof enrollment)}>
+          <select
+            value={enrollment}
+            onChange={(event) => setEnrollment(event.target.value as typeof enrollment)}
+          >
             <option value="open">Mở: học viên tự đăng ký</option>
             <option value="assigned">Chỉ định: giảng viên gán học viên</option>
             <option value="approval">Cần duyệt: học viên gửi yêu cầu, giảng viên duyệt</option>
@@ -288,17 +453,41 @@ function CourseSettings({ course, run }: { course: CourseDetail; run: Run }) {
         <div className="course-outline__tools">
           <Button type="submit">Lưu</Button>
           {course.status !== "published" && (
-            <Button variant="secondary" type="button" onClick={() => void run("Đã xuất bản khóa học", () => coursesApi.update(token, course.id, { status: "published" }))}>
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() =>
+                void run("Đã xuất bản khóa học", () =>
+                  coursesApi.update(token, course.id, { status: "published" }),
+                )
+              }
+            >
               Xuất bản
             </Button>
           )}
           {course.status === "published" && (
-            <Button variant="ghost" type="button" onClick={() => void run("Đã chuyển về nháp", () => coursesApi.update(token, course.id, { status: "draft" }))}>
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={() =>
+                void run("Đã chuyển về nháp", () =>
+                  coursesApi.update(token, course.id, { status: "draft" }),
+                )
+              }
+            >
               Chuyển về nháp
             </Button>
           )}
           {course.status !== "archived" && (
-            <Button variant="ghost" type="button" onClick={() => void run("Đã lưu trữ khóa học", () => coursesApi.update(token, course.id, { status: "archived" }))}>
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={() =>
+                void run("Đã lưu trữ khóa học", () =>
+                  coursesApi.update(token, course.id, { status: "archived" }),
+                )
+              }
+            >
               Lưu trữ
             </Button>
           )}
@@ -308,11 +497,22 @@ function CourseSettings({ course, run }: { course: CourseDetail; run: Run }) {
         className="course-inline-form"
         onSubmit={(event) => {
           event.preventDefault();
-          void run("Đã thêm giảng viên", () => coursesApi.addInstructor(token, course.id, email.trim())).then((ok) => ok && setEmail(""));
+          void run("Đã thêm giảng viên", () =>
+            coursesApi.addInstructor(token, course.id, email.trim()),
+          ).then((ok) => ok && setEmail(""));
         }}
       >
-        <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Email giảng viên cùng dạy" aria-label="Email giảng viên cùng dạy" required />
-        <Button size="sm" type="submit" icon="user-plus">Thêm giảng viên</Button>
+        <input
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="Email giảng viên cùng dạy"
+          aria-label="Email giảng viên cùng dạy"
+          required
+        />
+        <Button size="sm" type="submit" icon="user-plus">
+          Thêm giảng viên
+        </Button>
       </form>
     </div>
   );

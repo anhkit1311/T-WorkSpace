@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { CcContactDepartment, CcTicket, CcTicketEvent, CcWebCallAccount, TicketStatus } from "@doan/shared";
+import type {
+  CcContactDepartment,
+  CcTicket,
+  CcTicketEvent,
+  CcWebCallAccount,
+  TicketStatus,
+} from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
 import { Badge, Button, Field, Modal } from "../../shared/ui/Primitives";
@@ -9,7 +15,10 @@ import { callCenterApi } from "./api";
 import { useSoftphone } from "./useSoftphone";
 import "./contact-center.css";
 
-const STATUS: Record<TicketStatus, { label: string; tone: "neutral" | "blue" | "amber" | "green" | "violet" }> = {
+const STATUS: Record<
+  TicketStatus,
+  { label: string; tone: "neutral" | "blue" | "amber" | "green" | "violet" }
+> = {
   open: { label: "Mới", tone: "blue" },
   in_progress: { label: "Đang xử lý", tone: "violet" },
   waiting: { label: "Chờ bạn phản hồi", tone: "amber" },
@@ -17,8 +26,12 @@ const STATUS: Record<TicketStatus, { label: string; tone: "neutral" | "blue" | "
   closed: { label: "Đã đóng", tone: "neutral" },
 };
 
-const clock = (seconds: number) => `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
-const message = (error: unknown) => (error instanceof ApiError || error instanceof Error ? error.message : "Không thể thực hiện yêu cầu.");
+const clock = (seconds: number) =>
+  `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+const message = (error: unknown) =>
+  error instanceof ApiError || error instanceof Error
+    ? error.message
+    : "Không thể thực hiện yêu cầu.";
 
 /**
  * NV-CC1 / NV-CC3 for every user: call a department straight from the browser, send it a written
@@ -35,7 +48,11 @@ export function ContactCenter() {
   const [openTicket, setOpenTicket] = useState<string | null>(null);
   const [error, setError] = useState("");
 
-  const loadTickets = useCallback(() => void callCenterApi<CcTicket[]>(token, "my-tickets").then(setTickets, () => setTickets([])), [token]);
+  const loadTickets = useCallback(
+    () =>
+      void callCenterApi<CcTicket[]>(token, "my-tickets").then(setTickets, () => setTickets([])),
+    [token],
+  );
   useEffect(() => {
     callCenterApi<CcContactDepartment[]>(token, "contacts").then(setDepartments, (failure) => {
       setDepartments([]);
@@ -58,8 +75,15 @@ export function ContactCenter() {
             <span>Liên hệ phòng ban</span>
           </h2>
         </div>
-        <p className="desk-muted">Gọi trực tiếp từ trình duyệt (cần micro) hoặc gửi yêu cầu bằng văn bản. Ngoài giờ làm việc, cuộc gọi chuyển vào hộp thư thoại của phòng.</p>
-        {error && <p role="alert" className="desk-warning">{error}</p>}
+        <p className="desk-muted">
+          Gọi trực tiếp từ trình duyệt (cần micro) hoặc gửi yêu cầu bằng văn bản. Ngoài giờ làm
+          việc, cuộc gọi chuyển vào hộp thư thoại của phòng.
+        </p>
+        {error && (
+          <p role="alert" className="desk-warning">
+            {error}
+          </p>
+        )}
         {departments === null ? (
           <p className="desk-muted">Đang tải danh sách phòng ban…</p>
         ) : !departments.length ? (
@@ -70,14 +94,23 @@ export function ContactCenter() {
               <li key={department.id} className="contact-card">
                 <div className="contact-card__head">
                   <strong>{department.name}</strong>
-                  <Badge tone={department.open ? "green" : "neutral"} dot>{department.open ? "Đang trong giờ làm việc" : "Ngoài giờ"}</Badge>
+                  <Badge tone={department.open ? "green" : "neutral"} dot>
+                    {department.open ? "Đang trong giờ làm việc" : "Ngoài giờ"}
+                  </Badge>
                 </div>
-                {department.hotline && <span className="desk-muted">Hotline {department.hotline}</span>}
+                {department.hotline && (
+                  <span className="desk-muted">Hotline {department.hotline}</span>
+                )}
                 <div className="contact-card__actions">
                   <Button size="sm" icon="phone" onClick={() => setCalling(department)}>
                     {department.open ? "Gọi ngay" : "Để lại lời nhắn"}
                   </Button>
-                  <Button size="sm" variant="secondary" icon="clipboard" onClick={() => setWriting(department)}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    icon="clipboard"
+                    onClick={() => setWriting(department)}
+                  >
                     Gửi yêu cầu
                   </Button>
                 </div>
@@ -93,21 +126,36 @@ export function ContactCenter() {
             <Icon name="clipboard" size={18} />
             <span>Phiếu hỗ trợ của tôi</span>
           </h2>
-          {tickets && tickets.some((ticket) => ticket.status === "waiting") && <Badge tone="amber">Có phiếu chờ bạn phản hồi</Badge>}
+          {tickets && tickets.some((ticket) => ticket.status === "waiting") && (
+            <Badge tone="amber">Có phiếu chờ bạn phản hồi</Badge>
+          )}
         </div>
         {tickets === null ? (
           <p className="desk-muted">Đang tải…</p>
         ) : !tickets.length ? (
-          <p className="desk-muted">Bạn chưa gửi yêu cầu nào. Yêu cầu từ cuộc gọi nhỡ, thư thoại hay nút “Cần hỗ trợ” trong khóa học cũng hiện ở đây.</p>
+          <p className="desk-muted">
+            Bạn chưa gửi yêu cầu nào. Yêu cầu từ cuộc gọi nhỡ, thư thoại hay nút “Cần hỗ trợ” trong
+            khóa học cũng hiện ở đây.
+          </p>
         ) : (
           <ul className="desk-recent" aria-label="Phiếu hỗ trợ của tôi">
             {tickets.map((ticket) => (
               <li key={ticket.id}>
-                <button type="button" className="contact-ticket" onClick={() => setOpenTicket(ticket.id)}>
+                <button
+                  type="button"
+                  className="contact-ticket"
+                  onClick={() => setOpenTicket(ticket.id)}
+                >
                   <span className="desk-recent__who">
                     <strong>{ticket.subject}</strong>
                     <span>
-                      {ticket.code} · {ticket.departmentName} · cập nhật {new Date(ticket.updatedAt).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })}
+                      {ticket.code} · {ticket.departmentName} · cập nhật{" "}
+                      {new Date(ticket.updatedAt).toLocaleString("vi-VN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        day: "2-digit",
+                        month: "2-digit",
+                      })}
                     </span>
                   </span>
                   <Badge tone={STATUS[ticket.status].tone}>{STATUS[ticket.status].label}</Badge>
@@ -118,25 +166,44 @@ export function ContactCenter() {
         )}
       </section>
 
-      {calling && <WebCallDialog department={calling} context="" onClose={() => setCalling(null)} />}
+      {calling && (
+        <WebCallDialog department={calling} context="" onClose={() => setCalling(null)} />
+      )}
       {writing && (
         <RequestDialog
           department={writing}
           onClose={() => setWriting(null)}
           onCreated={(ticket) => {
             setWriting(null);
-            notify("Đã gửi yêu cầu", `${ticket.code} — ${writing.name} sẽ phản hồi trong phiếu này.`);
+            notify(
+              "Đã gửi yêu cầu",
+              `${ticket.code} — ${writing.name} sẽ phản hồi trong phiếu này.`,
+            );
             loadTickets();
             setOpenTicket(ticket.id);
           }}
         />
       )}
-      {openTicket && <TicketDialog ticketId={openTicket} onClose={() => setOpenTicket(null)} onChanged={loadTickets} />}
+      {openTicket && (
+        <TicketDialog
+          ticketId={openTicket}
+          onClose={() => setOpenTicket(null)}
+          onChanged={loadTickets}
+        />
+      )}
     </div>
   );
 }
 
-function RequestDialog({ department, onClose, onCreated }: { department: CcContactDepartment; onClose: () => void; onCreated: (ticket: CcTicket) => void }) {
+function RequestDialog({
+  department,
+  onClose,
+  onCreated,
+}: {
+  department: CcContactDepartment;
+  onClose: () => void;
+  onCreated: (ticket: CcTicket) => void;
+}) {
   const { accessToken } = useApp();
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
@@ -145,8 +212,15 @@ function RequestDialog({ department, onClose, onCreated }: { department: CcConta
   const submit = () => {
     setBusy(true);
     setError("");
-    callCenterApi<{ ticket: CcTicket }>(accessToken!, "my-tickets", "POST", { departmentId: department.id, subject: subject.trim(), description: description.trim() })
-      .then((result) => onCreated(result.ticket), (failure) => setError(message(failure)))
+    callCenterApi<{ ticket: CcTicket }>(accessToken!, "my-tickets", "POST", {
+      departmentId: department.id,
+      subject: subject.trim(),
+      description: description.trim(),
+    })
+      .then(
+        (result) => onCreated(result.ticket),
+        (failure) => setError(message(failure)),
+      )
       .finally(() => setBusy(false));
   };
   return (
@@ -156,25 +230,53 @@ function RequestDialog({ department, onClose, onCreated }: { department: CcConta
       onClose={onClose}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>Hủy</Button>
-          <Button disabled={busy || !subject.trim()} onClick={submit} icon="check">Gửi yêu cầu</Button>
+          <Button variant="ghost" onClick={onClose}>
+            Hủy
+          </Button>
+          <Button disabled={busy || !subject.trim()} onClick={submit} icon="check">
+            Gửi yêu cầu
+          </Button>
         </>
       }
     >
       <div className="desk-form">
         <Field label="Tiêu đề">
-          <input value={subject} maxLength={200} onChange={(event) => setSubject(event.target.value)} placeholder="Ví dụ: Xin xác nhận sinh viên" autoFocus />
+          <input
+            value={subject}
+            maxLength={200}
+            onChange={(event) => setSubject(event.target.value)}
+            placeholder="Ví dụ: Xin xác nhận sinh viên"
+            autoFocus
+          />
         </Field>
         <Field label="Nội dung">
-          <textarea rows={5} maxLength={8000} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Mô tả yêu cầu, mã số sinh viên, thời gian thuận tiện để gọi lại…" />
+          <textarea
+            rows={5}
+            maxLength={8000}
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder="Mô tả yêu cầu, mã số sinh viên, thời gian thuận tiện để gọi lại…"
+          />
         </Field>
-        {error && <p role="alert" className="desk-warning">{error}</p>}
+        {error && (
+          <p role="alert" className="desk-warning">
+            {error}
+          </p>
+        )}
       </div>
     </Modal>
   );
 }
 
-function TicketDialog({ ticketId, onClose, onChanged }: { ticketId: string; onClose: () => void; onChanged: () => void }) {
+function TicketDialog({
+  ticketId,
+  onClose,
+  onChanged,
+}: {
+  ticketId: string;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
   const { accessToken } = useApp();
   const { socket } = useSocket();
   const token = accessToken!;
@@ -183,7 +285,11 @@ function TicketDialog({ ticketId, onClose, onChanged }: { ticketId: string; onCl
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const load = useCallback(
-    () => void callCenterApi<{ ticket: CcTicket; events: CcTicketEvent[] }>(token, `my-tickets/${ticketId}`).then(setData, (failure) => setError(message(failure))),
+    () =>
+      void callCenterApi<{ ticket: CcTicket; events: CcTicketEvent[] }>(
+        token,
+        `my-tickets/${ticketId}`,
+      ).then(setData, (failure) => setError(message(failure))),
     [token, ticketId],
   );
   useEffect(load, [load]);
@@ -195,36 +301,52 @@ function TicketDialog({ ticketId, onClose, onChanged }: { ticketId: string; onCl
   const act = (path: string, body: object) => {
     setBusy(true);
     setError("");
-    callCenterApi<{ ticket: CcTicket; events: CcTicketEvent[] }>(token, `my-tickets/${ticketId}/${path}`, "POST", body)
-      .then((next) => {
-        setData(next);
-        setReply("");
-        onChanged();
-      }, (failure) => setError(message(failure)))
+    callCenterApi<{ ticket: CcTicket; events: CcTicketEvent[] }>(
+      token,
+      `my-tickets/${ticketId}/${path}`,
+      "POST",
+      body,
+    )
+      .then(
+        (next) => {
+          setData(next);
+          setReply("");
+          onChanged();
+        },
+        (failure) => setError(message(failure)),
+      )
       .finally(() => setBusy(false));
   };
   const ticket = data?.ticket;
   const done = ticket?.status === "resolved" || ticket?.status === "closed";
   return (
-    <Modal title={ticket?.subject ?? "Phiếu hỗ trợ"} eyebrow={ticket ? `${ticket.code} · ${ticket.departmentName}` : undefined} onClose={onClose}>
+    <Modal
+      title={ticket?.subject ?? "Phiếu hỗ trợ"}
+      eyebrow={ticket ? `${ticket.code} · ${ticket.departmentName}` : undefined}
+      onClose={onClose}
+    >
       {!ticket ? (
         <p className="desk-muted">{error || "Đang tải…"}</p>
       ) : (
         <div className="contact-thread">
           <div className="contact-thread__meta">
             <Badge tone={STATUS[ticket.status].tone}>{STATUS[ticket.status].label}</Badge>
-            {ticket.assigneeName && <span className="desk-muted">Người xử lý: {ticket.assigneeName}</span>}
+            {ticket.assigneeName && (
+              <span className="desk-muted">Người xử lý: {ticket.assigneeName}</span>
+            )}
           </div>
           {ticket.description && <p className="desk-notes">{ticket.description}</p>}
           <ol className="contact-thread__events">
             {data!.events.map((event) => (
               <li key={event.id} className={event.kind === "status" ? "is-status" : ""}>
                 <span className="desk-muted">
-                  {new Date(event.createdAt).toLocaleString("vi-VN")} · {event.actorName ?? "Hệ thống"}
+                  {new Date(event.createdAt).toLocaleString("vi-VN")} ·{" "}
+                  {event.actorName ?? "Hệ thống"}
                 </span>
                 {event.kind === "status" ? (
                   <span>
-                    Trạng thái: {event.fromStatus ? STATUS[event.fromStatus].label : "—"} → {event.toStatus ? STATUS[event.toStatus].label : "—"}
+                    Trạng thái: {event.fromStatus ? STATUS[event.fromStatus].label : "—"} →{" "}
+                    {event.toStatus ? STATUS[event.toStatus].label : "—"}
                   </span>
                 ) : (
                   <p>{event.body}</p>
@@ -234,7 +356,11 @@ function TicketDialog({ ticketId, onClose, onChanged }: { ticketId: string; onCl
           </ol>
           {done ? (
             <div className="contact-rating">
-              <span>{ticket.satisfaction ? "Cảm ơn bạn đã đánh giá:" : "Bạn hài lòng với cách giải quyết?"}</span>
+              <span>
+                {ticket.satisfaction
+                  ? "Cảm ơn bạn đã đánh giá:"
+                  : "Bạn hài lòng với cách giải quyết?"}
+              </span>
               <div role="radiogroup" aria-label="Mức hài lòng">
                 {[1, 2, 3, 4, 5].map((score) => (
                   <button
@@ -255,15 +381,33 @@ function TicketDialog({ ticketId, onClose, onChanged }: { ticketId: string; onCl
           ) : null}
           {ticket.status !== "closed" && (
             <div className="desk-form">
-              <Field label={ticket.status === "waiting" ? "Phòng ban đang chờ bạn phản hồi" : "Trả lời"}>
-                <textarea rows={3} maxLength={4000} value={reply} onChange={(event) => setReply(event.target.value)} placeholder="Bổ sung thông tin cho phòng ban…" />
+              <Field
+                label={ticket.status === "waiting" ? "Phòng ban đang chờ bạn phản hồi" : "Trả lời"}
+              >
+                <textarea
+                  rows={3}
+                  maxLength={4000}
+                  value={reply}
+                  onChange={(event) => setReply(event.target.value)}
+                  placeholder="Bổ sung thông tin cho phòng ban…"
+                />
               </Field>
               <div className="desk-actions">
-                <Button disabled={busy || !reply.trim()} icon="send" onClick={() => act("replies", { body: reply.trim() })}>Gửi trả lời</Button>
+                <Button
+                  disabled={busy || !reply.trim()}
+                  icon="send"
+                  onClick={() => act("replies", { body: reply.trim() })}
+                >
+                  Gửi trả lời
+                </Button>
               </div>
             </div>
           )}
-          {error && <p role="alert" className="desk-warning">{error}</p>}
+          {error && (
+            <p role="alert" className="desk-warning">
+              {error}
+            </p>
+          )}
         </div>
       )}
     </Modal>
@@ -274,7 +418,15 @@ function TicketDialog({ ticketId, onClose, onChanged }: { ticketId: string; onCl
  * A browser call to one department: the API makes a temporary SIP endpoint that can only reach that
  * department's queue; it is removed when the call ends. `context` (LT1) is shown to the agent.
  */
-export function WebCallDialog({ department, context, onClose }: { department: Pick<CcContactDepartment, "id" | "name">; context: string; onClose: () => void }) {
+export function WebCallDialog({
+  department,
+  context,
+  onClose,
+}: {
+  department: Pick<CcContactDepartment, "id" | "name">;
+  context: string;
+  onClose: () => void;
+}) {
   const { accessToken } = useApp();
   const token = accessToken!;
   const [account, setAccount] = useState<CcWebCallAccount | null>(null);
@@ -287,8 +439,12 @@ export function WebCallDialog({ department, context, onClose }: { department: Pi
   useEffect(() => {
     let current: CcWebCallAccount | null = null;
     let closed = false;
-    const release = (endpoint: string) => void callCenterApi(token, `web-calls/${endpoint}`, "DELETE").catch(() => undefined);
-    callCenterApi<CcWebCallAccount>(token, "web-calls", "POST", { departmentId: department.id, context }).then(
+    const release = (endpoint: string) =>
+      void callCenterApi(token, `web-calls/${endpoint}`, "DELETE").catch(() => undefined);
+    callCenterApi<CcWebCallAccount>(token, "web-calls", "POST", {
+      departmentId: department.id,
+      context,
+    }).then(
       (next) => {
         // Closed before the endpoint arrived: give it back at once instead of leaving it to expire.
         if (closed) return release(next.number);
@@ -343,16 +499,30 @@ export function WebCallDialog({ department, context, onClose }: { department: Pi
       footer={
         phase !== "none" ? (
           <>
-            <Button variant="secondary" icon={phone.muted ? "mic-off" : "mic"} onClick={phone.toggleMute}>{phone.muted ? "Bật micro" : "Tắt micro"}</Button>
-            <Button variant="danger" icon="phone" onClick={phone.hangup}>Kết thúc</Button>
+            <Button
+              variant="secondary"
+              icon={phone.muted ? "mic-off" : "mic"}
+              onClick={phone.toggleMute}
+            >
+              {phone.muted ? "Bật micro" : "Tắt micro"}
+            </Button>
+            <Button variant="danger" icon="phone" onClick={phone.hangup}>
+              Kết thúc
+            </Button>
           </>
         ) : (
           <Button onClick={onClose}>Đóng</Button>
         )
       }
     >
-      <div className={`web-call ${phase === "active" ? "is-active" : ""}`} role="status" aria-live="polite">
-        <span className="web-call__icon"><Icon name="headset" size={28} /></span>
+      <div
+        className={`web-call ${phase === "active" ? "is-active" : ""}`}
+        role="status"
+        aria-live="polite"
+      >
+        <span className="web-call__icon">
+          <Icon name="headset" size={28} />
+        </span>
         <strong>{label}</strong>
         <p className="desk-muted">
           {error ||

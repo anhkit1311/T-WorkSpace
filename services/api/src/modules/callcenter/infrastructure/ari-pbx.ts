@@ -31,10 +31,14 @@ export class AriPbx implements Pbx {
    * Behind Docker's port proxy a restarting Asterisk can leave a socket that never opens or never
    * reports closing, so a connect timeout and a watchdog (ARI must still know our app) force a retry.
    */
-  listen(onEvent: (event: PbxEvent) => void, log: (event: string, details?: Record<string, unknown>) => void) {
+  listen(
+    onEvent: (event: PbxEvent) => void,
+    log: (event: string, details?: Record<string, unknown>) => void,
+  ) {
     this.stopped = false; // listening again after stop(): this instance became the leader again
     let generation = 0;
-    let current: { generation: number; open: boolean; retry: (reason: string) => void } | null = null;
+    let current: { generation: number; open: boolean; retry: (reason: string) => void } | null =
+      null;
     const connect = () => {
       if (this.stopped) return;
       const mine = ++generation;
@@ -104,16 +108,23 @@ export class AriPbx implements Pbx {
   private async request<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
     const response = await fetch(`${this.base}${path}`, {
       method,
-      headers: { Authorization: this.authorization, ...(body ? { "Content-Type": "application/json" } : {}) },
+      headers: {
+        Authorization: this.authorization,
+        ...(body ? { "Content-Type": "application/json" } : {}),
+      },
       body: body ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(5000),
     });
     if (!response.ok) throw new Error(`ARI ${method} ${path.split("?")[0]} → ${response.status}`);
-    return (response.status === 204 ? undefined : await response.json().catch(() => undefined)) as T;
+    return (
+      response.status === 204 ? undefined : await response.json().catch(() => undefined)
+    ) as T;
   }
 
-  answer = async (channelId: string) => void (await this.request("POST", `/channels/${channelId}/answer`));
-  hangup = async (channelId: string) => void (await this.request("DELETE", `/channels/${channelId}`));
+  answer = async (channelId: string) =>
+    void (await this.request("POST", `/channels/${channelId}/answer`));
+  hangup = async (channelId: string) =>
+    void (await this.request("DELETE", `/channels/${channelId}`));
 
   async play(channelId: string, media: string[]): Promise<string> {
     // ARI takes a list as one comma-separated value; repeated `media=` keeps only the last item.
@@ -121,12 +132,20 @@ export class AriPbx implements Pbx {
     return (await this.request<{ id: string }>("POST", `/channels/${channelId}/play?${query}`)).id;
   }
 
-  stopPlayback = async (playbackId: string) => void (await this.request("DELETE", `/playbacks/${playbackId}`));
+  stopPlayback = async (playbackId: string) =>
+    void (await this.request("DELETE", `/playbacks/${playbackId}`));
   startMusicOnHold = async (channelId: string) =>
     void (await this.request("POST", `/channels/${channelId}/moh?mohClass=default`));
-  stopMusicOnHold = async (channelId: string) => void (await this.request("DELETE", `/channels/${channelId}/moh`));
+  stopMusicOnHold = async (channelId: string) =>
+    void (await this.request("DELETE", `/channels/${channelId}/moh`));
 
-  async callExtension(input: { extension: string; callerId: string; callId: string; timeoutSeconds: number; purpose?: string }) {
+  async callExtension(input: {
+    extension: string;
+    callerId: string;
+    callId: string;
+    timeoutSeconds: number;
+    purpose?: string;
+  }) {
     const params = new URLSearchParams({
       endpoint: `PJSIP/${input.extension}`,
       app: this.options.app,
@@ -149,7 +168,10 @@ export class AriPbx implements Pbx {
   }
 
   addToBridge = async (bridgeId: string, channelIds: string[]) =>
-    void (await this.request("POST", `/bridges/${bridgeId}/addChannel?channel=${channelIds.join(",")}`));
+    void (await this.request(
+      "POST",
+      `/bridges/${bridgeId}/addChannel?channel=${channelIds.join(",")}`,
+    ));
   removeFromBridge = async (bridgeId: string, channelId: string) =>
     void (await this.request("POST", `/bridges/${bridgeId}/removeChannel?channel=${channelId}`));
 
@@ -160,16 +182,32 @@ export class AriPbx implements Pbx {
       app: this.options.app,
       appArgs: `snoop,${input.callId}`,
     });
-    return (await this.request<{ id: string }>("POST", `/channels/${channelId}/snoop?${params}`)).id;
+    return (await this.request<{ id: string }>("POST", `/channels/${channelId}/snoop?${params}`))
+      .id;
   }
 
-  destroyBridge = async (bridgeId: string) => void (await this.request("DELETE", `/bridges/${bridgeId}`));
+  destroyBridge = async (bridgeId: string) =>
+    void (await this.request("DELETE", `/bridges/${bridgeId}`));
 
   async externalMedia(host: string) {
-    const params = new URLSearchParams({ app: this.options.app, external_host: host, format: "ulaw", encapsulation: "rtp", transport: "udp", data: "phone-leg" });
-    const channel = await this.request<{ id: string; channelvars?: Record<string, string> }>("POST", `/channels/externalMedia?${params}`);
+    const params = new URLSearchParams({
+      app: this.options.app,
+      external_host: host,
+      format: "ulaw",
+      encapsulation: "rtp",
+      transport: "udp",
+      data: "phone-leg",
+    });
+    const channel = await this.request<{ id: string; channelvars?: Record<string, string> }>(
+      "POST",
+      `/channels/externalMedia?${params}`,
+    );
     const vars = channel.channelvars ?? {};
-    return { channelId: channel.id, address: vars.UNICASTRTP_LOCAL_ADDRESS ?? "", port: Number(vars.UNICASTRTP_LOCAL_PORT) };
+    return {
+      channelId: channel.id,
+      address: vars.UNICASTRTP_LOCAL_ADDRESS ?? "",
+      port: Number(vars.UNICASTRTP_LOCAL_PORT),
+    };
   }
 
   recordBridge = async (bridgeId: string, name: string) =>
@@ -199,51 +237,90 @@ export class AriPbx implements Pbx {
 
   async linkedId(channelId: string): Promise<string> {
     const variable = encodeURIComponent("CHANNEL(linkedid)");
-    return (await this.request<{ value: string }>("GET", `/channels/${channelId}/variable?variable=${variable}`)).value;
+    return (
+      await this.request<{ value: string }>(
+        "GET",
+        `/channels/${channelId}/variable?variable=${variable}`,
+      )
+    ).value;
   }
 
   async releaseOrphans(): Promise<number> {
     const prefix = `${this.options.app},`;
-    const channels = (await this.request<{ id: string; dialplan?: { app_name?: string; app_data?: string } }[]>("GET", "/channels"))
-      .filter((channel) => channel.dialplan?.app_name === "Stasis" && channel.dialplan.app_data?.startsWith(prefix));
-    const bridges = (await this.request<{ id: string; bridge_class?: string }[]>("GET", "/bridges"))
-      .filter((bridge) => bridge.bridge_class === "stasis");
+    const channels = (
+      await this.request<{ id: string; dialplan?: { app_name?: string; app_data?: string } }[]>(
+        "GET",
+        "/channels",
+      )
+    ).filter(
+      (channel) =>
+        channel.dialplan?.app_name === "Stasis" && channel.dialplan.app_data?.startsWith(prefix),
+    );
+    const bridges = (
+      await this.request<{ id: string; bridge_class?: string }[]>("GET", "/bridges")
+    ).filter((bridge) => bridge.bridge_class === "stasis");
     for (const channel of channels) await this.hangup(channel.id).catch(() => undefined);
     for (const bridge of bridges) await this.destroyBridge(bridge.id).catch(() => undefined);
     return channels.length + bridges.length;
   }
 
   /** CC-2: extensions live in Asterisk's memory wizard; auth and aor first, then the endpoint. */
-  async pushExtension(input: { number: string; secret: string; transport: ExtensionTransport; callerName: string; canCallOut?: boolean; context?: string }) {
+  async pushExtension(input: {
+    number: string;
+    secret: string;
+    transport: ExtensionTransport;
+    callerName: string;
+    canCallOut?: boolean;
+    context?: string;
+  }) {
     const fields = (values: Record<string, string>) => ({
       fields: Object.entries(values).map(([attribute, value]) => ({ attribute, value })),
     });
     const dynamic = `/asterisk/config/dynamic/res_pjsip`;
-    await this.request("PUT", `${dynamic}/auth/${input.number}`, fields({
-      auth_type: "userpass",
-      username: input.number,
-      password: input.secret,
-    }));
-    await this.request("PUT", `${dynamic}/aor/${input.number}`, fields({
-      max_contacts: "1",
-      remove_existing: "yes",
-      qualify_frequency: "30",
-    }));
+    await this.request(
+      "PUT",
+      `${dynamic}/auth/${input.number}`,
+      fields({
+        auth_type: "userpass",
+        username: input.number,
+        password: input.secret,
+      }),
+    );
+    await this.request(
+      "PUT",
+      `${dynamic}/aor/${input.number}`,
+      fields({
+        max_contacts: "1",
+        remove_existing: "yes",
+        qualify_frequency: "30",
+      }),
+    );
     // Wideband first: Opus (FEC, browser default) for WebRTC, G.722 for IP phones; G.711 as fallback.
     const media: Record<string, string> =
       input.transport === "webrtc"
         ? { transport: "transport-ws", webrtc: "yes", allow: "opus,g722,ulaw,alaw" }
-        : { transport: "transport-udp", rtp_symmetric: "yes", force_rport: "yes", rewrite_contact: "yes", acl: "internal-only", allow: "g722,ulaw,alaw" };
-    await this.request("PUT", `${dynamic}/endpoint/${input.number}`, fields({
-      // BR-20: the trunk is only in from-internal-out's dialplan.
-      context: input.context ?? (input.canCallOut ? "from-internal-out" : "from-internal"),
-      disallow: "all",
-      direct_media: "no",
-      aors: input.number,
-      auth: input.number,
-      callerid: `"${input.callerName.replace(/"/g, "")}" <${input.number}>`,
-      ...media, // after disallow: PJSIP applies allow/disallow in order
-    }));
+        : {
+            transport: "transport-udp",
+            rtp_symmetric: "yes",
+            force_rport: "yes",
+            rewrite_contact: "yes",
+            acl: "internal-only",
+            allow: "g722,ulaw,alaw",
+          };
+    await this.request(
+      "PUT",
+      `${dynamic}/endpoint/${input.number}`,
+      fields({
+        // BR-20: the trunk is only in from-internal-out's dialplan.
+        context: input.context ?? (input.canCallOut ? "from-internal-out" : "from-internal"),
+        disallow: "all",
+        direct_media: "no",
+        aors: input.number,
+        auth: input.number,
+        callerid: `"${input.callerName.replace(/"/g, "")}" <${input.number}>`,
+        ...media, // after disallow: PJSIP applies allow/disallow in order
+      }),
+    );
   }
 
   async removeExtension(number: string): Promise<void> {
@@ -255,9 +332,11 @@ export class AriPbx implements Pbx {
   }
 
   async deleteRecording(name: string): Promise<void> {
-    await this.request("DELETE", `/recordings/stored/${encodeURIComponent(name)}`).catch((error: Error) => {
-      if (!error.message.endsWith("404")) throw error;
-    });
+    await this.request("DELETE", `/recordings/stored/${encodeURIComponent(name)}`).catch(
+      (error: Error) => {
+        if (!error.message.endsWith("404")) throw error;
+      },
+    );
   }
 
   async setGlobal(name: string, value: string): Promise<void> {
@@ -275,20 +354,25 @@ export class AriPbx implements Pbx {
       this.request<{ name: string; state: string }[]>("GET", "/channels"),
     ]);
     const states = new Map<string, ExtensionState>();
-    for (const endpoint of endpoints) if (endpoint.state !== "online") states.set(endpoint.resource, "offline");
+    for (const endpoint of endpoints)
+      if (endpoint.state !== "online") states.set(endpoint.resource, "offline");
     for (const channel of channels) {
       const number = /^PJSIP\/([0-9]{3,6})-/.exec(channel.name)?.[1];
-      if (number && states.get(number) !== "busy") states.set(number, channel.state === "Up" ? "busy" : "ringing");
+      if (number && states.get(number) !== "busy")
+        states.set(number, channel.state === "Up" ? "busy" : "ringing");
     }
     return states;
   }
 
   /** Streams a stored recording (call or voicemail) for playback in the browser (CC-7). */
   async recording(name: string): Promise<Response> {
-    const response = await fetch(`${this.base}/recordings/stored/${encodeURIComponent(name)}/file`, {
-      headers: { Authorization: this.authorization },
-      signal: AbortSignal.timeout(15000),
-    });
+    const response = await fetch(
+      `${this.base}/recordings/stored/${encodeURIComponent(name)}/file`,
+      {
+        headers: { Authorization: this.authorization },
+        signal: AbortSignal.timeout(15000),
+      },
+    );
     if (!response.ok) throw new Error(`ARI recording ${response.status}`);
     return response;
   }
@@ -333,7 +417,11 @@ function translate(event: AriEvent): PbxEvent | null {
     case "PlaybackFinished":
       return { type: "playback_finished", playbackId: event.playback!.id };
     case "RecordingFinished":
-      return { type: "recording_finished", name: event.recording!.name, durationSeconds: event.recording!.duration ?? 0 };
+      return {
+        type: "recording_finished",
+        name: event.recording!.name,
+        durationSeconds: event.recording!.duration ?? 0,
+      };
     case "RecordingFailed":
       return { type: "recording_failed", name: event.recording!.name };
     case "ChannelDialplan":
@@ -349,7 +437,9 @@ function translate(event: AriEvent): PbxEvent | null {
       };
     case "Dial":
       // Only the end of a dial attempt matters (the start has an empty status).
-      return event.caller && event.dialstatus ? { type: "dial", callerChannelId: event.caller.id, status: event.dialstatus } : null;
+      return event.caller && event.dialstatus
+        ? { type: "dial", callerChannelId: event.caller.id, status: event.dialstatus }
+        : null;
     default:
       return null;
   }

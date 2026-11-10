@@ -127,7 +127,9 @@ async function captureLocal(): Promise<MediaStream> {
   });
   if (scripted) stream.addTrack(scriptedVoice());
   log(`getUserMedia ${Math.round(performance.now() - begin)}ms`);
-  stream.getTracks().forEach((track) => track.addEventListener("ended", () => log(`local ${track.kind} ended`)));
+  stream
+    .getTracks()
+    .forEach((track) => track.addEventListener("ended", () => log(`local ${track.kind} ended`)));
   return stream;
 }
 
@@ -307,11 +309,15 @@ function ack<T>(socket: Socket, event: string, data: unknown): Promise<T> {
   return new Promise((resolve, reject) => {
     socket
       .timeout(15000)
-      .emit(event, data, (error: Error | null, response: T & { success: boolean; error?: string }) => {
-        if (error) reject(error);
-        else if (!response.success) reject(new Error(response.error ?? `${event} failed`));
-        else resolve(response);
-      });
+      .emit(
+        event,
+        data,
+        (error: Error | null, response: T & { success: boolean; error?: string }) => {
+          if (error) reject(error);
+          else if (!response.success) reject(new Error(response.error ?? `${event} failed`));
+          else resolve(response);
+        },
+      );
   });
 }
 
@@ -345,7 +351,9 @@ async function runSfu() {
   await service.loadDevice(joined.routerRtpCapabilities);
   // ?policy=relay forces both transports through the TURN server returned by the API.
   const policy = params.get("policy") === "relay" ? "relay" : undefined;
-  const sendParams = await ack<{ params: TransportOptions }>(socket, "create_webrtc_transport", { roomId });
+  const sendParams = await ack<{ params: TransportOptions }>(socket, "create_webrtc_transport", {
+    roomId,
+  });
   if (policy) sendParams.params.iceTransportPolicy = policy;
   const send = service.initSendTransport(
     sendParams.params,
@@ -367,7 +375,9 @@ async function runSfu() {
         })
       ).producerId,
   );
-  const recvParams = await ack<{ params: TransportOptions }>(socket, "create_webrtc_transport", { roomId });
+  const recvParams = await ack<{ params: TransportOptions }>(socket, "create_webrtc_transport", {
+    roomId,
+  });
   if (policy) recvParams.params.iceTransportPolicy = policy;
   const recv = service.initRecvTransport(recvParams.params, async (dtlsParameters) => {
     await ack(socket, "connect_webrtc_transport", {
@@ -387,7 +397,10 @@ async function runSfu() {
     });
     const consumer = await service.consume(response.params);
     if (consumer.kind === "video")
-      videoOwners.set(consumer.id, (response.params as { producerSocketId: string }).producerSocketId);
+      videoOwners.set(
+        consumer.id,
+        (response.params as { producerSocketId: string }).producerSocketId,
+      );
     attachRemote(producerId, consumer.track);
     await ack(socket, "resume_consumer", { roomId, consumerId: consumer.id });
     if (consumer.kind === "video") await applyLayers();
@@ -407,7 +420,10 @@ async function runSfu() {
     const page = paginate(owners, pageSizeFor(1280), 0).items;
     const grid = bestGridLayout(page.length, 1280, 720, 16);
     const base: LayerDemand = Object.fromEntries(
-      owners.map(([, owner]) => [owner, page.some(([, o]) => o === owner) ? layerForTile(grid.tileWidth) : null]),
+      owners.map(([, owner]) => [
+        owner,
+        page.some(([, o]) => o === owner) ? layerForTile(grid.tileWidth) : null,
+      ]),
     );
     const target = applyLayerPolicy(base, selection, speakerId, lastSpokeAt, Date.now());
     for (const [consumerId, owner] of owners) {
@@ -433,7 +449,10 @@ async function runSfu() {
     for (const level of data.levels) lastSpokeAt[level.socketId] = Date.now();
   });
   if (isLayerPolicy(selection))
-    setInterval(() => void applySelection().catch((error) => log(`selection ${String(error)}`)), 2000);
+    setInterval(
+      () => void applySelection().catch((error) => log(`selection ${String(error)}`)),
+      2000,
+    );
   // Same policy as MeetingContext: >6 video consumers -> layer 0, >2 -> 1, else 2.
   // A numeric ?layer= forces one layer for every consumer instead.
   const applyLayers = async () => {
@@ -459,9 +478,13 @@ async function runSfu() {
   consumeReady = consumeLogged;
   pendingProducers.splice(0).forEach(consumeLogged);
   // Same as MeetingContext: re-snapshot once transports exist to catch concurrent joiners.
-  const latest = await ack<{ existingProducers: { producerId: string }[] }>(socket, "join_meeting", {
-    roomId,
-  });
+  const latest = await ack<{ existingProducers: { producerId: string }[] }>(
+    socket,
+    "join_meeting",
+    {
+      roomId,
+    },
+  );
   for (const producer of [...joined.existingProducers, ...latest.existingProducers])
     await consume(producer.producerId);
   state.joinedAt = performance.now() - started;

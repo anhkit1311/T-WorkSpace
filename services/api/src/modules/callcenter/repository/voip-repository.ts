@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
-import type { CcContactDepartment, CcPersonalVoicemail, CcRecentCall, CcTicket } from "@doan/shared";
+import type {
+  CcContactDepartment,
+  CcPersonalVoicemail,
+  CcRecentCall,
+  CcTicket,
+} from "@doan/shared";
 import { query } from "../../../infrastructure/database/db.js";
 import type { InternalCallRecord } from "../service/internal-call-service.js";
 
@@ -13,7 +18,12 @@ export class VoipRepository {
 
   /** The extension behind `number` and who owns it; null when it does not exist or is disabled. */
   async mailbox(number: string) {
-    const result = await query<{ id: string; user_id: string | null; display_name: string | null; email: string | null }>(
+    const result = await query<{
+      id: string;
+      user_id: string | null;
+      display_name: string | null;
+      email: string | null;
+    }>(
       `SELECT e.id,e.user_id,u.display_name,u.email FROM cc_extensions e LEFT JOIN users u ON u.id=e.user_id
        WHERE e.number=$1 AND e.active`,
       [number],
@@ -42,7 +52,14 @@ export class VoipRepository {
     const id = randomUUID();
     await query(
       `INSERT INTO cc_voicemails(id,extension_id,caller_number,caller_name,duration_seconds,recording_key) VALUES($1,$2,$3,$4,$5,$6)`,
-      [id, input.extensionId, input.callerNumber.slice(0, 32), input.callerName?.slice(0, 120) ?? null, Math.round(input.durationSeconds), input.recordingKey],
+      [
+        id,
+        input.extensionId,
+        input.callerNumber.slice(0, 32),
+        input.callerName?.slice(0, 120) ?? null,
+        Math.round(input.durationSeconds),
+        input.recordingKey,
+      ],
     );
     return id;
   }
@@ -82,13 +99,31 @@ export class VoipRepository {
          (SELECT id FROM cc_calls WHERE id=$5::uuid),$6,$7,$8,$9
        FROM (SELECT 1) one LEFT JOIN cc_extensions callee ON callee.number=$4::varchar
        ON CONFLICT (linkedid) DO NOTHING`,
-      [call.id, call.linkedId, call.callerNumber.slice(0, 32), call.calleeNumber, call.transferredFrom, call.startedAt, call.answeredAt, call.endedAt, call.outcome],
+      [
+        call.id,
+        call.linkedId,
+        call.callerNumber.slice(0, 32),
+        call.calleeNumber,
+        call.transferredFrom,
+        call.startedAt,
+        call.answeredAt,
+        call.endedAt,
+        call.outcome,
+      ],
     );
   }
 
   /** The user's own extension-to-extension calls, newest first. */
   async recentCalls(userId: string, limit = 30): Promise<CcRecentCall[]> {
-    const result = await query<{ id: string; way: "in" | "out"; number: string; name: string | null; started_at: Date; seconds: number; outcome: CcRecentCall["outcome"] }>(
+    const result = await query<{
+      id: string;
+      way: "in" | "out";
+      number: string;
+      name: string | null;
+      started_at: Date;
+      seconds: number;
+      outcome: CcRecentCall["outcome"];
+    }>(
       `SELECT c.id,CASE WHEN c.caller_user_id=$1 THEN 'out' ELSE 'in' END AS way,
          CASE WHEN c.caller_user_id=$1 THEN c.callee_number ELSE c.caller_number END AS number,
          u.display_name AS name,c.started_at,
@@ -126,7 +161,11 @@ export class VoipRepository {
 
   // ---- calling a department from the browser ------------------------------------------------
 
-  async contactDepartments(): Promise<(Omit<CcContactDepartment, "open"> & { hours: { weekday: number; opens: string; closes: string }[] })[]> {
+  async contactDepartments(): Promise<
+    (Omit<CcContactDepartment, "open"> & {
+      hours: { weekday: number; opens: string; closes: string }[];
+    })[]
+  > {
     const [departments, hours] = await Promise.all([
       query<{ id: string; name: string; hotline: string | null }>(
         `SELECT d.unit_id AS id,u.name,
@@ -142,28 +181,59 @@ export class VoipRepository {
       ...row,
       hours: hours.rows
         .filter((item) => item.department_id === row.id)
-        .map((item) => ({ weekday: item.weekday, opens: item.opens.slice(0, 5), closes: item.closes.slice(0, 5) })),
+        .map((item) => ({
+          weekday: item.weekday,
+          opens: item.opens.slice(0, 5),
+          closes: item.closes.slice(0, 5),
+        })),
     }));
   }
 
   async ownerEmail(userId: string): Promise<string | null> {
-    return (await query<{ email: string }>(`SELECT email FROM users WHERE id=$1`, [userId])).rows[0]?.email ?? null;
+    return (
+      (await query<{ email: string }>(`SELECT email FROM users WHERE id=$1`, [userId])).rows[0]
+        ?.email ?? null
+    );
   }
 
   async displayName(userId: string): Promise<string | null> {
-    return (await query<{ display_name: string }>(`SELECT display_name FROM users WHERE id=$1`, [userId])).rows[0]?.display_name ?? null;
+    return (
+      (
+        await query<{ display_name: string }>(`SELECT display_name FROM users WHERE id=$1`, [
+          userId,
+        ])
+      ).rows[0]?.display_name ?? null
+    );
   }
 
-  async createWebCall(input: { endpoint: string; userId: string; departmentId: string; context: string; expiresAt: Date }) {
+  async createWebCall(input: {
+    endpoint: string;
+    userId: string;
+    departmentId: string;
+    context: string;
+    expiresAt: Date;
+  }) {
     await query(
       `INSERT INTO cc_web_calls(endpoint,user_id,department_id,context,expires_at) VALUES($1,$2,$3,$4,$5)`,
-      [input.endpoint, input.userId, input.departmentId, input.context.slice(0, 500), input.expiresAt],
+      [
+        input.endpoint,
+        input.userId,
+        input.departmentId,
+        input.context.slice(0, 500),
+        input.expiresAt,
+      ],
     );
   }
 
   /** The session behind a browser endpoint, while it is valid. */
   async webCall(endpoint: string) {
-    const result = await query<{ user_id: string; department_id: string; context: string; display_name: string; phone: string | null }>(
+    const result = await query<{
+      user_id: string;
+      department_id: string;
+      context: string;
+      display_name: string;
+      phone: string | null;
+    }>(
       `SELECT w.user_id,w.department_id,w.context,u.display_name,u.phone FROM cc_web_calls w JOIN users u ON u.id=w.user_id
        WHERE w.endpoint=$1 AND w.expires_at > now()`,
       [endpoint],
@@ -229,14 +299,24 @@ export class VoipRepository {
 
   /** The requester of a ticket and its state, for permission checks. */
   async ticketOwner(id: string) {
-    const result = await query<{ id: string; caller_user_id: string | null; status: CcTicket["status"]; department_id: string; satisfaction: number | null }>(
-      `SELECT id,caller_user_id,status,department_id,satisfaction FROM cc_tickets WHERE id=$1`,
-      [id],
-    );
+    const result = await query<{
+      id: string;
+      caller_user_id: string | null;
+      status: CcTicket["status"];
+      department_id: string;
+      satisfaction: number | null;
+    }>(`SELECT id,caller_user_id,status,department_id,satisfaction FROM cc_tickets WHERE id=$1`, [
+      id,
+    ]);
     return result.rows[0] ?? null;
   }
 
-  async createOwnTicket(input: { userId: string; departmentId: string; subject: string; description: string }): Promise<string> {
+  async createOwnTicket(input: {
+    userId: string;
+    departmentId: string;
+    subject: string;
+    description: string;
+  }): Promise<string> {
     const id = randomUUID();
     await query(
       `INSERT INTO cc_tickets(id,department_id,source,caller_number,caller_user_id,subject,description,created_by)
@@ -264,7 +344,10 @@ export class VoipRepository {
   }
 
   async rate(ticketId: string, score: number) {
-    await query(`UPDATE cc_tickets SET satisfaction=$2, rated_at=now(), updated_at=now() WHERE id=$1`, [ticketId, score]);
+    await query(
+      `UPDATE cc_tickets SET satisfaction=$2, rated_at=now(), updated_at=now() WHERE id=$1`,
+      [ticketId, score],
+    );
   }
 
   // ---- retention ------------------------------------------------------------------------------

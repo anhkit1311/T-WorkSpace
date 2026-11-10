@@ -81,4 +81,3 @@ export function appRouteUrl(route: AppRoute): string {
   if (route.query) params.set("q", route.query);
   return `/app/${route.view}${params.size ? `?${params}` : ""}${route.invitationToken ? `#token=${encodeURIComponent(route.invitationToken)}` : ""}`;
 }
-

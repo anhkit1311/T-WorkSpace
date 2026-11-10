@@ -24,11 +24,16 @@ export async function getAcademicProfile(userId: string) {
     const actor = await loadActor(client, userId);
     const units = await client.query(
       `SELECT id,code,name,id_prefix AS "idPrefix" FROM academic_units WHERE $1::boolean OR id=ANY($2::uuid[]) ORDER BY code`,
-      [actor.systemAdmin, [...actor.unitRoles.keys(), ...(actor.staff ? [actor.staff.unitId] : [])]],
+      [
+        actor.systemAdmin,
+        [...actor.unitRoles.keys(), ...(actor.staff ? [actor.staff.unitId] : [])],
+      ],
     );
     return {
       systemAdmin: actor.systemAdmin,
-      unitRoles: Object.fromEntries([...actor.unitRoles].map(([unit, roles]) => [unit, [...roles]])),
+      unitRoles: Object.fromEntries(
+        [...actor.unitRoles].map(([unit, roles]) => [unit, [...roles]]),
+      ),
       staff: actor.staff,
       units: units.rows,
     };
@@ -40,7 +45,10 @@ function idPrefix(value: unknown, kind: string): string {
   const prefix = String(value).trim();
   const [low, high] = kind === "office" ? [50, 99] : [1, 49];
   if (!/^[0-9]{2}$/.test(prefix) || Number(prefix) < low || Number(prefix) > high)
-    throw invalid(`Mã định danh của ${kind === "office" ? "phòng ban" : "khoa"} là 2 chữ số từ ${String(low).padStart(2, "0")} đến ${high}.`, "INVALID_ID_PREFIX");
+    throw invalid(
+      `Mã định danh của ${kind === "office" ? "phòng ban" : "khoa"} là 2 chữ số từ ${String(low).padStart(2, "0")} đến ${high}.`,
+      "INVALID_ID_PREFIX",
+    );
   return prefix;
 }
 
@@ -56,7 +64,10 @@ async function freePrefix(client: PoolClient, kind: string): Promise<string | nu
 }
 
 /** Máy lẻ of a unit: 1{mã định danh}{01–99}, e.g. 01 → 10101–10199 (see migration 045). */
-const prefixRange = (prefix: string): [number, number] => [10000 + Number(prefix) * 100 + 1, 10000 + Number(prefix) * 100 + 99];
+const prefixRange = (prefix: string): [number, number] => [
+  10000 + Number(prefix) * 100 + 1,
+  10000 + Number(prefix) * 100 + 99,
+];
 
 const unitTaken = (err: { code?: string; constraint?: string }) => {
   if (err.code === "23505" && err.constraint === "academic_units_id_prefix_key")
@@ -77,10 +88,12 @@ export async function createUnit(userId: string, body: Record<string, unknown>) 
     const enableFreePbx = Boolean(body.enableFreePbx || body.hasFreePbx);
     const prefix = body.idPrefix ? idPrefix(body.idPrefix, kind) : await freePrefix(client, kind);
 
-    await client.query(
-      `INSERT INTO academic_units(id, code, name, kind, id_prefix) VALUES($1, $2, $3, $4, $5)`,
-      [id, unitCode, name, kind, prefix],
-    ).catch(unitTaken);
+    await client
+      .query(
+        `INSERT INTO academic_units(id, code, name, kind, id_prefix) VALUES($1, $2, $3, $4, $5)`,
+        [id, unitCode, name, kind, prefix],
+      )
+      .catch(unitTaken);
 
     if (enableFreePbx) {
       let extFrom = body.extensionFrom ? Number(body.extensionFrom) : null;
@@ -88,7 +101,9 @@ export async function createUnit(userId: string, body: Record<string, unknown>) 
       if (!extFrom && prefix) {
         [extFrom, extTo] = prefixRange(prefix);
       } else if (!extFrom) {
-        const maxExt = await client.query<{ max_to: number }>(`SELECT MAX(extension_to) AS max_to FROM cc_departments`);
+        const maxExt = await client.query<{ max_to: number }>(
+          `SELECT MAX(extension_to) AS max_to FROM cc_departments`,
+        );
         extFrom = Math.max(600, (maxExt.rows[0]?.max_to || 599) + 1);
         extTo = extFrom + 99;
       } else if (!extTo) {
@@ -102,7 +117,14 @@ export async function createUnit(userId: string, body: Record<string, unknown>) 
       );
     }
 
-    await audit(client, { unitId: id, actorId: userId, entity: "unit", entityId: id, action: "unit.created", details: { id, code: unitCode, name, kind, enableFreePbx } });
+    await audit(client, {
+      unitId: id,
+      actorId: userId,
+      entity: "unit",
+      entityId: id,
+      action: "unit.created",
+      details: { id, code: unitCode, name, kind, enableFreePbx },
+    });
     return { id, code: unitCode, name, kind, idPrefix: prefix, hasFreePbx: enableFreePbx };
   });
 }
@@ -112,14 +134,25 @@ export async function updateUnit(userId: string, unitId: string, body: Record<st
   return withTransaction(async (client) => {
     const actor = await loadActor(client, userId);
     if (!actor.systemAdmin) throw forbidden("Chỉ quản trị hệ thống được sửa khoa / phòng ban.");
-    const existing = await client.query<{ id: string; code: string | null; name: string; kind: string; id_prefix: string | null }>(
-      `SELECT id, code, name, kind, id_prefix FROM academic_units WHERE id = $1`,
-      [unitId],
-    );
+    const existing = await client.query<{
+      id: string;
+      code: string | null;
+      name: string;
+      kind: string;
+      id_prefix: string | null;
+    }>(`SELECT id, code, name, kind, id_prefix FROM academic_units WHERE id = $1`, [unitId]);
     if (!existing.rowCount) throw notFound("Khoa / phòng ban không tồn tại.");
 
-    const name = body.name !== undefined ? text(body.name, "Tên khoa / phòng ban", 2, 160) : existing.rows[0].name;
-    const kind = body.kind !== undefined ? (body.kind === "office" ? "office" : "faculty") : existing.rows[0].kind;
+    const name =
+      body.name !== undefined
+        ? text(body.name, "Tên khoa / phòng ban", 2, 160)
+        : existing.rows[0].name;
+    const kind =
+      body.kind !== undefined
+        ? body.kind === "office"
+          ? "office"
+          : "faculty"
+        : existing.rows[0].kind;
     let unitCode = existing.rows[0].code;
     if (body.code !== undefined) {
       const rawCode = body.code ? String(body.code).trim().toUpperCase() : null;
@@ -128,13 +161,17 @@ export async function updateUnit(userId: string, unitId: string, body: Record<st
 
     const prefix =
       body.idPrefix !== undefined
-        ? body.idPrefix ? idPrefix(body.idPrefix, kind) : null
+        ? body.idPrefix
+          ? idPrefix(body.idPrefix, kind)
+          : null
         : existing.rows[0].id_prefix;
 
-    await client.query(
-      `UPDATE academic_units SET name = $1, kind = $2, code = $3, id_prefix = $4 WHERE id = $5`,
-      [name, kind, unitCode, prefix, unitId],
-    ).catch(unitTaken);
+    await client
+      .query(
+        `UPDATE academic_units SET name = $1, kind = $2, code = $3, id_prefix = $4 WHERE id = $5`,
+        [name, kind, unitCode, prefix, unitId],
+      )
+      .catch(unitTaken);
 
     if (body.enableFreePbx !== undefined || body.hasFreePbx !== undefined) {
       const enableFreePbx = Boolean(body.enableFreePbx ?? body.hasFreePbx);
@@ -152,7 +189,9 @@ export async function updateUnit(userId: string, unitId: string, body: Record<st
           } else if (prefix) {
             [extFrom, extTo] = prefixRange(prefix);
           } else {
-            const maxExt = await client.query<{ max_to: number }>(`SELECT MAX(extension_to) AS max_to FROM cc_departments`);
+            const maxExt = await client.query<{ max_to: number }>(
+              `SELECT MAX(extension_to) AS max_to FROM cc_departments`,
+            );
             extFrom = Math.max(600, (maxExt.rows[0]?.max_to || 599) + 1);
             extTo = extFrom + 99;
           }
@@ -170,7 +209,14 @@ export async function updateUnit(userId: string, unitId: string, body: Record<st
       }
     }
 
-    await audit(client, { unitId, actorId: userId, entity: "unit", entityId: unitId, action: "unit.updated", details: { name, kind, code: unitCode } });
+    await audit(client, {
+      unitId,
+      actorId: userId,
+      entity: "unit",
+      entityId: unitId,
+      action: "unit.updated",
+      details: { name, kind, code: unitCode },
+    });
     return { id: unitId, code: unitCode, name, kind };
   });
 }
@@ -183,24 +229,49 @@ export async function deleteUnit(userId: string, unitId: string) {
     await client.query(`DELETE FROM cc_departments WHERE unit_id = $1`, [unitId]);
     await client.query(`DELETE FROM academic_departments WHERE unit_id = $1`, [unitId]);
     await client.query(`DELETE FROM academic_role_grants WHERE unit_id = $1`, [unitId]);
-    const res = await client.query(`DELETE FROM academic_units WHERE id = $1 RETURNING id, name`, [unitId]);
+    const res = await client.query(`DELETE FROM academic_units WHERE id = $1 RETURNING id, name`, [
+      unitId,
+    ]);
     if (!res.rowCount) throw notFound("Khoa / phòng ban không tồn tại.");
-    await audit(client, { unitId, actorId: userId, entity: "unit", entityId: unitId, action: "unit.deleted", details: res.rows[0] });
+    await audit(client, {
+      unitId,
+      actorId: userId,
+      entity: "unit",
+      entityId: unitId,
+      action: "unit.deleted",
+      details: res.rows[0],
+    });
     return { ok: true, deleted: res.rows[0] };
   });
 }
 
-export async function createDepartment(userId: string, unitId: string, body: Record<string, unknown>) {
+export async function createDepartment(
+  userId: string,
+  unitId: string,
+  body: Record<string, unknown>,
+) {
   return withTransaction(async (client) => {
     id(unitId);
     requireUnitRole(await loadActor(client, userId), unitId, "unit_admin");
-    const department = { id: randomUUID(), code: code(body.code, "Mã bộ môn"), name: text(body.name, "Tên bộ môn", 2, 160) };
+    const department = {
+      id: randomUUID(),
+      code: code(body.code, "Mã bộ môn"),
+      name: text(body.name, "Tên bộ môn", 2, 160),
+    };
     const inserted = await client.query(
       `INSERT INTO academic_departments(id,unit_id,code,name) SELECT $1,$2,$3,$4 WHERE EXISTS(SELECT 1 FROM academic_units WHERE id=$2) ON CONFLICT(unit_id,code) DO NOTHING`,
       [department.id, unitId, department.code, department.name],
     );
-    if (!inserted.rowCount) throw conflict("DUPLICATE_CODE", "Mã bộ môn đã tồn tại hoặc khoa không hợp lệ.");
-    await audit(client, { unitId, actorId: userId, entity: "department", entityId: department.id, action: "department.created", details: department });
+    if (!inserted.rowCount)
+      throw conflict("DUPLICATE_CODE", "Mã bộ môn đã tồn tại hoặc khoa không hợp lệ.");
+    await audit(client, {
+      unitId,
+      actorId: userId,
+      entity: "department",
+      entityId: department.id,
+      action: "department.created",
+      details: department,
+    });
     return department;
   });
 }
@@ -217,7 +288,8 @@ export async function enrollAccount(userId: string, unitId: string, body: Record
   const cohort = kind === "student" ? cohortOf(body.cohort) : null;
   const rank = kind === "student" ? null : choice(body.rank ?? "ths", ranks, "Học vị");
   await withTransaction(async (client) => {
-    if (!(await loadActor(client, userId)).systemAdmin) throw forbidden("Chỉ quản trị hệ thống được tạo tài khoản.");
+    if (!(await loadActor(client, userId)).systemAdmin)
+      throw forbidden("Chỉ quản trị hệ thống được tạo tài khoản.");
   });
   // Hashed before the transaction like createAccounts; unused when the account already exists.
   const password = randomBytes(9).toString("base64url");
@@ -227,7 +299,14 @@ export async function enrollAccount(userId: string, unitId: string, body: Record
     let departmentId: string | null = null;
     if (body.departmentId && kind !== "student") {
       departmentId = id(body.departmentId);
-      if (!(await client.query(`SELECT 1 FROM academic_departments WHERE id=$1 AND unit_id=$2`, [departmentId, unitId])).rowCount)
+      if (
+        !(
+          await client.query(`SELECT 1 FROM academic_departments WHERE id=$1 AND unit_id=$2`, [
+            departmentId,
+            unitId,
+          ])
+        ).rowCount
+      )
         throw invalid("Bộ môn không thuộc khoa.");
     }
     const existing = await client.query<{ id: string; user_code: string | null }>(
@@ -238,27 +317,56 @@ export async function enrollAccount(userId: string, unitId: string, body: Record
     const userCode = target && issue.fits(target.user_code) ? target.user_code! : await issue();
     const accountId = target?.id ?? randomUUID();
     if (target)
-      await client.query(`UPDATE users SET unit_id=$1,user_code=$2,updated_at=now() WHERE id=$3`, [unitId, userCode, accountId]);
+      await client.query(`UPDATE users SET unit_id=$1,user_code=$2,updated_at=now() WHERE id=$3`, [
+        unitId,
+        userCode,
+        accountId,
+      ]);
     else
       await client.query(
         `INSERT INTO users(id,email,password_hash,display_name,email_verified,auth_provider,user_code,unit_id) VALUES($1,$2,$3,$4,true,'local',$5,$6)`,
         [accountId, email, hash, validateDisplayName(body.displayName), userCode, unitId],
       );
     if (!rank)
-      await client.query(`DELETE FROM academic_staff WHERE user_id=$1`, [accountId]).catch((error: { code?: string }) => {
-        if (error.code === "23503") throw conflict("STAFF_IN_USE", "Tài khoản đang hướng dẫn / chấm đồ án nên chưa chuyển thành sinh viên được.");
-        throw error;
-      });
+      await client
+        .query(`DELETE FROM academic_staff WHERE user_id=$1`, [accountId])
+        .catch((error: { code?: string }) => {
+          if (error.code === "23503")
+            throw conflict(
+              "STAFF_IN_USE",
+              "Tài khoản đang hướng dẫn / chấm đồ án nên chưa chuyển thành sinh viên được.",
+            );
+          throw error;
+        });
     else
-      await client.query(
-        `INSERT INTO academic_staff(user_id,unit_id,department_id,staff_code,academic_rank,active) VALUES($1,$2,$3,$4,$5,true)
+      await client
+        .query(
+          `INSERT INTO academic_staff(user_id,unit_id,department_id,staff_code,academic_rank,active) VALUES($1,$2,$3,$4,$5,true)
          ON CONFLICT(user_id) DO UPDATE SET unit_id=EXCLUDED.unit_id,department_id=EXCLUDED.department_id,staff_code=EXCLUDED.staff_code,academic_rank=EXCLUDED.academic_rank,active=true`,
-        [accountId, unitId, departmentId, userCode, rank],
-      ).catch(codeTaken(userCode));
-    await audit(client, { unitId, actorId: userId, entity: "account", entityId: accountId, action: target ? "account.unit_set" : "account.created", details: { email, kind, userCode } });
+          [accountId, unitId, departmentId, userCode, rank],
+        )
+        .catch(codeTaken(userCode));
+    await audit(client, {
+      unitId,
+      actorId: userId,
+      entity: "account",
+      entityId: accountId,
+      action: target ? "account.unit_set" : "account.created",
+      details: { email, kind, userCode },
+    });
     // An existing account keeps the máy lẻ it has; one without gets the unit's next (routes.ts).
-    const phoneless = !(await client.query(`SELECT 1 FROM cc_extensions WHERE user_id=$1`, [accountId])).rowCount;
-    return { userId: accountId, email, kind, userCode, status: target ? ("moved" as const) : ("created" as const), password: target ? null : password, phoneless };
+    const phoneless = !(
+      await client.query(`SELECT 1 FROM cc_extensions WHERE user_id=$1`, [accountId])
+    ).rowCount;
+    return {
+      userId: accountId,
+      email,
+      kind,
+      userCode,
+      status: target ? ("moved" as const) : ("created" as const),
+      password: target ? null : password,
+      phoneless,
+    };
   });
 }
 
@@ -267,14 +375,18 @@ export async function listStaff(userId: string, unitId: string) {
   id(unitId);
   return withTransaction(async (client) => {
     const actor = await loadActor(client, userId);
-    if (!actor.systemAdmin && !actor.unitRoles.has(unitId) && actor.staff?.unitId !== unitId) throw forbidden();
+    if (!actor.systemAdmin && !actor.unitRoles.has(unitId) && actor.staff?.unitId !== unitId)
+      throw forbidden();
     const rows = await client.query(
       `SELECT u.id AS "userId",u.display_name AS "displayName",u.email,COALESCE(u.user_code,s.staff_code) AS "staffCode",s.academic_rank AS rank,COALESCE(s.active,true) AS active,d.code AS "departmentCode"
        FROM users u LEFT JOIN academic_staff s ON s.user_id=u.id LEFT JOIN academic_departments d ON d.id=s.department_id
        WHERE u.unit_id=$1 OR s.unit_id=$1 ORDER BY 4 NULLS LAST,u.display_name`,
       [unitId],
     );
-    const departments = await client.query(`SELECT id,code,name FROM academic_departments WHERE unit_id=$1 ORDER BY code`, [unitId]);
+    const departments = await client.query(
+      `SELECT id,code,name FROM academic_departments WHERE unit_id=$1 ORDER BY code`,
+      [unitId],
+    );
     return { staff: rows.rows, departments: departments.rows };
   });
 }
@@ -285,7 +397,8 @@ const ACCOUNT_KINDS = ["student", "lecturer", "staff"] as const;
 /** Khóa: the last two digits of the intake year. */
 function cohortOf(value: unknown): string {
   const cohort = String(value ?? "").trim();
-  if (!/^[0-9]{2}$/.test(cohort)) throw invalid("Khóa là 2 chữ số cuối của năm nhập học, ví dụ 23.", "INVALID_COHORT");
+  if (!/^[0-9]{2}$/.test(cohort))
+    throw invalid("Khóa là 2 chữ số cuối của năm nhập học, ví dụ 23.", "INVALID_COHORT");
   return cohort;
 }
 
@@ -293,12 +406,24 @@ function cohortOf(value: unknown): string {
  * Hands out the next mã số under the unit's prefix: SV `{khóa}{mã đơn vị}{STT 4}`, GV `GV{mã đơn vị}{STT 3}`,
  * CB `CB{mã đơn vị}{STT 3}`. The advisory lock keeps two concurrent imports from drawing the same number.
  */
-async function codeIssuer(client: PoolClient, unitId: string, kind: (typeof ACCOUNT_KINDS)[number], cohort: string | null) {
-  const unit = await client.query<{ id_prefix: string | null; name: string }>(`SELECT id_prefix,name FROM academic_units WHERE id=$1`, [unitId]);
+async function codeIssuer(
+  client: PoolClient,
+  unitId: string,
+  kind: (typeof ACCOUNT_KINDS)[number],
+  cohort: string | null,
+) {
+  const unit = await client.query<{ id_prefix: string | null; name: string }>(
+    `SELECT id_prefix,name FROM academic_units WHERE id=$1`,
+    [unitId],
+  );
   if (!unit.rowCount) throw notFound("Không tìm thấy khoa / phòng ban.");
   const unitPrefix = unit.rows[0].id_prefix;
-  if (!unitPrefix) throw invalid(`${unit.rows[0].name} chưa có mã định danh 2 số.`, "MISSING_ID_PREFIX");
-  const prefix = kind === "student" ? `${cohort}${unitPrefix}` : `${kind === "lecturer" ? "GV" : "CB"}${unitPrefix}`;
+  if (!unitPrefix)
+    throw invalid(`${unit.rows[0].name} chưa có mã định danh 2 số.`, "MISSING_ID_PREFIX");
+  const prefix =
+    kind === "student"
+      ? `${cohort}${unitPrefix}`
+      : `${kind === "lecturer" ? "GV" : "CB"}${unitPrefix}`;
   const width = kind === "student" ? 4 : 3;
   await client.query(`SELECT pg_advisory_xact_lock(hashtext('user_code:' || $1))`, [prefix]);
   const last = await client.query<{ n: number | null }>(
@@ -308,11 +433,14 @@ async function codeIssuer(client: PoolClient, unitId: string, kind: (typeof ACCO
   let next = (last.rows[0].n ?? 0) + 1;
   const pattern = new RegExp(`^${prefix}[0-9]{${width}}$`);
   const issue = async () => {
-    if (next >= 10 ** width) throw conflict("USER_CODE_EXHAUSTED", `Đã hết số thứ tự cho mã ${prefix}.`);
+    if (next >= 10 ** width)
+      throw conflict("USER_CODE_EXHAUSTED", `Đã hết số thứ tự cho mã ${prefix}.`);
     return prefix + String(next++).padStart(width, "0");
   };
   // fits: the code already belongs to this unit / kind (/ khóa), so moving the account keeps it.
-  return Object.assign(issue, { fits: (userCode: string | null) => userCode !== null && pattern.test(userCode) });
+  return Object.assign(issue, {
+    fits: (userCode: string | null) => userCode !== null && pattern.test(userCode),
+  });
 }
 
 /**
@@ -323,25 +451,31 @@ export async function createAccounts(userId: string, body: Record<string, unknow
   const rows = body.accounts;
   if (!Array.isArray(rows) || !rows.length || rows.length > MAX_ACCOUNTS)
     throw invalid(`Cần từ 1 đến ${MAX_ACCOUNTS} tài khoản mỗi lần.`);
-  const accounts = rows.map((row: { email?: unknown; displayName?: unknown; userCode?: unknown } | null, index) => {
-    try {
-      return {
-        email: normalizeEmail(row?.email),
-        displayName: validateDisplayName(row?.displayName),
-        userCode: row?.userCode ? normalizeUserCode(row.userCode) : null,
-      };
-    } catch (error) {
-      throw invalid(`Dòng ${index + 1}: ${error instanceof Error ? error.message : "không hợp lệ."}`);
-    }
-  });
+  const accounts = rows.map(
+    (row: { email?: unknown; displayName?: unknown; userCode?: unknown } | null, index) => {
+      try {
+        return {
+          email: normalizeEmail(row?.email),
+          displayName: validateDisplayName(row?.displayName),
+          userCode: row?.userCode ? normalizeUserCode(row.userCode) : null,
+        };
+      } catch (error) {
+        throw invalid(
+          `Dòng ${index + 1}: ${error instanceof Error ? error.message : "không hợp lệ."}`,
+        );
+      }
+    },
+  );
   // Every account belongs to a faculty / office and has a mã số: both are required here.
-  if (!body.unitId || !body.kind) throw invalid("Chọn khoa / phòng ban và loại tài khoản để cấp mã số.", "UNIT_REQUIRED");
+  if (!body.unitId || !body.kind)
+    throw invalid("Chọn khoa / phòng ban và loại tài khoản để cấp mã số.", "UNIT_REQUIRED");
   const unitId = id(body.unitId);
   const kind = choice(body.kind, ACCOUNT_KINDS, "Loại tài khoản");
   const cohort = kind === "student" ? cohortOf(body.cohort) : null;
   // Checked before hashing: scrypt for a whole list is too costly to spend on a refused request.
   await withTransaction(async (client) => {
-    if (!(await loadActor(client, userId)).systemAdmin) throw forbidden("Chỉ quản trị hệ thống được tạo tài khoản.");
+    if (!(await loadActor(client, userId)).systemAdmin)
+      throw forbidden("Chỉ quản trị hệ thống được tạo tài khoản.");
   });
   const prepared = await Promise.all(
     accounts.map(async (account) => {
@@ -353,21 +487,50 @@ export async function createAccounts(userId: string, body: Record<string, unknow
     const issue = await codeIssuer(client, unitId, kind, cohort);
     const results = [];
     for (const account of prepared) {
-      const exists = await client.query(`SELECT 1 FROM users WHERE lower(email)=$1`, [account.email]);
+      const exists = await client.query(`SELECT 1 FROM users WHERE lower(email)=$1`, [
+        account.email,
+      ]);
       if (!exists.rowCount && !account.userCode) account.userCode = await issue();
       const created = await client
         .query<{ id: string }>(
           `INSERT INTO users(id,email,password_hash,display_name,email_verified,auth_provider,user_code,unit_id) VALUES($1,$2,$3,$4,true,'local',$5,$6)
            ON CONFLICT ((lower(email))) DO NOTHING RETURNING id`,
-          [randomUUID(), account.email, account.hash, account.displayName, account.userCode, unitId],
+          [
+            randomUUID(),
+            account.email,
+            account.hash,
+            account.displayName,
+            account.userCode,
+            unitId,
+          ],
         )
         .catch(codeTaken(account.userCode));
       if (!created.rowCount) {
-        results.push({ userId: null, email: account.email, displayName: account.displayName, userCode: account.userCode, status: "exists" as const, password: null });
+        results.push({
+          userId: null,
+          email: account.email,
+          displayName: account.displayName,
+          userCode: account.userCode,
+          status: "exists" as const,
+          password: null,
+        });
         continue;
       }
-      await audit(client, { actorId: userId, entity: "account", entityId: created.rows[0].id, action: "account.created", details: { email: account.email } });
-      results.push({ userId: created.rows[0].id, email: account.email, displayName: account.displayName, userCode: account.userCode, status: "created" as const, password: account.password });
+      await audit(client, {
+        actorId: userId,
+        entity: "account",
+        entityId: created.rows[0].id,
+        action: "account.created",
+        details: { email: account.email },
+      });
+      results.push({
+        userId: created.rows[0].id,
+        email: account.email,
+        displayName: account.displayName,
+        userCode: account.userCode,
+        status: "created" as const,
+        password: account.password,
+      });
     }
     return { unitId, kind, accounts: results };
   });
@@ -383,7 +546,8 @@ export async function previewCodes(userId: string, unitId: string, params: URLSe
   const cohort = kind === "student" ? cohortOf(params.get("cohort")) : null;
   const count = Math.min(Math.max(Number(params.get("count")) || 1, 1), MAX_ACCOUNTS);
   return withTransaction(async (client) => {
-    if (!(await loadActor(client, userId)).systemAdmin) throw forbidden("Chỉ quản trị hệ thống được tạo tài khoản.");
+    if (!(await loadActor(client, userId)).systemAdmin)
+      throw forbidden("Chỉ quản trị hệ thống được tạo tài khoản.");
     const issue = await codeIssuer(client, unitId, kind, cohort);
     const codes = [];
     for (let index = 0; index < count; index++) codes.push(await issue());
@@ -403,12 +567,19 @@ export async function setUserCode(userId: string, targetId: string, body: Record
   id(targetId);
   const userCode = body.userCode ? normalizeUserCode(body.userCode) : null;
   return withTransaction(async (client) => {
-    if (!(await loadActor(client, userId)).systemAdmin) throw forbidden("Chỉ quản trị hệ thống được đặt mã số.");
+    if (!(await loadActor(client, userId)).systemAdmin)
+      throw forbidden("Chỉ quản trị hệ thống được đặt mã số.");
     const updated = await client
       .query(`UPDATE users SET user_code=$1,updated_at=now() WHERE id=$2`, [userCode, targetId])
       .catch(codeTaken(userCode));
     if (!updated.rowCount) throw notFound("Không tìm thấy tài khoản.");
-    await audit(client, { actorId: userId, entity: "account", entityId: targetId, action: "account.code_set", details: { userCode } });
+    await audit(client, {
+      actorId: userId,
+      entity: "account",
+      entityId: targetId,
+      action: "account.code_set",
+      details: { userCode },
+    });
     return { userCode };
   });
 }
@@ -419,10 +590,12 @@ export async function setUserCode(userId: string, targetId: string, body: Record
  */
 export async function setUserUnit(userId: string, targetId: string, body: Record<string, unknown>) {
   id(targetId);
-  if (!body.unitId) throw invalid("Mỗi tài khoản phải thuộc một khoa / phòng ban.", "UNIT_REQUIRED");
+  if (!body.unitId)
+    throw invalid("Mỗi tài khoản phải thuộc một khoa / phòng ban.", "UNIT_REQUIRED");
   const unitId = id(body.unitId);
   return withTransaction(async (client) => {
-    if (!(await loadActor(client, userId)).systemAdmin) throw forbidden("Chỉ quản trị hệ thống được đổi đơn vị.");
+    if (!(await loadActor(client, userId)).systemAdmin)
+      throw forbidden("Chỉ quản trị hệ thống được đổi đơn vị.");
     const target = await client.query<{ user_code: string | null; lecturer: boolean }>(
       `SELECT user_code,EXISTS(SELECT 1 FROM academic_staff s WHERE s.user_id=u.id) AS lecturer FROM users u WHERE id=$1 FOR UPDATE`,
       [targetId],
@@ -430,12 +603,28 @@ export async function setUserUnit(userId: string, targetId: string, body: Record
     if (!target.rowCount) throw notFound("Không tìm thấy tài khoản.");
     let userCode = target.rows[0].user_code;
     if (!userCode) {
-      const kind = body.kind ? choice(body.kind, ACCOUNT_KINDS, "Loại tài khoản") : target.rows[0].lecturer ? "lecturer" : "staff";
-      userCode = await (await codeIssuer(client, unitId, kind, kind === "student" ? cohortOf(body.cohort) : null))();
+      const kind = body.kind
+        ? choice(body.kind, ACCOUNT_KINDS, "Loại tài khoản")
+        : target.rows[0].lecturer
+          ? "lecturer"
+          : "staff";
+      userCode = await (
+        await codeIssuer(client, unitId, kind, kind === "student" ? cohortOf(body.cohort) : null)
+      )();
     } else if (!(await client.query(`SELECT 1 FROM academic_units WHERE id=$1`, [unitId])).rowCount)
       throw notFound("Không tìm thấy khoa / phòng ban.");
-    await client.query(`UPDATE users SET unit_id=$1,user_code=$2,updated_at=now() WHERE id=$3`, [unitId, userCode, targetId]);
-    await audit(client, { actorId: userId, entity: "account", entityId: targetId, action: "account.unit_set", details: { unitId, userCode } });
+    await client.query(`UPDATE users SET unit_id=$1,user_code=$2,updated_at=now() WHERE id=$3`, [
+      unitId,
+      userCode,
+      targetId,
+    ]);
+    await audit(client, {
+      actorId: userId,
+      entity: "account",
+      entityId: targetId,
+      action: "account.unit_set",
+      details: { unitId, userCode },
+    });
     return { unitId, userCode };
   });
 }
@@ -445,14 +634,24 @@ export async function setUserUnit(userId: string, targetId: string, body: Record
  * left blank. Passwords are only stored hashed, so the new one is returned once and never readable later.
  * Every session of that account is signed out.
  */
-export async function resetPassword(userId: string, targetId: string, body: Record<string, unknown>) {
+export async function resetPassword(
+  userId: string,
+  targetId: string,
+  body: Record<string, unknown>,
+) {
   id(targetId);
   const typed = body.password;
-  if (typed !== undefined && typed !== "" && (typeof typed !== "string" || typed.length < 8 || typed.length > 128))
+  if (
+    typed !== undefined &&
+    typed !== "" &&
+    (typeof typed !== "string" || typed.length < 8 || typed.length > 128)
+  )
     throw invalid("Mật khẩu phải có từ 8 đến 128 ký tự.", "INVALID_PASSWORD");
-  const password = typeof typed === "string" && typed ? typed : randomBytes(9).toString("base64url");
+  const password =
+    typeof typed === "string" && typed ? typed : randomBytes(9).toString("base64url");
   await withTransaction(async (client) => {
-    if (!(await loadActor(client, userId)).systemAdmin) throw forbidden("Chỉ quản trị hệ thống được đặt lại mật khẩu.");
+    if (!(await loadActor(client, userId)).systemAdmin)
+      throw forbidden("Chỉ quản trị hệ thống được đặt lại mật khẩu.");
   });
   const hash = await hashPassword(password);
   return withTransaction(async (client) => {
@@ -461,8 +660,16 @@ export async function resetPassword(userId: string, targetId: string, body: Reco
       [hash, targetId],
     );
     if (!updated.rowCount) throw notFound("Không tìm thấy tài khoản.");
-    await client.query(`UPDATE refresh_sessions SET revoked_at=now() WHERE user_id=$1 AND revoked_at IS NULL`, [targetId]);
-    await audit(client, { actorId: userId, entity: "account", entityId: targetId, action: "account.password_reset" });
+    await client.query(
+      `UPDATE refresh_sessions SET revoked_at=now() WHERE user_id=$1 AND revoked_at IS NULL`,
+      [targetId],
+    );
+    await audit(client, {
+      actorId: userId,
+      entity: "account",
+      entityId: targetId,
+      action: "account.password_reset",
+    });
     return { password };
   });
 }
@@ -484,21 +691,38 @@ const blockingData: Record<string, string> = {
  */
 export async function deleteAccount(userId: string, targetId: string) {
   id(targetId);
-  if (targetId === userId) throw conflict("SELF_DELETE", "Không thể tự xoá tài khoản đang đăng nhập.");
+  if (targetId === userId)
+    throw conflict("SELF_DELETE", "Không thể tự xoá tài khoản đang đăng nhập.");
   return withTransaction(async (client) => {
-    if (!(await loadActor(client, userId)).systemAdmin) throw forbidden("Chỉ quản trị hệ thống được xoá tài khoản.");
-    const target = await client.query<{ email: string }>(`SELECT email FROM users WHERE id=$1 FOR UPDATE`, [targetId]);
+    if (!(await loadActor(client, userId)).systemAdmin)
+      throw forbidden("Chỉ quản trị hệ thống được xoá tài khoản.");
+    const target = await client.query<{ email: string }>(
+      `SELECT email FROM users WHERE id=$1 FOR UPDATE`,
+      [targetId],
+    );
     if (!target.rowCount) throw notFound("Không tìm thấy tài khoản.");
     const refused = (error: { code?: string; table?: string }) => {
       if (error.code !== "23503") throw error;
       const what = blockingData[error.table ?? ""] ?? `dữ liệu (${error.table})`;
-      throw conflict("ACCOUNT_IN_USE", `Không xoá được ${target.rows[0].email}: tài khoản còn ${what}.`);
+      throw conflict(
+        "ACCOUNT_IN_USE",
+        `Không xoá được ${target.rows[0].email}: tài khoản còn ${what}.`,
+      );
     };
     // Its máy lẻ become unassigned (ON DELETE SET NULL); returned so the switchboard can free them.
-    const extensions = await client.query<{ id: string }>(`SELECT id FROM cc_extensions WHERE user_id=$1`, [targetId]);
+    const extensions = await client.query<{ id: string }>(
+      `SELECT id FROM cc_extensions WHERE user_id=$1`,
+      [targetId],
+    );
     await client.query(`DELETE FROM academic_staff WHERE user_id=$1`, [targetId]).catch(refused);
     await client.query(`DELETE FROM users WHERE id=$1`, [targetId]).catch(refused);
-    await audit(client, { actorId: userId, entity: "account", entityId: targetId, action: "account.deleted", details: { email: target.rows[0].email } });
+    await audit(client, {
+      actorId: userId,
+      entity: "account",
+      entityId: targetId,
+      action: "account.deleted",
+      details: { email: target.rows[0].email },
+    });
     return { deleted: target.rows[0].email, extensionIds: extensions.rows.map((row) => row.id) };
   });
 }
@@ -510,7 +734,8 @@ export async function listAccess(userId: string, params: URLSearchParams) {
   const unit = params.get("unit") || null;
   if (unit && unit !== "none") id(unit);
   return withTransaction(async (client) => {
-    if (!(await loadActor(client, userId)).systemAdmin) throw forbidden("Chỉ quản trị hệ thống xem được phân quyền.");
+    if (!(await loadActor(client, userId)).systemAdmin)
+      throw forbidden("Chỉ quản trị hệ thống xem được phân quyền.");
     const rows = await client.query(
       `SELECT u.id,u.display_name AS "displayName",u.email,u.user_code AS "userCode",u.unit_id AS "unitId",
          COALESCE((SELECT json_agg(json_build_object('role',g.role,'unitId',g.unit_id)) FROM academic_role_grants g WHERE g.user_id=u.id),'[]') AS grants,
@@ -564,9 +789,15 @@ export async function grantRole(userId: string, body: Record<string, unknown>) {
     // Only system administrators hand out unit-level authority.
     if (!actor.systemAdmin) throw forbidden("Chỉ quản trị hệ thống được cấp quyền.");
     const email = text(body.email, "Email", 3, 320).toLowerCase();
-    const target = await client.query<{ id: string }>(`SELECT id FROM users WHERE lower(email)=$1`, [email]);
+    const target = await client.query<{ id: string }>(
+      `SELECT id FROM users WHERE lower(email)=$1`,
+      [email],
+    );
     if (!target.rowCount) throw notFound("Chưa có tài khoản dùng email này.");
-    if (unitId && !(await client.query(`SELECT 1 FROM academic_units WHERE id=$1`, [unitId])).rowCount)
+    if (
+      unitId &&
+      !(await client.query(`SELECT 1 FROM academic_units WHERE id=$1`, [unitId])).rowCount
+    )
       throw notFound("Không tìm thấy khoa.");
     const revoke = body.revoke === true;
     if (revoke) {
@@ -581,7 +812,14 @@ export async function grantRole(userId: string, body: Record<string, unknown>) {
         `INSERT INTO academic_role_grants(id,user_id,role,unit_id,granted_by) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
         [randomUUID(), target.rows[0].id, role, unitId, userId],
       );
-    await audit(client, { unitId, actorId: userId, entity: "role_grant", entityId: target.rows[0].id, action: revoke ? "role.revoked" : "role.granted", details: { role } });
+    await audit(client, {
+      unitId,
+      actorId: userId,
+      entity: "role_grant",
+      entityId: target.rows[0].id,
+      action: revoke ? "role.revoked" : "role.granted",
+      details: { role },
+    });
     return { userId: target.rows[0].id, role, unitId, revoked: revoke };
   });
 }
@@ -630,7 +868,10 @@ export async function listUnits(userId: string) {
         CASE WHEN u.kind = 'office' THEN 0 ELSE 1 END,
         u.code NULLS LAST,
         u.name`,
-      [actor.systemAdmin, [...actor.unitRoles.keys(), ...(actor.staff ? [actor.staff.unitId] : [])]],
+      [
+        actor.systemAdmin,
+        [...actor.unitRoles.keys(), ...(actor.staff ? [actor.staff.unitId] : [])],
+      ],
     );
     return result.rows;
   });

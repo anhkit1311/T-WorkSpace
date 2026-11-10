@@ -68,7 +68,11 @@ export async function createConversationNotifications(
     [channelId, userId],
   );
   const recipients = [
-    ...new Set([...mentions, ...watchers.rows.map((row) => row.author_id), ...peer.rows.map((row) => row.user_id)]),
+    ...new Set([
+      ...mentions,
+      ...watchers.rows.map((row) => row.author_id),
+      ...peer.rows.map((row) => row.user_id),
+    ]),
   ].filter((id) => id !== userId);
   for (const target of recipients) {
     await client.query(
@@ -102,10 +106,10 @@ const messageProjection = `SELECT m.id,m.client_message_id AS "clientMessageId",
 
 export async function getMessageItem(userId: string, messageId: string) {
   validateId(messageId);
-  const result = await query<ChatMessageItem>(`${messageProjection} WHERE m.id=$2 AND m.deleted_at IS NULL`, [
-    userId,
-    messageId,
-  ]);
+  const result = await query<ChatMessageItem>(
+    `${messageProjection} WHERE m.id=$2 AND m.deleted_at IS NULL`,
+    [userId, messageId],
+  );
   return result.rows[0] ?? null;
 }
 

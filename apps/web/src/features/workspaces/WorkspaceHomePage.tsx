@@ -146,7 +146,10 @@ export function WorkspaceHomePage() {
   const featuredAnnouncement = announcements.length > 0 ? announcements[0] : null;
   const secondaryAnnouncements = announcements.slice(1, 5);
   const unreadCount = announcements.filter(isUnread).length;
-  const upcomingMeetings = useMemo(() => (roleData?.meetings ?? []).slice(0, 3), [roleData?.meetings]);
+  const upcomingMeetings = useMemo(
+    () => (roleData?.meetings ?? []).slice(0, 3),
+    [roleData?.meetings],
+  );
 
   return (
     <div className="tdtu-home-container">
@@ -181,7 +184,11 @@ export function WorkspaceHomePage() {
 
           {/* Skeleton khi đang tải */}
           {loadingAnnouncements && announcements.length === 0 && (
-            <div className="tdtu-home-skeleton-stack" aria-busy="true" aria-label="Đang tải thông báo">
+            <div
+              className="tdtu-home-skeleton-stack"
+              aria-busy="true"
+              aria-label="Đang tải thông báo"
+            >
               <div className="tdtu-home-skeleton-featured" />
               <div className="tdtu-home-skeleton-row" />
               <div className="tdtu-home-skeleton-row" />
@@ -198,7 +205,8 @@ export function WorkspaceHomePage() {
                 <div className="tdtu-board-feature__tags">
                   <span className="tdtu-board-chip is-category">
                     <span className="tdtu-board-led" aria-hidden="true" />
-                    {CATEGORY_LABELS[featuredAnnouncement.category] || featuredAnnouncement.category}
+                    {CATEGORY_LABELS[featuredAnnouncement.category] ||
+                      featuredAnnouncement.category}
                   </span>
                   {featuredAnnouncement.pinned && (
                     <span className="tdtu-board-chip is-quiet">
@@ -206,16 +214,21 @@ export function WorkspaceHomePage() {
                     </span>
                   )}
                   {authorBadge(featuredAnnouncement) && (
-                    <span className="tdtu-board-chip is-quiet">{authorBadge(featuredAnnouncement)}</span>
+                    <span className="tdtu-board-chip is-quiet">
+                      {authorBadge(featuredAnnouncement)}
+                    </span>
                   )}
-                  {isUnread(featuredAnnouncement) && <span className="tdtu-board-chip is-new">Mới</span>}
+                  {isUnread(featuredAnnouncement) && (
+                    <span className="tdtu-board-chip is-new">Mới</span>
+                  )}
                 </div>
                 <h3 className="tdtu-board-feature__title">{featuredAnnouncement.title}</h3>
                 {featuredAnnouncement.summary && (
                   <p className="tdtu-board-feature__summary">{featuredAnnouncement.summary}</p>
                 )}
                 <p className="tdtu-board-feature__meta">
-                  {featuredAnnouncement.authorName} · {new Date(featuredAnnouncement.createdAt).toLocaleDateString("vi-VN")} ·{" "}
+                  {featuredAnnouncement.authorName} ·{" "}
+                  {new Date(featuredAnnouncement.createdAt).toLocaleDateString("vi-VN")} ·{" "}
                   {featuredAnnouncement.scope}
                 </p>
                 <button
@@ -238,7 +251,10 @@ export function WorkspaceHomePage() {
                   <span className="tdtu-board-rack__unit is-lit">
                     <span className="tdtu-board-led" />
                     <b>Loại</b>
-                    <b>{CATEGORY_LABELS[featuredAnnouncement.category] || featuredAnnouncement.category}</b>
+                    <b>
+                      {CATEGORY_LABELS[featuredAnnouncement.category] ||
+                        featuredAnnouncement.category}
+                    </b>
                   </span>
                   <span className="tdtu-board-rack__unit">
                     <span className="tdtu-board-led is-off" />
@@ -261,7 +277,9 @@ export function WorkspaceHomePage() {
           {secondaryAnnouncements.length > 0 && (
             <section className="tdtu-board-timeline" aria-label="Các tin khác">
               {FEED_GROUPS.map((group) => {
-                const items = secondaryAnnouncements.filter((item) => feedGroup(item.createdAt) === group);
+                const items = secondaryAnnouncements.filter(
+                  (item) => feedGroup(item.createdAt) === group,
+                );
                 if (items.length === 0) return null;
                 return (
                   <div key={group} className="tdtu-board-group">
@@ -290,16 +308,22 @@ export function WorkspaceHomePage() {
                                     </span>
                                   )}
                                   {authorBadge(item) && (
-                                    <span className="tdtu-board-chip is-category">{authorBadge(item)}</span>
+                                    <span className="tdtu-board-chip is-category">
+                                      {authorBadge(item)}
+                                    </span>
                                   )}
                                   {unread && <span className="tdtu-board-chip is-new">Mới</span>}
                                 </span>
-                                {item.summary && <span className="tdtu-board-row__summary">{item.summary}</span>}
+                                {item.summary && (
+                                  <span className="tdtu-board-row__summary">{item.summary}</span>
+                                )}
                                 <span className="tdtu-board-row__meta">
                                   {item.authorName} · {item.scope}
                                 </span>
                               </span>
-                              <span className="tdtu-board-row__time">{formatTimeAgo(item.createdAt)}</span>
+                              <span className="tdtu-board-row__time">
+                                {formatTimeAgo(item.createdAt)}
+                              </span>
                             </button>
                           </li>
                         );
@@ -314,7 +338,11 @@ export function WorkspaceHomePage() {
           {/* Trạng thái rỗng */}
           {!loadingAnnouncements && announcements.length === 0 && (
             <div className="tdtu-home-announcements-empty">
-              <Icon name="bell" size={28} style={{ margin: "0 auto 8px", color: "var(--text-muted)" }} />
+              <Icon
+                name="bell"
+                size={28}
+                style={{ margin: "0 auto 8px", color: "var(--text-muted)" }}
+              />
               <div>Chưa có thông báo nào trong chuyên mục này.</div>
             </div>
           )}
@@ -357,7 +385,10 @@ export function WorkspaceHomePage() {
             {upcomingMeetings.length > 0 && (
               <div className="tdtu-home-meetings-timeline">
                 {upcomingMeetings.map((item, idx) => (
-                  <div key={item.id} className={`tdtu-home-meeting-row ${idx === 0 ? "is-next" : ""}`}>
+                  <div
+                    key={item.id}
+                    className={`tdtu-home-meeting-row ${idx === 0 ? "is-next" : ""}`}
+                  >
                     <div className="tdtu-home-calendar-tile">
                       <span className="tdtu-home-calendar-tile__weekday">
                         {calendarDate(item.startsAt).weekday}
@@ -459,7 +490,9 @@ export function WorkspaceHomePage() {
                 </span>
                 <span className="tdtu-home-shortcut-btn__text">
                   <strong>Khoa / Phòng ban</strong>
-                  <small>{menuAccess?.systemAdmin ? "Quản trị & Tổ chức" : "Danh bạ nhân sự"}</small>
+                  <small>
+                    {menuAccess?.systemAdmin ? "Quản trị & Tổ chức" : "Danh bạ nhân sự"}
+                  </small>
                 </span>
               </button>
             </div>

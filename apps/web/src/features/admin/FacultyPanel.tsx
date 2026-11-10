@@ -131,7 +131,12 @@ export function FacultyPanel({ token, run, onUnitCreated }: Props) {
         );
         if (created) {
           setModalOpen(false);
-          onUnitCreated({ id: created.id, code: created.code || "", name: created.name, idPrefix: created.idPrefix });
+          onUnitCreated({
+            id: created.id,
+            code: created.code || "",
+            name: created.name,
+            idPrefix: created.idPrefix,
+          });
           setSelectedUnitId(created.id);
           await loadDepartments();
         }
@@ -170,14 +175,20 @@ export function FacultyPanel({ token, run, onUnitCreated }: Props) {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={6} style={{ textAlign: "center", padding: 24, color: "var(--tws-text-muted)" }}>
+                <td
+                  colSpan={6}
+                  style={{ textAlign: "center", padding: 24, color: "var(--tws-text-muted)" }}
+                >
                   Đang tải danh sách khoa và phòng ban…
                 </td>
               </tr>
             )}
             {!loading && departments.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ textAlign: "center", padding: 24, color: "var(--tws-text-muted)" }}>
+                <td
+                  colSpan={6}
+                  style={{ textAlign: "center", padding: 24, color: "var(--tws-text-muted)" }}
+                >
                   Chưa có khoa hoặc phòng ban nào được tạo.
                 </td>
               </tr>
@@ -283,9 +294,15 @@ export function FacultyPanel({ token, run, onUnitCreated }: Props) {
                   inputMode="numeric"
                   pattern="[0-9]{2}"
                   maxLength={2}
-                  placeholder={formData.kind === "office" ? "50–99 (trống = tự chọn)" : "01–49 (trống = tự chọn)"}
+                  placeholder={
+                    formData.kind === "office"
+                      ? "50–99 (trống = tự chọn)"
+                      : "01–49 (trống = tự chọn)"
+                  }
                   value={formData.idPrefix}
-                  onChange={(e) => setFormData({ ...formData, idPrefix: e.target.value.replace(/[^0-9]/g, "") })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, idPrefix: e.target.value.replace(/[^0-9]/g, "") })
+                  }
                 />
               </div>
             </div>
@@ -312,10 +329,10 @@ function StaffCard({ unit, token, run }: { unit: DepartmentUnit; token: string; 
   const [department, setDepartment] = useState({ code: "", name: "" });
 
   useEffect(() => {
-    void academicApi<{ staff: StaffRow[]; departments: { id: string; code: string; name: string }[] }>(
-      token,
-      `units/${unit.id}/staff`,
-    )
+    void academicApi<{
+      staff: StaffRow[];
+      departments: { id: string; code: string; name: string }[];
+    }>(token, `units/${unit.id}/staff`)
       .then((d) => {
         setStaff(d.staff || []);
         setDepartments(d.departments || []);
@@ -361,7 +378,8 @@ function StaffCard({ unit, token, run }: { unit: DepartmentUnit; token: string; 
                     </div>
                     <p className="staff-empty-title">Chưa có tài khoản nào thuộc đơn vị này</p>
                     <p className="staff-empty-desc">
-                      Tạo hoặc chuyển tài khoản vào đơn vị ở tab "Tạo tài khoản": hệ thống tự cấp mã số theo mã định danh của đơn vị.
+                      Tạo hoặc chuyển tài khoản vào đơn vị ở tab "Tạo tài khoản": hệ thống tự cấp mã
+                      số theo mã định danh của đơn vị.
                     </p>
                   </div>
                 </td>
@@ -370,14 +388,26 @@ function StaffCard({ unit, token, run }: { unit: DepartmentUnit; token: string; 
               staff.map((s) => (
                 <tr key={s.userId}>
                   <td>
-                    <strong style={{ fontFamily: "monospace", fontSize: 13, color: "#1e293b" }}>{s.staffCode}</strong>
+                    <strong style={{ fontFamily: "monospace", fontSize: 13, color: "#1e293b" }}>
+                      {s.staffCode}
+                    </strong>
                   </td>
                   <td>
                     <div style={{ fontWeight: 600, color: "#0f172a" }}>{s.displayName}</div>
                     <small style={{ color: "#64748b", fontSize: 12 }}>{s.email}</small>
                   </td>
                   <td>
-                    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: "#f1f5f9", fontSize: 12.5, fontWeight: 500, color: "#334155" }}>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "2px 8px",
+                        borderRadius: 4,
+                        background: "#f1f5f9",
+                        fontSize: 12.5,
+                        fontWeight: 500,
+                        color: "#334155",
+                      }}
+                    >
                       {s.rank ? rankLabel[s.rank] || s.rank : "—"}
                     </span>
                   </td>
@@ -419,7 +449,10 @@ function StaffCard({ unit, token, run }: { unit: DepartmentUnit; token: string; 
             }}
           >
             <div className="staff-form-head">
-              <div className="staff-form-head-icon" style={{ background: "#f0fdf4", color: "#16a34a" }}>
+              <div
+                className="staff-form-head-icon"
+                style={{ background: "#f0fdf4", color: "#16a34a" }}
+              >
                 <Icon name="building" size={18} />
               </div>
               <div>
@@ -441,18 +474,24 @@ function StaffCard({ unit, token, run }: { unit: DepartmentUnit; token: string; 
 
               <div className="staff-form-row">
                 <div className="staff-form-group">
-                  <label className="staff-field-label">Mã bộ môn <span className="req">*</span></label>
+                  <label className="staff-field-label">
+                    Mã bộ môn <span className="req">*</span>
+                  </label>
                   <input
                     className="staff-input"
                     placeholder="VD: HTTT, KHMT"
                     value={department.code}
-                    onChange={(e) => setDepartment({ ...department, code: e.target.value.toUpperCase() })}
+                    onChange={(e) =>
+                      setDepartment({ ...department, code: e.target.value.toUpperCase() })
+                    }
                     required
                     aria-label="Mã bộ môn"
                   />
                 </div>
                 <div className="staff-form-group">
-                  <label className="staff-field-label">Tên bộ môn <span className="req">*</span></label>
+                  <label className="staff-field-label">
+                    Tên bộ môn <span className="req">*</span>
+                  </label>
                   <input
                     className="staff-input"
                     placeholder="VD: Hệ thống thông tin"

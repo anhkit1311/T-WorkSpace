@@ -28,11 +28,10 @@ test(
         `INSERT INTO channels(id,workspace_id,created_by,name,type,kind) VALUES($1,NULL,$2,'direct','text','direct')`,
         [channel, low],
       );
-      await client.query(`INSERT INTO direct_conversations(channel_id,user_low,user_high) VALUES($1,$2,$3)`, [
-        channel,
-        low,
-        high,
-      ]);
+      await client.query(
+        `INSERT INTO direct_conversations(channel_id,user_low,user_high) VALUES($1,$2,$3)`,
+        [channel, low, high],
+      );
       const access = await client.query(
         `SELECT user_id,role,can_write FROM channel_access WHERE channel_id=$1 ORDER BY user_id`,
         [channel],
@@ -44,11 +43,10 @@ test(
           [high, "member", true],
         ],
       );
-      await client.query(`INSERT INTO messages(id,channel_id,author_id,content) VALUES($1,$2,$3,'xin chào')`, [
-        randomUUID(),
-        channel,
-        low,
-      ]);
+      await client.query(
+        `INSERT INTO messages(id,channel_id,author_id,content) VALUES($1,$2,$3,'xin chào')`,
+        [randomUUID(), channel, low],
+      );
 
       const second = randomUUID();
       await client.query(
@@ -72,11 +70,14 @@ test(
       );
 
       const unit = randomUUID();
-      await client.query(`INSERT INTO academic_units(id,code,name,kind) VALUES($1,$2,'Phòng Đại học','office')`, [
-        unit,
-        `T${unit.slice(0, 8).toUpperCase()}`,
-      ]);
-      await client.query(`INSERT INTO cc_departments(unit_id,extension_from,extension_to) VALUES($1,1100,1199)`, [unit]);
+      await client.query(
+        `INSERT INTO academic_units(id,code,name,kind) VALUES($1,$2,'Phòng Đại học','office')`,
+        [unit, `T${unit.slice(0, 8).toUpperCase()}`],
+      );
+      await client.query(
+        `INSERT INTO cc_departments(unit_id,extension_from,extension_to) VALUES($1,1100,1199)`,
+        [unit],
+      );
       const call = randomUUID();
       await client.query(
         `INSERT INTO cc_calls(id,linkedid,direction,caller_number,callee_number,department_id)
@@ -84,12 +85,25 @@ test(
         [call, `test-${call}`, unit],
       );
       await rejects(`UPDATE cc_calls SET ended_at=now() WHERE id=$1`, [call], "23514");
-      await rejects(`UPDATE cc_calls SET ended_at=now(), outcome='answered' WHERE id=$1`, [call], "23514");
-      await client.query(`UPDATE cc_calls SET ended_at=now(), outcome='abandoned' WHERE id=$1`, [call]);
+      await rejects(
+        `UPDATE cc_calls SET ended_at=now(), outcome='answered' WHERE id=$1`,
+        [call],
+        "23514",
+      );
+      await client.query(`UPDATE cc_calls SET ended_at=now(), outcome='abandoned' WHERE id=$1`, [
+        call,
+      ]);
 
       const agent = randomUUID();
-      await client.query(`INSERT INTO cc_agent_states(id,user_id,state) VALUES($1,$2,'ready')`, [agent, low]);
-      await rejects(`INSERT INTO cc_agent_states(id,user_id,state) VALUES($1,$2,'on_call')`, [randomUUID(), low], "23505");
+      await client.query(`INSERT INTO cc_agent_states(id,user_id,state) VALUES($1,$2,'ready')`, [
+        agent,
+        low,
+      ]);
+      await rejects(
+        `INSERT INTO cc_agent_states(id,user_id,state) VALUES($1,$2,'on_call')`,
+        [randomUUID(), low],
+        "23505",
+      );
 
       const ticket = randomUUID();
       await client.query(
@@ -98,7 +112,9 @@ test(
         [ticket, unit, call],
       );
       await rejects(`UPDATE cc_tickets SET status='resolved' WHERE id=$1`, [ticket], "23514");
-      await client.query(`UPDATE cc_tickets SET status='resolved', resolved_at=now() WHERE id=$1`, [ticket]);
+      await client.query(`UPDATE cc_tickets SET status='resolved', resolved_at=now() WHERE id=$1`, [
+        ticket,
+      ]);
       const event = randomUUID();
       await client.query(
         `INSERT INTO cc_ticket_events(id,ticket_id,actor_id,kind,from_status,to_status) VALUES($1,$2,$3,'status','open','resolved')`,

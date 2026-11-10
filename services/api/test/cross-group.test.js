@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, before, test } from "node:test";
 import { pool } from "../../../dist/api/infrastructure/database/db.js";
-import { createWorkspace, addWorkspaceMember, getWorkspaceChannels, saveMessage } from "../../../dist/api/modules/workspaces/service.js";
+import {
+  createWorkspace,
+  addWorkspaceMember,
+  getWorkspaceChannels,
+  saveMessage,
+} from "../../../dist/api/modules/workspaces/service.js";
 import { updateWorkspace } from "../../../dist/api/modules/workspaces/governance.js";
 import { createTask, listAllTasks } from "../../../dist/api/modules/tasks/service.js";
 import { listWorkspaceFiles } from "../../../dist/api/modules/workspaces/home.js";
@@ -10,9 +15,12 @@ import { listMeetingCalendar } from "../../../dist/api/modules/meetings/calendar
 
 // Pages that gather every group (Tin nhắn, Công việc, Tài liệu, Họp): owner is in A and B, member only in A.
 const skip = process.env.RUN_DB_TESTS !== "1";
-const owner = randomUUID(), member = randomUUID(), outsider = randomUUID();
+const owner = randomUUID(),
+  member = randomUUID(),
+  outsider = randomUUID();
 const groups = {};
-const textChannel = async (workspaceId) => (await getWorkspaceChannels(owner, workspaceId)).find((c) => c.type === "text");
+const textChannel = async (workspaceId) =>
+  (await getWorkspaceChannels(owner, workspaceId)).find((c) => c.type === "text");
 
 before(async () => {
   if (skip) return;
@@ -30,38 +38,60 @@ before(async () => {
 
 after(async () => {
   if (skip) return;
-  await pool.query(`DELETE FROM workspaces WHERE id=ANY($1::uuid[])`, [[groups.a?.id, groups.b?.id].filter(Boolean)]);
+  await pool.query(`DELETE FROM workspaces WHERE id=ANY($1::uuid[])`, [
+    [groups.a?.id, groups.b?.id].filter(Boolean),
+  ]);
   await pool.query(`DELETE FROM users WHERE id=ANY($1::uuid[])`, [[owner, member, outsider]]);
   await pool.end();
 });
 
-test("Cross-group: tasks of every group, mine by default, outsiders see none", { skip }, async () => {
-  const add = (channelId, title, assigneeId) => createTask(owner, channelId, { title, description: "", clientTaskId: randomUUID(), assigneeId });
-  await add(groups.aText.id, "A cho chủ", owner);
-  await add(groups.bText.id, "B cho chủ", owner);
-  await add(groups.aText.id, "A cho thành viên", member);
-  const list = (user, query = "") => listAllTasks(user, new URLSearchParams(query)).then((result) => result.tasks);
+test(
+  "Cross-group: tasks of every group, mine by default, outsiders see none",
+  { skip },
+  async () => {
+    const add = (channelId, title, assigneeId) =>
+      createTask(owner, channelId, {
+        title,
+        description: "",
+        clientTaskId: randomUUID(),
+        assigneeId,
+      });
+    await add(groups.aText.id, "A cho chủ", owner);
+    await add(groups.bText.id, "B cho chủ", owner);
+    await add(groups.aText.id, "A cho thành viên", member);
+    const list = (user, query = "") =>
+      listAllTasks(user, new URLSearchParams(query)).then((result) => result.tasks);
 
-  const mine = await list(owner);
-  assert.equal(mine.length, 2);
-  assert.ok(mine.every((task) => task.assigneeId === owner));
-  const fromB = mine.find((task) => task.title === "B cho chủ");
-  assert.equal(fromB.workspaceName, "Cross B");
-  assert.equal(fromB.workspaceId, groups.b.id);
-  assert.equal(fromB.channelName, groups.bText.name);
-  assert.equal(fromB.workspaceArchived, false);
+    const mine = await list(owner);
+    assert.equal(mine.length, 2);
+    assert.ok(mine.every((task) => task.assigneeId === owner));
+    const fromB = mine.find((task) => task.title === "B cho chủ");
+    assert.equal(fromB.workspaceName, "Cross B");
+    assert.equal(fromB.workspaceId, groups.b.id);
+    assert.equal(fromB.channelName, groups.bText.name);
+    assert.equal(fromB.workspaceArchived, false);
 
-  assert.equal((await list(owner, "assignee=all")).length, 3);
-  assert.deepEqual((await list(owner, `assignee=all&workspace=${groups.b.id}`)).map((task) => task.title), ["B cho chủ"]);
-  assert.deepEqual((await list(member, "assignee=all")).map((task) => task.title).sort(), ["A cho chủ", "A cho thành viên"]);
-  assert.equal((await list(outsider, "assignee=all")).length, 0);
-  await assert.rejects(list(owner, "assignee=someone"), { statusCode: 400, code: "INVALID_FILTER" });
+    assert.equal((await list(owner, "assignee=all")).length, 3);
+    assert.deepEqual(
+      (await list(owner, `assignee=all&workspace=${groups.b.id}`)).map((task) => task.title),
+      ["B cho chủ"],
+    );
+    assert.deepEqual((await list(member, "assignee=all")).map((task) => task.title).sort(), [
+      "A cho chủ",
+      "A cho thành viên",
+    ]);
+    assert.equal((await list(outsider, "assignee=all")).length, 0);
+    await assert.rejects(list(owner, "assignee=someone"), {
+      statusCode: 400,
+      code: "INVALID_FILTER",
+    });
 
-  await updateWorkspace(owner, groups.b.id, { archived: true });
-  const archived = (await list(owner)).find((task) => task.title === "B cho chủ");
-  assert.equal(archived?.workspaceArchived, true);
-  await updateWorkspace(owner, groups.b.id, { archived: false });
-});
+    await updateWorkspace(owner, groups.b.id, { archived: true });
+    const archived = (await list(owner)).find((task) => task.title === "B cho chủ");
+    assert.equal(archived?.workspaceArchived, true);
+    await updateWorkspace(owner, groups.b.id, { archived: false });
+  },
+);
 
 test("Cross-group: files of every group, filtered by group and name", { skip }, async () => {
   const send = async (channelId, fileName) => {
@@ -82,59 +112,104 @@ test("Cross-group: files of every group, filtered by group and name", { skip }, 
   assert.equal(lich.workspaceId, groups.b.id);
   assert.equal(lich.uploaderName, "Cross Owner");
 
-  assert.deepEqual((await listWorkspaceFiles(owner, null, undefined, 30, false, "CUONG")).files.map((file) => file.fileName), ["de-cuong-mang.pdf"]);
+  assert.deepEqual(
+    (await listWorkspaceFiles(owner, null, undefined, 30, false, "CUONG")).files.map(
+      (file) => file.fileName,
+    ),
+    ["de-cuong-mang.pdf"],
+  );
   assert.equal((await listWorkspaceFiles(owner, null, undefined, 30, false, "%")).files.length, 0);
-  assert.deepEqual((await listWorkspaceFiles(member, null)).files.map((file) => file.fileName), ["de-cuong-mang.pdf"]);
+  assert.deepEqual(
+    (await listWorkspaceFiles(member, null)).files.map((file) => file.fileName),
+    ["de-cuong-mang.pdf"],
+  );
   assert.equal((await listWorkspaceFiles(outsider, null)).files.length, 0);
   // The per-group list still checks membership.
   await assert.rejects(listWorkspaceFiles(member, groups.b.id));
 });
 
-test("Cross-group: meeting calendar covers past, live and upcoming, only rooms you can see", { skip }, async () => {
-  const room = (await getWorkspaceChannels(owner, groups.a.id)).find((c) => c.type === "video");
-  const schedule = async (title, startHours, canceled = false) => {
-    const id = randomUUID();
-    await pool.query(
-      `INSERT INTO meeting_schedules(id,channel_id,created_by,title,description,starts_at,ends_at,canceled_at)
+test(
+  "Cross-group: meeting calendar covers past, live and upcoming, only rooms you can see",
+  { skip },
+  async () => {
+    const room = (await getWorkspaceChannels(owner, groups.a.id)).find((c) => c.type === "video");
+    const schedule = async (title, startHours, canceled = false) => {
+      const id = randomUUID();
+      await pool.query(
+        `INSERT INTO meeting_schedules(id,channel_id,created_by,title,description,starts_at,ends_at,canceled_at)
        VALUES($1,$2,$3,$4,'',now()+make_interval(hours=>$5::int),now()+make_interval(hours=>$5::int+1),CASE WHEN $6 THEN now() END)`,
-      [id, room.id, owner, title, startHours, canceled],
+        [id, room.id, owner, title, startHours, canceled],
+      );
+      return id;
+    };
+    const past = await schedule("Họp đã qua", -48);
+    await schedule("Họp sắp tới", 48);
+    await schedule("Họp đã huỷ", 24, true);
+    const ended = randomUUID(),
+      live = randomUUID();
+    await pool.query(
+      `INSERT INTO meeting_sessions(id,channel_id,schedule_id,host_id,started_at,ended_at) VALUES($1,$2,$3,$4,now()-interval '48 hours',now()-interval '47 hours')`,
+      [ended, room.id, past, owner],
     );
-    return id;
-  };
-  const past = await schedule("Họp đã qua", -48);
-  await schedule("Họp sắp tới", 48);
-  await schedule("Họp đã huỷ", 24, true);
-  const ended = randomUUID(), live = randomUUID();
-  await pool.query(
-    `INSERT INTO meeting_sessions(id,channel_id,schedule_id,host_id,started_at,ended_at) VALUES($1,$2,$3,$4,now()-interval '48 hours',now()-interval '47 hours')`,
-    [ended, room.id, past, owner],
-  );
-  await pool.query(`INSERT INTO meeting_attendees(session_id,user_id,role,state) VALUES($1,$2,'host','admitted'),($1,$3,'member','waiting')`, [ended, owner, member]);
-  await pool.query(`INSERT INTO meeting_sessions(id,channel_id,host_id,started_at) VALUES($1,$2,$3,now()-interval '10 minutes')`, [live, room.id, member]);
-  await pool.query(`INSERT INTO meeting_attendees(session_id,user_id,role,state) VALUES($1,$2,'host','admitted'),($1,$3,'member','admitted')`, [live, member, owner]);
-  await pool.query(`INSERT INTO meeting_connections(socket_id,session_id,user_id,instance_id) VALUES('cross-test',$1,$2,'test')`, [live, member]);
-  try {
-    const day = 86_400_000, now = Date.now();
-    const week = await listMeetingCalendar(owner, new Date(now - 7 * day), new Date(now + 7 * day));
-    assert.deepEqual(week.schedules.map((item) => item.title).sort(), ["Họp sắp tới", "Họp đã qua"].sort());
-    assert.equal(week.schedules[0].workspaceName, "Cross A");
-    const endedSession = week.sessions.find((item) => item.id === ended);
-    assert.equal(endedSession.title, "Họp đã qua");
-    assert.equal(endedSession.scheduleId, past);
-    assert.equal(endedSession.workspaceName, "Cross A");
-    assert.deepEqual(endedSession.people, ["Cross Owner"]);
-    const liveSession = week.sessions.find((item) => item.id === live);
-    assert.equal(liveSession.endedAt, null);
-    assert.equal(liveSession.title, null);
-    assert.deepEqual(liveSession.people, ["Cross QA"]);
-    // A window that ended before the past meeting started leaves it out.
-    assert.equal((await listMeetingCalendar(owner, new Date(now - 7 * day), new Date(now - 3 * day))).sessions.length, 0);
+    await pool.query(
+      `INSERT INTO meeting_attendees(session_id,user_id,role,state) VALUES($1,$2,'host','admitted'),($1,$3,'member','waiting')`,
+      [ended, owner, member],
+    );
+    await pool.query(
+      `INSERT INTO meeting_sessions(id,channel_id,host_id,started_at) VALUES($1,$2,$3,now()-interval '10 minutes')`,
+      [live, room.id, member],
+    );
+    await pool.query(
+      `INSERT INTO meeting_attendees(session_id,user_id,role,state) VALUES($1,$2,'host','admitted'),($1,$3,'member','admitted')`,
+      [live, member, owner],
+    );
+    await pool.query(
+      `INSERT INTO meeting_connections(socket_id,session_id,user_id,instance_id) VALUES('cross-test',$1,$2,'test')`,
+      [live, member],
+    );
+    try {
+      const day = 86_400_000,
+        now = Date.now();
+      const week = await listMeetingCalendar(
+        owner,
+        new Date(now - 7 * day),
+        new Date(now + 7 * day),
+      );
+      assert.deepEqual(
+        week.schedules.map((item) => item.title).sort(),
+        ["Họp sắp tới", "Họp đã qua"].sort(),
+      );
+      assert.equal(week.schedules[0].workspaceName, "Cross A");
+      const endedSession = week.sessions.find((item) => item.id === ended);
+      assert.equal(endedSession.title, "Họp đã qua");
+      assert.equal(endedSession.scheduleId, past);
+      assert.equal(endedSession.workspaceName, "Cross A");
+      assert.deepEqual(endedSession.people, ["Cross Owner"]);
+      const liveSession = week.sessions.find((item) => item.id === live);
+      assert.equal(liveSession.endedAt, null);
+      assert.equal(liveSession.title, null);
+      assert.deepEqual(liveSession.people, ["Cross QA"]);
+      // A window that ended before the past meeting started leaves it out.
+      assert.equal(
+        (await listMeetingCalendar(owner, new Date(now - 7 * day), new Date(now - 3 * day)))
+          .sessions.length,
+        0,
+      );
 
-    const none = await listMeetingCalendar(outsider, new Date(now - 7 * day), new Date(now + 7 * day));
-    assert.deepEqual(none, { schedules: [], sessions: [] });
-    await assert.rejects(listMeetingCalendar(owner, new Date(now), new Date(now + 60 * day)), { code: "INVALID_RANGE" });
-    await assert.rejects(listMeetingCalendar(owner, new Date(now), new Date(now - day)), { code: "INVALID_RANGE" });
-  } finally {
-    await pool.query(`DELETE FROM meeting_sessions WHERE id=ANY($1::uuid[])`, [[ended, live]]);
-  }
-});
+      const none = await listMeetingCalendar(
+        outsider,
+        new Date(now - 7 * day),
+        new Date(now + 7 * day),
+      );
+      assert.deepEqual(none, { schedules: [], sessions: [] });
+      await assert.rejects(listMeetingCalendar(owner, new Date(now), new Date(now + 60 * day)), {
+        code: "INVALID_RANGE",
+      });
+      await assert.rejects(listMeetingCalendar(owner, new Date(now), new Date(now - day)), {
+        code: "INVALID_RANGE",
+      });
+    } finally {
+      await pool.query(`DELETE FROM meeting_sessions WHERE id=ANY($1::uuid[])`, [[ended, live]]);
+    }
+  },
+);

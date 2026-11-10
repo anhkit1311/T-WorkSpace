@@ -17,7 +17,11 @@ const QUALITY: { value: Quality; label: string; title: string }[] = [
   { value: "high", label: "1080p", title: "Full HD · 1080p" },
 ];
 const clock = (iso: string) =>
-  new Date(iso).toLocaleTimeString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit" });
+  new Date(iso).toLocaleTimeString("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
 /** The check before entering one room: preview camera and mic, pick devices, see the plan and who is already in. */
 export function PreJoinScreen({
@@ -67,7 +71,10 @@ export function PreJoinScreen({
     getMeetingCalendarApi(accessToken, new Date(now - 86_400_000), new Date(now + 7 * 86_400_000))
       .then((calendar) => {
         if (!active) return;
-        setLive(calendar.sessions.find((session) => session.roomId === room.id && !session.endedAt) ?? null);
+        setLive(
+          calendar.sessions.find((session) => session.roomId === room.id && !session.endedAt) ??
+            null,
+        );
         setPlan(calendar.schedules.find((item) => item.id === scheduleId) ?? null);
         setCalendarLoaded(true);
       })
@@ -91,7 +98,10 @@ export function PreJoinScreen({
           if (active) setDevices(list);
         })
         .catch((reason) => {
-          if (active) setPreviewError(reason instanceof Error ? reason.message : "Không liệt kê được thiết bị.");
+          if (active)
+            setPreviewError(
+              reason instanceof Error ? reason.message : "Không liệt kê được thiết bị.",
+            );
         });
     };
     refresh();
@@ -184,7 +194,13 @@ export function PreJoinScreen({
   const title = plan?.title ?? live?.title ?? room.name;
   const code = dialIn ? `${dialIn.code.slice(0, 3)} ${dialIn.code.slice(3)}` : "";
   const deviceCheck = (has: boolean, on: boolean) =>
-    !previewEnabled ? (["is-off", "Chưa kiểm tra"] as const) : !has ? (["tone-red", "Không dùng được"] as const) : on ? (["", "Hoạt động"] as const) : (["is-off", "Đang tắt"] as const);
+    !previewEnabled
+      ? (["is-off", "Chưa kiểm tra"] as const)
+      : !has
+        ? (["tone-red", "Không dùng được"] as const)
+        : on
+          ? (["", "Hoạt động"] as const)
+          : (["is-off", "Đang tắt"] as const);
   const [micTone, micText] = deviceCheck(hasAudio, previewMic);
   const [camTone, camText] = deviceCheck(hasVideo, previewCam);
   const deviceList = (kind: MediaDeviceKind, fallback: string) =>
@@ -199,7 +215,13 @@ export function PreJoinScreen({
   return (
     <section className="meeting-prejoin" aria-labelledby="prejoin-title">
       <nav className="pj-crumbs" aria-label="Vị trí">
-        <Button variant="secondary" size="sm" icon="chevron-left" onClick={onBack} disabled={joining}>
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="chevron-left"
+          onClick={onBack}
+          disabled={joining}
+        >
           Họp
         </Button>
         <span>
@@ -214,20 +236,35 @@ export function PreJoinScreen({
               <video ref={previewVideoRef} autoPlay playsInline muted className="pj-stage__video" />
             ) : (
               <div className="pj-stage__placeholder">
-                <span className="pj-stage__avatar">{(user?.displayName || "Bạn").slice(0, 1).toUpperCase()}</span>
-                <span>{!previewEnabled ? "Chưa kiểm tra camera" : previewLoading ? "Đang mở camera…" : "Camera đang tắt"}</span>
+                <span className="pj-stage__avatar">
+                  {(user?.displayName || "Bạn").slice(0, 1).toUpperCase()}
+                </span>
+                <span>
+                  {!previewEnabled
+                    ? "Chưa kiểm tra camera"
+                    : previewLoading
+                      ? "Đang mở camera…"
+                      : "Camera đang tắt"}
+                </span>
                 {!previewEnabled && (
-                  <Button variant="secondary" size="sm" icon="camera" onClick={() => setPreviewEnabled(true)}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon="camera"
+                    onClick={() => setPreviewEnabled(true)}
+                  >
                     Kiểm tra camera và micro
                   </Button>
                 )}
               </div>
             )}
             <span className="pj-glass is-top-left">
-              <span className={`mt-led ${previewStream ? "" : "is-off"}`} /> Xem trước · {qualityLabel}
+              <span className={`mt-led ${previewStream ? "" : "is-off"}`} /> Xem trước ·{" "}
+              {qualityLabel}
             </span>
             <span className="pj-glass is-top-right">
-              <span className={`mt-led ${isConnected ? "" : "tone-red"}`} /> {isConnected ? "Máy chủ đã kết nối" : "Mất kết nối"}
+              <span className={`mt-led ${isConnected ? "" : "tone-red"}`} />{" "}
+              {isConnected ? "Máy chủ đã kết nối" : "Mất kết nối"}
             </span>
             <span className="pj-glass is-name">{user?.displayName || "Bạn"} (bạn)</span>
             <div className="pj-controls">
@@ -264,7 +301,11 @@ export function PreJoinScreen({
           {previewError && (
             <div className="meeting-device-error" role="alert">
               <span>{previewError}</span>
-              <Button variant="ghost" size="sm" onClick={() => setPreviewRetry((value) => value + 1)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPreviewRetry((value) => value + 1)}
+              >
                 Thử lại
               </Button>
             </div>
@@ -281,14 +322,22 @@ export function PreJoinScreen({
             <div className="pj-devices">
               <label className="pj-dev">
                 <span className="pj-label">Micro</span>
-                <select aria-label="Chọn micro" value={audioInputId} onChange={(event) => setAudioInputId(event.target.value)}>
+                <select
+                  aria-label="Chọn micro"
+                  value={audioInputId}
+                  onChange={(event) => setAudioInputId(event.target.value)}
+                >
                   <option value="">Thiết bị mặc định</option>
                   {deviceList("audioinput", "Micro")}
                 </select>
               </label>
               <label className="pj-dev">
                 <span className="pj-label">Camera</span>
-                <select aria-label="Chọn camera" value={videoInputId} onChange={(event) => setVideoInputId(event.target.value)}>
+                <select
+                  aria-label="Chọn camera"
+                  value={videoInputId}
+                  onChange={(event) => setVideoInputId(event.target.value)}
+                >
                   <option value="">Thiết bị mặc định</option>
                   {deviceList("videoinput", "Camera")}
                 </select>
@@ -296,7 +345,11 @@ export function PreJoinScreen({
               {"setSinkId" in HTMLMediaElement.prototype && (
                 <label className="pj-dev">
                   <span className="pj-label">Loa</span>
-                  <select aria-label="Chọn loa" value={outputDeviceId} onChange={(event) => setOutputDeviceId(event.target.value)}>
+                  <select
+                    aria-label="Chọn loa"
+                    value={outputDeviceId}
+                    onChange={(event) => setOutputDeviceId(event.target.value)}
+                  >
                     <option value="">Thiết bị mặc định</option>
                     {deviceList("audiooutput", "Loa")}
                   </select>
@@ -352,7 +405,9 @@ export function PreJoinScreen({
                   {people.slice(0, 3).map((name, index) => (
                     <Avatar key={`${name}-${index}`} name={name} size="sm" />
                   ))}
-                  {people.length > 3 && <span className="mt-stack__more">+{people.length - 3}</span>}
+                  {people.length > 3 && (
+                    <span className="mt-stack__more">+{people.length - 3}</span>
+                  )}
                 </span>
               ) : (
                 <span className="pj-people__icon">
@@ -419,7 +474,13 @@ export function PreJoinScreen({
           </div>
 
           <div className="pj-actions">
-            <Button size="lg" icon="video" disabled={joining || !isConnected} loading={joining} onClick={() => void join()}>
+            <Button
+              size="lg"
+              icon="video"
+              disabled={joining || !isConnected}
+              loading={joining}
+              onClick={() => void join()}
+            >
               {joining ? "Đang kết nối…" : plan?.waitingRoom ? "Xin vào phòng" : "Vào phòng"}
             </Button>
             {joining ? (
@@ -428,10 +489,20 @@ export function PreJoinScreen({
               </Button>
             ) : (
               <div className="pj-actions__row">
-                <Button variant="secondary" icon="mic-off" disabled={!isConnected} onClick={() => void join({ mic: false })}>
+                <Button
+                  variant="secondary"
+                  icon="mic-off"
+                  disabled={!isConnected}
+                  onClick={() => void join({ mic: false })}
+                >
                   Vào với mic tắt
                 </Button>
-                <Button variant="secondary" icon="volume" disabled={!isConnected} onClick={() => void join({ mic: false, camera: false })}>
+                <Button
+                  variant="secondary"
+                  icon="volume"
+                  disabled={!isConnected}
+                  onClick={() => void join({ mic: false, camera: false })}
+                >
                   Chỉ nghe
                 </Button>
               </div>
@@ -449,7 +520,8 @@ export function PreJoinScreen({
                 )}
                 {dialIn && (
                   <>
-                    Không có mic? Gọi <b className="pj-mono">{dialIn.number}</b> từ máy lẻ, nhập <b className="pj-mono">{dialIn.code}#</b>.
+                    Không có mic? Gọi <b className="pj-mono">{dialIn.number}</b> từ máy lẻ, nhập{" "}
+                    <b className="pj-mono">{dialIn.code}#</b>.
                   </>
                 )}
               </span>

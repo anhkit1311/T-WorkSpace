@@ -6,7 +6,9 @@ test("E-model: no impairment gives R 93.2 / MOS 4.41; delay and loss lower it", 
   assert.deepEqual(eModel({ delayMs: 0, lossPct: 0 }), { r: 93.2, mos: 4.41 });
   // Id = 0.024·200 + 0.11·22.7 = 7.30; Ie,eff = 95·1/(1+25.1) = 3.64
   assert.equal(eModel({ delayMs: 200, lossPct: 1 }).r, 82.3);
-  assert.ok(eModel({ delayMs: 40, lossPct: 1, bpl: 4.3 }).mos < eModel({ delayMs: 40, lossPct: 1 }).mos);
+  assert.ok(
+    eModel({ delayMs: 40, lossPct: 1, bpl: 4.3 }).mos < eModel({ delayMs: 40, lossPct: 1 }).mos,
+  );
 });
 
 test("echoed packets give round trip, loss and jitter per PBX port", () => {
