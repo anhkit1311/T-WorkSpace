@@ -6,7 +6,7 @@ import type {
   PortalAnnouncement,
 } from "@doan/shared";
 import { governanceApi } from "../workspaces/api";
-import { Avatar } from "../../shared/ui/Primitives";
+import { Avatar, ConfirmDialog, PageHeader } from "../../shared/ui/Primitives";
 import { Icon, type IconName } from "../../shared/ui/Icon";
 import { useApp } from "../../app/providers/AppContext";
 import type { AppRoute } from "../../app/navigation";
@@ -23,7 +23,7 @@ import {
   AnnouncementComposer,
   CATEGORIES,
   CATEGORY_META,
-  FeatureCard,
+  distinctBadge,
   formatStamp,
 } from "../announcements/AnnouncementComposer";
 import { PublisherManagementModal } from "../announcements/PublisherManagementModal";
@@ -127,6 +127,7 @@ export function NotificationsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [detail, setDetail] = useState<PortalAnnouncement | null>(null);
   const [publishersOpen, setPublishersOpen] = useState(false);
+  const [removing, setRemoving] = useState<PortalAnnouncement | null>(null);
 
   // Personal inbox
   const [page, setPage] = useState<NotificationPage>({ items: [], unreadCount: 0, hasMore: false });
@@ -288,8 +289,8 @@ export function NotificationsPage() {
   };
 
   const remove = async (item: PortalAnnouncement) => {
-    if (!accessToken || !window.confirm(`Xóa thông báo “${item.title}”? Không thể hoàn tác.`))
-      return;
+    setRemoving(null);
+    if (!accessToken) return;
     try {
       await deleteAnnouncementApi(accessToken, item.id);
       notify("Đã xóa thông báo", item.title, "info");
@@ -411,16 +412,15 @@ export function NotificationsPage() {
 
   return (
     <div className="nf-page">
-      <div className="nf-head">
-        <div className="nf-head__title">
-          <div className="nf-eyebrow">
-            <span className="nf-led" />
-            {view === "board"
-              ? "Bảng tin toàn trường · cập nhật tức thì"
-              : "Cá nhân · nhắc tên, tin riêng, họp, khóa học"}
-          </div>
-          <h1>Thông báo</h1>
-        </div>
+      <PageHeader
+        className="nf-head"
+        title="Thông báo"
+        meta={
+          view === "board"
+            ? "Bảng tin toàn trường, cập nhật tức thì"
+            : "Của riêng bạn: nhắc tên, tin riêng, họp, khóa học"
+        }
+      >
         <div className="nf-seg" role="group" aria-label="Khu vực">
           <button type="button" aria-pressed={view === "board"} onClick={() => setTab("board")}>
             {canPublish ? "Bảng tin đã đăng" : "Bảng tin trường"}{" "}
@@ -461,7 +461,7 @@ export function NotificationsPage() {
             Đánh dấu đã đọc tất cả
           </button>
         )}
-      </div>
+      </PageHeader>
 
       {view === "board" ? (
         <>
@@ -614,8 +614,8 @@ export function NotificationsPage() {
                               <span className={`nf-chip is-${item.category}`}>
                                 {CATEGORY_META[item.category].short}
                               </span>
-                              {item.badge && (
-                                <span className={`nf-chip ${badgeTone(item.badge)}`}>
+                              {distinctBadge(item) && (
+                                <span className={`nf-chip ${badgeTone(item.badge ?? "")}`}>
                                   {item.badge}
                                 </span>
                               )}
@@ -646,7 +646,7 @@ export function NotificationsPage() {
                                   icon="trash"
                                   label="Xóa"
                                   danger
-                                  onClick={() => void remove(item)}
+                                  onClick={() => setRemoving(item)}
                                 />
                               </div>
                             )}
@@ -661,19 +661,6 @@ export function NotificationsPage() {
 
             {selected && (
               <aside className="nf-side" aria-label="Thông báo đang chọn">
-                <section className="nf-card nf-side__card">
-                  <div className="nf-side__head">
-                    <h2>Trên Trang chủ</h2>
-                    <span className="nf-mono">
-                      {selected.id === featured?.id
-                        ? selected.pinned
-                          ? "Ô nổi bật · đang ghim"
-                          : "Ô nổi bật · tin mới nhất"
-                        : "Xem trước thẻ"}
-                    </span>
-                  </div>
-                  <FeatureCard item={selected} onOpen={() => setDetail(selected)} />
-                </section>
                 <section className="nf-card nf-side__card nf-details">
                   <h2>Chi tiết</h2>
                   <dl>
@@ -715,7 +702,7 @@ export function NotificationsPage() {
                         className="nf-btn is-danger"
                         aria-label="Xóa thông báo"
                         title="Xóa thông báo"
-                        onClick={() => void remove(selected)}
+                        onClick={() => setRemoving(selected)}
                       >
                         <Icon name="trash" size={14} />
                       </button>
@@ -953,6 +940,15 @@ export function NotificationsPage() {
           accessToken={accessToken}
           onClose={() => setPublishersOpen(false)}
           onChanged={reloadAnnouncements}
+        />
+      )}
+      {removing && (
+        <ConfirmDialog
+          title="Xóa thông báo"
+          description={`Xóa thông báo “${removing.title}”? Không thể hoàn tác.`}
+          confirmLabel="Xóa"
+          onClose={() => setRemoving(null)}
+          onConfirm={() => void remove(removing)}
         />
       )}
     </div>

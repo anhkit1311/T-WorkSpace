@@ -477,7 +477,6 @@ export interface WorkspaceOverviewSummary {
 export * from "./callcenter.js";
 export * from "./meeting-attendance.js";
 export * from "./meeting-recordings.js";
-export * from "./meeting-council.js";
 export * from "./elearning.js";
 
 export type AnnouncementCategory = "general" | "training" | "event" | "urgent";

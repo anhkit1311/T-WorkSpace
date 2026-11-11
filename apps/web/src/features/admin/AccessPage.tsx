@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useApp } from "../../app/providers/AppContext";
 import { AnimatePresence } from "motion/react";
-import { Badge, Button, ConfirmDialog } from "../../shared/ui/Primitives";
+import { Badge, Button, ConfirmDialog, PageHeader } from "../../shared/ui/Primitives";
 import { academicApi, type AcademicProfile } from "./api";
 import { parseAccountLines } from "./labels";
 import { AccountForm } from "./AccountForm";
@@ -63,13 +63,10 @@ export function AccessPage() {
     );
   return (
     <div className="workspace-admin admin-page">
-      <header className="admin-header">
-        <div>
-          <p className="admin-eyebrow">Quản trị & Tổ chức</p>
-          <h1>Quản lý Khoa / Phòng ban & Hệ thống</h1>
-          <p className="admin-subtitle">Quản lý cơ cấu khoa, phòng ban, tài khoản và phân quyền.</p>
-        </div>
-      </header>
+      <PageHeader
+        title="Quản lý Khoa / Phòng ban & Hệ thống"
+        meta="Quản lý cơ cấu khoa, phòng ban, tài khoản và phân quyền."
+      />
       {profile.systemAdmin ? (
         <AccessPanel
           token={token}

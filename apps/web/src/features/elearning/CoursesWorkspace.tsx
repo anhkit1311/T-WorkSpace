@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import type { CourseEnrollmentMode, CourseSummary } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
-import { Badge, Button, Field, Modal } from "../../shared/ui/Primitives";
+import { Badge, Button, Field, Modal, PageHeader } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
 import { coursesApi } from "./courses-api";
 import { CourseView } from "./CourseView";
@@ -67,17 +67,16 @@ export function CoursesWorkspace() {
 
   return (
     <div className="courses">
-      <header className="courses-head">
-        <div>
-          <h1>Khóa học</h1>
-          <p>Học trực tuyến của TDTU: bài video, tài liệu, bài kiểm tra và lớp học trực tuyến.</p>
-        </div>
+      <PageHeader
+        title="Khóa học"
+        meta="Học trực tuyến của TDTU: bài video, tài liệu, bài kiểm tra và lớp học trực tuyến."
+      >
         {units.length > 0 && (
           <Button icon="plus" onClick={() => setCreating(true)}>
             Tạo khóa học
           </Button>
         )}
-      </header>
+      </PageHeader>
       <div className="courses-filters" role="tablist" aria-label="Lọc khóa học">
         {/* Learners never manage a course: "Tôi phụ trách" is only for staff who can. */}
         {FILTERS.filter(

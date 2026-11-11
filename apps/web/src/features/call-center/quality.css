@@ -3,10 +3,10 @@
   display: grid;
   gap: 8px;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   background: var(--primary-soft);
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 .desk-training strong {
   display: flex;
@@ -21,7 +21,7 @@
 }
 .desk-training__bar {
   height: 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--border);
   overflow: hidden;
 }
@@ -57,7 +57,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12.5px;
+  font-size: var(--fs-subtext);
   color: var(--text-muted);
 }
 .qa-weight input {
@@ -85,7 +85,7 @@
 }
 .qa-review__body {
   margin-top: 8px;
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 .qa-review__body ul {
   margin: 0 0 6px;
@@ -113,7 +113,7 @@
   grid-template-columns: minmax(0, 1fr) 140px 48px;
   align-items: center;
   gap: 10px;
-  font-size: 13.5px;
+  font-size: var(--fs-body);
 }
 .qa-score output {
   font-variant-numeric: tabular-nums;
@@ -135,14 +135,14 @@
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 .call-ai-summary {
   display: grid;
   gap: 6px;
   justify-items: start;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: var(--bg-subtle);
 }
 .call-ai-summary p {

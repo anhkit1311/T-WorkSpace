@@ -1,5 +1,5 @@
 // Demo-day data on top of seed-academic, callcenter seed-demo and seed-elearning: a "Giáo vụ CNTT" group
-// with this week's meetings, a thesis council with its criteria, a past meeting with recording,
+// with this week's meetings, a past meeting with recording,
 // transcript, AI summary and tasks on the board, a held live class whose attendance is closed (replay
 // video added) in course CC-201 that has all four lesson kinds, completed by one agent (certificate for
 // /verify/:code) and in progress for another, and one hotline call with transcript, AI summary and a QA score.
@@ -234,45 +234,6 @@ try {
         minutes(thisWeek(day, hour), length),
       );
 
-    // ---- thesis council (BR-12): chair, members, weighted criteria, presenters ------------------
-    const councilStart = thisWeek(2, 8);
-    const council = await schedule(
-      room.id,
-      truongkhoa,
-      "Hội đồng bảo vệ đồ án tốt nghiệp – đợt 1",
-      councilStart,
-      minutes(councilStart, 180),
-      "Hội đồng chấm đồ án tốt nghiệp ngành Khoa học máy tính.",
-    );
-    for (const [member, role] of [
-      [truongkhoa, "chair"],
-      [lan, "member"],
-      [hung, "member"],
-    ])
-      await sql(`INSERT INTO council_members(schedule_id,user_id,role) VALUES($1,$2,$3)`, [
-        council,
-        member,
-        role,
-      ]);
-    for (const [position, [label, weight]] of [
-      ["Nội dung và kết quả", 40],
-      ["Trình bày", 30],
-      ["Trả lời câu hỏi", 30],
-    ].entries())
-      await sql(
-        `INSERT INTO council_criteria(id,schedule_id,label,weight,position) VALUES($1,$2,$3,$4,$5)`,
-        [randomUUID(), council, label, weight, position],
-      );
-    for (const [position, [student, topic]] of [
-      [students[0], "Hệ thống tổng đài và họp trực tuyến cho trường đại học"],
-      [students[1], "Ứng dụng học trực tuyến có điểm danh lớp live"],
-      [students[2], "Phân tích chất lượng thoại VoIP bằng E-model"],
-    ].entries())
-      await sql(
-        `INSERT INTO council_presenters(id,schedule_id,user_id,topic,position) VALUES($1,$2,$3,$4,$5)`,
-        [randomUUID(), council, student, topic, position],
-      );
-
     // ---- a past meeting: recording, transcript, AI summary, tasks on the board --------------------
     const reviewStart = daysAgo(1, 9);
     const review = await schedule(
@@ -364,7 +325,11 @@ try {
         `SELECT user_id FROM academic_role_grants WHERE role='system_admin' ORDER BY created_at LIMIT 1`,
       )
     ).rows[0].user_id;
-    const unit = (await sql(`SELECT id FROM academic_units WHERE code='CNTT'`)).rows[0];
+    const unit = (
+      await sql(
+        `SELECT id FROM academic_units WHERE name ILIKE 'khoa công nghệ thông tin' ORDER BY created_at LIMIT 1`,
+      )
+    ).rows[0];
     const course = await courses.create(admin, {
       unitId: unit.id,
       code: "CC-201",

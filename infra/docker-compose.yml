@@ -33,6 +33,8 @@ services:
       TRUNK_PASSWORD: ${ASTERISK_TRUNK_PASSWORD:-}
       TRUNK_SERVER: ${ASTERISK_TRUNK_SERVER:-}
       TRUNK_NUMBER: ${ASTERISK_TRUNK_NUMBER:-}
+      TRUNK_PUBLIC_IP: ${ASTERISK_TRUNK_PUBLIC_IP:-}
+      TRUNK_PUBLIC_PORT: ${ASTERISK_TRUNK_PUBLIC_PORT:-}
     volumes:
       # Edit config without rebuilding; restart the container to apply.
       - ./asterisk/config:/opt/tws-asterisk:ro

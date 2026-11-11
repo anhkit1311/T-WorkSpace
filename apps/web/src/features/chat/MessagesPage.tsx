@@ -1,3 +1,4 @@
+import { PageHeader } from "../../shared/ui/Primitives";
 import { ChatPage } from "./LiveChatPage";
 import "./messages-page.css";
 
@@ -5,12 +6,11 @@ import "./messages-page.css";
 export function MessagesPage() {
   return (
     <div className="messages-page">
-      <header className="messages-page__header">
-        <div>
-          <h1 className="messages-page__title">Tin nhắn</h1>
-          <p className="messages-page__subtitle">Nhóm chat và trò chuyện riêng với đồng nghiệp</p>
-        </div>
-      </header>
+      <PageHeader
+        className="messages-page__header"
+        title="Tin nhắn"
+        meta="Nhóm chat và trò chuyện riêng với đồng nghiệp"
+      />
       <div className="messages-page__card">
         <ChatPage />
       </div>

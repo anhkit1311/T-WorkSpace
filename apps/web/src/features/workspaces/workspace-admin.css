@@ -4,49 +4,51 @@
    ========================================================================== */
 
 .workspace-admin {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 20px 24px 40px;
   display: grid;
   gap: 16px;
   font-family: var(--font-sans);
-  color: var(--tws-text-primary, #1c1b19);
+  color: var(--text);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: var(--page-pad);
 }
 
 .workspace-admin h1 {
   font-style: normal;
-  font-size: var(--fs-page-title, 22px);
+  font-size: var(--fs-page-title);
   font-weight: 700;
-  color: var(--tws-text-primary, #1c1b19);
+  color: var(--text);
   letter-spacing: -0.015em;
   margin: 0 0 4px;
 }
 
 .workspace-admin h2 {
   font-style: normal;
-  font-size: var(--fs-section, 17px);
+  font-size: var(--fs-section);
   font-weight: 600;
-  color: var(--tws-text-primary, #1c1b19);
+  color: var(--text);
   margin: 0 0 8px;
 }
 
 .workspace-admin h3 {
-  font-size: 15px;
+  font-size: var(--fs-card-title);
   font-weight: 600;
-  color: var(--tws-text-primary, #1c1b19);
+  color: var(--text);
   margin: 0 0 8px;
 }
 
 .workspace-admin p {
-  color: var(--tws-text-muted, #8a8780);
+  color: var(--text-muted);
   line-height: 1.6;
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 
 .workspace-admin section {
   padding: 16px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: none;
 }
@@ -60,7 +62,7 @@
 .workspace-admin label {
   display: grid;
   gap: 6px;
-  font-size: 12.5px;
+  font-size: var(--fs-subtext);
   font-weight: 600;
   text-transform: none;
   letter-spacing: normal;
@@ -78,7 +80,7 @@
   border-radius: var(--radius-md);
   padding: 6px 10px;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body);
   outline: none !important;
   transition:
     background-color 150ms ease,
@@ -103,20 +105,15 @@
   outline: none !important;
 }
 
-.workspace-admin select option {
-  background: var(--surface);
-  color: var(--tws-text-primary, #1c1b19);
-}
-
 .workspace-admin .admin-check {
   display: flex;
   align-items: center;
   gap: 12px;
   min-height: 32px;
   text-transform: none;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 500;
-  color: var(--tws-text-primary, #1c1b19);
+  color: var(--text);
   cursor: pointer;
 }
 
@@ -148,23 +145,23 @@
 .workspace-admin td,
 .workspace-admin th {
   padding: 14px 16px;
-  border-bottom: 1px solid var(--tws-border-beige, #e6e2da);
-  font-size: 13.5px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--fs-body);
 }
 
 .workspace-admin th {
-  font-size: 11.5px;
+  font-size: var(--fs-badge);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--tws-text-muted, #8a8780);
+  color: var(--text-muted);
   font-weight: 600;
 }
 
 .workspace-admin td small {
   display: block;
-  color: var(--tws-text-muted, #8a8780);
+  color: var(--text-muted);
   margin-top: 4px;
-  font-size: 11.5px;
+  font-size: var(--fs-badge);
 }
 
 .workspace-admin td .button {
@@ -178,7 +175,7 @@
   align-items: center;
   min-height: 64px;
   padding: 12px 0;
-  border-bottom: 1px solid var(--tws-border-beige, #e6e2da);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .workspace-admin ol,

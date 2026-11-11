@@ -1,3 +1,4 @@
+import { LessonBody } from "./LessonBody";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CourseDetail, CourseQuestion, LessonDetail, LiveAttendanceRow } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
@@ -161,7 +162,7 @@ export function LessonView({
             ))}
           {lesson.kind === "document" && (
             <>
-              {lesson.body && <div className="lesson-body">{lesson.body}</div>}
+              {lesson.body && <LessonBody body={lesson.body} />}
               {lesson.mediaStatus === "ready" && (
                 <Button
                   variant="secondary"

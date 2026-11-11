@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Modal, Button, Field } from "../../shared/ui/Primitives";
+import { Modal, Button, ConfirmDialog, Field } from "../../shared/ui/Primitives";
 import type { AnnouncementPublisher } from "@doan/shared";
 import { getPublishersApi, grantPublisherApi, revokePublisherApi } from "./api";
 
@@ -16,6 +16,7 @@ export function PublisherManagementModal({ accessToken, onClose, onChanged }: Pr
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [revoking, setRevoking] = useState<AnnouncementPublisher | null>(null);
 
   const loadData = async () => {
     try {
@@ -52,14 +53,16 @@ export function PublisherManagementModal({ accessToken, onClose, onChanged }: Pr
     }
   };
 
-  const handleRevoke = async (userId: string, name: string) => {
-    if (!window.confirm(`Bạn có chắc muốn thu hồi quyền đăng bài của "${name}"?`)) return;
+  const handleRevoke = async ({ userId }: { userId: string }) => {
+    setRevoking(null);
+    setError("");
+    setSuccessMsg("");
     try {
       await revokePublisherApi(accessToken, userId);
       setPublishers((prev) => prev.filter((p) => p.userId !== userId));
       onChanged?.();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Không thể thu hồi quyền.");
+      setError(err instanceof Error ? err.message : "Không thể thu hồi quyền.");
     }
   };
 
@@ -198,11 +201,7 @@ export function PublisherManagementModal({ accessToken, onClose, onChanged }: Pr
                       {p.email} · Được cấp {new Date(p.grantedAt).toLocaleDateString("vi-VN")}
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    onClick={() => handleRevoke(p.userId, p.displayName)}
-                  >
+                  <Button size="sm" variant="danger" onClick={() => setRevoking(p)}>
                     Thu hồi
                   </Button>
                 </div>
@@ -211,6 +210,15 @@ export function PublisherManagementModal({ accessToken, onClose, onChanged }: Pr
           )}
         </div>
       </div>
+      {revoking && (
+        <ConfirmDialog
+          title="Thu hồi quyền đăng bài"
+          description={`Thu hồi quyền đăng thông báo của "${revoking.displayName}"?`}
+          confirmLabel="Thu hồi"
+          onClose={() => setRevoking(null)}
+          onConfirm={() => void handleRevoke(revoking)}
+        />
+      )}
     </Modal>
   );
 }

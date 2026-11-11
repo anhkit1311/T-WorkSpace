@@ -6,11 +6,12 @@ import type { AgentState } from "@doan/shared";
  */
 const transitions: Record<AgentState, readonly AgentState[]> = {
   offline: ["ready", "not_ready"],
-  ready: ["not_ready", "offline", "ringing"],
-  not_ready: ["ready", "offline"],
+  // on_call straight from an idle state: an outside call the agent dialled themselves (BR-20).
+  ready: ["not_ready", "offline", "ringing", "on_call"],
+  not_ready: ["ready", "offline", "on_call"],
   ringing: ["on_call", "ready", "not_ready", "offline"],
   on_call: ["wrap_up", "offline"],
-  wrap_up: ["ready", "not_ready", "offline"],
+  wrap_up: ["ready", "not_ready", "offline", "on_call"],
 };
 
 const agentChoices: readonly AgentState[] = ["ready", "not_ready", "offline"];

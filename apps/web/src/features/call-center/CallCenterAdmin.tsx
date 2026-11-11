@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { CcDepartment, CcExtension, CcHotline } from "@doan/shared";
-import { Badge, Button, Field, Modal } from "../../shared/ui/Primitives";
+import { Badge, Button, ConfirmDialog, Field, Modal } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
 
 type Api = <T>(path: string, method?: string, body?: object) => Promise<T>;
@@ -37,6 +37,7 @@ export function CallCenterAdmin({
   const [extensions, setExtensions] = useState<CcExtension[]>([]);
   const [hotlines, setHotlines] = useState<CcHotline[]>([]);
   const [secret, setSecret] = useState<{ number: string; secret: string } | null>(null);
+  const [removing, setRemoving] = useState<CcExtension | null>(null);
   const [courses, setCourses] = useState<{ id: string; code: string; title: string }[]>([]);
 
   const load = useCallback(() => {
@@ -371,14 +372,7 @@ export function CallCenterAdmin({
                     >
                       {extension.active ? "Tắt" : "Bật"}
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() =>
-                        window.confirm(`Xóa máy lẻ ${extension.number}?`) &&
-                        run(api(`extensions/${extension.id}`, "DELETE"), "Đã xóa máy lẻ.")
-                      }
-                    >
+                    <Button size="sm" variant="ghost" onClick={() => setRemoving(extension)}>
                       Xóa
                     </Button>
                   </td>
@@ -440,6 +434,18 @@ export function CallCenterAdmin({
           </p>
           <code className="desk-secret">{secret.secret}</code>
         </Modal>
+      )}
+      {removing && (
+        <ConfirmDialog
+          title="Xóa máy lẻ"
+          description={`Xóa máy lẻ ${removing.number}? Tài khoản SIP của máy lẻ này sẽ ngừng hoạt động.`}
+          confirmLabel="Xóa"
+          onClose={() => setRemoving(null)}
+          onConfirm={() => {
+            setRemoving(null);
+            void run(api(`extensions/${removing.id}`, "DELETE"), "Đã xóa máy lẻ.");
+          }}
+        />
       )}
     </div>
   );

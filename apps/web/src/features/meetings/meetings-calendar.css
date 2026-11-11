@@ -1,20 +1,20 @@
 /* ==========================================================================
    "Họp" hub: page head, live rack (dark), agenda timeline, side widgets.
-   Dark panels follow the home board and call center (#22272E panel, mono numbers, LEDs).
+   Dark panels follow the home board and call center (var(--dark-bg) panel, mono numbers, LEDs).
    ========================================================================== */
 
 /* Tokens on the page wrapper: the hub, the pre-join screen and the room all use the LEDs. */
 .meetings-page {
-  --mt-ink: #22272e;
-  --mt-rack: #1b1f24;
-  --mt-unit: #2d333b;
-  --mt-line: #3a424c;
-  --mt-on-ink: #e6edf3;
-  --mt-ink-soft: #c9d1d9;
-  --mt-ink-muted: #9da7b3;
-  --led-green: #059669;
-  --led-red: #c8102e;
-  --led-amber: #d97706;
+  --mt-ink: var(--dark-bg);
+  --mt-rack: var(--dark-sunken);
+  --mt-unit: var(--dark-raised);
+  --mt-line: var(--dark-border);
+  --mt-on-ink: var(--dark-text);
+  --mt-ink-soft: var(--dark-text-secondary);
+  --mt-ink-muted: var(--dark-muted);
+  --led-green: var(--primary);
+  --led-red: var(--live);
+  --led-amber: var(--amber-600);
   --led-off: #9ca3af;
 }
 .meetings-calendar {
@@ -29,9 +29,9 @@
 .pj-stage,
 .pj-checks,
 .meeting-room-active {
-  --led-green: #34d399;
-  --led-red: #f87171;
-  --led-amber: #fbbf24;
+  --led-green: var(--green-400);
+  --led-red: var(--red-400);
+  --led-amber: var(--amber-400);
   --led-off: #8b949e;
 }
 
@@ -41,7 +41,7 @@
   display: inline-block;
   width: 8px;
   height: 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--led);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--led) 20%, transparent);
 }
@@ -88,26 +88,18 @@
   align-items: center;
   gap: 8px;
   margin: 0 0 4px;
-  font-family: var(--font-mono);
-  font-size: 11px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--tint-green-fg);
 }
-.mt-head__title {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -0.04em;
-  color: var(--text-strong);
-}
 .mt-seg {
   display: flex;
   gap: 2px;
   padding: 3px;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: var(--bg-subtle);
 }
 .mt-seg button {
@@ -117,11 +109,11 @@
   height: 30px;
   padding: 0 12px;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-muted);
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--fs-subtext);
   font-weight: 600;
   cursor: pointer;
 }
@@ -135,11 +127,11 @@
   max-width: 100%;
   padding: 0 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: var(--surface);
   color: var(--text);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
 }
 .mt-select.is-dark {
@@ -156,7 +148,7 @@
   height: 36px;
   padding: 0 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: var(--surface);
   color: var(--text-muted);
   box-sizing: border-box;
@@ -174,13 +166,13 @@
   background: transparent;
   color: var(--text);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 
 /* Live rack */
 .mt-rack {
   padding: 14px 16px 16px;
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   background: var(--mt-ink);
   color: var(--mt-on-ink);
   box-shadow: 0 18px 40px -28px rgba(15, 23, 42, 0.7);
@@ -194,16 +186,16 @@
 }
 .mt-rack__head h2 {
   margin: 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #6ee7b7;
+  color: var(--green-300);
 }
 .mt-rack__head span {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--mt-ink-muted);
@@ -220,7 +212,7 @@
   min-width: 0;
   padding: 13px 14px;
   border: 1px solid var(--mt-line);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   background: var(--mt-unit);
 }
 .mt-unit.is-live {
@@ -235,8 +227,8 @@
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  font-family: var(--font-mono);
-  font-size: 10px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-overflow: ellipsis;
@@ -245,19 +237,19 @@
   color: var(--mt-ink-muted);
 }
 .mt-unit__clock {
-  font-family: var(--font-mono);
-  font-size: 15px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-card-title);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: #fff;
+  color: var(--white);
 }
 .mt-unit__title {
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: 16px;
+  font-size: var(--fs-card-title);
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: #fff;
+  color: var(--white);
 }
 .mt-unit__chips {
   display: flex;
@@ -271,10 +263,10 @@
   height: 22px;
   padding: 0 8px;
   border: 1px solid var(--mt-line);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--mt-rack);
-  font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -293,7 +285,7 @@
 .mt-unit__people {
   flex: 1;
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--fs-badge);
   color: var(--mt-ink-soft);
 }
 .mt-unit.is-empty {
@@ -306,7 +298,7 @@
 }
 .mt-unit.is-empty p {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-body);
   line-height: 1.5;
   color: var(--mt-ink-soft);
 }
@@ -316,17 +308,17 @@
 }
 .mt-unit__label,
 .mt-unit__hint {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--mt-ink-muted);
 }
 .mt-unit__label {
-  font-size: 10px;
+  font-size: var(--fs-micro);
   font-weight: 700;
 }
 .mt-unit__hint {
-  font-size: 9.5px;
+  font-size: var(--fs-micro);
 }
 .mt-unit__row {
   display: flex;
@@ -343,7 +335,7 @@
 }
 .mt-rack .mt-ghost-dark:hover:not(:disabled) {
   background: var(--mt-unit);
-  color: #fff;
+  color: var(--white);
 }
 
 /* Body: agenda (or week grid) + side column */
@@ -374,7 +366,7 @@
   min-width: 0;
   padding: 14px 16px;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius-xl);
   background: var(--surface);
 }
 .mt-card__head {
@@ -386,7 +378,7 @@
 }
 .mt-card__head h2 {
   margin: 0 auto 0 0;
-  font-size: 15px;
+  font-size: var(--fs-card-title);
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--text-strong);
@@ -398,8 +390,8 @@
   margin-left: auto;
 }
 .mt-card__meta {
-  font-family: var(--font-mono);
-  font-size: 10px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -410,7 +402,7 @@
   background: none;
   color: var(--tint-green-fg);
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--fs-subtext);
   font-weight: 700;
   cursor: pointer;
 }
@@ -429,27 +421,27 @@
   height: 28px;
   padding: 0 11px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--surface);
   color: var(--text-muted);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-badge);
   font-weight: 600;
   cursor: pointer;
 }
 .mt-chip-btn small {
-  font-family: var(--font-mono);
-  font-size: 10px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
   font-weight: 700;
   color: var(--tint-green-fg);
 }
 .mt-chip-btn.is-active {
   border-color: var(--text-strong);
   background: var(--text-strong);
-  color: #fff;
+  color: var(--white);
 }
 .mt-chip-btn.is-active small {
-  color: #6ee7b7;
+  color: var(--green-300);
 }
 .mt-weeknav {
   display: flex;
@@ -458,8 +450,8 @@
 }
 .mt-weeknav > span {
   min-width: 118px;
-  font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-badge);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-align: center;
@@ -475,8 +467,8 @@
   align-items: center;
   gap: 10px;
   margin: 8px 0 4px;
-  font-family: var(--font-mono);
-  font-size: 10px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -494,25 +486,25 @@
   align-items: center;
   gap: 10px;
   padding: 8px;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
 }
 .mt-ev:hover {
-  background: var(--surface-soft, #f6f8fa);
+  background: var(--surface-soft);
 }
 .mt-ev.is-selected {
   background: var(--tint-green-bg);
-  box-shadow: inset 0 0 0 1px #a7f3d0;
+  box-shadow: inset 0 0 0 1px var(--green-200);
 }
 .mt-ev__time b {
   display: block;
-  font-family: var(--font-mono);
-  font-size: 13px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
   font-weight: 700;
   color: var(--text-strong);
 }
 .mt-ev__time span {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
   color: var(--text-muted);
 }
 .mt-ev__rail {
@@ -536,7 +528,7 @@
   width: 10px;
   height: 10px;
   border: 2px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--surface);
   box-sizing: border-box;
 }
@@ -557,7 +549,7 @@
 .mt-ev__title > span:first-child {
   min-width: 0;
   overflow: hidden;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -574,9 +566,9 @@
   height: 19px;
   padding: 0 7px;
   border: 1px solid var(--border);
-  border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: 9.5px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -592,13 +584,13 @@
   content: "";
   width: 6px;
   height: 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: currentColor;
 }
 .mt-ev__meta {
   margin-top: 3px;
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--fs-badge);
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text-muted);
@@ -626,12 +618,12 @@
   min-width: 22px;
   height: 22px;
   padding: 0 4px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   display: grid;
   place-items: center;
   background: var(--bg-subtle);
-  font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
   font-weight: 700;
   color: var(--text-muted);
   box-sizing: border-box;
@@ -641,8 +633,8 @@
   box-shadow: 0 0 0 2px var(--mt-unit);
 }
 .mt-rack .mt-stack__more {
-  background: #475569;
-  color: #fff;
+  background: var(--slate-600);
+  color: var(--white);
 }
 
 /* Side widgets */
@@ -658,28 +650,28 @@
   gap: 3px;
   padding: 7px 0 6px;
   border: 0;
-  border-radius: 9px;
+  border-radius: var(--radius-lg);
   background: transparent;
   color: var(--text-strong);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   cursor: pointer;
 }
 .mt-cal__day:hover {
   background: var(--bg-subtle);
 }
 .mt-cal__day small {
-  font-size: 9.5px;
+  font-size: var(--fs-micro);
   font-weight: 600;
   color: var(--text-muted);
 }
 .mt-cal__day b {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 700;
 }
 .mt-cal__day i {
   width: 5px;
   height: 5px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--led-green);
 }
 .mt-cal__day i.is-empty {
@@ -687,13 +679,13 @@
 }
 .mt-cal__day.is-today {
   background: var(--text-strong);
-  color: #fff;
+  color: var(--white);
 }
 .mt-cal__day.is-today small {
   color: var(--mt-ink-muted);
 }
 .mt-cal__day.is-today i:not(.is-empty) {
-  background: #6ee7b7;
+  background: var(--green-300);
 }
 .mt-rooms,
 .mt-minutes {
@@ -724,7 +716,7 @@
 .mt-minutes__text b {
   display: block;
   overflow: hidden;
-  font-size: 12.5px;
+  font-size: var(--fs-subtext);
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -734,8 +726,8 @@
 .mt-minutes__text small {
   display: block;
   overflow: hidden;
-  font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
   letter-spacing: 0.06em;
   text-overflow: ellipsis;
   text-transform: uppercase;
@@ -767,9 +759,9 @@
   height: 32px;
   display: grid;
   place-items: center;
-  border-radius: 9px;
+  border-radius: var(--radius-lg);
   background: var(--mt-ink);
-  color: #6ee7b7;
+  color: var(--green-300);
 }
 .mt-empty {
   display: grid;
@@ -782,7 +774,7 @@
 .mt-empty p,
 .mt-muted {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--text-muted);
 }
 
@@ -795,7 +787,7 @@
   gap: 10px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   padding: 8px 14px;
 }
 
@@ -820,13 +812,13 @@
 .meeting-week__head span {
   padding: 8px 6px;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--fs-micro);
 }
 
 .meeting-week__head strong {
   display: block;
   color: var(--text);
-  font-size: 13.5px;
+  font-size: var(--fs-body);
 }
 
 .meeting-week__head .is-today strong {
@@ -842,7 +834,7 @@
   height: var(--hour-height);
   padding: 2px 6px 0 0;
   color: var(--text-muted);
-  font-size: 10.5px;
+  font-size: var(--fs-micro);
   text-align: right;
   box-sizing: border-box;
 }
@@ -870,10 +862,10 @@
   padding: 3px 6px;
   border: 0;
   border-left: 3px solid var(--tint-blue-fg);
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: var(--tint-blue-bg);
   color: var(--text);
-  font-size: 11.5px;
+  font-size: var(--fs-badge);
   text-align: left;
   cursor: pointer;
   box-sizing: border-box;
@@ -895,7 +887,7 @@
 
 .meeting-event span {
   color: var(--text-secondary);
-  font-size: 10.5px;
+  font-size: var(--fs-micro);
 }
 
 .meeting-event.is-live {
@@ -934,7 +926,7 @@
 .meeting-days h3 {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 
 .meeting-days .is-today h3 {
@@ -944,7 +936,7 @@
 .meeting-days p {
   margin: 0;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--fs-badge);
 }
 
 /* Detail Drawer */
@@ -970,7 +962,7 @@
   border-radius: var(--radius-pill);
   background: var(--tint-blue-bg);
   color: var(--tint-blue-fg);
-  font-size: 11px;
+  font-size: var(--fs-micro);
   font-weight: 650;
 }
 
@@ -987,7 +979,7 @@
 .meeting-detail h2 {
   margin: 0;
   color: var(--text);
-  font-size: 15px;
+  font-size: var(--fs-card-title);
   font-weight: 700;
 }
 
@@ -997,13 +989,13 @@
   gap: 6px;
   margin: 0;
   color: var(--text-secondary);
-  font-size: 12.5px;
+  font-size: var(--fs-subtext);
 }
 
 .meeting-detail .meeting-detail__note {
   display: block;
   white-space: pre-wrap;
-  font-size: 12px;
+  font-size: var(--fs-badge);
   color: var(--text-muted);
 }
 
@@ -1027,7 +1019,7 @@
 
 /* Responsive */
 .meetings-calendar__hint {
-  font-size: 11.5px;
+  font-size: var(--fs-badge);
   color: var(--text-muted);
 }
 
@@ -1038,7 +1030,7 @@
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .mt-head > :first-child,
   .mt-search {
     flex: 1 1 100%;
@@ -1070,7 +1062,7 @@
   .meeting-detail {
     position: fixed;
     inset: 0;
-    z-index: 200;
+    z-index: var(--z-overlay);
     align-content: start;
     overflow-y: auto;
     border: 0;
@@ -1093,9 +1085,9 @@
   overflow-y: auto;
   margin: 0;
   padding: 6px 10px;
-  border: 1px solid var(--border, #e4e7ec);
-  border-radius: 8px;
-  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: var(--fs-body);
 }
 .meeting-room-settings {
   max-height: none;
@@ -1119,5 +1111,5 @@
   padding: 0;
 }
 .meeting-invite small {
-  color: var(--text-muted, #667085);
+  color: var(--text-muted);
 }

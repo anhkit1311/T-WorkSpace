@@ -1,7 +1,5 @@
 import { ApiError } from "../auth/api";
 import type {
-  CouncilSetupInput,
-  CouncilView,
   MeetingAttendance,
   MeetingCalendar,
   MeetingInviteInput,
@@ -283,47 +281,3 @@ export async function getDialInApi(
     );
   return data;
 }
-
-// NV-MT3 họp hội đồng
-export const getSessionCouncilApi = async (accessToken: string, sessionId: string) =>
-  (
-    await meetingsRequest<{ council: CouncilView | null }>(
-      accessToken,
-      `sessions/${sessionId}/council`,
-    )
-  ).council;
-export const getCouncilApi = async (accessToken: string, scheduleId: string) =>
-  (
-    await meetingsRequest<{ council: CouncilView | null }>(
-      accessToken,
-      `schedules/${scheduleId}/council`,
-    )
-  ).council;
-export const saveCouncilApi = (accessToken: string, scheduleId: string, input: CouncilSetupInput) =>
-  meetingsRequest(accessToken, `schedules/${scheduleId}/council`, "PATCH", input);
-export const setCouncilMemberAbsentApi = (
-  accessToken: string,
-  scheduleId: string,
-  userId: string,
-  absent: boolean,
-) =>
-  meetingsRequest(accessToken, `schedules/${scheduleId}/council/members/${userId}`, "PATCH", {
-    absent,
-  });
-export const startPresenterApi = (accessToken: string, presenterId: string) =>
-  meetingsRequest(accessToken, `council/presenters/${presenterId}/start`, "POST");
-export const submitCouncilSheetApi = (
-  accessToken: string,
-  presenterId: string,
-  input: { scores: Record<string, number>; comment: string },
-) => meetingsRequest(accessToken, `council/presenters/${presenterId}/sheet`, "PATCH", input);
-export const finalizePresenterApi = (
-  accessToken: string,
-  presenterId: string,
-  conclusion: string,
-) =>
-  meetingsRequest(accessToken, `council/presenters/${presenterId}/finalize`, "POST", {
-    conclusion,
-  });
-export const downloadCouncilApi = (accessToken: string, scheduleId: string) =>
-  downloadCsv(accessToken, `schedules/${scheduleId}/council.xlsx`, "bang-diem-hoi-dong.xlsx");

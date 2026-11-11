@@ -19,6 +19,11 @@ export const CATEGORY_META: Record<
 };
 
 export const CATEGORIES = Object.keys(CATEGORY_META) as AnnouncementCategory[];
+/** The author's badge, unless it only repeats the category chip beside it ("Khẩn" on an urgent post). */
+export const distinctBadge = (item: { badge?: string | null; category: AnnouncementCategory }) =>
+  item.badge && item.badge.trim().toLowerCase() !== CATEGORY_META[item.category].label.toLowerCase()
+    ? item.badge
+    : undefined;
 
 const BADGES = ["Mới", "Quan trọng", "Khẩn"];
 const SCHOOL = "Toàn trường";
@@ -361,7 +366,7 @@ export function FeatureCard({ item, onOpen }: { item: PortalAnnouncement; onOpen
           <span className="nf-led" />
           {CATEGORY_META[item.category].label}
         </span>
-        {item.badge && <span className="nf-chip is-dark-badge">{item.badge}</span>}
+        {distinctBadge(item) && <span className="nf-chip is-dark-badge">{item.badge}</span>}
         {item.pinned && <span className="nf-chip is-dark-quiet">Đã ghim</span>}
       </div>
       <h3>{item.title}</h3>

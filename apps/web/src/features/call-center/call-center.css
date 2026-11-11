@@ -21,7 +21,7 @@
 
 .callcenter-header__title {
   margin: 0 0 3px;
-  font-size: 18px;
+  font-size: var(--fs-section);
   letter-spacing: -0.015em;
   font-weight: 700;
   color: var(--text);
@@ -29,7 +29,7 @@
 
 .callcenter-header__subtitle {
   margin: 0;
-  font-size: 11.5px;
+  font-size: var(--fs-badge);
   color: var(--text-muted);
 }
 
@@ -49,7 +49,7 @@
   align-items: start;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1100px) {
   .callcenter-main-grid {
     grid-template-columns: 1fr;
   }
@@ -59,7 +59,7 @@
 .callcenter-panel {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   padding: 18px 20px;
   box-shadow:
     0 1px 3px rgba(15, 23, 42, 0.03),
@@ -75,7 +75,7 @@
 
 .callcenter-panel__title {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--fs-card-title);
   font-weight: 700;
   color: var(--text);
   display: flex;
@@ -86,7 +86,7 @@
 /* List Items in Queue & Active */
 .call-item-card {
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   padding: 12px 16px;
   margin-bottom: 10px;
   background: var(--bg-subtle);
@@ -111,7 +111,7 @@
 }
 
 .call-item-caller {
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   font-weight: 700;
   color: var(--text);
   display: flex;
@@ -123,7 +123,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11.5px;
+  font-size: var(--fs-badge);
   color: var(--text-muted);
 }
 
@@ -138,7 +138,7 @@
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 
 .cdr-table th {

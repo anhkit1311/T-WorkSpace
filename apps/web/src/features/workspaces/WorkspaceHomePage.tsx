@@ -3,7 +3,7 @@ import type { PortalAnnouncement } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
 import { Icon } from "../../shared/ui/Icon";
-import { FilterPills } from "../../shared/ui/Primitives";
+import { Avatar, FilterPills } from "../../shared/ui/Primitives";
 import { RoleHome, useRoleData } from "./RoleHome";
 import { useMenuAccess } from "../../app/layout/useMenuAccess";
 import { getAnnouncementsApi } from "../announcements/api";
@@ -57,9 +57,12 @@ function categoryKey(category: string): string {
   return category in CATEGORY_LABELS ? category : "general";
 }
 
-/** The author's badge, minus a plain "Mới": the unread mark already says that, per reader. */
+/** The author's badge, minus a plain "Mới" (the unread mark says that, per reader) and minus a repeat of the category chip. */
 function authorBadge(item: PortalAnnouncement): string | undefined {
-  return item.badge && item.badge.trim().toLowerCase() !== "mới" ? item.badge : undefined;
+  const badge = item.badge?.trim().toLowerCase();
+  return badge && badge !== "mới" && badge !== CATEGORY_LABELS[item.category]?.toLowerCase()
+    ? item.badge
+    : undefined;
 }
 
 // shortcut: read marks live in this browser (per account); move them to a server table to follow the user across devices.
@@ -195,12 +198,13 @@ export function WorkspaceHomePage() {
             </div>
           )}
 
-          {/* Thẻ nổi bật: panel tối, màu theo loại tin, khối "rack" tóm tắt bên phải */}
+          {/* Thẻ nổi bật: tờ thông báo sáng, ô ngày đăng bên trái mang màu loại tin */}
           {featuredAnnouncement && (
             <article
               className={`tdtu-board-feature is-${categoryKey(featuredAnnouncement.category)}`}
               onClick={() => openAnnouncement(featuredAnnouncement)}
             >
+              <FeatureDate iso={featuredAnnouncement.createdAt} />
               <div className="tdtu-board-feature__lead">
                 <div className="tdtu-board-feature__tags">
                   <span className="tdtu-board-chip is-category">
@@ -218,19 +222,23 @@ export function WorkspaceHomePage() {
                       {authorBadge(featuredAnnouncement)}
                     </span>
                   )}
-                  {isUnread(featuredAnnouncement) && (
-                    <span className="tdtu-board-chip is-new">Mới</span>
-                  )}
                 </div>
                 <h3 className="tdtu-board-feature__title">{featuredAnnouncement.title}</h3>
                 {featuredAnnouncement.summary && (
                   <p className="tdtu-board-feature__summary">{featuredAnnouncement.summary}</p>
                 )}
                 <p className="tdtu-board-feature__meta">
-                  {featuredAnnouncement.authorName} ·{" "}
-                  {new Date(featuredAnnouncement.createdAt).toLocaleDateString("vi-VN")} ·{" "}
-                  {featuredAnnouncement.scope}
+                  <Avatar name={featuredAnnouncement.authorName} size="xs" />
+                  <b>{featuredAnnouncement.authorName}</b>
+                  <span>· Phạm vi: {featuredAnnouncement.scope}</span>
                 </p>
+              </div>
+              <div className="tdtu-board-feature__side">
+                {isUnread(featuredAnnouncement) ? (
+                  <span className="tdtu-board-chip is-new">Mới</span>
+                ) : (
+                  <span />
+                )}
                 <button
                   type="button"
                   className="tdtu-board-feature__cta"
@@ -241,34 +249,6 @@ export function WorkspaceHomePage() {
                 >
                   Xem chi tiết <Icon name="arrow-right" size={15} />
                 </button>
-              </div>
-
-              {/* Same facts as the meta line, drawn as server-rack units: decoration for sighted users. */}
-              <div className="tdtu-board-rack" aria-hidden="true">
-                <span className="tdtu-board-rack__rail" />
-                <div className="tdtu-board-rack__units">
-                  <span className="tdtu-board-rack__unit is-blank" />
-                  <span className="tdtu-board-rack__unit is-lit">
-                    <span className="tdtu-board-led" />
-                    <b>Loại</b>
-                    <b>
-                      {CATEGORY_LABELS[featuredAnnouncement.category] ||
-                        featuredAnnouncement.category}
-                    </b>
-                  </span>
-                  <span className="tdtu-board-rack__unit">
-                    <span className="tdtu-board-led is-off" />
-                    <span>Phạm vi</span>
-                    <span>{featuredAnnouncement.scope}</span>
-                  </span>
-                  <span className="tdtu-board-rack__unit">
-                    <span className="tdtu-board-led is-off" />
-                    <span>Đăng</span>
-                    <span>{formatTimeAgo(featuredAnnouncement.createdAt)}</span>
-                  </span>
-                  <span className="tdtu-board-rack__unit is-blank" />
-                </div>
-                <span className="tdtu-board-rack__rail" />
               </div>
             </article>
           )}
@@ -508,5 +488,16 @@ export function WorkspaceHomePage() {
         />
       )}
     </div>
+  );
+}
+
+function FeatureDate({ iso }: { iso: string }) {
+  const date = new Date(iso);
+  return (
+    <time className="tdtu-board-feature__date" dateTime={iso}>
+      <span>Thg {date.getMonth() + 1}</span>
+      <b>{String(date.getDate()).padStart(2, "0")}</b>
+      <span>{date.toLocaleDateString("vi-VN", { weekday: "long" })}</span>
+    </time>
   );
 }

@@ -46,8 +46,8 @@
   flex: none;
   min-width: 42px;
   color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 12px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-badge);
 }
 .hls-transcript__empty {
   padding: 4px 8px;

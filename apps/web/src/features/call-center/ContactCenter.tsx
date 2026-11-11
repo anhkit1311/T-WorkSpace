@@ -47,6 +47,7 @@ export function ContactCenter() {
   const [writing, setWriting] = useState<CcContactDepartment | null>(null);
   const [openTicket, setOpenTicket] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [showDone, setShowDone] = useState(false);
 
   const loadTickets = useCallback(
     () =>
@@ -66,104 +67,142 @@ export function ContactCenter() {
     return () => void socket.off("callcenter_ticket", loadTickets);
   }, [socket, loadTickets]);
 
+  const isDone = (ticket: CcTicket) => ticket.status === "resolved" || ticket.status === "closed";
+  const doneCount = tickets?.filter(isDone).length ?? 0;
+  const openCount = (tickets?.length ?? 0) - doneCount;
+  const waiting = tickets?.filter((ticket) => ticket.status === "waiting").length ?? 0;
+  const shown = tickets?.filter((ticket) => isDone(ticket) === showDone) ?? [];
+  const openDepartments = departments?.filter((department) => department.open).length ?? 0;
+
   return (
     <div className="contact-center">
-      <section className="callcenter-panel">
-        <div className="callcenter-panel__head">
-          <h2 className="callcenter-panel__title">
-            <Icon name="headset" size={18} />
-            <span>Liên hệ phòng ban</span>
-          </h2>
+      <section className="contact-departments" aria-labelledby="contact-departments-title">
+        <div className="contact-departments__head">
+          <div>
+            <p className="contact-eyebrow">Phòng ban nhận cuộc gọi</p>
+            <h2 id="contact-departments-title">Bạn cần liên hệ ai?</h2>
+          </div>
+          {departments && departments.length > 0 && (
+            <span className="contact-chip">
+              <i className="contact-led" aria-hidden="true" />
+              {openDepartments} / {departments.length} đang mở
+            </span>
+          )}
         </div>
-        <p className="desk-muted">
-          Gọi trực tiếp từ trình duyệt (cần micro) hoặc gửi yêu cầu bằng văn bản. Ngoài giờ làm
-          việc, cuộc gọi chuyển vào hộp thư thoại của phòng.
-        </p>
         {error && (
           <p role="alert" className="desk-warning">
             {error}
           </p>
         )}
         {departments === null ? (
-          <p className="desk-muted">Đang tải danh sách phòng ban…</p>
+          <p className="contact-departments__note">Đang tải danh sách phòng ban…</p>
         ) : !departments.length ? (
-          <p className="desk-muted">Chưa có phòng ban nào nhận cuộc gọi.</p>
+          <p className="contact-departments__note">Chưa có phòng ban nào nhận cuộc gọi.</p>
         ) : (
           <ul className="contact-grid">
             {departments.map((department) => (
-              <li key={department.id} className="contact-card">
+              <li
+                key={department.id}
+                className={`contact-card ${department.open ? "" : "is-closed"}`}
+              >
                 <div className="contact-card__head">
                   <strong>{department.name}</strong>
-                  <Badge tone={department.open ? "green" : "neutral"} dot>
-                    {department.open ? "Đang trong giờ làm việc" : "Ngoài giờ"}
-                  </Badge>
+                  <i className="contact-led" aria-hidden="true" />
                 </div>
-                {department.hotline && (
-                  <span className="desk-muted">Hotline {department.hotline}</span>
-                )}
+                <span className="contact-card__status">
+                  {department.open ? "Đang trong giờ làm việc" : "Ngoài giờ"}
+                  {department.hotline && ` · Hotline ${department.hotline}`}
+                </span>
                 <div className="contact-card__actions">
-                  <Button size="sm" icon="phone" onClick={() => setCalling(department)}>
-                    {department.open ? "Gọi ngay" : "Để lại lời nhắn"}
-                  </Button>
                   <Button
                     size="sm"
-                    variant="secondary"
-                    icon="clipboard"
-                    onClick={() => setWriting(department)}
+                    icon="phone"
+                    variant={department.open ? "primary" : "secondary"}
+                    onClick={() => setCalling(department)}
                   >
+                    {department.open ? "Gọi ngay" : "Để lại lời nhắn"}
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => setWriting(department)}>
                     Gửi yêu cầu
                   </Button>
                 </div>
               </li>
             ))}
+            <li className="contact-card contact-card--info">
+              Gọi bằng micro của máy tính. Ngoài giờ làm việc, cuộc gọi chuyển vào hộp thư thoại và
+              tạo phiếu hỗ trợ cho bạn.
+            </li>
           </ul>
         )}
       </section>
 
-      <section className="callcenter-panel">
+      <section className="callcenter-panel contact-tickets" aria-labelledby="contact-tickets-title">
         <div className="callcenter-panel__head">
-          <h2 className="callcenter-panel__title">
-            <Icon name="clipboard" size={18} />
-            <span>Phiếu hỗ trợ của tôi</span>
+          <h2 id="contact-tickets-title" className="callcenter-panel__title">
+            Phiếu hỗ trợ của tôi
           </h2>
-          {tickets && tickets.some((ticket) => ticket.status === "waiting") && (
-            <Badge tone="amber">Có phiếu chờ bạn phản hồi</Badge>
-          )}
+          {waiting > 0 && <Badge tone="amber">{waiting} chờ bạn phản hồi</Badge>}
         </div>
         {tickets === null ? (
           <p className="desk-muted">Đang tải…</p>
         ) : !tickets.length ? (
-          <p className="desk-muted">
-            Bạn chưa gửi yêu cầu nào. Yêu cầu từ cuộc gọi nhỡ, thư thoại hay nút “Cần hỗ trợ” trong
-            khóa học cũng hiện ở đây.
-          </p>
+          <p className="desk-muted">Bạn chưa gửi yêu cầu nào.</p>
         ) : (
-          <ul className="desk-recent" aria-label="Phiếu hỗ trợ của tôi">
-            {tickets.map((ticket) => (
-              <li key={ticket.id}>
-                <button
-                  type="button"
-                  className="contact-ticket"
-                  onClick={() => setOpenTicket(ticket.id)}
-                >
-                  <span className="desk-recent__who">
-                    <strong>{ticket.subject}</strong>
-                    <span>
-                      {ticket.code} · {ticket.departmentName} · cập nhật{" "}
-                      {new Date(ticket.updatedAt).toLocaleString("vi-VN", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        day: "2-digit",
-                        month: "2-digit",
-                      })}
-                    </span>
-                  </span>
-                  <Badge tone={STATUS[ticket.status].tone}>{STATUS[ticket.status].label}</Badge>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <>
+            <div className="contact-filter" role="group" aria-label="Lọc phiếu">
+              <button type="button" aria-pressed={!showDone} onClick={() => setShowDone(false)}>
+                Đang mở <small>{openCount}</small>
+              </button>
+              <button type="button" aria-pressed={showDone} onClick={() => setShowDone(true)}>
+                Đã xong <small>{doneCount}</small>
+              </button>
+            </div>
+            {!shown.length ? (
+              <p className="desk-muted">
+                {showDone ? "Chưa có phiếu nào đã xong." : "Không có phiếu nào đang mở."}
+              </p>
+            ) : (
+              <ul className="contact-tickets__list" aria-label="Phiếu hỗ trợ của tôi">
+                {shown.map((ticket) => (
+                  <li
+                    key={ticket.id}
+                    className={`tone-${STATUS[ticket.status].tone} ${ticket.status === "waiting" ? "is-waiting" : ""}`}
+                  >
+                    <button
+                      type="button"
+                      className="contact-ticket"
+                      onClick={() => setOpenTicket(ticket.id)}
+                    >
+                      <i className="contact-step" aria-hidden="true" />
+                      <span className="desk-recent__who">
+                        <strong>{ticket.subject}</strong>
+                        <span>
+                          {ticket.code} · {ticket.departmentName} · cập nhật{" "}
+                          {new Date(ticket.updatedAt).toLocaleString("vi-VN", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            day: "2-digit",
+                            month: "2-digit",
+                          })}
+                        </span>
+                      </span>
+                      {ticket.status === "waiting" ? (
+                        <span className="contact-reply">Phản hồi</span>
+                      ) : (
+                        <Badge tone={STATUS[ticket.status].tone}>
+                          {STATUS[ticket.status].label}
+                        </Badge>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
+        <p className="contact-tickets__foot">
+          Yêu cầu từ cuộc gọi nhỡ, thư thoại hay nút “Cần hỗ trợ” trong khóa học cũng hiện ở đây.
+        </p>
       </section>
 
       {calling && (

@@ -39,10 +39,10 @@ try {
       code,
       name,
       extensionFrom,
-      extensionTo: extensionFrom + 29,
+      extensionTo: extensionFrom + 98, // 1PP01–1PP99; 1PP00 is the unit's group number
     }));
-  const admissions = await ensure("CC_TS", "Phòng Tuyển sinh", 1200);
-  const academic = await ensure("CC_DT", "Phòng Đại học", 1230);
+  const admissions = await ensure("CC_TS", "Phòng Tuyển sinh", 15201);
+  const academic = await ensure("CC_DT", "Phòng Đại học", 15101);
 
   if (!(await repo.hotlines()).length)
     await admin.saveHotline(adminId, null, {
@@ -83,7 +83,7 @@ try {
     role: "supervisor",
   });
   console.log(
-    `Đã seed tổng đài demo: phòng Tuyển sinh (1200-1229), Đại học (1230-1259), hotline ${process.env.ASTERISK_TRUNK_NUMBER || "19001234"}.`,
+    `Đã seed tổng đài demo: phòng Tuyển sinh (15201-15299), Đại học (15101-15199), hotline ${process.env.ASTERISK_TRUNK_NUMBER || "19001234"}.`,
   );
 } finally {
   await pool.end();

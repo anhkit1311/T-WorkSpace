@@ -90,6 +90,8 @@ interface LiveAgent extends AgentRecord {
   lostSince: number;
   callId: string | null;
   wrapTimer: unknown;
+  /** An outside call the agent dialled (dialplan [outbound], not the ACD) and the state to return to. */
+  outbound: { channelId: string; previous: "ready" | "not_ready" } | null;
 }
 
 /** IVR and voicemail prompts. shortcut: stock English prompts; record Vietnamese ones for the demo. */
@@ -614,7 +616,9 @@ export class AcdService {
       case "channel_up":
         return this.onChannelUp(event.channelId);
       case "channel_ended":
-        return this.onChannelEnded(event.channelId);
+        return this.onOutboundEnded(event.channelId) ?? this.onChannelEnded(event.channelId);
+      case "dialplan":
+        return this.onOutboundDial(event);
       case "recording_finished":
         return this.onRecordingDone(event.name, event.durationSeconds);
       case "recording_failed":
@@ -942,6 +946,37 @@ export class AcdService {
     this.notifier.live(call.department!.id);
   }
 
+  /**
+   * BR-20 outside calls bypass the ARI app (dialplan Dial() to the trunk), so the ACD would still
+   * see the agent as ready: hold them on_call for the call, so they get no offer and the board shows it.
+   */
+  private async onOutboundDial(event: Extract<PbxEvent, { type: "dialplan" }>): Promise<void> {
+    if (event.context !== "outbound" || event.app !== "Dial") return;
+    const agent = [...this.agents.values()].find((item) => item.extension === event.callerNumber);
+    if (!agent || agent.outbound || agent.callId) return;
+    if (agent.state !== "ready" && agent.state !== "not_ready" && agent.state !== "wrap_up") return;
+    this.clock.clearTimeout(agent.wrapTimer);
+    agent.outbound = {
+      channelId: event.channelId,
+      previous: agent.state === "not_ready" ? "not_ready" : "ready",
+    };
+    await this.setAgentState(agent, "on_call", `Gọi ra ${event.exten}`);
+  }
+
+  private onOutboundEnded(channelId: string): Promise<void> | null {
+    const agent = [...this.agents.values()].find((item) => item.outbound?.channelId === channelId);
+    if (!agent) return null;
+    const { previous } = agent.outbound!;
+    agent.outbound = null;
+    return (async () => {
+      if (agent.state !== "on_call") return; // went offline mid-call
+      await this.setAgentState(agent, "wrap_up", "");
+      await this.setAgentState(agent, previous, "");
+      if (previous === "ready")
+        for (const departmentId of agent.departments) await this.distribute(departmentId);
+    })();
+  }
+
   private async onChannelEnded(channelId: string): Promise<void> {
     const call = this.callOf(channelId);
     this.byChannel.delete(channelId);
@@ -1096,6 +1131,7 @@ export class AcdService {
       lostSince: 0,
       callId: null,
       wrapTimer: null,
+      outbound: null,
     };
   }
 }

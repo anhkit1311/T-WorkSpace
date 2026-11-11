@@ -39,7 +39,7 @@ export interface ServerToClientEvents {
   meeting_outcomes_changed: (data: {
     roomId: string;
     sessionId: string;
-    part: "notes" | "agenda" | "tasks" | "channel" | "summary" | "recording" | "council";
+    part: "notes" | "agenda" | "tasks" | "channel" | "summary" | "recording";
     notes?: MeetingNotes;
   }) => void;
   task_changed: (data: { channelId: string; taskId: string; version: number }) => void;

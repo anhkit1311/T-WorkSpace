@@ -57,7 +57,11 @@ EOF
 
 # SIP trunk for the hotline number (CC-4), only when the provider account is set. It has its own
 # transport without external addresses: the provider sits outside our NAT and answers to where
-# packets come from (rport), and the short registration keeps that NAT binding open.
+# packets come from (rport), and the short registration keeps that NAT binding open. Providers that
+# send INVITEs to the registered Contact instead (Pitel) need TRUNK_PUBLIC_IP plus UDP 5070
+# forwarded on the router to this machine; media stays symmetric (outbound calls already work).
+# shortcut: without router access, TRUNK_PUBLIC_PORT = the NAT port the provider sees (rport in the
+# REGISTER reply); it holds while registration keeps the binding alive, recheck after a modem restart.
 : > /etc/asterisk/pjsip_trunk.conf
 if [ -n "${TRUNK_USERNAME:-}" ]; then
   : "${TRUNK_PASSWORD:?TRUNK_PASSWORD is required with TRUNK_USERNAME}"
@@ -69,7 +73,12 @@ if [ -n "${TRUNK_USERNAME:-}" ]; then
 type = transport
 protocol = udp
 bind = 0.0.0.0:5070
-
+${TRUNK_PUBLIC_IP:+external_signaling_address = ${TRUNK_PUBLIC_IP}
+external_signaling_port = ${TRUNK_PUBLIC_PORT:-5070}
+local_net = 10.0.0.0/8
+local_net = 172.16.0.0/12
+local_net = 192.168.0.0/16
+}
 [trunk-auth]
 type = auth
 auth_type = userpass

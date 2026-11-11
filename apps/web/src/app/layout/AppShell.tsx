@@ -22,6 +22,7 @@ import { LogoutConfirmDialog } from "../../features/auth/LogoutConfirmDialog";
 import { PageErrorBoundary } from "../../shared/ui/PageErrorBoundary";
 import { governanceApi } from "../../features/workspaces/api";
 import type { ViewId } from "../types";
+import { appRouteUrl } from "../navigation";
 
 /** Page modules, warmed while the browser is idle so a first visit to a tab opens without waiting. */
 const pageLoaders: (() => Promise<unknown>)[] = [];
@@ -348,13 +349,16 @@ export function AppShell() {
               (item.id === "switchboard" && phone.phase !== "none") ||
               (item.id === "meetings" && meeting.inCall);
             return (
-              <button
+              // A real link: Ctrl/middle-click opens the page in a new tab.
+              <a
                 key={item.id}
-                type="button"
+                href={item.targetView && appRouteUrl({ view: item.targetView })}
                 className={`tdtu-nav__item ${isSelected ? "is-active" : ""} ${BOTTOM_BAR_ITEMS.has(item.id) ? "" : "is-secondary"} ${MANAGE_ITEMS.has(item.id) ? "is-manage" : ""}`}
                 aria-current={isSelected ? "page" : undefined}
                 title={item.label}
-                onClick={() => {
+                onClick={(event) => {
+                  if (event.ctrlKey || event.metaKey || event.shiftKey) return;
+                  event.preventDefault();
                   // The switchboard tab keeps its current sub-page; everything else opens its page.
                   if (item.targetView && !(item.id === "switchboard" && isSelected))
                     setActiveView(item.targetView);
@@ -367,7 +371,7 @@ export function AppShell() {
                 {badgeCount > 0 && (
                   <span className="tdtu-nav__badge">{badgeCount > 99 ? "99+" : badgeCount}</span>
                 )}
-              </button>
+              </a>
             );
           })}
           <button

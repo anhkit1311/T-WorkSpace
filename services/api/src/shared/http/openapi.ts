@@ -278,39 +278,6 @@ add(
   object,
 );
 add(
-  "/api/meetings/sessions/{sessionId}/council",
-  ["get"],
-  "Meetings",
-  "Council (NV-MT3) of the session's schedule, or null",
-);
-add(
-  "/api/meetings/schedules/{scheduleId}/council",
-  ["get", "patch"],
-  "Meetings",
-  "Council view / organizer replaces setup; 409 COUNCIL_LOCKED once scoring started",
-  object,
-);
-add(
-  "/api/meetings/schedules/{scheduleId}/council.csv",
-  ["get"],
-  "Meetings",
-  "Council results CSV for Excel",
-);
-add(
-  "/api/meetings/schedules/{scheduleId}/council/members/{userId}",
-  ["patch"],
-  "Meetings",
-  "Chair marks a member absent / present",
-  object,
-);
-add(
-  "/api/meetings/council/presenters/{presenterId}/{action}",
-  ["post", "patch"],
-  "Meetings",
-  "start (chair) · sheet (member scores) · finalize (chair; 409 SHEETS_MISSING, BR-12)",
-  object,
-);
-add(
   "/api/channels/{channelId}/attachments",
   ["post"],
   "Files",

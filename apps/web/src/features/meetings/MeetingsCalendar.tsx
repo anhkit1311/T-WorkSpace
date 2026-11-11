@@ -10,6 +10,7 @@ import {
   Field,
   IconButton,
   Modal,
+  PageHeader,
 } from "../../shared/ui/Primitives";
 import { NoGroups } from "../workspaces/GroupDialogs";
 import { cancelMeetingScheduleApi, getMeetingCalendarApi, saveMeetingScheduleApi } from "./api";
@@ -23,8 +24,6 @@ import {
 } from "./calendar";
 import { MeetingAttendancePanel } from "./MeetingAttendancePanel";
 import { MeetingClock } from "./MeetingClock";
-import { CouncilSetupDialog } from "./CouncilSetupDialog";
-import { MeetingCouncilPanel } from "./MeetingCouncilPanel";
 import { MeetingOutcomesPanel } from "./MeetingOutcomesPanel";
 import { MeetingRecordingPanel } from "./MeetingRecordingPanel";
 import { inviteInput, ScheduleInviteFields, type InviteState } from "./ScheduleInviteFields";
@@ -104,7 +103,6 @@ export function MeetingsCalendar({
   const [form, setForm] = useState<{ item?: MeetingScheduleItem } | null>(null);
   const [startNow, setStartNow] = useState(false);
   const [cancelId, setCancelId] = useState("");
-  const [councilFor, setCouncilFor] = useState<MeetingScheduleItem | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
   const [viewMode, setViewMode] = useState<"cards" | "calendar">("cards");
@@ -352,14 +350,6 @@ export function MeetingsCalendar({
                 <Button
                   variant="text"
                   size="sm"
-                  icon="clipboard"
-                  onClick={() => setCouncilFor(schedule(selected)!)}
-                >
-                  Hội đồng
-                </Button>
-                <Button
-                  variant="text"
-                  size="sm"
                   onClick={() => setCancelId(selected.scheduleId ?? "")}
                 >
                   Huỷ
@@ -374,7 +364,6 @@ export function MeetingsCalendar({
           {selected.people.length > 0 && <p>Đã tham gia: {selected.people.join(", ")}</p>}
           <MeetingRecordingPanel sessionId={selected.sessionId} live={false} />
           <MeetingOutcomesPanel sessionId={selected.sessionId} live={false} />
-          <MeetingCouncilPanel sessionId={selected.sessionId} live={false} />
           <MeetingAttendancePanel sessionId={selected.sessionId} />
         </div>
       ) : selected.status === "past" ? (
@@ -385,19 +374,17 @@ export function MeetingsCalendar({
 
   return (
     <section className="meetings-calendar" aria-labelledby="meetings-title">
-      <header className="mt-head">
-        <div>
-          <p className="mt-eyebrow">
-            <span className={`mt-led ${activeSessions.length ? "is-pulse" : "is-off"}`} />
-            Họp trực tuyến ·{" "}
-            {activeSessions.length
-              ? `${activeSessions.length} phiên đang diễn ra`
-              : "chưa có phiên nào đang diễn ra"}
-          </p>
-          <h1 id="meetings-title" className="mt-head__title">
-            Họp
-          </h1>
-        </div>
+      <PageHeader
+        className="mt-head"
+        title="Họp"
+        titleId="meetings-title"
+        live={activeSessions.length > 0}
+        meta={
+          activeSessions.length
+            ? `${activeSessions.length} phiên đang diễn ra`
+            : "Chưa có phiên nào đang diễn ra"
+        }
+      >
         <div className="mt-seg" role="group" aria-label="Chế độ xem">
           <button
             type="button"
@@ -453,7 +440,7 @@ export function MeetingsCalendar({
         <Button size="sm" icon="plus" disabled={!rooms.length} onClick={() => setForm({})}>
           Lên lịch
         </Button>
-      </header>
+      </PageHeader>
 
       {error && (
         <p className="inline-alert" role="alert">
@@ -905,17 +892,6 @@ export function MeetingsCalendar({
             rooms={rooms}
             defaultGroupId={groupId}
             onClose={() => setStartNow(false)}
-          />
-        )}
-        {councilFor && (
-          <CouncilSetupDialog
-            scheduleId={councilFor.id}
-            workspaceId={councilFor.workspaceId}
-            onClose={() => setCouncilFor(null)}
-            onSaved={() => {
-              setCouncilFor(null);
-              notify("Đã lưu hội đồng", councilFor.title, "success");
-            }}
           />
         )}
         {cancelId && (

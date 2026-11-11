@@ -629,3 +629,43 @@ test("ACD: the caller hears the recording notice exactly once before reaching an
   assert.equal(plays.flat().filter((item) => item === "sound:conf-now-recording").length, 1);
   assert.equal(plays[0][0], "sound:conf-now-recording");
 });
+
+test("BR-20: an agent's outside call holds them on_call (no offers), then restores their state", async () => {
+  const { acd, pbxCalls, agentState } = harness();
+  await acd.handle({ type: "connected" });
+  await acd.requestState("alice", "ready");
+  const dial = (channelId, callerNumber) => ({
+    type: "dialplan",
+    channelId,
+    linkedId: channelId,
+    context: "outbound",
+    exten: "0938709049",
+    app: "Dial",
+    appData: "PJSIP/0938709049@trunk,60,S(1800)",
+    callerNumber,
+  });
+  await acd.handle(dial("alice-out", "2101"));
+  assert.equal(agentState("alice"), "on_call");
+  assert.equal(
+    acd.snapshot("sales").agents.find((a) => a.userId === "alice").reason,
+    "Gọi ra 0938709049",
+  );
+
+  await acd.handle(inbound);
+  await acd.handle({ type: "dtmf", channelId: "caller", digit: "1" });
+  assert.ok(
+    !pbxCalls.some(([name, ext]) => name === "callExtension" && ext === "2101"),
+    "busy agent not offered",
+  );
+
+  await acd.handle({ type: "channel_ended", channelId: "alice-out" });
+  // Back to ready, so the waiting caller is offered to alice now.
+  assert.ok(pbxCalls.some(([name, ext]) => name === "callExtension" && ext === "2101"));
+  assert.equal(agentState("alice"), "ringing");
+
+  await acd.requestState("bob", "not_ready");
+  await acd.handle(dial("bob-out", "2102"));
+  assert.equal(agentState("bob"), "on_call");
+  await acd.handle({ type: "channel_ended", channelId: "bob-out" });
+  assert.equal(agentState("bob"), "not_ready", "a paused agent stays paused");
+});

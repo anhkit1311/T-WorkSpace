@@ -1,4 +1,13 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type {
   MonitorMode,
   AgentState,
@@ -13,7 +22,7 @@ import { useApp } from "../../app/providers/AppContext";
 import { appRouteUrl } from "../../app/navigation";
 import type { ViewId } from "../../app/types";
 import { useSocket } from "../../app/providers/SocketContext";
-import { Badge, Button, Field } from "../../shared/ui/Primitives";
+import { Badge, Button, Field, PageHeader } from "../../shared/ui/Primitives";
 import { Icon, type IconName } from "../../shared/ui/Icon";
 import { ApiError } from "../auth/api";
 import { callCenterApi, recordingUrl } from "./api";
@@ -78,9 +87,11 @@ const numberLabel = (number: string) => (number === "web" ? "Gọi từ trình d
 const dialable = (number: string) => /^[0-9*#]{3,15}$/.test(number);
 const pad = (value: number) => String(value).padStart(2, "0");
 const clock = (total: number) =>
-  total >= 3600
-    ? `${Math.floor(total / 3600)}:${pad(Math.floor(total / 60) % 60)}:${pad(total % 60)}`
-    : `${pad(Math.floor(total / 60))}:${pad(total % 60)}`;
+  total >= 86400
+    ? `${Math.floor(total / 86400)} ngày`
+    : total >= 3600
+      ? `${Math.floor(total / 3600)}:${pad(Math.floor(total / 60) % 60)}:${pad(total % 60)}`
+      : `${pad(Math.floor(total / 60))}:${pad(total % 60)}`;
 /** Queue thresholds of the wallboard: under 30 s fine, under 60 s watch, then late. */
 const waitTone = (waited: number) => (waited >= 60 ? "red" : waited >= 30 ? "amber" : "green");
 
@@ -211,8 +222,10 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
     );
   if (!me)
     return (
-      <div className="callcenter-page">
-        <div className="callcenter-panel">Đang tải tổng đài…</div>
+      <div className="page-suspense-fallback" role="status" aria-label="Đang tải tổng đài…">
+        <div className="page-suspense-line is-title" />
+        <div className="page-suspense-line is-body" />
+        <div className="page-suspense-card" />
       </div>
     );
 
@@ -220,15 +233,39 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
   if (!member && !me.isAdmin && !me.extension)
     return (
       <div className="callcenter-page">
-        <div className="callcenter-header">
-          <div>
-            <h1 className="callcenter-header__title">Liên hệ & hỗ trợ</h1>
-            <p className="callcenter-header__subtitle">
-              Gọi hoặc gửi yêu cầu tới các phòng ban của trường, theo dõi phiếu hỗ trợ của bạn.
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          className="cc-pagehead"
+          title="Tổng đài"
+          meta="Liên hệ và hỗ trợ: gọi từ trình duyệt, không cần máy lẻ"
+        />
         <ContactCenter />
+      </div>
+    );
+
+  // A personal extension without a department: one phone page, no agent tabs.
+  if (!member && !me.isAdmin)
+    return (
+      <div className="callcenter-page">
+        <PageHeader
+          className="cc-pagehead"
+          title="Tổng đài"
+          meta="Máy lẻ cá nhân: gọi nội bộ và liên hệ phòng ban"
+        />
+        <AgentDesk
+          personal
+          me={me}
+          isAgent={false}
+          canMonitor={false}
+          api={api}
+          fail={fail}
+          onChange={setMe}
+          dialRequest={dialRequest}
+          onPhoneStatus={setPhoneStatus}
+          autoAnswerUntil={0}
+          token={accessToken!}
+        >
+          <ContactCenter />
+        </AgentDesk>
       </div>
     );
 
@@ -313,6 +350,8 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
 type Api = <T>(path: string, method?: string, body?: object) => Promise<T>;
 
 function AgentDesk({
+  personal = false,
+  children,
   me,
   isAgent,
   canMonitor,
@@ -324,6 +363,8 @@ function AgentDesk({
   autoAnswerUntil,
   token,
 }: {
+  personal?: boolean;
+  children?: ReactNode;
   token: string;
   me: CcAgentProfile;
   isAgent: boolean;
@@ -346,8 +387,9 @@ function AgentDesk({
   const phone = useGlobalSoftphone();
 
   useEffect(() => {
-    api<CcDisposition[]>("dispositions").then(setDispositions, fail);
-  }, [api, fail]);
+    // Only agents wrap up calls; for an extension-only account the endpoint answers 403.
+    if (isAgent) api<CcDisposition[]>("dispositions").then(setDispositions, fail);
+  }, [api, fail, isAgent]);
   useEffect(() => {
     if (!isAgent) return;
     // Reloaded on every state change, so a finished call shows up in "today" as soon as the agent is free.
@@ -487,7 +529,7 @@ function AgentDesk({
         : "Chọn “Sẵn sàng” để nhận cuộc gọi từ hàng đợi.";
 
   return (
-    <div className="cc-console">
+    <div className={`cc-console ${personal ? "cc-console--personal" : ""}`}>
       <section className="cc-statebar" aria-label="Trạng thái nhận cuộc gọi">
         {isAgent && (
           <div className="cc-states" role="group" aria-label="Trạng thái trực">
@@ -873,6 +915,7 @@ function AgentDesk({
           <DeskDialer hotlineCall={hotlineCall} />
         </div>
       </div>
+      {children}
     </div>
   );
 }

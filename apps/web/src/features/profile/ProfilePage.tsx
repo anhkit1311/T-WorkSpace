@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { AnimatePresence } from "motion/react";
 import { useApp } from "../../app/providers/AppContext";
-import { Button, Chip, Field, ListItem } from "../../shared/ui/Primitives";
+import { Button, Chip, Field, ListItem, PageHeader } from "../../shared/ui/Primitives";
 import { LogoutConfirmDialog } from "../auth/LogoutConfirmDialog";
 import { Icon } from "../../shared/ui/Icon";
 import { changePasswordApi } from "../auth/api";
@@ -141,11 +141,11 @@ export function ProfilePage() {
 
   return (
     <div className="profile-page">
-      <header className="profile-header">
-        <div>
-          <h1>Thông tin cá nhân & Tài khoản</h1>
-          <p>Quản lý thông tin cá nhân và bảo mật tài khoản người dùng.</p>
-        </div>
+      <PageHeader
+        className="profile-header"
+        title="Thông tin cá nhân & Tài khoản"
+        meta="Quản lý thông tin cá nhân và bảo mật tài khoản người dùng."
+      >
         <Chip icon="check">
           {isStudent
             ? "Tài khoản sinh viên"
@@ -153,7 +153,7 @@ export function ProfilePage() {
               ? "Tài khoản quản trị"
               : "Tài khoản người dùng"}
         </Chip>
-      </header>
+      </PageHeader>
 
       {/* Student / User Profile Summary Card */}
       <section className="profile-card profile-user-summary">
@@ -420,9 +420,7 @@ export function ProfilePage() {
       {/* Danger Zone */}
       <section className="profile-card profile-danger-zone">
         <h3 className="profile-section-title">Đăng xuất tài khoản</h3>
-        <p
-          style={{ fontSize: "14px", color: "var(--tws-text-muted, #8A8780)", margin: "0 0 16px" }}
-        >
+        <p style={{ fontSize: "14px", color: "var(--text-muted)", margin: "0 0 16px" }}>
           Đăng xuất sẽ kết thúc phiên làm việc hiện tại trên trình duyệt này.
         </p>
         <Button variant="secondary" icon="logout" onClick={() => setLogoutConfirmOpen(true)}>

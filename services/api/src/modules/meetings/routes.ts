@@ -28,16 +28,6 @@ const logNoticeFailure = (error: Error) =>
   );
 import { exportMeetingAttendance, getMeetingAttendance } from "./attendance.js";
 import {
-  exportCouncil,
-  finalizePresenter,
-  getCouncil,
-  getSessionCouncil,
-  saveCouncil,
-  setMemberAbsent,
-  startPresenter,
-  submitSheet,
-} from "./council.js";
-import {
   listRecordings,
   recordingFile,
   shareRecording,
@@ -72,52 +62,6 @@ export async function meetingRoutes({
       return;
     }
     sendTable(response, await exportMeetingAttendance(userId, attendance[1]), attendance[2]);
-    return;
-  }
-  const council = pathname.match(
-    /^\/api\/meetings\/(?:sessions\/([^/]+)\/council|schedules\/([^/]+)\/council(\.csv|\.xlsx|\/members\/[^/]+)?|council\/presenters\/([^/]+)\/(start|sheet|finalize))$/,
-  );
-  if (council) {
-    const userId = await getAuthUserId(request);
-    const [, sessionId, scheduleId, scheduleSub, presenterId, action] = council;
-    response.setHeader("Cache-Control", "no-store");
-    if (request.method === "GET" && sessionId) {
-      sendJson(response, 200, { council: await getSessionCouncil(userId, sessionId) });
-      return;
-    }
-    if (request.method === "GET" && scheduleId && !scheduleSub) {
-      sendJson(response, 200, { council: await getCouncil(userId, scheduleId) });
-      return;
-    }
-    if (request.method === "GET" && (scheduleSub === ".csv" || scheduleSub === ".xlsx")) {
-      sendTable(response, await exportCouncil(userId, scheduleId), scheduleSub);
-      return;
-    }
-    await limitRequest(request, `meeting-council:${userId}`, 120, 60);
-    let change: { roomId: string; sessionId: string | null } | null = null;
-    if (request.method === "PATCH" && scheduleId && !scheduleSub)
-      change = await saveCouncil(userId, scheduleId, await readJson(request));
-    else if (request.method === "PATCH" && scheduleSub?.startsWith("/members/"))
-      change = await setMemberAbsent(
-        userId,
-        scheduleId,
-        scheduleSub.slice(9),
-        (await readJson(request)).absent,
-      );
-    else if (request.method === "POST" && action === "start")
-      change = await startPresenter(userId, presenterId);
-    else if (request.method === "PATCH" && action === "sheet")
-      change = await submitSheet(userId, presenterId, await readJson(request));
-    else if (request.method === "POST" && action === "finalize")
-      change = await finalizePresenter(userId, presenterId, await readJson(request));
-    if (!change) throw new HttpError(405, "METHOD_NOT_ALLOWED", "Phương thức không được hỗ trợ.");
-    if (change.sessionId)
-      publishOutcomeChange(io, {
-        roomId: change.roomId,
-        sessionId: change.sessionId,
-        part: "council",
-      });
-    sendJson(response, 200, { ok: true });
     return;
   }
   const dialIn = pathname.match(/^\/api\/meetings\/rooms\/([^/]+)\/dial-in$/);

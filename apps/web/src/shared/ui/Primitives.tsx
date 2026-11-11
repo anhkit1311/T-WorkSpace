@@ -416,6 +416,9 @@ export function Modal({
       (first ?? dialogRef.current)?.focus({ preventScroll: true });
     });
     const handleKey = (event: KeyboardEvent) => {
+      // A dialog opened inside another (a confirmation) owns the keyboard until it closes.
+      const dialogs = document.querySelectorAll(".modal");
+      if (dialogs[dialogs.length - 1] !== dialogRef.current) return;
       if (event.key === "Escape") {
         if (isSelectPickerEvent(event)) return;
         event.preventDefault();
@@ -844,5 +847,44 @@ export function KpiStatCard({
         </span>
       </div>
     </div>
+  );
+}
+
+export interface PageHeaderProps {
+  title: ReactNode;
+  titleId?: string;
+  /** One line under the title: what the page is, or its live counts. */
+  meta?: ReactNode;
+  /** Shows a status dot before `meta`: green when true, grey when false. */
+  live?: boolean;
+  className?: string;
+  /** Page actions (filters, search, buttons), laid out to the right of the title. */
+  children?: ReactNode;
+}
+
+/** The title block of every top-level page, so they all share one size, order and spacing. */
+export function PageHeader({
+  title,
+  titleId,
+  meta,
+  live,
+  className = "",
+  children,
+}: PageHeaderProps) {
+  return (
+    <header className={`page-head ${className}`.trim()}>
+      <div className="page-head__text">
+        <h1 id={titleId}>{title}</h1>
+        {meta != null && (
+          <p className="page-head__meta">
+            {live !== undefined && (
+              <i className={`page-head__led${live ? " is-live" : ""}`} aria-hidden="true" />
+            )}
+            <span>{meta}</span>
+          </p>
+        )}
+      </div>
+      {children}
+    </header>
   );
 }

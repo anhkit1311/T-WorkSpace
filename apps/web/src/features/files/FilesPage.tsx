@@ -5,7 +5,7 @@ import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
 import { formatFileSize } from "../../shared/lib/file-size";
 import { Icon } from "../../shared/ui/Icon";
-import { Button, Field, Modal } from "../../shared/ui/Primitives";
+import { Button, Field, Modal, PageHeader } from "../../shared/ui/Primitives";
 import {
   getAttachmentBlobApi,
   getChannelsApi,
@@ -142,10 +142,11 @@ export function FilesPage() {
   return (
     <section className="ws-files-tab files-page" aria-labelledby="files-title">
       <div className="ws-files-toolbar">
-        <div className="ws-files-toolbar__left">
-          <h1 id="files-title">Tài liệu</h1>
-          <p>Tệp gửi trong kênh và thẻ công việc của mọi nhóm bạn tham gia.</p>
-        </div>
+        <PageHeader
+          title="Tài liệu"
+          titleId="files-title"
+          meta="Tệp gửi trong kênh và thẻ công việc của mọi nhóm bạn tham gia."
+        />
         <div className="ws-files-toolbar__controls">
           <div className="ws-files-search">
             <Icon name="search" size={15} />

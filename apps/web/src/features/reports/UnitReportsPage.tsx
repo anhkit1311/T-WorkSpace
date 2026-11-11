@@ -1,3 +1,4 @@
+import { PageHeader } from "../../shared/ui/Primitives";
 import { useEffect, useState } from "react";
 import { useApp } from "../../app/providers/AppContext";
 import { academicApi } from "../admin/api";
@@ -52,14 +53,10 @@ export function UnitReportsPage() {
   const offered = sum(rows, (row) => row.calls.offered);
   return (
     <div className="unit-reports">
-      <header className="unit-reports__head">
-        <div>
-          <h1>Báo cáo đơn vị</h1>
-          <p>
-            Tổng đài, họp và khóa học của từng khoa, phòng ban. Chỉ có số đếm, không có dữ liệu từng
-            người.
-          </p>
-        </div>
+      <PageHeader
+        title="Báo cáo đơn vị"
+        meta="Tổng đài, họp và khóa học của từng khoa, phòng ban. Chỉ có số đếm, không có dữ liệu từng người."
+      >
         <div className="unit-reports__range">
           <label>
             Từ ngày
@@ -80,7 +77,7 @@ export function UnitReportsPage() {
             />
           </label>
         </div>
-      </header>
+      </PageHeader>
       {error && (
         <p role="alert" className="unit-reports__error">
           {error}

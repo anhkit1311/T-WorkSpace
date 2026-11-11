@@ -1,43 +1,228 @@
+/* Contact & support: dark "who to call" rack beside the user's own tickets. */
 .contact-center {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.contact-departments {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border-radius: var(--radius-xl);
+  background: var(--dark-bg);
+  color: var(--dark-text);
+  box-shadow: 0 18px 40px -28px rgba(15, 23, 42, 0.7);
+}
+.contact-departments__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.contact-departments__head > div {
+  flex: 1;
+  min-width: 0;
+}
+.contact-departments h2 {
+  margin: 4px 0 0;
+  font-size: var(--fs-big);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--white);
+}
+.contact-eyebrow {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dark-muted);
+}
+.contact-departments__note {
+  margin: 0;
+  color: var(--dark-muted);
+}
+.contact-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: var(--radius-full);
+  background: rgba(16, 185, 129, 0.16);
+  color: var(--green-300);
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.contact-led {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: var(--green-500);
+  box-shadow:
+    0 0 0 3px rgba(16, 185, 129, 0.22),
+    0 0 8px var(--green-500);
 }
 .contact-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
   gap: 12px;
-  margin: 12px 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 .contact-card {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--bg-subtle);
+  border: 1px solid var(--dark-border);
+  border-radius: var(--radius-xl);
+  background: var(--dark-raised);
+}
+.contact-card.is-closed .contact-led {
+  background: #6b7280;
+  box-shadow: none;
 }
 .contact-card__head {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
+  gap: 8px;
+}
+.contact-card__head strong {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-card-title);
+  color: var(--white);
+}
+.contact-card__status {
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--dark-muted);
 }
 .contact-card__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
+  margin-top: auto;
+}
+.contact-card__actions .button--secondary {
+  border-color: var(--dark-border);
+  background: transparent;
+  color: var(--dark-text);
+}
+.contact-card__actions .button--secondary:hover:not(:disabled) {
+  background: var(--dark-border);
+}
+.contact-card--info {
+  justify-content: center;
+  border-style: dashed;
+  background: transparent;
+  font-size: var(--fs-subtext);
+  line-height: 1.5;
+  color: var(--dark-muted);
+}
+.contact-tickets {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 16px 0 0;
+  border-radius: var(--radius-xl);
+}
+.contact-tickets > .callcenter-panel__head,
+.contact-tickets > .desk-muted,
+.contact-filter {
+  padding: 0 16px;
+}
+.contact-tickets > .callcenter-panel__head {
+  margin-bottom: 10px;
+}
+.contact-tickets .callcenter-panel__title {
+  font-size: var(--fs-card-title);
+  font-weight: 800;
+}
+.contact-filter {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.contact-filter button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-badge);
+  font-weight: 700;
+  cursor: pointer;
+}
+.contact-filter button[aria-pressed="true"] {
+  border-color: var(--text-strong);
+  background: var(--text-strong);
+  color: var(--white);
+}
+.contact-filter small {
+  font-family: var(--font-sans);
+  opacity: 0.75;
+}
+.contact-tickets__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.contact-tickets__list li {
+  --step: var(--dark-muted);
+  --step-soft: var(--bg);
+  border-top: 1px solid var(--border);
+}
+.contact-tickets__list li.tone-blue {
+  --step: var(--blue-500);
+  --step-soft: var(--blue-100);
+}
+.contact-tickets__list li.tone-violet {
+  --step: var(--violet-600);
+  --step-soft: var(--violet-100);
+}
+.contact-tickets__list li.tone-amber {
+  --step: var(--amber-500);
+  --step-soft: var(--amber-100);
+}
+.contact-tickets__list li.tone-green {
+  --step: var(--green-500);
+  --step-soft: var(--primary-soft);
+}
+.contact-tickets__list li.is-waiting {
+  background: var(--amber-50);
+}
+.contact-step {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--step);
+  box-shadow: 0 0 0 4px var(--step-soft);
 }
 .contact-ticket {
   display: flex;
   flex: 1;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  width: 100%;
   min-width: 0;
-  padding: 0;
+  padding: 12px 16px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -45,9 +230,38 @@
   text-align: left;
   cursor: pointer;
 }
+.contact-ticket .desk-recent__who {
+  flex: 1;
+  min-width: 0;
+}
 .contact-ticket:hover strong,
 .contact-ticket:focus-visible strong {
   color: var(--primary-text);
+}
+.contact-reply {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: var(--white);
+  font-size: var(--fs-subtext);
+  font-weight: 700;
+}
+.contact-tickets__foot {
+  margin: auto 0 0;
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-subtext);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+@media (max-width: 1100px) {
+  .contact-center {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .contact-thread {
   display: grid;
@@ -72,7 +286,7 @@
 .contact-thread__events li {
   display: grid;
   gap: 2px;
-  font-size: 14px;
+  font-size: var(--fs-body);
 }
 .contact-thread__events li p {
   margin: 0;
@@ -80,7 +294,7 @@
 }
 .contact-thread__events li.is-status {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 .contact-rating {
   display: flex;
@@ -96,11 +310,11 @@
   padding: 2px;
   border: 0;
   background: transparent;
-  color: var(--border-strong, #cbd5e1);
+  color: var(--border-strong);
   cursor: pointer;
 }
 .contact-rating button.is-on {
-  color: #f59e0b;
+  color: var(--amber-500);
 }
 .contact-rating button.is-on svg {
   fill: currentColor;

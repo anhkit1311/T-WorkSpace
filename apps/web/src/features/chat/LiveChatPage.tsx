@@ -227,10 +227,8 @@ export function ChatPage() {
   const [attachmentPreview, setAttachmentPreview] = useState("");
   const [members, setMembers] = useState<GroupMemberItem[]>([]);
   const [showStickers, setShowStickers] = useState(false);
-  // Group channels open without the details panel; the "Tin nhắn" inbox shows the contact beside the chat when it fits.
-  const [showInfoPanel, setShowInfoPanel] = useState(
-    () => route.view === "chat" && window.matchMedia("(min-width: 1101px)").matches,
-  );
+  // The details panel opens from the header's info button, so the conversation gets the width.
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [mobileChannelDrawerOpen, setMobileChannelDrawerOpen] = useState(false);
   const [wideInfoLayout, setWideInfoLayout] = useState(
     () => window.matchMedia("(min-width: 961px)").matches,
@@ -1424,7 +1422,7 @@ export function ChatPage() {
     const sync = () => {
       setWideInfoLayout(wide.matches);
       if (!wide.matches) setShowInfoPanel(false);
-      if (window.matchMedia("(min-width: 681px)").matches) setMobileChannelDrawerOpen(false);
+      if (window.matchMedia("(min-width: 769px)").matches) setMobileChannelDrawerOpen(false);
     };
     wide.addEventListener("change", sync);
     window.addEventListener("resize", sync);

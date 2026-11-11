@@ -81,6 +81,7 @@ async function account(handle, displayName, passwordHash) {
 }
 
 /** Deletes the demo faculty. Append-only guards are bypassed for this session only. */
+// Only the unit this script created (code CNTT); never a real Khoa CNTT matched by name.
 async function reset() {
   const unit = (await sql(`SELECT id FROM academic_units WHERE code='CNTT'`)).rows[0];
   const client = await pool.connect();
@@ -109,10 +110,13 @@ async function reset() {
   }
 }
 
+// Matched by name, not code: a real install names the unit "Khoa Công nghệ thông tin" with code 001.
 async function main() {
   if (process.argv.includes("--reset")) await reset();
-  if ((await sql(`SELECT 1 FROM academic_units WHERE code='CNTT'`)).rowCount) {
-    console.log("Demo faculty CNTT already exists; nothing to do.");
+  if (
+    (await sql(`SELECT 1 FROM academic_units WHERE name ILIKE 'khoa công nghệ thông tin'`)).rowCount
+  ) {
+    console.log("Khoa CNTT already exists (matched by name); nothing to do.");
     return;
   }
   const admin = (

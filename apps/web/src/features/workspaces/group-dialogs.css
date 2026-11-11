@@ -16,7 +16,7 @@
   border-radius: var(--radius-pill);
   background: var(--primary-soft);
   color: var(--primary-text);
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 
 .group-create__chips button {
@@ -46,7 +46,7 @@
 .group-create__hint {
   padding: 12px 4px;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 
 .group-create__person {
@@ -71,13 +71,13 @@
 
 .group-create__who strong {
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--fs-body);
 }
 
 .group-create__who span {
   overflow: hidden;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--fs-badge);
   text-overflow: ellipsis;
   white-space: nowrap;
 }

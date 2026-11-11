@@ -9,18 +9,18 @@
 .meeting-attendance table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 .meeting-attendance caption {
   text-align: left;
-  color: var(--text-muted, #667085);
+  color: var(--text-muted);
   padding: 6px 0;
 }
 .meeting-attendance th,
 .meeting-attendance td {
   text-align: left;
   padding: 4px 6px;
-  border-bottom: 1px solid var(--border, #e4e7ec);
+  border-bottom: 1px solid var(--border);
   font-weight: normal;
 }
 .meeting-attendance thead th {
@@ -31,14 +31,14 @@
 }
 .meeting-recording-live {
   color: #b42318;
-  font-size: 13px;
+  font-size: var(--fs-body);
   margin: 4px 0;
 }
 .meeting-recording-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 .meeting-recording-list li {
   display: flex;
@@ -46,7 +46,7 @@
   align-items: center;
   gap: 8px;
   padding: 4px 0;
-  border-bottom: 1px solid var(--border, #e4e7ec);
+  border-bottom: 1px solid var(--border);
 }
 .meeting-recording-list li > span {
   margin-right: auto;
@@ -55,7 +55,7 @@
   width: 100%;
   max-height: 360px;
   background: #000;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   margin-top: 8px;
 }
 .meeting-ai-summary {
@@ -63,8 +63,8 @@
   display: grid;
   gap: 4px;
   padding: 8px 10px;
-  border-radius: 6px;
-  background: var(--bg-subtle, #f4f5f7);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
 }
 .meeting-ai-summary p {
   margin: 0;

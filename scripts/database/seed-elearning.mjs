@@ -93,7 +93,7 @@ try {
   const adminId = adminRow.rows[0].user_id;
   const unit = (
     await pool.query(
-      `SELECT id FROM academic_units ORDER BY (code='CNTT') DESC, created_at LIMIT 1`,
+      `SELECT id FROM academic_units ORDER BY (name ILIKE 'khoa công nghệ thông tin') DESC, created_at LIMIT 1`,
     )
   ).rows[0];
   if (!unit) throw new Error("Chưa có đơn vị học thuật nào.");

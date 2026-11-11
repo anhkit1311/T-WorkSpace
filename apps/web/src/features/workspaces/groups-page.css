@@ -1,29 +1,12 @@
 .groups-page {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 24px;
   display: grid;
   gap: 16px;
   color: var(--text);
-}
-
-.groups-page__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.groups-page__head h1 {
-  margin: 0 0 4px;
-  font-size: 22px;
-  font-weight: 700;
-}
-
-.groups-page__head p {
-  margin: 0;
-  color: var(--text-secondary);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-narrow);
+  margin: 0 auto;
+  padding: var(--page-pad);
 }
 
 .groups-page__actions,
@@ -62,14 +45,14 @@
 }
 
 .groups-page__info strong {
-  font-size: 15px;
+  font-size: var(--fs-card-title);
 }
 
 .groups-page__info span,
 .groups-page__member-name span,
 .groups-page__presence {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 
 .groups-page__members li {
@@ -111,7 +94,7 @@
 
 .no-groups h2 {
   margin: 0;
-  font-size: 17px;
+  font-size: var(--fs-section);
 }
 
 .no-groups p {

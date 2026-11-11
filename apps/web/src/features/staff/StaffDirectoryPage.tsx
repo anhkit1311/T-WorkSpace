@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import type { DirectConversationItem } from "@doan/shared";
 import { Icon } from "../../shared/ui/Icon";
-import { Avatar } from "../../shared/ui/Primitives";
+import { Avatar, PageHeader } from "../../shared/ui/Primitives";
 import { useGlobalSoftphone } from "../../app/providers/SoftphoneContext";
 import { useSocket } from "../../app/providers/SocketContext";
 import { useApp } from "../../app/providers/AppContext";
@@ -211,15 +211,12 @@ export function StaffDirectoryPage() {
 
   return (
     <div className="staff-page">
-      <header className="sd-head">
-        <div className="sd-head__title">
-          <p className="sd-eyebrow">
-            <i className="sd-led" aria-hidden="true" />
-            Danh bạ · {units.length} đơn vị · {staffList?.length ?? 0} cán bộ · {onlineCount} đang
-            trực tuyến
-          </p>
-          <h1>Nhân sự</h1>
-        </div>
+      <PageHeader
+        className="sd-head"
+        title="Nhân sự"
+        live={onlineCount > 0}
+        meta={`${units.length} đơn vị · ${staffList?.length ?? 0} cán bộ · ${onlineCount} đang trực tuyến`}
+      >
         <div className="sd-seg" role="group" aria-label="Cách xem">
           <button type="button" aria-pressed={view === "list"} onClick={() => pickView("list")}>
             Danh sách
@@ -260,7 +257,7 @@ export function StaffDirectoryPage() {
             onChange={(event) => setQuery(event.target.value)}
           />
         </label>
-      </header>
+      </PageHeader>
 
       <div className={`sd-body${selected ? " has-profile" : ""}`}>
         <nav className="sd-tree" aria-label="Đơn vị">

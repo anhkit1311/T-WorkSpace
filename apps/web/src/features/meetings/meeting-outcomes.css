@@ -8,14 +8,14 @@
   gap: 14px;
   padding: 10px 14px 16px;
   color: var(--text);
-  font-size: 13.5px;
+  font-size: var(--fs-body);
 }
 
 .meeting-outcomes section {
   display: grid;
   gap: 8px;
   padding: 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.72);
 }
 
@@ -24,29 +24,29 @@
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 650;
 }
 
 .meeting-outcomes small,
 .meeting-outcomes-meta {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-badge);
   color: var(--text-muted);
 }
 
 .meeting-outcomes-count {
   padding: 1px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: rgba(37, 99, 235, 0.1);
-  color: #1d4ed8;
-  font-size: 11.5px;
+  color: var(--blue-700);
+  font-size: var(--fs-badge);
   font-variant-numeric: tabular-nums;
 }
 
 .meeting-outcomes-save {
   margin-left: auto;
-  font-size: 11.5px;
+  font-size: var(--fs-badge);
   font-weight: 500;
   color: var(--text-muted);
 }
@@ -55,11 +55,11 @@
 .meeting-notes-conflict {
   margin: 0;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   border: 1px solid rgba(180, 83, 9, 0.22);
   background: rgba(255, 251, 235, 0.92);
   color: #92400e;
-  font-size: 12.5px;
+  font-size: var(--fs-subtext);
 }
 
 .meeting-notes-conflict p {
@@ -86,11 +86,11 @@
   min-width: 0;
   padding: 8px 10px;
   border: 1px solid rgba(15, 23, 42, 0.12);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--text);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 
 .meeting-outcomes textarea {
@@ -100,7 +100,7 @@
 }
 
 .meeting-outcomes :is(select, input, textarea):focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--blue-600);
   outline-offset: 1px;
 }
 
@@ -134,7 +134,7 @@
   width: 16px;
   height: 16px;
   padding: 0;
-  accent-color: #2563eb;
+  accent-color: var(--blue-600);
 }
 
 .meeting-agenda li.is-done label span {
@@ -164,7 +164,7 @@
   display: grid;
   gap: 2px;
   padding: 6px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
 }
 
 .meeting-task-list li:hover {
@@ -219,7 +219,7 @@
   max-width: 560px;
   padding: 12px 14px;
   border: 1px solid rgba(37, 99, 235, 0.18);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: rgba(239, 246, 255, 0.85);
   color: var(--text);
 }
@@ -228,9 +228,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--fs-badge);
   font-weight: 650;
-  color: #1d4ed8;
+  color: var(--blue-700);
   letter-spacing: 0.01em;
 }
 
@@ -238,7 +238,7 @@
   margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   line-height: 1.5;
 }
 

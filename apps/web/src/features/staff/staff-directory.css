@@ -3,30 +3,30 @@
    Dark "rack" pieces share the meetings hub palette.
    -------------------------------------------------------------------------- */
 .staff-page {
-  --sd-ink: #22272e;
-  --sd-rack: #1b1f24;
-  --sd-unit: #2d333b;
-  --sd-line: #3a424c;
-  --sd-on-ink: #e6edf3;
-  --sd-ink-soft: #c9d1d9;
-  --sd-ink-muted: #9da7b3;
-  --sd-green: #10b981;
-  --sd-red: #ef4444;
+  --sd-ink: var(--dark-bg);
+  --sd-rack: var(--dark-sunken);
+  --sd-unit: var(--dark-raised);
+  --sd-line: var(--dark-border);
+  --sd-on-ink: var(--dark-text);
+  --sd-ink-soft: var(--dark-text-secondary);
+  --sd-ink-muted: var(--dark-muted);
+  --sd-green: var(--green-500);
+  --sd-red: var(--red-500);
   --sd-off: #9ca3af;
   --sd-wire: #9ca3af;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  width: 100%;
-  max-width: 1480px;
-  margin: 0 auto;
-  padding: 20px 32px 32px;
   box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: var(--page-pad);
 }
 
 .sd-mono-label {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -38,7 +38,7 @@
   flex: none;
   width: 7px;
   height: 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--sd-green);
   box-shadow:
     0 0 0 3px rgba(16, 185, 129, 0.2),
@@ -65,38 +65,16 @@
   gap: 10px;
 }
 
-.sd-head__title {
+.sd-head .page-head__text {
   flex: 1;
   min-width: 240px;
-}
-
-.sd-eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.sd-head h1 {
-  margin: 6px 0 0;
-  font-size: 30px;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: -0.045em;
-  color: var(--text-strong);
 }
 
 .sd-seg {
   display: flex;
   gap: 2px;
   padding: 3px;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: var(--bg-subtle);
 }
 
@@ -104,10 +82,10 @@
   height: 30px;
   padding: 0 12px;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: transparent;
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--fs-subtext);
   font-weight: 600;
   color: var(--text-muted);
   cursor: pointer;
@@ -126,10 +104,10 @@
   height: 36px;
   padding: 0 12px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--surface);
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--fs-subtext);
   font-weight: 600;
   color: var(--text);
   cursor: pointer;
@@ -138,17 +116,17 @@
 .sd-chip[aria-pressed="true"] {
   border-color: var(--text-strong);
   background: var(--text-strong);
-  color: #fff;
+  color: var(--white);
 }
 
 .sd-select {
   height: 36px;
   padding: 0 10px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--radius-lg);
   background: var(--surface);
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--fs-subtext);
   font-weight: 600;
   color: var(--text);
 }
@@ -165,14 +143,14 @@
   height: 36px;
   padding: 0 12px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--radius-lg);
   background: var(--surface);
   color: var(--text-muted);
   box-sizing: border-box;
 }
 
 .sd-search:focus-within {
-  border-color: #059669;
+  border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
 }
 
@@ -183,7 +161,7 @@
   outline: 0;
   background: transparent;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--text);
 }
 
@@ -209,15 +187,15 @@
   padding: 6px 8px 10px;
   overflow-y: auto;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius-xl);
   background: var(--surface);
   box-sizing: border-box;
 }
 
 .sd-tree__group {
   margin: 12px 8px 4px;
-  font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -232,10 +210,10 @@
   min-height: 34px;
   padding: 0 8px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: transparent;
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--fs-subtext);
   font-weight: 600;
   color: var(--text-strong);
   text-align: left;
@@ -255,19 +233,19 @@
 }
 
 .sd-tree__item small {
-  font-family: var(--font-mono);
-  font-size: 10px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
   font-weight: 700;
   color: var(--text-muted);
 }
 
 .sd-tree__item[aria-current="true"] {
   background: var(--text-strong);
-  color: #fff;
+  color: var(--white);
 }
 
 .sd-tree__item[aria-current="true"] small {
-  color: #6ee7b7;
+  color: var(--green-300);
 }
 
 .sd-tree__item.is-sub {
@@ -278,15 +256,15 @@
 }
 
 .sd-tree__item.is-sub[aria-pressed="true"] {
-  background: #ecfdf5;
-  color: #065f46;
-  box-shadow: inset 0 0 0 1px #a7f3d0;
+  background: var(--green-50);
+  color: var(--primary-text);
+  box-shadow: inset 0 0 0 1px var(--green-200);
 }
 
 .sd-mine {
   margin-top: 12px;
   padding: 12px;
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   background: var(--sd-ink);
   color: var(--sd-on-ink);
 }
@@ -304,19 +282,19 @@
 
 .sd-mine strong {
   flex: 1;
-  font-family: var(--font-mono);
-  font-size: 22px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-page-title);
   font-weight: 700;
-  color: #fff;
+  color: var(--white);
 }
 
 .sd-mine .is-state {
-  color: #6ee7b7;
+  color: var(--green-300);
 }
 
 .sd-mine p {
   margin: 6px 0 0;
-  font-size: 11.5px;
+  font-size: var(--fs-badge);
   line-height: 1.45;
   color: var(--sd-ink-soft);
 }
@@ -327,7 +305,7 @@
   margin: 0;
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius-xl);
   background: var(--surface);
 }
 
@@ -341,7 +319,7 @@
 
 .sd-card__head h2 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--fs-card-title);
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--text-strong);
@@ -356,8 +334,8 @@
   height: 34px;
   padding: 0 12px;
   border-bottom: 1px solid var(--border);
-  font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-align: left;
@@ -369,7 +347,7 @@
   height: 52px;
   padding: 0 12px;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-  font-size: 12.5px;
+  font-size: var(--fs-subtext);
   color: var(--text);
   vertical-align: middle;
 }
@@ -378,8 +356,8 @@
   height: 30px;
   padding: 0 12px;
   background: var(--bg-subtle);
-  font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-align: left;
@@ -388,11 +366,11 @@
 }
 
 .sd-table tr.is-selected td {
-  background: #ecfdf5;
+  background: var(--green-50);
 }
 
 .sd-table tr.is-selected td:first-child {
-  box-shadow: inset 3px 0 0 #059669;
+  box-shadow: inset 3px 0 0 var(--primary);
 }
 
 .sd-table__empty {
@@ -410,8 +388,8 @@
 .sd-facts code {
   padding: 0;
   background: none;
-  font-family: var(--font-mono);
-  font-size: 12px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-badge);
   color: var(--text-strong);
 }
 
@@ -424,7 +402,7 @@
   margin: -4px;
   padding: 4px;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: transparent;
   font: inherit;
   color: inherit;
@@ -440,7 +418,7 @@
 .sd-act:focus-visible,
 .sd-btn:focus-visible,
 .sd-tree__item:focus-visible {
-  outline: 2px solid #059669;
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
@@ -451,7 +429,7 @@
 
 .sd-person b {
   overflow: hidden;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -460,7 +438,7 @@
 
 .sd-person small {
   overflow: hidden;
-  font-size: 11px;
+  font-size: var(--fs-micro);
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text-muted);
@@ -483,7 +461,7 @@
   width: 11px;
   height: 11px;
   border: 2px solid var(--surface);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--sd-green);
   box-sizing: border-box;
 }
@@ -495,7 +473,7 @@
 .sd-avatar.is-lg .avatar {
   width: 56px;
   height: 56px;
-  font-size: 19px;
+  font-size: var(--fs-big);
 }
 
 .sd-avatar.is-lg .sd-dot {
@@ -510,13 +488,13 @@
   height: 20px;
   margin-right: 6px;
   padding: 0 7px;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--sd-ink);
-  font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: #6ee7b7;
+  color: var(--green-300);
   vertical-align: middle;
 }
 
@@ -526,10 +504,10 @@
 }
 
 .sd-ext {
-  font-family: var(--font-mono);
-  font-size: 13px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
   font-weight: 700;
-  color: #047857;
+  color: var(--primary-hover);
 }
 
 .sd-status {
@@ -560,7 +538,7 @@
   width: 30px;
   height: 30px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: var(--surface);
   color: var(--text);
   cursor: pointer;
@@ -571,15 +549,15 @@
 }
 
 .sd-act.is-call {
-  border-color: #a7f3d0;
-  background: #ecfdf5;
-  color: #047857;
+  border-color: var(--green-200);
+  background: var(--green-50);
+  color: var(--primary-hover);
 }
 
 .sd-act.is-call:hover {
-  border-color: #059669;
-  background: #059669;
-  color: #fff;
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--white);
 }
 
 /* Profile ---------------------------------------------------------------- */
@@ -588,7 +566,7 @@
   top: 76px;
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius-xl);
   background: var(--surface);
 }
 
@@ -608,7 +586,7 @@
   border: 0;
   background: transparent;
   font: inherit;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--sd-on-ink);
   cursor: pointer;
@@ -628,15 +606,15 @@
 .sd-profile__id h2 {
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: 18px;
+  font-size: var(--fs-section);
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: #fff;
+  color: var(--white);
 }
 
 .sd-profile__id p {
   margin: 2px 0 0;
-  font-size: 12.5px;
+  font-size: var(--fs-subtext);
   color: var(--sd-ink-soft);
 }
 
@@ -654,7 +632,7 @@
   width: 30px;
   height: 30px;
   border: 1px solid var(--sd-line);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: transparent;
   color: var(--sd-on-ink);
   cursor: pointer;
@@ -667,9 +645,9 @@
   margin: 12px 0 0;
   padding: 8px 10px;
   border: 1px solid var(--sd-line);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: var(--sd-rack);
-  font-size: 12px;
+  font-size: var(--fs-badge);
   color: var(--sd-on-ink);
 }
 
@@ -688,10 +666,10 @@
   height: 36px;
   padding: 0 12px;
   border: 1px solid var(--sd-line);
-  border-radius: 9px;
+  border-radius: var(--radius-lg);
   background: transparent;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 700;
   white-space: nowrap;
   color: var(--sd-on-ink);
@@ -699,9 +677,9 @@
 }
 
 .sd-btn.is-primary {
-  border-color: #059669;
-  background: #059669;
-  color: #fff;
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--white);
 }
 
 .sd-facts {
@@ -724,7 +702,7 @@
 .sd-facts dt {
   flex: none;
   width: 84px;
-  font-size: 12.5px;
+  font-size: var(--fs-subtext);
   color: var(--text-muted);
 }
 
@@ -735,7 +713,7 @@
   gap: 8px;
   min-width: 0;
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--fs-subtext);
   font-weight: 600;
   color: var(--text-strong);
 }
@@ -773,7 +751,7 @@
   grid-template-columns: 0.8fr 1.5fr 1fr 1fr;
   gap: 12px;
   padding: 14px 16px;
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   background: var(--sd-ink);
   color: var(--sd-on-ink);
   box-shadow: 0 18px 40px -28px rgba(15, 23, 42, 0.7);
@@ -786,7 +764,7 @@
   min-width: 0;
   padding: 11px 14px;
   border: 1px solid var(--sd-line);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   background: var(--sd-unit);
 }
 
@@ -795,26 +773,26 @@
 }
 
 .sd-rack__unit strong {
-  font-family: var(--font-mono);
-  font-size: 24px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-hero);
   font-weight: 700;
   line-height: 1;
-  color: #fff;
+  color: var(--white);
 }
 
 .sd-rack__unit strong em {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-style: normal;
   color: var(--sd-ink-muted);
 }
 
 .sd-rack__unit strong.is-ext {
-  color: #6ee7b7;
+  color: var(--green-300);
 }
 
 .sd-rack__unit small {
   overflow: hidden;
-  font-size: 11.5px;
+  font-size: var(--fs-badge);
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--sd-ink-soft);
@@ -826,7 +804,7 @@
   height: 10px;
   margin-top: 4px;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }
 
 .sd-ranks i {
@@ -834,13 +812,13 @@
 }
 
 .sd-ranks .is-0 {
-  background: #6ee7b7;
+  background: var(--green-300);
 }
 .sd-ranks .is-1 {
-  background: #10b981;
+  background: var(--green-500);
 }
 .sd-ranks .is-2 {
-  background: #047857;
+  background: var(--primary-hover);
 }
 .sd-ranks .is-3 {
   background: #57606a;
@@ -851,12 +829,12 @@
   flex-wrap: wrap;
   gap: 4px 12px;
   white-space: normal;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
 }
 
 .sd-ranks__legend b {
-  color: #fff;
+  color: var(--white);
 }
 
 .sd-org__top {
@@ -885,7 +863,7 @@
   width: 340px;
   max-width: 100%;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: var(--radius-xl);
   box-sizing: border-box;
 }
 
@@ -896,11 +874,11 @@
 }
 
 .sd-node.is-head .sd-mono-label {
-  color: #6ee7b7;
+  color: var(--green-300);
 }
 
 .sd-node.is-head .sd-person b {
-  color: #fff;
+  color: var(--white);
 }
 
 .sd-node.is-head .sd-person small {
@@ -918,9 +896,9 @@
 }
 
 .sd-node.is-head .sd-act.is-call {
-  border-color: #059669;
-  background: #059669;
-  color: #fff;
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--white);
 }
 
 .sd-node.is-admin {
@@ -971,7 +949,7 @@
   flex-direction: column;
   min-width: 0;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius-xl);
   background: var(--surface);
 }
 
@@ -997,7 +975,7 @@
 
 .sd-dept h3 {
   margin: 0;
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   font-weight: 800;
   color: var(--text-strong);
 }
@@ -1060,16 +1038,12 @@
 }
 
 /* Phones: rows become a contact list and the profile a full screen. */
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .staff-page {
     padding: 14px 12px 24px;
   }
 
-  .sd-head h1 {
-    font-size: 26px;
-  }
-
-  .sd-head__title {
+  .sd-head .page-head__text {
     flex-basis: 100%;
   }
 
@@ -1121,13 +1095,13 @@
   .sd-dept .sd-act.is-call {
     width: 44px;
     height: 44px;
-    border-radius: 999px;
+    border-radius: var(--radius-full);
   }
 
   .sd-profile {
     position: fixed;
     inset: 0;
-    z-index: 300;
+    z-index: var(--z-modal);
     overflow-y: auto;
     border: 0;
     border-radius: 0;
@@ -1149,7 +1123,7 @@
   .sd-avatar.is-lg .avatar {
     width: 76px;
     height: 76px;
-    font-size: 24px;
+    font-size: var(--fs-hero);
   }
 
   .sd-profile__state {
@@ -1160,7 +1134,7 @@
     flex-direction: column;
     gap: 4px;
     height: 60px;
-    font-size: 12px;
+    font-size: var(--fs-badge);
   }
 
   .sd-facts > div {

@@ -122,9 +122,8 @@ test("trang Khóa học và Tổng đài mở được", async ({ browser }) => 
 test("menu theo chức năng", async ({ browser }) => {
   const page = await signedIn(browser, fixtures().users.alice);
   const menu = page.getByRole("navigation", { name: "Menu chức năng chính" });
-  // A menu button's name ends with its unread badge, if any.
-  const item = (name: string) =>
-    menu.getByRole("button", { name: new RegExp(`^${name}( \\d+)?$`) });
+  // A menu link's name ends with its unread badge, if any.
+  const item = (name: string) => menu.getByRole("link", { name: new RegExp(`^${name}( \\d+)?$`) });
   for (const name of ["Trang chủ", "Tổng đài", "Tin nhắn", "Họp", "Khóa học", "Nhân sự"])
     await expect(item(name).first()).toBeVisible();
   for (const name of ["Quản trị hệ thống", "Quản lý thông báo", "Báo cáo đơn vị"])
@@ -248,7 +247,7 @@ test("Họp: lên lịch rồi thấy trên lịch tuần, vào được phòng"
   await page.getByRole("button", { name: "Thu nhỏ cuộc họp" }).click();
   await page
     .getByRole("navigation", { name: "Menu chức năng chính" })
-    .getByRole("button", { name: /^Họp( |$)/ })
+    .getByRole("link", { name: /^Họp( |$)/ })
     .click();
   await expect.poll(() => playingVideos(page), { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
   await expect(row).toHaveCount(0);

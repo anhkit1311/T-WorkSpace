@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { Button, Modal } from "../../shared/ui/Primitives";
+import { Button, ConfirmDialog, Modal } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
 import { academicApi, rankLabel, type AcademicProfile, type DepartmentUnit } from "./api";
 import "./admin.css";
@@ -47,6 +47,7 @@ export function FacultyPanel({ token, run, onUnitCreated }: Props) {
   // Modal create/edit
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<DepartmentUnit | null>(null);
+  const [deleting, setDeleting] = useState<DepartmentUnit | null>(null);
   const [formData, setFormData] = useState<FormState>(DEFAULT_FORM);
   const [submitting, setSubmitting] = useState(false);
 
@@ -87,9 +88,7 @@ export function FacultyPanel({ token, run, onUnitCreated }: Props) {
   };
 
   const handleDelete = async (dept: DepartmentUnit) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa "${dept.name}" khỏi hệ thống?`)) {
-      return;
-    }
+    setDeleting(null);
     const res = await run(`Đã xóa ${dept.name}`, () =>
       academicApi(token, `units/${dept.id}`, "DELETE"),
     );
@@ -177,7 +176,7 @@ export function FacultyPanel({ token, run, onUnitCreated }: Props) {
               <tr>
                 <td
                   colSpan={6}
-                  style={{ textAlign: "center", padding: 24, color: "var(--tws-text-muted)" }}
+                  style={{ textAlign: "center", padding: 24, color: "var(--text-muted)" }}
                 >
                   Đang tải danh sách khoa và phòng ban…
                 </td>
@@ -187,7 +186,7 @@ export function FacultyPanel({ token, run, onUnitCreated }: Props) {
               <tr>
                 <td
                   colSpan={6}
-                  style={{ textAlign: "center", padding: 24, color: "var(--tws-text-muted)" }}
+                  style={{ textAlign: "center", padding: 24, color: "var(--text-muted)" }}
                 >
                   Chưa có khoa hoặc phòng ban nào được tạo.
                 </td>
@@ -221,7 +220,7 @@ export function FacultyPanel({ token, run, onUnitCreated }: Props) {
                       <button
                         type="button"
                         className="dept-action-btn dept-action-delete"
-                        onClick={() => handleDelete(dept)}
+                        onClick={() => setDeleting(dept)}
                       >
                         Xóa
                       </button>
@@ -318,6 +317,15 @@ export function FacultyPanel({ token, run, onUnitCreated }: Props) {
           </form>
         </Modal>
       )}
+      {deleting && (
+        <ConfirmDialog
+          title="Xóa đơn vị"
+          description={`Xóa "${deleting.name}" khỏi hệ thống?`}
+          confirmLabel="Xóa"
+          onClose={() => setDeleting(null)}
+          onConfirm={() => void handleDelete(deleting)}
+        />
+      )}
     </section>
   );
 }
@@ -388,9 +396,7 @@ function StaffCard({ unit, token, run }: { unit: DepartmentUnit; token: string; 
               staff.map((s) => (
                 <tr key={s.userId}>
                   <td>
-                    <strong style={{ fontFamily: "monospace", fontSize: 13, color: "#1e293b" }}>
-                      {s.staffCode}
-                    </strong>
+                    <strong style={{ fontSize: 13, color: "#1e293b" }}>{s.staffCode}</strong>
                   </td>
                   <td>
                     <div style={{ fontWeight: 600, color: "#0f172a" }}>{s.displayName}</div>

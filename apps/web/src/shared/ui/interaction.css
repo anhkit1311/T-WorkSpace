@@ -5,7 +5,7 @@
   animation: spin 0.8s linear infinite;
 }
 :root :is(button, a, summary, [tabindex]:not(input):not(textarea):not(select)):focus-visible {
-  outline: 2px solid var(--tws-text-primary, #1c1b19) !important;
+  outline: 2px solid var(--text) !important;
   outline-offset: 2px !important;
   box-shadow: none !important;
 }

@@ -3,7 +3,14 @@ import { AnimatePresence } from "motion/react";
 import type { GroupMemberItem, WorkspaceItem } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
-import { Avatar, Badge, Button, ConfirmDialog, Modal } from "../../shared/ui/Primitives";
+import {
+  Avatar,
+  Badge,
+  Button,
+  ConfirmDialog,
+  Modal,
+  PageHeader,
+} from "../../shared/ui/Primitives";
 import { getWorkspaceMembersApi, getWorkspacesApi } from "../chat/api";
 import { useUserAvatars } from "../chat/useUserAvatars";
 import { governanceApi } from "./api";
@@ -66,11 +73,11 @@ export function GroupsPage() {
 
   return (
     <section className="groups-page" aria-labelledby="groups-title">
-      <header className="groups-page__head">
-        <div>
-          <h1 id="groups-title">Nhóm của tôi</h1>
-          <p>Tạo nhóm, mời người, quản lý thành viên và kênh.</p>
-        </div>
+      <PageHeader
+        title="Nhóm của tôi"
+        titleId="groups-title"
+        meta="Tạo nhóm, mời người, quản lý thành viên và kênh."
+      >
         {!!groups?.length && (
           <div className="groups-page__actions">
             <Button variant="secondary" icon="link" onClick={() => setDialog("join")}>
@@ -81,7 +88,7 @@ export function GroupsPage() {
             </Button>
           </div>
         )}
-      </header>
+      </PageHeader>
       {error && (
         <p className="inline-alert" role="alert">
           {error}

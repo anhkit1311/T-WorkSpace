@@ -296,10 +296,10 @@ export function LoginPage() {
                   <TWorkSpaceLogo size="lg" />
                 </div>
 
-                <h1 className="editorial-auth-title">T-WorkSpace</h1>
+                <h1 className="editorial-auth-title">Đăng nhập</h1>
 
                 <p className="editorial-auth-desc">
-                  Đăng nhập bằng tài khoản trường cấp. Chưa có tài khoản? Liên hệ quản trị hệ thống.
+                  Dùng tài khoản trường cấp. Chưa có tài khoản? Liên hệ quản trị hệ thống.
                 </p>
 
                 {errors.general && (
@@ -389,7 +389,7 @@ export function LoginPage() {
 
                 <div className="editorial-auth-style-14">
                   <ShieldCheck className="editorial-auth-style-4" />
-                  <span>Bảo mật phiên đăng nhập qua JWT & HttpOnly Session Cookie</span>
+                  <span>Phiên đăng nhập được mã hóa và bảo vệ</span>
                 </div>
               </div>
             )}

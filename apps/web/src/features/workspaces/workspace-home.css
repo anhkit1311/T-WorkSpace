@@ -4,11 +4,11 @@
    ========================================================================== */
 
 .tdtu-home-container {
-  padding: 20px 26px 40px;
-  max-width: 1360px;
-  width: 100%;
-  margin: 0 auto;
   box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: var(--page-pad);
 }
 
 /* Two-column Main Section (2.15fr : 1fr) */
@@ -43,17 +43,17 @@
 
 .tdtu-home-feed__title {
   margin: 0;
-  font-size: 17px;
+  font-size: var(--fs-section);
   font-weight: 700;
   color: var(--text);
 }
 
 .tdtu-home-feed__count {
   padding: 2px 8px;
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   background: var(--tint-green-bg);
   color: var(--tint-green-fg);
-  font-size: 11.5px;
+  font-size: var(--fs-badge);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -68,7 +68,7 @@
 
 .tdtu-home-skeleton-featured {
   height: 164px;
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   background: linear-gradient(90deg, var(--surface) 25%, var(--bg-subtle) 50%, var(--surface) 75%);
   background-size: 200% 100%;
   border: 1px solid var(--border);
@@ -77,7 +77,7 @@
 
 .tdtu-home-skeleton-row {
   height: 62px;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: linear-gradient(90deg, var(--surface) 25%, var(--bg-subtle) 50%, var(--surface) 75%);
   background-size: 200% 100%;
   border: 1px solid var(--border);
@@ -94,48 +94,44 @@
 }
 
 /* ==========================================================================
-   Bảng tin: dark "server panel" feature card + a timeline of the next notices.
+   Bảng tin: light feature card with a date block + a timeline of the next notices.
    Each category sets --cat (on dark) and --cat-ink / --cat-soft (on light).
    ========================================================================== */
 .tdtu-board-feature,
 .tdtu-board-row {
-  --cat: #34d399;
+  --cat: var(--green-400);
   --cat-glow: rgba(52, 211, 153, 0.22);
-  --cat-lit: #2a3a35;
-  --cat-ink: #047857;
-  --cat-soft: #ecfdf5;
-  --cat-ring: #a7f3d0;
+  --cat-ink: var(--primary-hover);
+  --cat-soft: var(--green-50);
+  --cat-ring: var(--green-200);
 }
 .tdtu-board-feature.is-training,
 .tdtu-board-row.is-training {
-  --cat: #60a5fa;
+  --cat: var(--blue-400);
   --cat-glow: rgba(96, 165, 250, 0.22);
-  --cat-lit: #26303d;
-  --cat-ink: #1d4ed8;
-  --cat-soft: #eff6ff;
-  --cat-ring: #bfdbfe;
+  --cat-ink: var(--blue-700);
+  --cat-soft: var(--blue-50);
+  --cat-ring: var(--blue-200);
 }
 .tdtu-board-feature.is-event,
 .tdtu-board-row.is-event {
-  --cat: #fbbf24;
+  --cat: var(--amber-400);
   --cat-glow: rgba(251, 191, 36, 0.22);
-  --cat-lit: #3a3526;
-  --cat-ink: #b45309;
-  --cat-soft: #fffbeb;
-  --cat-ring: #fde68a;
+  --cat-ink: var(--tint-amber-fg);
+  --cat-soft: var(--amber-50);
+  --cat-ring: var(--amber-200);
 }
 .tdtu-board-feature.is-urgent,
 .tdtu-board-row.is-urgent {
-  --cat: #f87171;
+  --cat: var(--red-400);
   --cat-glow: rgba(248, 113, 113, 0.24);
-  --cat-lit: #3a2a2e;
-  --cat-ink: #a50d26;
-  --cat-soft: #fbe7ea;
+  --cat-ink: var(--live-text);
+  --cat-soft: var(--live-soft);
   --cat-ring: #fca5a5;
 }
 
 .tdtu-home-feed__title--lead {
-  font-size: 24px;
+  font-size: var(--fs-hero);
   font-weight: 800;
   letter-spacing: -0.035em;
   color: var(--text-strong);
@@ -148,7 +144,7 @@
   white-space: nowrap;
 }
 .tdtu-home-feed__count {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
@@ -156,9 +152,9 @@
   border: 0;
   background: transparent;
   padding: 4px 6px;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   color: var(--primary-text);
-  font-size: 12.5px;
+  font-size: var(--fs-subtext);
   font-weight: 600;
   cursor: pointer;
 }
@@ -171,9 +167,9 @@
   align-items: center;
   gap: 6px;
   padding: 3px 9px;
-  border-radius: 9999px;
-  font-family: var(--font-mono);
-  font-size: 11px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -181,34 +177,27 @@
 }
 .tdtu-board-chip.is-new {
   background: var(--primary);
-  color: #ffffff;
+  color: var(--white);
 }
 .tdtu-board-led {
   width: 8px;
   height: 8px;
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   flex-shrink: 0;
   background: var(--cat);
   box-shadow: 0 0 0 4px var(--cat-glow);
 }
-.tdtu-board-led.is-off {
-  background: #6b7480;
-  box-shadow: none;
-}
-
-/* Feature card */
+/* Feature card: a light notice sheet with the post date as its left block. */
 .tdtu-board-feature {
   position: relative;
   overflow: hidden;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 28px;
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr) auto;
   margin-bottom: 8px;
-  padding: 28px;
-  border-radius: 14px;
-  background: #22272e;
-  color: #e6edf3;
-  box-shadow: 0 18px 40px -18px rgba(15, 23, 42, 0.45);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: 0 10px 30px -22px rgba(15, 23, 42, 0.35);
   cursor: pointer;
   transition:
     transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
@@ -216,18 +205,7 @@
 }
 .tdtu-board-feature:hover {
   transform: translateY(-2px);
-  box-shadow: 0 24px 48px -18px rgba(15, 23, 42, 0.55);
-}
-/* Urgent notices get a hazard stripe along the top edge. */
-.tdtu-board-feature.is-urgent {
-  padding-top: 34px;
-}
-.tdtu-board-feature.is-urgent::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto;
-  height: 6px;
-  background: repeating-linear-gradient(135deg, #c8102e 0 12px, #22272e 12px 24px);
+  box-shadow: 0 18px 36px -22px rgba(15, 23, 42, 0.45);
 }
 .tdtu-board-feature.is-urgent .tdtu-board-chip.is-category .tdtu-board-led {
   animation: boardLedPulse 1.6s ease-in-out infinite;
@@ -237,12 +215,41 @@
     box-shadow: 0 0 0 7px transparent;
   }
 }
+.tdtu-board-feature__date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 20px 8px;
+  background: var(--dark-bg);
+  color: var(--white);
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  box-shadow: inset 0 -4px 0 var(--cat);
+}
+.tdtu-board-feature__date span:first-child {
+  font-weight: 700;
+  color: var(--cat);
+}
+.tdtu-board-feature__date b {
+  font-family: var(--font-sans);
+  font-size: 52px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+.tdtu-board-feature__date span:last-child {
+  color: var(--dark-muted);
+}
 .tdtu-board-feature__lead {
-  flex: 1 1 340px;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  padding: 24px 28px;
 }
 .tdtu-board-feature__tags {
   display: flex;
@@ -250,55 +257,66 @@
   gap: 8px;
 }
 .tdtu-board-feature .tdtu-board-chip.is-category {
-  background: var(--cat-glow);
-  color: var(--cat);
+  background: var(--cat-soft);
+  color: var(--cat-ink);
 }
 .tdtu-board-feature .tdtu-board-chip.is-quiet {
-  background: rgba(230, 237, 243, 0.08);
-  color: #c9d1d9;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
 }
 .tdtu-board-feature__title {
   margin: 0;
-  font-size: clamp(24px, 2.4vw, 32px);
-  line-height: 1.15;
+  font-size: clamp(21px, 2vw, 26px);
+  line-height: 1.2;
   font-weight: 800;
   letter-spacing: -0.035em;
-  color: #ffffff;
+  color: var(--text-strong);
   overflow-wrap: anywhere;
 }
 .tdtu-board-feature__summary {
   margin: 0;
-  max-width: 600px;
-  font-size: 14.5px;
-  line-height: 1.6;
-  color: #c9d1d9;
+  max-width: 640px;
+  font-size: var(--fs-body);
+  line-height: 1.55;
+  color: var(--text-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 .tdtu-board-feature__meta {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #9da7b3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  font-size: var(--fs-subtext);
+  color: var(--text-muted);
+}
+.tdtu-board-feature__meta b {
+  color: var(--text-strong);
+}
+.tdtu-board-feature__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 24px 28px 24px 0;
 }
 .tdtu-board-feature__cta {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  width: fit-content;
   min-height: 40px;
-  margin-top: auto;
   padding: 0 16px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: var(--primary);
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 600;
+  color: var(--white);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background-color 0.16s ease,
@@ -315,69 +333,6 @@
   background: var(--live-text);
 }
 
-/* Server-rack summary */
-.tdtu-board-rack {
-  flex: 0 1 280px;
-  min-width: 240px;
-  display: flex;
-  gap: 10px;
-  padding: 14px;
-  border-radius: 12px;
-  background: #1b1f24;
-}
-.tdtu-board-rack__rail {
-  width: 6px;
-  flex-shrink: 0;
-  background: radial-gradient(#4a535e 1.5px, transparent 1.6px) 0 0 / 6px 12px repeat-y;
-}
-.tdtu-board-rack__units {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 8px;
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  text-transform: uppercase;
-}
-.tdtu-board-rack__unit {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 42px;
-  padding: 0 14px;
-  border: 1px solid #3a424c;
-  border-radius: 8px;
-  background: #2d333b;
-  color: #c9d1d9;
-}
-.tdtu-board-rack__unit > :last-child:not(.tdtu-board-led) {
-  margin-left: auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: #e6edf3;
-}
-.tdtu-board-rack__unit.is-lit {
-  border-color: var(--cat);
-  background: var(--cat-lit);
-}
-.tdtu-board-rack__unit.is-lit b:first-of-type {
-  color: #e6edf3;
-}
-.tdtu-board-rack__unit.is-lit b:last-child {
-  color: var(--cat);
-}
-.tdtu-board-rack__unit.is-blank {
-  min-height: 30px;
-  background-image: repeating-linear-gradient(90deg, #4a535e 0 3px, transparent 3px 7px);
-  background-size: calc(100% - 28px) 10px;
-  background-position: center;
-  background-repeat: no-repeat;
-  opacity: 0.75;
-}
-
 /* Timeline of the next notices */
 .tdtu-board-timeline {
   margin-bottom: 18px;
@@ -387,8 +342,8 @@
   align-items: center;
   gap: 12px;
   margin: 18px 0 4px;
-  font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-badge);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -413,7 +368,7 @@
   width: 100%;
   padding: 12px 14px 12px 0;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: transparent;
   color: var(--text);
   text-align: left;
@@ -448,7 +403,7 @@
   width: 12px;
   height: 12px;
   margin: 5px 0 0 11px;
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   border: 2px solid var(--cat-ring);
   background: var(--surface);
 }
@@ -471,7 +426,7 @@
   gap: 6px 8px;
 }
 .tdtu-board-row__title {
-  font-size: 14.5px;
+  font-size: var(--fs-card-title);
   font-weight: 600;
   color: var(--text-secondary);
   overflow-wrap: anywhere;
@@ -490,7 +445,7 @@
   color: var(--text-muted);
 }
 .tdtu-board-row__summary {
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -498,8 +453,8 @@
 }
 .tdtu-board-row__meta,
 .tdtu-board-row__time {
-  font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-badge);
   text-transform: uppercase;
   color: var(--text-muted);
 }
@@ -512,17 +467,28 @@
 
 @media (max-width: 640px) {
   .tdtu-home-feed__title--lead {
-    font-size: 21px;
+    font-size: var(--fs-big);
   }
+  /* Phones: the date block becomes a strip across the top, the button spans the bottom. */
   .tdtu-board-feature {
-    padding: 22px 20px;
+    grid-template-columns: minmax(0, 1fr);
   }
-  .tdtu-board-feature.is-urgent {
-    padding-top: 28px;
+  .tdtu-board-feature__date {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 12px 20px;
   }
-  /* The rack repeats the meta line; phones keep the space for the notice itself. */
-  .tdtu-board-rack {
-    display: none;
+  .tdtu-board-feature__date b {
+    font-size: var(--fs-hero);
+  }
+  .tdtu-board-feature__lead {
+    padding: 18px 20px 12px;
+  }
+  .tdtu-board-feature__side {
+    flex-direction: row;
+    align-items: center;
+    padding: 0 20px 20px;
   }
   .tdtu-board-row {
     flex-wrap: wrap;
@@ -545,10 +511,10 @@
   padding: 18px 14px;
   background: var(--surface);
   border: 1px dashed var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   text-align: center;
   color: var(--text-muted);
-  font-size: 12.5px;
+  font-size: var(--fs-subtext);
   margin-bottom: 14px;
 }
 
@@ -562,7 +528,7 @@
 .tdtu-home-side-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   padding: 18px;
   box-shadow:
     0 1px 3px rgba(15, 23, 42, 0.03),
@@ -578,7 +544,7 @@
 
 .tdtu-home-side-card__title {
   margin: 0;
-  font-size: 14.5px;
+  font-size: var(--fs-card-title);
   font-weight: 700;
   color: var(--text);
   display: inline-flex;
@@ -594,11 +560,11 @@
   background: transparent;
   border: none;
   color: var(--primary);
-  font-size: 12.5px;
+  font-size: var(--fs-subtext);
   font-weight: 600;
   cursor: pointer;
   padding: 2px 6px;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   transition: background-color 0.15s ease;
 }
 
@@ -608,7 +574,7 @@
 
 .tdtu-home-side-empty {
   padding: 18px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: var(--bg-subtle);
   border: 1px dashed var(--border);
   display: flex;
@@ -621,7 +587,7 @@
 
 .tdtu-home-side-empty p {
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--fs-subtext);
   color: var(--text-muted);
 }
 
@@ -636,7 +602,7 @@
   align-items: center;
   gap: 11px;
   padding: 8px 10px;
-  border-radius: 9px;
+  border-radius: var(--radius-lg);
   border: 1px solid transparent;
   transition:
     background-color 0.15s ease,
@@ -656,8 +622,8 @@
   width: 40px;
   height: 44px;
   background: var(--tint-green-bg);
-  border: 1px solid #a7f3d0;
-  border-radius: 8px;
+  border: 1px solid var(--green-200);
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -667,16 +633,16 @@
 }
 
 .tdtu-home-calendar-tile__weekday {
-  font-size: 10px;
+  font-size: var(--fs-micro);
   font-weight: 700;
-  color: #059669;
+  color: var(--primary);
   text-transform: uppercase;
 }
 
 .tdtu-home-calendar-tile__day {
-  font-size: 15px;
+  font-size: var(--fs-card-title);
   font-weight: 800;
-  color: #047857;
+  color: var(--primary-hover);
   line-height: 1.05;
 }
 
@@ -686,7 +652,7 @@
 }
 
 .tdtu-home-meeting-name {
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   font-weight: 700;
   color: var(--text);
   white-space: nowrap;
@@ -695,7 +661,7 @@
 }
 
 .tdtu-home-meeting-time {
-  font-size: 12px;
+  font-size: var(--fs-badge);
   color: var(--text-muted);
   margin-top: 2px;
   font-variant-numeric: tabular-nums;
@@ -704,9 +670,9 @@
 .tdtu-home-detail-btn {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   padding: 5px 11px;
-  font-size: 12px;
+  font-size: var(--fs-badge);
   font-weight: 600;
   color: var(--text-secondary);
   cursor: pointer;
@@ -723,7 +689,7 @@
 .tdtu-home-detail-btn.is-primary {
   background: var(--primary);
   border-color: var(--primary);
-  color: #ffffff;
+  color: var(--white);
 }
 
 .tdtu-home-detail-btn.is-primary:hover {
@@ -740,7 +706,7 @@
 .tdtu-home-shortcut-btn {
   background: var(--bg-subtle);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   padding: 11px 12px;
   display: flex;
   align-items: center;
@@ -758,7 +724,7 @@
 .tdtu-home-shortcut-btn__icon {
   width: 34px;
   height: 34px;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -790,7 +756,7 @@
 }
 
 .tdtu-home-shortcut-btn__text strong {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 700;
   color: var(--text);
   white-space: nowrap;
@@ -799,7 +765,7 @@
 }
 
 .tdtu-home-shortcut-btn__text small {
-  font-size: 11px;
+  font-size: var(--fs-micro);
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -808,7 +774,7 @@
 
 .tdtu-home-shortcut-btn:hover {
   background: var(--surface);
-  border-color: #6ee7b7;
+  border-color: var(--green-300);
   transform: translateY(-1.5px);
   box-shadow: 0 4px 12px rgba(5, 150, 105, 0.08);
 }
@@ -818,7 +784,7 @@
 }
 
 /* Responsive adjustments */
-@media (max-width: 1080px) {
+@media (max-width: 1100px) {
   .tdtu-home-main-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -846,8 +812,8 @@
   gap: 10px;
   padding: 10px 14px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-surface, var(--surface));
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
   color: var(--text);
 }
 .role-home__card > svg {
@@ -857,20 +823,20 @@
 }
 .role-home__card h3 {
   margin: 0 0 2px;
-  font-size: 13.5px;
+  font-size: var(--fs-body);
 }
 .role-home__card p {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--fs-badge);
 }
 .role-home__warn {
-  color: #b45309 !important;
+  color: var(--tint-amber-fg) !important;
 }
 .role-home__empty {
   margin: 0;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--fs-badge);
 }
 @media (max-width: 640px) {
   .role-home__card {
