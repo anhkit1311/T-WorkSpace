@@ -1,9 +1,9 @@
 import { createReadStream } from "node:fs";
-import { readdir, readFile, stat } from "node:fs/promises";
+import { readdir, readFile, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { config } from "../config/config.js";
-import { putObject, readObject } from "../modules/files/storage.js";
+import { deleteObject, putObject, readObject } from "../modules/files/storage.js";
 
 // Q2: finished media (HLS playlists, segments, captions) is copied to S3/MinIO when
 // MEDIA_STORAGE=s3, under media/<dir>/<file>. Files are served from the local disk when this
@@ -65,3 +65,15 @@ export const archiveQuietly = (dir: string, only?: string[]) =>
       JSON.stringify({ level: "warn", event: "media_archive_failed", dir, message: String(error) }),
     ),
   );
+
+/** Deletes `dir` from this disk and its servable files from the bucket (names from its playlist). */
+export async function removeMedia(dir: string) {
+  if (mediaInBucket()) {
+    const playlist = await openMedia(dir, "index.m3u8");
+    const text = playlist ? (await playlist.stream.toArray()).join("") : "";
+    const segments = text.split("\n").filter((line) => line && !line.startsWith("#"));
+    for (const name of [...segments, "index.m3u8", "captions.vtt", "transcript.json"])
+      await deleteObject(keyOf(dir, name.trim()));
+  }
+  await rm(path.join(config.mediaDir, dir), { recursive: true, force: true });
+}

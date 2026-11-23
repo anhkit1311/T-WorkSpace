@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { after, test } from "node:test";
 import { chooseStreams } from "../../../dist/api/modules/meetings/recording/recorder.js";
 import { hlsArgs, joinPlaylists } from "../../../dist/api/modules/meetings/recording/ffmpeg.js";
 import { randomUUID } from "node:crypto";
 process.env.JWT_SECRET ??= "meeting-recording-secret-at-least-32-characters";
 const db = process.env.RUN_DB_TESTS === "1";
+after(async () => {
+  if (db) await (await import("../../../dist/api/infrastructure/database/db.js")).pool.end();
+});
 
 const producer = (producerId, socketId, kind, source, paused = false) => ({
   producerId,
@@ -136,7 +139,111 @@ test(
       if (workspace) await pool.query(`DELETE FROM workspaces WHERE id=$1`, [workspace.id]);
       for (const id of [owner, member, latecomer])
         await pool.query(`DELETE FROM users WHERE id=$1`, [id]);
-      await pool.end();
+    }
+  },
+);
+
+test(
+  "Recording retention (BR-17): finished recordings over 90 days go with their files, lesson ones stay",
+  { skip: !db, timeout: 30000 },
+  async () => {
+    const { mkdir, writeFile, access } = await import("node:fs/promises");
+    const path = await import("node:path");
+    const { pool } = await import("../../../dist/api/infrastructure/database/db.js");
+    const { config } = await import("../../../dist/api/config/config.js");
+    const { createWorkspace, getWorkspaceChannels } =
+      await import("../../../dist/api/modules/workspaces/service.js");
+    const recordings = await import("../../../dist/api/modules/meetings/recording/recordings.js");
+    const owner = randomUUID();
+    const unitId = randomUUID();
+    let workspace;
+    try {
+      await pool.query(
+        `INSERT INTO users(id,email,password_hash,display_name,email_verified) VALUES($1,$2,'test-only','Rec retention',true)`,
+        [owner, `test-${owner}@example.test`],
+      );
+      workspace = await createWorkspace(owner, "Retention test");
+      const room = (await getWorkspaceChannels(owner, workspace.id)).find(
+        (c) => c.type === "video",
+      );
+      const sessionId = randomUUID();
+      await pool.query(
+        `INSERT INTO meeting_sessions(id,channel_id,host_id,started_at,ended_at) VALUES($1,$2,$3,now()-interval '200 days',now()-interval '200 days')`,
+        [sessionId, room.id, owner],
+      );
+      const recording = async (status, daysAgo) => {
+        const id = randomUUID();
+        await pool.query(
+          `INSERT INTO meeting_recordings(id,session_id,channel_id,started_by,status,started_at,stopped_at)
+           VALUES($1,$2,$3,$4,$5::varchar,now()-make_interval(days=>$6),CASE WHEN $5::varchar='recording' THEN NULL ELSE now()-make_interval(days=>$6) END)`,
+          [id, sessionId, room.id, owner, status, daysAgo],
+        );
+        const dir = path.join(config.mediaDir, "recordings", id);
+        await mkdir(dir, { recursive: true });
+        await writeFile(path.join(dir, "index.m3u8"), "#EXTM3U\np0001_00000.ts\n");
+        return id;
+      };
+      const oldReady = await recording("ready", 100);
+      const oldFailed = await recording("failed", 100);
+      const recent = await recording("ready", 10);
+      const stillRecording = await recording("recording", 100);
+      const inLesson = await recording("ready", 100);
+      await pool.query(`INSERT INTO academic_units(id,code,name) VALUES($1,$2,'Retention')`, [
+        unitId,
+        `RR${unitId.slice(0, 6).toUpperCase()}`,
+      ]);
+      const courseId = randomUUID();
+      const chapterId = randomUUID();
+      await pool.query(
+        `INSERT INTO courses(id,unit_id,owner_id,code,title,status) VALUES($1,$2,$3,$4,'Học lại','published')`,
+        [courseId, unitId, owner, `R${unitId.slice(0, 6).toUpperCase()}`],
+      );
+      await pool.query(`INSERT INTO course_chapters(id,course_id,title) VALUES($1,$2,'C1')`, [
+        chapterId,
+        courseId,
+      ]);
+      await pool.query(
+        `INSERT INTO course_lessons(id,course_id,chapter_id,title,kind,status,recording_id) VALUES($1,$2,$3,'Buổi 1','video','published',$4)`,
+        [randomUUID(), courseId, chapterId, inLesson],
+      );
+
+      const deleted = [];
+      for (let run = 0; run < 20; run++) {
+        const ids = await recordings.expireRecordings(90);
+        deleted.push(...ids);
+        if (!ids.length) break;
+      }
+      const mine = [oldReady, oldFailed, recent, stillRecording, inLesson];
+      assert.deepEqual(
+        deleted.filter((id) => mine.includes(id)).sort(),
+        [oldReady, oldFailed].sort(),
+      );
+      const left = await pool.query(`SELECT id FROM meeting_recordings WHERE id=ANY($1::uuid[])`, [
+        mine,
+      ]);
+      assert.deepEqual(
+        left.rows.map((row) => row.id).sort(),
+        [recent, stillRecording, inLesson].sort(),
+        "new, still recording and lesson recordings stay",
+      );
+      const onDisk = (id) =>
+        access(path.join(config.mediaDir, "recordings", id, "index.m3u8")).then(
+          () => true,
+          () => false,
+        );
+      assert.equal(await onDisk(oldReady), false, "files go with the row");
+      assert.equal(await onDisk(oldFailed), false);
+      assert.equal(await onDisk(inLesson), true);
+      assert.equal(await onDisk(recent), true);
+      for (const id of mine)
+        await import("node:fs/promises").then(({ rm }) =>
+          rm(path.join(config.mediaDir, "recordings", id), { recursive: true, force: true }),
+        );
+    } finally {
+      await pool.query(`DELETE FROM courses WHERE unit_id=$1`, [unitId]);
+      await pool.query(`DELETE FROM academic_units WHERE id=$1`, [unitId]);
+      if (workspace) await pool.query(`DELETE FROM workspaces WHERE id=$1`, [workspace.id]);
+      await pool.query(`DELETE FROM users WHERE id=$1`, [owner]);
     }
   },
 );

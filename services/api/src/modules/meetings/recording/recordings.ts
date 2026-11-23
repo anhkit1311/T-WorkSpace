@@ -17,7 +17,7 @@ import {
 } from "../../../infrastructure/speech/transcribe.js";
 import { summarizeMeeting, summaryEnabled } from "../../../infrastructure/ai/summarize.js";
 import { enqueueJob, registerJob } from "../../../infrastructure/jobs/queue.js";
-import { archiveQuietly } from "../../../infrastructure/media-storage.js";
+import { archiveQuietly, removeMedia } from "../../../infrastructure/media-storage.js";
 
 // MT-1: who may record, who may watch, and the work after a recording stops.
 // shortcut: recorders live in this process and files on its disk, so with several API instances
@@ -391,4 +391,43 @@ export async function recoverRecordings(changed: Changed) {
 /** Shutdown: close the live parts so their files are complete. */
 export async function stopAllRecordings() {
   await Promise.all([...recorders.values()].map(({ recorder }) => recorder.stop()));
+}
+
+/** BR-17: finished recordings older than `days` are deleted, files first so a failure retries;
+ *  a recording an e-learning lesson plays is kept with its lesson. Returns the deleted ids. */
+export async function expireRecordings(days: number) {
+  const rows = await query<{ id: string }>(
+    `SELECT r.id FROM meeting_recordings r
+     WHERE r.status IN ('ready','failed') AND r.started_at < now() - make_interval(days => $1)
+       AND NOT EXISTS(SELECT 1 FROM course_lessons l WHERE l.recording_id=r.id)
+     ORDER BY r.started_at LIMIT 100`,
+    [days],
+  );
+  const deleted: string[] = [];
+  for (const { id } of rows.rows) {
+    try {
+      await removeMedia(dirOf(id));
+      await query(`DELETE FROM meeting_recordings WHERE id=$1`, [id]);
+      deleted.push(id);
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          level: "warn",
+          event: "recording_expiry_failed",
+          id,
+          message: String(error),
+        }),
+      );
+    }
+  }
+  return deleted;
+}
+
+export function startRecordingRetention() {
+  const days = Number(process.env.RECORDING_RETENTION_DAYS ?? 90);
+  const tick = () => void expireRecordings(days).catch(() => {});
+  const timer = setInterval(tick, 10 * 60_000);
+  timer.unref();
+  tick();
+  return () => clearInterval(timer);
 }
