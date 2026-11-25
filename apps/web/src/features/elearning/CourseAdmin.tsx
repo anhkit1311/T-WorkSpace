@@ -63,7 +63,7 @@ export function CourseLearners({ course }: { course: CourseDetail }) {
 
   const quizzes = report?.lessons.filter((lesson) => lesson.kind === "quiz") ?? [];
   return (
-    <div className="tw tw-form grid min-w-0 gap-4 rounded-[10px] border bg-card p-4 text-sm text-foreground">
+    <div className="tw tw-form grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 rounded-[10px] border bg-card p-4 text-sm text-foreground">
       <form
         className="tw tw-form grid gap-2.5"
         onSubmit={(event) => {
@@ -126,13 +126,20 @@ export function CourseLearners({ course }: { course: CourseDetail }) {
       {report && report.requests.length > 0 && (
         <>
           <h3>Yêu cầu ghi danh ({report.requests.length})</h3>
-          <ul className="grid gap-1.5 [&>li]:flex [&>li]:items-center [&>li]:gap-2 [&>li>span]:mr-auto [&>li>span]:grid [&_small]:text-muted-foreground">
+          <ul className="grid gap-1.5 [&>li]:flex [&>li]:items-center [&>li]:gap-2 [&>li>span]:mr-auto [&>li>span]:grid [&>li>span]:min-w-0 [&>li>span]:[overflow-wrap:anywhere] [&_small]:text-muted-foreground">
             {report.requests.map((item) => (
               <li key={item.userId}>
                 <span>
                   {item.displayName}
                   <small>
-                    {item.email} · {new Date(item.requestedAt).toLocaleString("vi-VN")}
+                    {item.email} ·{" "}
+                    {new Date(item.requestedAt).toLocaleString("vi-VN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })}
                   </small>
                 </span>
                 {[true, false].map((approve) => (
@@ -169,7 +176,10 @@ export function CourseLearners({ course }: { course: CourseDetail }) {
           Xuất Excel
         </Button>
       </div>
-      {report && (
+      {report?.learners.length === 0 && (
+        <p className="m-0 text-[13px] text-muted-foreground">Chưa có học viên nào.</p>
+      )}
+      {!!report?.learners.length && (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm [&_:is(th,td)]:border-b [&_:is(th,td)]:p-2 [&_:is(th,td)]:text-left [&_:is(th,td)]:align-middle [&_:is(th,td)]:font-normal [&_thead_th]:font-semibold [&_tbody_th_small]:block [&_tbody_th_small]:text-muted-foreground">
             <thead>
