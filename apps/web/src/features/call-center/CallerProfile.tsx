@@ -47,9 +47,6 @@ export function CallerProfile({
       {profile.student && (
         <p className="flex flex-wrap items-baseline gap-2 rounded-lg bg-secondary px-2.5 py-2">
           <strong className="font-semibold">MSSV {profile.student.code}</strong>
-          <span className={MUTED}>
-            {[profile.student.className, profile.student.faculty].filter(Boolean).join(" · ")}
-          </span>
         </p>
       )}
       {profile.tickets.length > 0 && (

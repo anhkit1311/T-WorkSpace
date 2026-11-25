@@ -185,7 +185,7 @@ export class CallCenterRepository implements AcdStore {
     ]);
     const row = student.rows[0];
     return {
-      student: row ? { code: row.student_code, className: "", faculty: "" } : null,
+      student: row ? { code: row.student_code } : null,
       tickets: tickets.rows.map((item) => ({
         id: item.id,
         code: item.code,

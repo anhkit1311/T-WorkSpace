@@ -76,8 +76,8 @@ export interface CcCaller {
 
 /** NV-CC1: what the desk shows about the caller on the line. */
 export interface CcCallerProfile {
-  /** From the caller's latest thesis enrollment, when they are a student. */
-  student: { code: string; className: string; faculty: string } | null;
+  /** The caller's student code (MSSV), when their account is a student's. */
+  student: { code: string } | null;
   tickets: { id: string; code: string; subject: string; status: TicketStatus; updatedAt: string }[];
   courses: { code: string; title: string; completed: boolean }[];
   calls: {
