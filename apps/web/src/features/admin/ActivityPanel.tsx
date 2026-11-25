@@ -154,7 +154,7 @@ export function ActivityPanel({ token }: { token: string }) {
                         name={item.actorName ?? "?"}
                         className="size-[26px] text-[10.5px]"
                       />
-                      <span className="min-w-0 truncate max-lg:whitespace-normal">
+                      <span className="min-w-0 truncate max-lg:whitespace-normal max-lg:[overflow-wrap:anywhere]">
                         <b className="font-semibold">{item.actorName ?? "Hệ thống"}</b>{" "}
                         <span className="text-muted-foreground">
                           {ACTION_LABEL[item.action] ?? item.action}
