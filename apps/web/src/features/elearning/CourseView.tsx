@@ -41,9 +41,12 @@ export function CourseView({ courseId, onBack }: { courseId: string; onBack: () 
     try {
       const next = await coursesApi.detail(accessToken, courseId);
       setCourse(next);
-      setLessonId(
-        (current) => current ?? next.chapters.flatMap((chapter) => chapter.lessons)[0]?.id ?? null,
-      );
+      // Lessons of a course you are not in are locked: opening the first one would only fetch a 403.
+      if (next.enrolled || next.canManage)
+        setLessonId(
+          (current) =>
+            current ?? next.chapters.flatMap((chapter) => chapter.lessons)[0]?.id ?? null,
+        );
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Không tải được khóa học.");
     }
@@ -272,7 +275,11 @@ export function CourseView({ courseId, onBack }: { courseId: string; onBack: () 
               <p className="tw py-10 text-center text-sm text-muted-foreground">
                 {course.enrolled || course.canManage
                   ? "Chọn một bài học."
-                  : "Ghi danh để bắt đầu học."}
+                  : course.requested
+                    ? "Yêu cầu ghi danh đang chờ giảng viên duyệt."
+                    : course.canEnroll
+                      ? "Ghi danh để bắt đầu học."
+                      : "Giảng viên sẽ gán học viên vào khóa học này."}
               </p>
             ))}
           {tab === "learners" && <CourseLearners course={course} />}

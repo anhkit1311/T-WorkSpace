@@ -129,7 +129,7 @@ export function LessonView({
   );
 
   return (
-    <article className="grid min-w-0 gap-4">
+    <article className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4">
       {player}
       <header className="tw flex flex-wrap items-start gap-x-3 gap-y-2">
         <div className="grid min-w-0 flex-1 basis-64 gap-0.5">
@@ -279,7 +279,7 @@ export function LessonView({
           {previous ? (
             <button
               type="button"
-              className={cn(BTN_GHOST, "min-w-0")}
+              className={cn(BTN_GHOST, "min-w-0 shrink")}
               onClick={() => onOpen(previous.id)}
             >
               <Icon name="chevron-left" size={15} />
@@ -291,7 +291,7 @@ export function LessonView({
           {next && (
             <button
               type="button"
-              className={cn(BTN_PRIMARY, "min-w-0")}
+              className={cn(BTN_PRIMARY, "min-w-0 shrink")}
               onClick={() => onOpen(next.id)}
             >
               <span className="truncate">Bài tiếp: {next.title}</span>

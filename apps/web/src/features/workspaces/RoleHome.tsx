@@ -125,7 +125,7 @@ const IconTile = ({ name }: { name: IconName }) => (
   </span>
 );
 
-/** Right rail of the home feed: what needs the user today, then the meetings after that. */
+/** Right rail of the home feed: what needs the user next, then the meetings after that. */
 export function RoleHome({ data }: { data: RoleData | null }) {
   const { navigate } = useApp();
   if (!data)
@@ -195,12 +195,12 @@ export function RoleHome({ data }: { data: RoleData | null }) {
 
   return (
     <>
-      <section className={CARD} aria-label="Hôm nay">
-        <h2 className={cn(CARD_TITLE, "mb-1")}>Hôm nay</h2>
+      <section className={CARD} aria-label="Việc của bạn">
+        <h2 className={cn(CARD_TITLE, "mb-1")}>Việc của bạn</h2>
         {rows.length ? (
           rows
         ) : (
-          <div className="py-3 text-sm text-muted-foreground">Hôm nay bạn chưa có việc nào.</div>
+          <div className="py-3 text-sm text-muted-foreground">Bạn chưa có việc nào.</div>
         )}
       </section>
 
