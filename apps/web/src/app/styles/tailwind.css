@@ -53,6 +53,12 @@
   --ring: #71717a;
   --brand: #6b95ff;
   --brand-soft: #16203d;
+  /* Legacy aliases resolve where they are declared: a nested .dark (the meeting room) must
+     declare them again, or h1–h3 and p keep the light theme's ink on a dark panel. */
+  --text: var(--foreground);
+  --text-strong: var(--foreground);
+  --text-secondary: color-mix(in srgb, var(--foreground) 78%, var(--background));
+  --text-muted: var(--muted-foreground);
   color-scheme: dark;
 }
 

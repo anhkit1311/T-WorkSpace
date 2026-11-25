@@ -20,13 +20,14 @@ import { MeetingOutcomesPanel } from "./MeetingOutcomesPanel";
 import { PreJoinScreen, type PreJoinChoice } from "./PreJoinScreen";
 import { useSocket } from "../../app/providers/SocketContext";
 import { Button, ConfirmDialog, STATE_CARD } from "../../shared/ui/Primitives";
-import { UserAvatar } from "../../shared/ui/kit/user-avatar";
+import { initialsOf, UserAvatar } from "../../shared/ui/kit/user-avatar";
 import { cn } from "../../shared/lib/utils";
 import { AnimatePresence } from "motion/react";
 import { meetingShortcut } from "../../shared/lib/interaction";
 import { Icon, type IconName } from "../../shared/ui/Icon";
 
 // The room is dark in both themes, so its chrome uses fixed zinc tones instead of the theme tokens.
+const canShareScreen = Boolean(navigator.mediaDevices?.getDisplayMedia);
 const ROOM_ICON =
   "grid size-9 shrink-0 cursor-pointer place-items-center rounded-md border-0 bg-transparent p-0 text-zinc-300 transition-colors hover:bg-[#27272a] hover:text-white disabled:cursor-default disabled:opacity-50";
 const ROOM_ICON_ON = "bg-[#27272a] text-white";
@@ -369,15 +370,7 @@ function ParticipantTile({
   const analysed = useAudioActivity(stream, hasAudio && speaking === undefined);
   const isSpeaking = speaking ?? analysed;
 
-  const initials =
-    displayName
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(-2)
-      .map((part) => part[0])
-      .join("")
-      .toUpperCase() || displayName.slice(0, 2).toUpperCase();
+  const initials = initialsOf(displayName) || "?";
 
   return (
     <article
@@ -612,6 +605,12 @@ export function MeetingPage() {
     }
   }, [callMessages, sidePanel]);
   const control = useMeetingControl(meeting.inCall ? meeting.roomId : "");
+  // The host note sits over the speaker's name label; it is a hint, so it leaves on its own.
+  useEffect(() => {
+    if (!control.canManage || adminToastDismissed) return;
+    const timer = window.setTimeout(() => setAdminToastDismissed(true), 6000);
+    return () => window.clearTimeout(timer);
+  }, [control.canManage, adminToastDismissed]);
   const meetingState = control.state;
   const meetingSessionId = meetingState?.id;
   // REC chip in the top bar: is a recording running in this session?
@@ -1258,7 +1257,7 @@ export function MeetingPage() {
             </div>
           )}
 
-          <header className="tw relative z-30 flex min-h-[46px] min-w-0 shrink-0 items-center gap-2.5 text-zinc-100">
+          <header className="tw relative z-30 flex min-h-[46px] min-w-0 shrink-0 items-center gap-2.5 text-zinc-100 max-md:gap-1.5">
             <h2 className="m-0 truncate text-[15px] leading-5 font-semibold tracking-normal text-zinc-100">
               {roomName}
             </h2>
@@ -1284,8 +1283,24 @@ export function MeetingPage() {
             <button
               type="button"
               className={ROOM_ICON}
-              title={meetingState?.locked ? "Phòng đã khóa" : "Bảo mật phòng"}
-              aria-label="Bảo mật phòng"
+              // For a host the button locks at once, so it is named by what a click does.
+              title={
+                control.canManage
+                  ? meetingState?.locked
+                    ? "Mở khóa phòng"
+                    : "Khóa phòng: không cho ai vào thêm"
+                  : meetingState?.locked
+                    ? "Phòng đã khóa"
+                    : "Bảo mật phòng"
+              }
+              aria-label={
+                control.canManage
+                  ? meetingState?.locked
+                    ? "Mở khóa phòng"
+                    : "Khóa phòng"
+                  : "Bảo mật phòng"
+              }
+              aria-pressed={control.canManage ? Boolean(meetingState?.locked) : undefined}
               onClick={() => {
                 if (control.canManage && meetingState) {
                   void control.action("lock", undefined, !meetingState.locked);
@@ -1313,7 +1328,7 @@ export function MeetingPage() {
             </button>
             <button
               type="button"
-              className={cn(ROOM_ICON, layout === "grid" && ROOM_ICON_ON)}
+              className={cn(ROOM_ICON, layout === "grid" && ROOM_ICON_ON, "max-md:hidden")}
               title="Bật/tắt chế độ xem lưới"
               aria-label="Chế độ xem lưới"
               aria-pressed={layout === "grid"}
@@ -1740,7 +1755,7 @@ export function MeetingPage() {
 
           {/* Control dock: floats centred over the bottom of the stage */}
           <div
-            className="tw fixed bottom-4 left-1/2 z-[var(--z-dropdown)] flex max-w-[calc(100vw-16px)] -translate-x-1/2 items-center gap-2 rounded-2xl border border-[#27272a] bg-[#111113] p-2 shadow-[0_16px_32px_-16px_rgba(0,0,0,0.7)] max-md:bottom-2.5 max-md:justify-start max-md:overflow-x-auto"
+            className="tw fixed bottom-4 left-1/2 z-[var(--z-dropdown)] flex w-max max-w-[calc(100vw-16px)] -translate-x-1/2 items-center gap-2 rounded-2xl border border-[#27272a] bg-[#111113] p-2 shadow-[0_16px_32px_-16px_rgba(0,0,0,0.7)] max-md:bottom-2.5 max-md:justify-start max-md:overflow-x-auto"
             role="toolbar"
             aria-label="Điều khiển cuộc họp"
           >
@@ -1788,7 +1803,12 @@ export function MeetingPage() {
 
             <button
               type="button"
-              className={cn(DOCK_BTN, meeting.sharing && DOCK_ON)}
+              // Phone browsers have no screen capture; the button would only fail and push Leave away.
+              className={cn(
+                DOCK_BTN,
+                meeting.sharing && DOCK_ON,
+                !canShareScreen && !meeting.sharing && "hidden",
+              )}
               aria-label={meeting.sharing ? "Dừng chia sẻ màn hình" : "Chia sẻ màn hình"}
               aria-pressed={meeting.sharing}
               onClick={() => void meeting.toggleScreenShare()}
@@ -1887,7 +1907,8 @@ export function MeetingPage() {
             <span className="mx-1 h-6 w-px shrink-0 bg-[#27272a]" aria-hidden="true" />
             <button
               type="button"
-              className="flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-xl bg-red-500 px-4 text-[13px] font-semibold text-white transition-colors hover:bg-red-600"
+              // Pinned to the end of the scrolling dock on phones, so Leave never scrolls out of view.
+              className="flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-xl bg-red-500 px-4 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 max-md:sticky max-md:right-0 max-md:shadow-[-12px_0_12px_-4px_#111113]"
               aria-label="Rời khỏi phòng họp"
               onClick={requestLeave}
               title="Rời khỏi phòng họp"

@@ -14,6 +14,7 @@ import {
 import { motion, AnimatePresence, useIsPresent } from "motion/react";
 import { useApp } from "../../app/providers/AppContext";
 import { Icon, type IconName } from "./Icon";
+import { initialsOf } from "./kit/user-avatar";
 import { isSelectPickerEvent } from "../lib/select-picker";
 import { toastDuration } from "../lib/interaction";
 import "./interaction.css";
@@ -257,13 +258,7 @@ export function Avatar({
   status?: "online" | "away" | "busy";
   image?: string;
 }) {
-  const initials = name
-    .split(" ")
-    .filter((part) => /^[\p{L}\p{N}]/u.test(part))
-    .slice(-2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
+  const initials = initialsOf(name);
   // Remote avatars (e.g. expired Google URLs) fall back to initials instead of a broken image.
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const showImage = Boolean(image) && failedImage !== image;

@@ -6,6 +6,7 @@ import { Icon } from "../../shared/ui/Icon";
 import { cn } from "../../shared/lib/utils";
 import { RoleHome, useRoleData } from "./RoleHome";
 import { getAnnouncementsApi, setAnnouncementMarkApi } from "../announcements/api";
+import { initialsOf } from "../../shared/ui/kit/user-avatar";
 
 const CATEGORY_LABELS: Record<string, string> = {
   general: "Thông báo chung",
@@ -60,12 +61,7 @@ function loadReadIds(key: string): Set<string> {
   }
 }
 
-/** "Phòng Đại học" → "PĐ": first letters of the first and last word. */
-function initials(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  const letters = words.length > 1 ? [words[0], words[words.length - 1]] : words;
-  return letters.map((word) => word.charAt(0).toUpperCase()).join("") || "?";
-}
+const initials = (name: string) => initialsOf(name) || "?";
 
 const CARD = "rounded-xl border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)]";
 const AVATAR =

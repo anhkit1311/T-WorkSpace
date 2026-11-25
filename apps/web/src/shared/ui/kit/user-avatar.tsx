@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { cn } from "../../lib/utils";
+import { initialsOf } from "../../lib/initials";
+
+export { initialsOf };
 
 /** A round avatar: the photo, or the initials of the first and last word of the name. */
 export function UserAvatar({
@@ -20,14 +23,7 @@ export function UserAvatar({
 }) {
   // Remote photos (e.g. expired Google URLs) fall back to initials instead of a broken image.
   const [failedImage, setFailedImage] = useState<string | null>(null);
-  // Words like "(test)" or "-" would give "L(" or "P-"; only letters and digits start initials.
-  const words = name
-    .trim()
-    .split(/\s+/)
-    .filter((word) => /^[\p{L}\p{N}]/u.test(word));
-  const initials = (words.length > 1 ? [words[0], words[words.length - 1]] : words)
-    .map((word) => word.charAt(0).toUpperCase())
-    .join("");
+  const initials = initialsOf(name);
   return (
     <span
       className={cn(

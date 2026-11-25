@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { MeetingCalendarSession, MeetingScheduleItem } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
-import { UserAvatar } from "../../shared/ui/kit/user-avatar";
+import { initialsOf, UserAvatar } from "../../shared/ui/kit/user-avatar";
 import { cn } from "../../shared/lib/utils";
 import { Icon } from "../../shared/ui/Icon";
 import { getDialInApi, getMeetingCalendarApi } from "./api";
@@ -270,7 +270,7 @@ export function PreJoinScreen({
             ) : (
               <div className="grid justify-items-center gap-3 text-[13px] text-zinc-300">
                 <span className="grid size-20 place-items-center rounded-full bg-[#2f3a55] text-[28px] font-semibold text-[#cfdcff]">
-                  {displayName.slice(0, 1).toUpperCase()}
+                  {initialsOf(displayName) || "?"}
                 </span>
                 <span>
                   {!previewEnabled

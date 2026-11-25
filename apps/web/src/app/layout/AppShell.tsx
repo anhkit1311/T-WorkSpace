@@ -35,6 +35,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../../shared/ui/kit/dropdown-menu";
+import { initialsOf } from "../../shared/lib/initials";
 
 /** Page modules, warmed while the browser is idle so a first visit to a tab opens without waiting. */
 const pageLoaders: (() => Promise<unknown>)[] = [];
@@ -415,7 +416,7 @@ export function AppShell() {
           size,
         )}
       >
-        {displayName.charAt(0).toUpperCase()}
+        {initialsOf(displayName) || "?"}
       </span>
     );
 
