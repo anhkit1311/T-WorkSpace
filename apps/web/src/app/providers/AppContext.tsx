@@ -103,12 +103,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
   const setActiveView = useCallback(
-    (view: ViewId) => {
-      // Each page keeps its own group filter; only group administration stays on the same group.
-      const keepWorkspace = view === "admin" && route.workspaceId ? route.workspaceId : undefined;
-      navigate({ view, workspaceId: keepWorkspace });
-    },
-    [navigate, route.workspaceId],
+    // Each page keeps its own group filter, so switching pages drops it.
+    (view: ViewId) => navigate({ view }),
+    [navigate],
   );
   // Re-read the route whenever auth lands in the app; the initial route may come from /login.
   const enterApp = useCallback(() => {

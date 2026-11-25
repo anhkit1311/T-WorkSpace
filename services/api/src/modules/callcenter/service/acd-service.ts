@@ -91,7 +91,13 @@ interface LiveAgent extends AgentRecord {
   callId: string | null;
   wrapTimer: unknown;
   /** An outside call the agent dialled (dialplan [outbound], not the ACD) and the state to return to. */
-  outbound: { channelId: string; previous: "ready" | "not_ready" } | null;
+  outbound: {
+    /** Live-call key the board and CC-11 monitoring use, like an ACD call's. */
+    key: string;
+    channelId: string;
+    previous: "ready" | "not_ready";
+    monitors: Monitor[];
+  } | null;
 }
 
 /** IVR and voicemail prompts. shortcut: stock English prompts; record Vietnamese ones for the demo. */
@@ -266,7 +272,7 @@ export class AcdService {
           reason: agent.reason,
           since: agent.sinceMs ? new Date(agent.sinceMs).toISOString() : null,
           extension: agent.extension,
-          callId: agent.callId,
+          callId: agent.callId ?? agent.outbound?.key ?? null,
         })),
     };
   }
@@ -395,9 +401,14 @@ export class AcdService {
     });
   }
 
-  /** The department of a live call (for the supervisor permission check), or null when it ended. */
-  departmentOfCall(callKey: string): string | null {
-    return this.calls.get(callKey)?.department?.id ?? null;
+  /** The departments of a live call (for the supervisor permission check); empty when it ended. */
+  departmentsOfCall(callKey: string): string[] {
+    const department = this.calls.get(callKey)?.department?.id;
+    return department ? [department] : (this.outboundCall(callKey)?.departments ?? []);
+  }
+
+  private outboundCall(callKey: string): LiveAgent | undefined {
+    return [...this.agents.values()].find((agent) => agent.outbound?.key === callKey);
   }
 
   /** CC-11: rings the supervisor's extension; once answered they listen, coach the agent or join in. */
@@ -408,12 +419,17 @@ export class AcdService {
     mode: MonitorMode,
   ): Promise<void> {
     return this.serial(async () => {
-      const call = this.calls.get(callKey);
-      if (!call || call.phase !== "connected" || !call.agentChannelId || call.consult)
+      const outbound = this.outboundCall(callKey);
+      const call = outbound ? undefined : this.calls.get(callKey);
+      if (
+        !outbound &&
+        (!call || call.phase !== "connected" || !call.agentChannelId || call.consult)
+      )
         throw new HttpError(409, "NO_ACTIVE_CALL", "Cuộc gọi không còn ở trạng thái đàm thoại.");
-      if (call.agentUserId === supervisorId)
+      const monitors = outbound ? outbound.outbound!.monitors : call!.monitors;
+      if ((outbound ? outbound.userId : call!.agentUserId) === supervisorId)
         throw new HttpError(409, "INVALID_INPUT", "Không thể giám sát cuộc gọi của chính mình.");
-      if (call.monitors.some((item) => item.supervisorId === supervisorId))
+      if (monitors.some((item) => item.supervisorId === supervisorId))
         throw new HttpError(409, "ALREADY_MONITORING", "Bạn đang giám sát cuộc gọi này.");
       const self = this.agents.get(supervisorId);
       if (self && self.state !== "not_ready" && self.state !== "offline")
@@ -421,12 +437,12 @@ export class AcdService {
       const channelId = await this.pbx.callExtension({
         extension,
         callerId: `"Giam sat ${mode}" <${extension}>`,
-        callId: call.id,
+        callId: callKey,
         timeoutSeconds: 20,
         purpose: "monitor",
       });
-      call.monitors.push({ supervisorId, mode, channelId, snoopId: null, bridgeId: null });
-      this.byChannel.set(channelId, call.id);
+      monitors.push({ supervisorId, mode, channelId, snoopId: null, bridgeId: null });
+      if (call) this.byChannel.set(channelId, call.id);
     });
   }
 
@@ -568,14 +584,24 @@ export class AcdService {
   private async onMonitorUp(call: ActiveCall, monitor: Monitor): Promise<void> {
     if (!call.agentChannelId || !call.bridgeId) return this.endMonitor(call, monitor, true);
     if (monitor.mode === "barge") return this.pbx.addToBridge(call.bridgeId, [monitor.channelId]);
-    monitor.snoopId = await this.pbx.snoop(call.agentChannelId, {
-      whisper: monitor.mode === "whisper",
-      callId: call.id,
+    await this.snoopFor(monitor, call.agentChannelId, call.id);
+  }
+
+  /** Listen hears both sides; whisper reaches only the agent's phone; barge reaches both sides. */
+  private async snoopFor(monitor: Monitor, agentChannelId: string, callKey: string) {
+    const whisper = { listen: "none", whisper: "out", barge: "both" } as const;
+    monitor.snoopId = await this.pbx.snoop(agentChannelId, {
+      whisper: whisper[monitor.mode],
+      callId: callKey,
     });
     monitor.bridgeId = await this.pbx.bridge([monitor.snoopId, monitor.channelId]);
   }
 
-  private async endMonitor(call: ActiveCall, monitor: Monitor, hangup: boolean): Promise<void> {
+  private async endMonitor(
+    call: { monitors: Monitor[] },
+    monitor: Monitor,
+    hangup: boolean,
+  ): Promise<void> {
     call.monitors = call.monitors.filter((item) => item !== monitor);
     this.byChannel.delete(monitor.channelId);
     if (hangup) await this.pbx.hangup(monitor.channelId).catch(() => undefined);
@@ -915,6 +941,10 @@ export class AcdService {
   }
 
   private async onChannelUp(channelId: string): Promise<void> {
+    for (const agent of this.agents.values()) {
+      const monitor = agent.outbound?.monitors.find((item) => item.channelId === channelId);
+      if (monitor) return this.snoopFor(monitor, agent.outbound!.channelId, agent.outbound!.key);
+    }
     const call = this.callOf(channelId);
     if (call?.consult?.channelId === channelId) return this.onConsultUp(call);
     const monitor = call?.monitors.find((item) => item.channelId === channelId);
@@ -957,18 +987,25 @@ export class AcdService {
     if (agent.state !== "ready" && agent.state !== "not_ready" && agent.state !== "wrap_up") return;
     this.clock.clearTimeout(agent.wrapTimer);
     agent.outbound = {
+      key: randomUUID(),
       channelId: event.channelId,
       previous: agent.state === "not_ready" ? "not_ready" : "ready",
+      monitors: [],
     };
     await this.setAgentState(agent, "on_call", `Gọi ra ${event.exten}`);
   }
 
   private onOutboundEnded(channelId: string): Promise<void> | null {
+    for (const owner of this.agents.values()) {
+      const monitor = owner.outbound?.monitors.find((item) => item.channelId === channelId);
+      if (monitor) return this.endMonitor(owner.outbound!, monitor, false);
+    }
     const agent = [...this.agents.values()].find((item) => item.outbound?.channelId === channelId);
     if (!agent) return null;
-    const { previous } = agent.outbound!;
+    const { previous, monitors } = agent.outbound!;
     agent.outbound = null;
     return (async () => {
+      for (const monitor of [...monitors]) await this.endMonitor({ monitors }, monitor, true);
       if (agent.state !== "on_call") return; // went offline mid-call
       await this.setAgentState(agent, "wrap_up", "");
       await this.setAgentState(agent, previous, "");

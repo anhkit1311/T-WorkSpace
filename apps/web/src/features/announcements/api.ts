@@ -1,4 +1,5 @@
 import type {
+  AnnouncementMark,
   AnnouncementPublisher,
   CreateAnnouncementInput,
   PortalAnnouncement,
@@ -35,9 +36,9 @@ async function request<T>(token: string, path: string, method = "GET", body?: ob
 export async function getAnnouncementsApi(
   token: string,
   category?: string,
-): Promise<{ items: PortalAnnouncement[]; canPublish: boolean; role: string }> {
+): Promise<{ items: PortalAnnouncement[]; canPublish: boolean; role: string; isStaff: boolean }> {
   const query = category && category !== "all" ? `?category=${category}` : "";
-  return request<{ items: PortalAnnouncement[]; canPublish: boolean; role: string }>(token, query);
+  return request(token, query);
 }
 
 export async function createAnnouncementApi(
@@ -57,6 +58,16 @@ export async function updateAnnouncementApi(
 
 export async function deleteAnnouncementApi(token: string, id: string): Promise<{ ok: boolean }> {
   return request<{ ok: boolean }>(token, `/${id}`, "DELETE");
+}
+
+/** Puts or removes the reader's heart or bookmark; answers with the post's like count. */
+export async function setAnnouncementMarkApi(
+  token: string,
+  id: string,
+  kind: AnnouncementMark,
+  on: boolean,
+): Promise<{ likeCount: number }> {
+  return request(token, `/${id}/${kind}`, on ? "POST" : "DELETE");
 }
 
 export async function getPublishersApi(

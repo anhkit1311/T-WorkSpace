@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import type { CcKpiReport } from "@doan/shared";
 import { Button, KpiStatCard } from "../../shared/ui/Primitives";
+import { cn } from "../../shared/lib/utils";
 import { downloadCsv } from "./api";
+import { CARD, H2, TABLE } from "./ui";
 
 type Api = <T>(path: string, method?: string, body?: object) => Promise<T>;
 
@@ -47,13 +49,12 @@ export function KpiPanel({
 
   const busiest = Math.max(1, ...(report?.hourly.map((row) => row.offered) ?? []));
   return (
-    <section className="callcenter-panel desk-kpi">
-      <div className="callcenter-panel__head desk-toolbar">
-        <h2 className="callcenter-panel__title">
-          <span>Chỉ số chất lượng</span>
-        </h2>
-        <div className="desk-admin__inline">
+    <section className={cn(CARD, "tw-form gap-3.5")}>
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className={H2}>Chỉ số chất lượng</h2>
+        <div className="ml-auto flex flex-wrap items-center gap-1.5">
           <input
+            className="h-8! py-0! text-[13px]!"
             type="date"
             value={from}
             max={to}
@@ -61,6 +62,7 @@ export function KpiPanel({
             aria-label="Từ ngày"
           />
           <input
+            className="h-8! py-0! text-[13px]!"
             type="date"
             value={to}
             min={from}
@@ -83,7 +85,7 @@ export function KpiPanel({
           </Button>
         </div>
       </div>
-      <div className="callcenter-kpi-grid desk-kpi__grid">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2.5">
         <KpiStatCard
           icon="phone-call"
           tone="blue"
@@ -128,42 +130,50 @@ export function KpiPanel({
         />
       </div>
       {report && report.hourly.length > 0 && (
-        <div className="desk-hourly" aria-label="Cuộc gọi theo giờ">
+        <div className="flex h-[120px] items-stretch gap-1.5" aria-label="Cuộc gọi theo giờ">
           {report.hourly.map((row) => (
             <div
               key={row.hour}
-              className="desk-hourly__bar"
+              className="grid flex-1 grid-rows-[1fr_auto] justify-items-center gap-1"
               title={`${row.hour}h: ${row.answered}/${row.offered} cuộc đã nghe`}
             >
-              <span style={{ height: `${(row.offered / busiest) * 100}%` }}>
-                <i style={{ height: `${(row.answered / row.offered) * 100}%` }} />
+              <span
+                className="flex w-full max-w-[26px] items-end self-end overflow-hidden rounded-t-[5px] rounded-b-[2px] bg-secondary"
+                style={{ height: `${(row.offered / busiest) * 100}%` }}
+              >
+                <i
+                  className="block w-full rounded-t-[5px] rounded-b-[2px] bg-[#2f6bff]"
+                  style={{ height: `${(row.answered / row.offered) * 100}%` }}
+                />
               </span>
-              <small>{row.hour}h</small>
+              <small className="text-[10.5px] text-muted-foreground">{row.hour}h</small>
             </div>
           ))}
         </div>
       )}
       {report && report.agents.length > 0 && (
-        <table className="cdr-table">
-          <thead>
-            <tr>
-              <th>Tổng đài viên</th>
-              <th>Đã nghe</th>
-              <th>Tổng đàm thoại</th>
-              <th>Đàm thoại TB</th>
-            </tr>
-          </thead>
-          <tbody>
-            {report.agents.map((agent) => (
-              <tr key={agent.userId}>
-                <td>{agent.displayName}</td>
-                <td>{agent.answered}</td>
-                <td>{duration(agent.talkSeconds)}</td>
-                <td>{duration(agent.averageTalk)}</td>
+        <div className="overflow-x-auto rounded-[9px] border">
+          <table className={TABLE}>
+            <thead>
+              <tr>
+                <th>Tổng đài viên</th>
+                <th>Đã nghe</th>
+                <th>Tổng đàm thoại</th>
+                <th>Đàm thoại TB</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {report.agents.map((agent) => (
+                <tr key={agent.userId}>
+                  <td>{agent.displayName}</td>
+                  <td>{agent.answered}</td>
+                  <td>{duration(agent.talkSeconds)}</td>
+                  <td>{duration(agent.averageTalk)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );

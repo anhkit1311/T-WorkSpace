@@ -3,7 +3,7 @@ import { useApp } from "./providers/AppContext";
 import { AnimatePresence, motion } from "motion/react";
 import { DURATION, EASE_OUT } from "../shared/motion/tokens";
 import { useMotionSafe, motionDebugEnabled } from "../shared/motion/MotionProvider";
-import { ToastViewport } from "../shared/ui/Primitives";
+import { PageFallback, ToastViewport } from "../shared/ui/Primitives";
 import { MeetingInviteListener } from "../features/meetings/MeetingInviteListener";
 
 const LoginPage = lazy(() =>
@@ -14,13 +14,7 @@ const AppShell = lazy(() => import("./layout/AppShell").then((m) => ({ default: 
 const MotionDebug = motionDebugEnabled ? lazy(() => import("../shared/motion/MotionDebug")) : null;
 
 function ScreenFallback() {
-  return (
-    <div className="page-suspense-fallback" role="status" aria-label="Đang tải giao diện...">
-      <div className="page-suspense-line is-title" />
-      <div className="page-suspense-line is-body" />
-      <div className="page-suspense-card" />
-    </div>
-  );
+  return <PageFallback label="Đang tải giao diện..." />;
 }
 
 export function App() {
@@ -31,14 +25,16 @@ export function App() {
   }, [screen]);
   return (
     <>
-      <a className="skip-link" href="#main-content">
+      <a
+        className="sr-only z-(--z-tooltip) rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:top-4 focus:left-4"
+        href="#main-content"
+      >
         Đi đến nội dung chính
       </a>
-      <div className={`screen-stage ${screen !== "app" ? "screen-stage--public" : ""}`}>
+      <div>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={screen === "app" ? "app" : "login"}
-            className={`screen-transition screen-transition--${screen === "app" ? "app" : "login"}`}
             initial={safe.reduced ? false : { opacity: 0, y: screen === "app" ? 0 : 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{

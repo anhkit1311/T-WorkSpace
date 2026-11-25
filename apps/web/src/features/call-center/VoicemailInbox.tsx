@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import type { CcPersonalVoicemail } from "@doan/shared";
 import { useSocket } from "../../app/providers/SocketContext";
 import { Badge, Button } from "../../shared/ui/Primitives";
-import { Icon } from "../../shared/ui/Icon";
+import { cn } from "../../shared/lib/utils";
 import { voicemailUrl } from "./api";
+import { CARD, H2, MUTED } from "./ui";
 
 type Api = <T>(path: string, method?: string, body?: object) => Promise<T>;
 
@@ -55,28 +56,40 @@ export function VoicemailInbox({
 
   const unheard = items?.filter((item) => !item.listened).length ?? 0;
   return (
-    <div className="callcenter-panel">
-      <div className="callcenter-panel__head">
-        <h2 className="callcenter-panel__title">
-          <Icon name="message" size={18} />
-          <span>Hộp thư thoại</span>
-        </h2>
-        {unheard > 0 && <Badge tone="red">{unheard} chưa nghe</Badge>}
+    <section className={CARD}>
+      <div className="flex items-center gap-2">
+        <h2 className={H2}>Hộp thư thoại</h2>
+        {unheard > 0 && (
+          <span className="ml-auto">
+            <Badge tone="red">{unheard} chưa nghe</Badge>
+          </span>
+        )}
       </div>
       {items === null ? (
-        <p className="desk-muted">Đang tải thư thoại…</p>
+        <p className={MUTED}>Đang tải thư thoại…</p>
       ) : !items.length ? (
-        <p className="desk-muted">
+        <p className={MUTED}>
           Chưa có tin nhắn. Khi bạn không nghe máy, bận hoặc ngoại tuyến, người gọi có thể để lại
           lời nhắn tại đây.
         </p>
       ) : (
-        <ul className="desk-recent" aria-label="Thư thoại">
+        <ul className="grid" aria-label="Thư thoại">
           {items.map((item) => (
-            <li key={item.id} className={item.listened ? "" : "is-unheard"}>
-              <div className="desk-recent__who">
-                <strong>{item.callerName ?? item.callerNumber}</strong>
-                <span>
+            <li
+              key={item.id}
+              className="flex flex-wrap items-start gap-1.5 rounded-lg px-1.5 py-2 hover:bg-secondary"
+            >
+              <div className="min-w-[140px] flex-1">
+                <strong className="flex items-center gap-1.5 truncate text-[13.5px] font-semibold">
+                  {!item.listened && (
+                    <i
+                      className="size-[7px] shrink-0 rounded-full bg-[#2f6bff]"
+                      aria-label="Chưa nghe"
+                    />
+                  )}
+                  {item.callerName ?? item.callerNumber}
+                </strong>
+                <span className="block truncate text-xs text-muted-foreground">
                   {item.callerName ? `${item.callerNumber} · ` : ""}
                   {new Date(item.receivedAt).toLocaleString("vi-VN", {
                     hour: "2-digit",
@@ -86,7 +99,9 @@ export function VoicemailInbox({
                   })}{" "}
                   · {duration(item.durationSeconds)}
                 </span>
-                {playing?.id === item.id && <audio src={playing.url} controls autoPlay />}
+                {playing?.id === item.id && (
+                  <audio className="mt-1.5 h-8 w-full" src={playing.url} controls autoPlay />
+                )}
               </div>
               <Button
                 size="sm"
@@ -110,7 +125,8 @@ export function VoicemailInbox({
               )}
               <Button
                 size="sm"
-                variant="ghost"
+                variant="icon"
+                className={cn("size-[30px] px-0")}
                 icon="trash"
                 onClick={() => void remove(item)}
                 aria-label="Xóa tin nhắn"
@@ -119,6 +135,6 @@ export function VoicemailInbox({
           ))}
         </ul>
       )}
-    </div>
+    </section>
   );
 }

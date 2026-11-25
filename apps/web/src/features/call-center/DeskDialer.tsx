@@ -4,7 +4,14 @@ import { useApp } from "../../app/providers/AppContext";
 import { useGlobalSoftphone } from "../../app/providers/SoftphoneContext";
 import { Button } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
+import { cn } from "../../shared/lib/utils";
 import { callCenterApi } from "./api";
+import { CARD, DOT, H2, ICON_BTN, LED, MUTED } from "./ui";
+import { SEG, SEG_BTN } from "../admin/ui";
+
+const ROW = "flex items-center gap-2.5 rounded-lg px-1.5 py-[7px] hover:bg-secondary";
+const ROUND =
+  "grid size-8 shrink-0 cursor-pointer place-items-center rounded-full bg-[var(--tint-green-bg)] text-[var(--tint-green-fg)] hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40";
 
 type Lamp = CcTransferDirectory["extensions"][number]["deviceState"];
 interface Contact {
@@ -191,12 +198,12 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
 
   return (
     <>
-      <section className="callcenter-panel cc-dialer" aria-label="Gọi nhanh">
-        <div className="callcenter-panel__head">
-          <h2 className="callcenter-panel__title">{inCall ? "Bàn phím DTMF" : "Gọi nhanh"}</h2>
+      <section className={CARD} aria-label="Gọi nhanh">
+        <div className="flex items-center gap-2">
+          <h2 className={H2}>{inCall ? "Bàn phím DTMF" : "Gọi nhanh"}</h2>
           <button
             type="button"
-            className="cc-icon-btn"
+            className={cn(ICON_BTN, "ml-auto hover:bg-secondary")}
             title="Kiểm tra âm thanh"
             aria-label="Kiểm tra âm thanh"
             onClick={() => playTone("5")}
@@ -205,7 +212,7 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
           </button>
         </div>
         <form
-          className="cc-dialer__display"
+          className="flex h-[46px] min-w-0 items-center rounded-[9px] border bg-background pr-1.5 pl-3 focus-within:border-foreground"
           onSubmit={(event) => {
             event.preventDefault();
             if (canTransfer && /^[0-9]{4,5}$/.test(dial)) transfer(dial);
@@ -213,7 +220,7 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
           }}
         >
           <input
-            className="cc-dialer__input"
+            className="w-0 min-w-0 flex-1 bg-transparent text-[22px] font-semibold tracking-[.06em] tabular-nums outline-none placeholder:text-sm placeholder:font-normal placeholder:tracking-normal"
             aria-label={canTransfer ? "Số máy lẻ nhận chuyển" : "Số cần gọi"}
             value={dial}
             inputMode="tel"
@@ -223,7 +230,7 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
           {dial && (
             <button
               type="button"
-              className="cc-icon-btn"
+              className={cn(ICON_BTN, "hover:bg-secondary")}
               aria-label="Xóa một số"
               onClick={() => setDial((value) => value.slice(0, -1))}
             >
@@ -231,23 +238,29 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
             </button>
           )}
         </form>
-        <div className="cc-keys" role="group" aria-label={inCall ? "Bàn phím DTMF" : "Bàn phím số"}>
+        <div
+          className="grid grid-cols-3 gap-1.5"
+          role="group"
+          aria-label={inCall ? "Bàn phím DTMF" : "Bàn phím số"}
+        >
           {KEYPAD.map(([key, sub]) => (
             <button
               key={key}
               type="button"
-              className="cc-key"
+              className="grid h-12 cursor-pointer place-content-center rounded-[9px] bg-secondary leading-tight transition-colors hover:bg-accent active:scale-[.97]"
               aria-label={key}
               onClick={() => press(key)}
             >
-              <b>{key}</b>
-              {sub && <small>{sub}</small>}
+              <b className="text-lg font-semibold">{key}</b>
+              {sub && (
+                <small className="text-[9.5px] tracking-[.12em] text-muted-foreground">{sub}</small>
+              )}
             </button>
           ))}
         </div>
         {canTransfer ? (
           <Button
-            className="cc-dialer__go"
+            className="h-10 w-full"
             variant="secondary"
             icon="share"
             disabled={!/^[0-9]{4,5}$/.test(dial)}
@@ -257,7 +270,7 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
           </Button>
         ) : (
           <Button
-            className="cc-dialer__go"
+            className="h-10 w-full"
             icon="phone"
             disabled={!dial || busy || !ready}
             onClick={dialOut}
@@ -265,15 +278,17 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
             Gọi
           </Button>
         )}
-        {status && <p className="desk-muted cc-dialer__status">{status}</p>}
+        {status && <p className={cn(MUTED, "text-center")}>{status}</p>}
       </section>
 
-      <section className="callcenter-panel cc-directory" aria-label="Danh bạ">
-        <div className="cc-tabs" role="tablist">
+      <section className={CARD} aria-label="Danh bạ">
+        <div className={cn(SEG, "w-full")} role="tablist">
           <button
             type="button"
             role="tab"
+            className={cn(SEG_BTN, "flex-1")}
             aria-selected={tab === "contacts"}
+            aria-pressed={tab === "contacts"}
             onClick={() => setTab("contacts")}
           >
             Danh bạ máy lẻ
@@ -281,7 +296,9 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
           <button
             type="button"
             role="tab"
+            className={cn(SEG_BTN, "flex-1")}
             aria-selected={tab === "recent"}
+            aria-pressed={tab === "recent"}
             onClick={() => setTab("recent")}
           >
             Gần đây
@@ -289,10 +306,11 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
         </div>
         {tab === "contacts" ? (
           <>
-            <label className="cc-search">
+            <label className="flex h-[34px] items-center gap-2 rounded-md border bg-background px-2.5 text-muted-foreground focus-within:border-foreground">
               <Icon name="search" size={14} />
               <input
                 type="search"
+                className="w-0 min-w-0 flex-1 bg-transparent text-[13.5px] text-foreground outline-none"
                 aria-label="Tìm máy lẻ"
                 placeholder="Tìm tên, số, đơn vị"
                 value={search}
@@ -300,7 +318,7 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
               />
             </label>
             {!shown.length ? (
-              <p className="desk-muted">
+              <p className={MUTED}>
                 {contacts === null
                   ? "Đang tải danh bạ…"
                   : contacts.length
@@ -308,28 +326,30 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
                     : "Chưa có máy lẻ nào, hoặc tài khoản của bạn chưa được cấp máy lẻ."}
               </p>
             ) : (
-              <ul className="cc-dir">
+              <ul className="grid max-h-[360px] grid-cols-[minmax(0,1fr)] overflow-y-auto">
                 {shown.map((item) => (
-                  <li key={item.id}>
+                  <li key={item.id} className={ROW}>
                     <span
-                      className={`cc-led tone-${item.state ? LAMP_TONE[item.state] : "group"}`}
+                      className={cn(LED, item.state ? DOT[LAMP_TONE[item.state]] : DOT.blue)}
                       aria-hidden="true"
                     />
                     <button
                       type="button"
-                      className="cc-dir__who"
+                      className="min-w-0 flex-1 cursor-pointer text-left"
                       title="Điền số vào bàn phím"
                       onClick={() => setDial(item.extension)}
                     >
-                      <strong>{item.name}</strong>
-                      <span>
+                      <strong className="block truncate text-[13.5px] font-semibold">
+                        {item.name}
+                      </strong>
+                      <span className="block truncate text-xs text-muted-foreground">
                         {item.extension} · {item.department}
                         {item.state && ` · ${LAMP[item.state]}`}
                       </span>
                     </button>
                     <button
                       type="button"
-                      className="cc-round"
+                      className={ROUND}
                       aria-label={
                         canTransfer ? `Chuyển cuộc gọi tới ${item.name}` : `Gọi ${item.name}`
                       }
@@ -345,58 +365,65 @@ export function DeskDialer({ hotlineCall }: { hotlineCall: boolean }) {
             )}
           </>
         ) : !recent?.length ? (
-          <p className="desk-muted">
+          <p className={MUTED}>
             {recent === null ? "Đang tải lịch sử…" : "Chưa có cuộc gọi nội bộ nào."}
           </p>
         ) : (
-          <ul className="cc-dir">
-            {recent.map((call) => (
-              <li
-                key={call.id}
-                className={
-                  call.way === "in" && call.outcome !== "answered" && call.outcome !== "transferred"
-                    ? "is-missed"
-                    : ""
-                }
-              >
-                <span
-                  className="cc-dir__way"
-                  aria-label={call.way === "out" ? "Gọi đi" : "Gọi đến"}
-                >
-                  {call.way === "out" ? "↗" : "↙"}
-                </span>
-                <div className="cc-dir__who">
-                  <strong>{call.name ?? call.number}</strong>
-                  <span>
-                    {call.number} ·{" "}
-                    {new Date(call.startedAt).toLocaleString("vi-VN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      day: "2-digit",
-                      month: "2-digit",
-                    })}{" "}
-                    ·{" "}
-                    {call.outcome === "answered"
-                      ? talkTime(call.durationSeconds)
-                      : OUTCOME[call.outcome]}
+          <ul className="grid max-h-[360px] grid-cols-[minmax(0,1fr)] overflow-y-auto">
+            {recent.map((call) => {
+              const missed =
+                call.way === "in" && call.outcome !== "answered" && call.outcome !== "transferred";
+              return (
+                <li key={call.id} className={ROW}>
+                  <span
+                    className={cn(
+                      "w-4 shrink-0 text-center font-semibold",
+                      missed ? "text-red-600" : "text-muted-foreground",
+                    )}
+                    aria-label={call.way === "out" ? "Gọi đi" : "Gọi đến"}
+                  >
+                    {call.way === "out" ? "↗" : "↙"}
                   </span>
-                </div>
-                <button
-                  type="button"
-                  className="cc-round"
-                  aria-label={
-                    canTransfer ? `Chuyển cuộc gọi tới ${call.number}` : `Gọi lại ${call.number}`
-                  }
-                  title={
-                    canTransfer ? `Chuyển cuộc gọi tới ${call.number}` : `Gọi lại ${call.number}`
-                  }
-                  disabled={actDisabled}
-                  onClick={() => act(call.number)}
-                >
-                  <Icon name={canTransfer ? "share" : "phone"} size={15} />
-                </button>
-              </li>
-            ))}
+                  <div className="min-w-0 flex-1">
+                    <strong
+                      className={cn(
+                        "block truncate text-[13.5px] font-semibold",
+                        missed && "text-red-600",
+                      )}
+                    >
+                      {call.name ?? call.number}
+                    </strong>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {call.number} ·{" "}
+                      {new Date(call.startedAt).toLocaleString("vi-VN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        day: "2-digit",
+                        month: "2-digit",
+                      })}{" "}
+                      ·{" "}
+                      {call.outcome === "answered"
+                        ? talkTime(call.durationSeconds)
+                        : OUTCOME[call.outcome]}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className={ROUND}
+                    aria-label={
+                      canTransfer ? `Chuyển cuộc gọi tới ${call.number}` : `Gọi lại ${call.number}`
+                    }
+                    title={
+                      canTransfer ? `Chuyển cuộc gọi tới ${call.number}` : `Gọi lại ${call.number}`
+                    }
+                    disabled={actDisabled}
+                    onClick={() => act(call.number)}
+                  >
+                    <Icon name={canTransfer ? "share" : "phone"} size={15} />
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

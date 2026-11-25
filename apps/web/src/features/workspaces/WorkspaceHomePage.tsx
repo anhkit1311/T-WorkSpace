@@ -1,14 +1,11 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
-import type { PortalAnnouncement } from "@doan/shared";
+import { useState, useEffect, useCallback } from "react";
+import type { AnnouncementMark, PortalAnnouncement } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
 import { Icon } from "../../shared/ui/Icon";
-import { Avatar, FilterPills } from "../../shared/ui/Primitives";
+import { cn } from "../../shared/lib/utils";
 import { RoleHome, useRoleData } from "./RoleHome";
-import { useMenuAccess } from "../../app/layout/useMenuAccess";
-import { getAnnouncementsApi } from "../announcements/api";
-import { AnnouncementDetailModal } from "../announcements/AnnouncementDetailModal";
-import "./workspace-home.css";
+import { getAnnouncementsApi, setAnnouncementMarkApi } from "../announcements/api";
 
 const CATEGORY_LABELS: Record<string, string> = {
   general: "Thông báo chung",
@@ -17,12 +14,14 @@ const CATEGORY_LABELS: Record<string, string> = {
   urgent: "Khẩn",
 };
 
+/** "saved" is the reader's own bookmarks, filtered here; the others are categories the API filters. */
 const FILTER_TABS = [
   { key: "all", label: "Tất cả" },
   { key: "general", label: "Thông báo chung" },
   { key: "training", label: "Đào tạo" },
   { key: "event", label: "Sự kiện" },
   { key: "urgent", label: "Khẩn" },
+  { key: "saved", label: "Đã lưu" },
 ];
 
 function formatTimeAgo(isoString: string): string {
@@ -43,19 +42,6 @@ function formatTimeAgo(isoString: string): string {
 
 /** Unopened announcements younger than this count as unread (older ones are not news any more). */
 const UNREAD_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
-const FEED_GROUPS = ["Hôm nay", "Tuần này", "Trước đó"] as const;
-
-function feedGroup(iso: string): (typeof FEED_GROUPS)[number] {
-  const created = new Date(iso);
-  const now = new Date();
-  if (created.toDateString() === now.toDateString()) return "Hôm nay";
-  return now.getTime() - created.getTime() < 7 * 24 * 60 * 60 * 1000 ? "Tuần này" : "Trước đó";
-}
-
-/** Category key for colours; anything unknown looks like a general notice. */
-function categoryKey(category: string): string {
-  return category in CATEGORY_LABELS ? category : "general";
-}
 
 /** The author's badge, minus a plain "Mới" (the unread mark says that, per reader) and minus a repeat of the category chip. */
 function authorBadge(item: PortalAnnouncement): string | undefined {
@@ -74,15 +60,29 @@ function loadReadIds(key: string): Set<string> {
   }
 }
 
+/** "Phòng Đại học" → "PĐ": first letters of the first and last word. */
+function initials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  const letters = words.length > 1 ? [words[0], words[words.length - 1]] : words;
+  return letters.map((word) => word.charAt(0).toUpperCase()).join("") || "?";
+}
+
+const CARD = "rounded-xl border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)]";
+const AVATAR =
+  "grid size-9 shrink-0 place-items-center rounded-full bg-brand-soft text-[13px] font-semibold text-brand";
+const CHIP = "rounded-full px-2.5 py-0.5 text-xs font-semibold";
+const ACTION =
+  "flex cursor-pointer items-center justify-center gap-2 rounded-md py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground";
+
 export function WorkspaceHomePage() {
   const { setActiveView, accessToken, user } = useApp();
-  const menuAccess = useMenuAccess(accessToken);
   const { socket } = useSocket();
 
   const [announcements, setAnnouncements] = useState<PortalAnnouncement[]>([]);
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(true);
-  const [selectedAnnouncement, setSelectedAnnouncement] = useState<PortalAnnouncement | null>(null);
+  const [canPublish, setCanPublish] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const readKey = `announcements-read:${user?.id ?? "anon"}`;
   const [readIds, setReadIds] = useState(() => loadReadIds(readKey));
   const markRead = (ids: string[]) => {
@@ -97,33 +97,38 @@ export function WorkspaceHomePage() {
   };
   const isUnread = (item: PortalAnnouncement) =>
     !readIds.has(item.id) && Date.now() - new Date(item.createdAt).getTime() < UNREAD_WINDOW_MS;
-  const openAnnouncement = (item: PortalAnnouncement) => {
-    markRead([item.id]);
-    setSelectedAnnouncement(item);
+  /** Posts open in place, like a social feed; opening one marks it read. */
+  const toggleExpanded = (item: PortalAnnouncement) => {
+    const next = new Set(expandedIds);
+    if (!next.delete(item.id)) {
+      next.add(item.id);
+      markRead([item.id]);
+    }
+    setExpandedIds(next);
   };
 
   const roleData = useRoleData();
-  const nextMeeting = roleData?.meetings[0] ?? null;
 
-  // 1. Fetch announcements
+  const category = selectedFilter === "saved" ? "all" : selectedFilter;
   const loadAnnouncements = useCallback(async () => {
     if (!accessToken) return;
     try {
       setLoadingAnnouncements(true);
-      const res = await getAnnouncementsApi(accessToken, selectedFilter);
+      const res = await getAnnouncementsApi(accessToken, category);
       setAnnouncements(res.items || []);
+      setCanPublish(res.canPublish);
     } catch {
       // Keep existing announcements if error
     } finally {
       setLoadingAnnouncements(false);
     }
-  }, [accessToken, selectedFilter]);
+  }, [accessToken, category]);
 
   useEffect(() => {
     void loadAnnouncements();
   }, [loadAnnouncements]);
 
-  // 2. Real-time refresh when announcements change via Socket.IO
+  // Real-time refresh when announcements change via Socket.IO
   useEffect(() => {
     if (!socket) return;
     const handleAnnouncementsChanged = () => {
@@ -135,369 +140,217 @@ export function WorkspaceHomePage() {
     };
   }, [socket, loadAnnouncements]);
 
-  const calendarDate = (iso: string) => {
-    const now = new Date(iso);
-    const day = now.getDate();
-    const dayOfWeek = now.getDay();
-    const weekdayShort = dayOfWeek === 0 ? "CN" : `T${dayOfWeek + 1}`;
-    return {
-      weekday: weekdayShort,
-      day: day.toString().padStart(2, "0"),
-    };
+  /** Heart and bookmark answer at once; the server's count replaces the guess, a failure reloads the truth. */
+  const toggleMark = (item: PortalAnnouncement, kind: AnnouncementMark) => {
+    if (!accessToken) return;
+    const on = !(kind === "like" ? item.liked : item.saved);
+    const patch = (change: Partial<PortalAnnouncement>) =>
+      setAnnouncements((list) =>
+        list.map((post) => (post.id === item.id ? { ...post, ...change } : post)),
+      );
+    patch(
+      kind === "like"
+        ? { liked: on, likeCount: Math.max(0, (item.likeCount ?? 0) + (on ? 1 : -1)) }
+        : { saved: on },
+    );
+    setAnnouncementMarkApi(accessToken, item.id, kind, on).then(
+      ({ likeCount }) => patch({ likeCount }),
+      () => void loadAnnouncements(),
+    );
   };
 
-  const featuredAnnouncement = announcements.length > 0 ? announcements[0] : null;
-  const secondaryAnnouncements = announcements.slice(1, 5);
-  const unreadCount = announcements.filter(isUnread).length;
-  const upcomingMeetings = useMemo(
-    () => (roleData?.meetings ?? []).slice(0, 3),
-    [roleData?.meetings],
-  );
+  const posts =
+    selectedFilter === "saved" ? announcements.filter((item) => item.saved) : announcements;
+  const unreadCount = posts.filter(isUnread).length;
 
   return (
-    <div className="tdtu-home-container">
+    <div className="tw mx-auto grid w-full max-w-[1040px] grid-cols-1 items-start justify-center gap-x-7 gap-y-3.5 px-4 py-5 lg:grid-cols-[minmax(0,620px)_300px]">
       <h1 className="sr-only">Trang chủ</h1>
-      {/* Khu vực nội dung chính chia 2 cột Bento (Tỷ lệ 2.15fr : 1fr) */}
-      <section className="tdtu-home-main-grid">
-        {/* Cột trái: Bảng tin + Việc của bạn */}
-        <div className="tdtu-home-feed">
-          {/* Header Bảng tin & Bộ lọc pills */}
-          <div className="tdtu-home-feed__head">
-            <div className="tdtu-home-feed__title-group">
-              <h2 className="tdtu-home-feed__title tdtu-home-feed__title--lead">Bảng tin nội bộ</h2>
-              <span className="tdtu-home-feed__count">
-                {announcements.length} tin{unreadCount > 0 && ` · ${unreadCount} chưa đọc`}
-              </span>
-              {unreadCount > 0 && (
-                <button
-                  type="button"
-                  className="tdtu-board-mark-all"
-                  onClick={() => markRead(announcements.map((item) => item.id))}
-                >
-                  Đánh dấu đã đọc hết
-                </button>
-              )}
-            </div>
-            <FilterPills
-              options={FILTER_TABS}
-              activeKey={selectedFilter}
-              onChange={(key) => setSelectedFilter(key)}
-            />
+
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3.5">
+        {canPublish && (
+          <button
+            type="button"
+            className={cn(
+              CARD,
+              "flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-3 text-left text-muted-foreground",
+            )}
+            onClick={() => setActiveView("bulletin")}
+          >
+            <span className={AVATAR}>{initials(user?.displayName ?? "")}</span>
+            <span className="flex-1 rounded-full bg-secondary px-3.5 py-2 text-sm">
+              Đăng thông báo mới lên bảng tin…
+            </span>
+            <Icon name="image" size={18} />
+            <Icon name="paperclip" size={18} />
+          </button>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Lọc bảng tin">
+            {FILTER_TABS.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                aria-pressed={selectedFilter === tab.key}
+                className={cn(
+                  "cursor-pointer rounded-full border px-3 py-1 text-[13px] transition-colors",
+                  selectedFilter === tab.key
+                    ? "border-foreground bg-foreground text-background"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+                onClick={() => setSelectedFilter(tab.key)}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
-
-          {/* Skeleton khi đang tải */}
-          {loadingAnnouncements && announcements.length === 0 && (
-            <div
-              className="tdtu-home-skeleton-stack"
-              aria-busy="true"
-              aria-label="Đang tải thông báo"
+          {unreadCount > 0 && (
+            <button
+              type="button"
+              className="cursor-pointer text-[12.5px] text-muted-foreground hover:text-foreground"
+              onClick={() => markRead(posts.map((item) => item.id))}
             >
-              <div className="tdtu-home-skeleton-featured" />
-              <div className="tdtu-home-skeleton-row" />
-              <div className="tdtu-home-skeleton-row" />
-            </div>
+              {unreadCount} chưa đọc · Đánh dấu đã đọc hết
+            </button>
           )}
+        </div>
+        <h2 className="sr-only">Bảng tin nội bộ</h2>
 
-          {/* Thẻ nổi bật: tờ thông báo sáng, ô ngày đăng bên trái mang màu loại tin */}
-          {featuredAnnouncement && (
-            <article
-              className={`tdtu-board-feature is-${categoryKey(featuredAnnouncement.category)}`}
-              onClick={() => openAnnouncement(featuredAnnouncement)}
-            >
-              <FeatureDate iso={featuredAnnouncement.createdAt} />
-              <div className="tdtu-board-feature__lead">
-                <div className="tdtu-board-feature__tags">
-                  <span className="tdtu-board-chip is-category">
-                    <span className="tdtu-board-led" aria-hidden="true" />
-                    {CATEGORY_LABELS[featuredAnnouncement.category] ||
-                      featuredAnnouncement.category}
-                  </span>
-                  {featuredAnnouncement.pinned && (
-                    <span className="tdtu-board-chip is-quiet">
-                      <Icon name="pin" size={12} /> Đã ghim
-                    </span>
+        {loadingAnnouncements && announcements.length === 0 && (
+          <div className="grid gap-3.5" aria-busy="true" aria-label="Đang tải thông báo">
+            {[0, 1, 2].map((key) => (
+              <div key={key} className={cn(CARD, "h-36 animate-pulse")} />
+            ))}
+          </div>
+        )}
+
+        {/* Feed: mỗi thông báo là một bài đăng, mở toàn văn tại chỗ */}
+        {posts.map((item) => {
+          const expanded = expandedIds.has(item.id);
+          const body = expanded ? item.content : item.summary;
+          const likes = item.likeCount ?? 0;
+          return (
+            <article key={item.id} className={cn(CARD, "px-4 pt-4 pb-1.5")}>
+              <header className="mb-2.5 flex items-center gap-2.5">
+                <span className={AVATAR}>{initials(item.authorName)}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold text-foreground">
+                    {item.authorName}
+                  </div>
+                  <div className="truncate text-[12.5px] text-muted-foreground">
+                    {[item.authorTitle, formatTimeAgo(item.createdAt), item.scope]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </div>
+                </div>
+                {isUnread(item) && (
+                  <span className={cn(CHIP, "bg-brand-soft text-brand")}>Mới</span>
+                )}
+              </header>
+              <div className="flex flex-wrap gap-1.5">
+                <span
+                  className={cn(
+                    CHIP,
+                    item.category === "urgent"
+                      ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
+                      : "bg-secondary text-secondary-foreground",
                   )}
-                  {authorBadge(featuredAnnouncement) && (
-                    <span className="tdtu-board-chip is-quiet">
-                      {authorBadge(featuredAnnouncement)}
-                    </span>
+                >
+                  {CATEGORY_LABELS[item.category] || item.category}
+                </span>
+                {item.audience === "staff" && (
+                  <span
+                    className={cn(CHIP, "flex items-center gap-1 border text-muted-foreground")}
+                  >
+                    <Icon name="lock" size={12} /> Chỉ cán bộ, giảng viên
+                  </span>
+                )}
+                {item.pinned && (
+                  <span
+                    className={cn(CHIP, "flex items-center gap-1 border text-muted-foreground")}
+                  >
+                    <Icon name="pin" size={12} /> Đã ghim
+                  </span>
+                )}
+                {authorBadge(item) && (
+                  <span className={cn(CHIP, "border text-muted-foreground")}>
+                    {authorBadge(item)}
+                  </span>
+                )}
+              </div>
+              <h3 className="m-0 mt-2 mb-1 text-[15.5px] leading-snug font-semibold text-foreground">
+                {item.title}
+              </h3>
+              {body && body.trim() !== item.title.trim() && (
+                <div className="text-sm leading-relaxed whitespace-pre-line text-muted-foreground">
+                  {body}
+                  {item.content.trim() !== item.summary.trim() && (
+                    <>
+                      {expanded ? " " : "… "}
+                      <button
+                        type="button"
+                        className="cursor-pointer font-semibold text-foreground"
+                        aria-expanded={expanded}
+                        onClick={() => toggleExpanded(item)}
+                      >
+                        {expanded ? "Thu gọn" : "Xem thêm"}
+                      </button>
+                    </>
                   )}
                 </div>
-                <h3 className="tdtu-board-feature__title">{featuredAnnouncement.title}</h3>
-                {featuredAnnouncement.summary && (
-                  <p className="tdtu-board-feature__summary">{featuredAnnouncement.summary}</p>
-                )}
-                <p className="tdtu-board-feature__meta">
-                  <Avatar name={featuredAnnouncement.authorName} size="xs" />
-                  <b>{featuredAnnouncement.authorName}</b>
-                  <span>· Phạm vi: {featuredAnnouncement.scope}</span>
-                </p>
+              )}
+              <div className="mt-3 min-h-5 border-b pb-2 text-[12.5px] text-muted-foreground">
+                {likes > 0 && `${likes.toLocaleString("vi-VN")} lượt thích`}
               </div>
-              <div className="tdtu-board-feature__side">
-                {isUnread(featuredAnnouncement) ? (
-                  <span className="tdtu-board-chip is-new">Mới</span>
-                ) : (
-                  <span />
-                )}
+              <div className="grid grid-cols-2 gap-1 py-1">
                 <button
                   type="button"
-                  className="tdtu-board-feature__cta"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    openAnnouncement(featuredAnnouncement);
-                  }}
+                  className={cn(
+                    ACTION,
+                    item.liked && "font-semibold text-red-500 hover:text-red-500",
+                  )}
+                  aria-pressed={Boolean(item.liked)}
+                  onClick={() => toggleMark(item, "like")}
                 >
-                  Xem chi tiết <Icon name="arrow-right" size={15} />
+                  <Icon
+                    name="heart"
+                    size={18}
+                    fill={item.liked ? "currentColor" : "none"}
+                    className={item.liked ? "motion-safe:animate-[like-pop_0.25s]" : undefined}
+                  />
+                  Thích
+                </button>
+                <button
+                  type="button"
+                  className={cn(ACTION, item.saved && "font-semibold text-brand hover:text-brand")}
+                  aria-pressed={Boolean(item.saved)}
+                  onClick={() => toggleMark(item, "save")}
+                >
+                  <Icon name="bookmark" size={18} fill={item.saved ? "currentColor" : "none"} />
+                  {item.saved ? "Đã lưu" : "Lưu"}
                 </button>
               </div>
             </article>
-          )}
+          );
+        })}
 
-          {/* Các tin kế tiếp: dòng thời gian theo Hôm nay / Tuần này / Trước đó */}
-          {secondaryAnnouncements.length > 0 && (
-            <section className="tdtu-board-timeline" aria-label="Các tin khác">
-              {FEED_GROUPS.map((group) => {
-                const items = secondaryAnnouncements.filter(
-                  (item) => feedGroup(item.createdAt) === group,
-                );
-                if (items.length === 0) return null;
-                return (
-                  <div key={group} className="tdtu-board-group">
-                    <h3 className="tdtu-board-group__label">{group}</h3>
-                    <ul className="tdtu-board-list">
-                      {items.map((item) => {
-                        const unread = isUnread(item);
-                        return (
-                          <li key={item.id}>
-                            <button
-                              type="button"
-                              className={`tdtu-board-row is-${categoryKey(item.category)} ${unread ? "is-unread" : ""}`}
-                              onClick={() => openAnnouncement(item)}
-                            >
-                              <span className="tdtu-board-row__dot" aria-hidden="true" />
-                              <span className="tdtu-board-row__body">
-                                <span className="tdtu-board-row__head">
-                                  <span className="tdtu-board-row__title">{item.title}</span>
-                                  <span className="tdtu-board-chip is-category">
-                                    {CATEGORY_LABELS[item.category] || item.category}
-                                  </span>
-                                  {item.pinned && (
-                                    <span className="tdtu-board-row__pin" title="Đã ghim">
-                                      <Icon name="pin" size={13} />
-                                      <span className="sr-only">Đã ghim</span>
-                                    </span>
-                                  )}
-                                  {authorBadge(item) && (
-                                    <span className="tdtu-board-chip is-category">
-                                      {authorBadge(item)}
-                                    </span>
-                                  )}
-                                  {unread && <span className="tdtu-board-chip is-new">Mới</span>}
-                                </span>
-                                {item.summary && (
-                                  <span className="tdtu-board-row__summary">{item.summary}</span>
-                                )}
-                                <span className="tdtu-board-row__meta">
-                                  {item.authorName} · {item.scope}
-                                </span>
-                              </span>
-                              <span className="tdtu-board-row__time">
-                                {formatTimeAgo(item.createdAt)}
-                              </span>
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                );
-              })}
-            </section>
-          )}
-
-          {/* Trạng thái rỗng */}
-          {!loadingAnnouncements && announcements.length === 0 && (
-            <div className="tdtu-home-announcements-empty">
-              <Icon
-                name="bell"
-                size={28}
-                style={{ margin: "0 auto 8px", color: "var(--text-muted)" }}
-              />
-              <div>Chưa có thông báo nào trong chuyên mục này.</div>
-            </div>
-          )}
-
-          {/* Việc của bạn hôm nay theo vai trò (Sinh viên, Giảng viên, Supervisor, v.v.) */}
-          <RoleHome data={roleData} />
-        </div>
-
-        {/* Cột phải: 2 thẻ Bento xếp dọc */}
-        <div className="tdtu-home-side-cards">
-          {/* Thẻ 1: Lịch trình cuộc họp sắp tới */}
-          <div className="tdtu-home-side-card">
-            <div className="tdtu-home-side-card__head">
-              <h3 className="tdtu-home-side-card__title">
-                <Icon name="calendar" size={16} />
-                <span>Lịch họp sắp tới</span>
-              </h3>
-              <button
-                type="button"
-                className="tdtu-home-side-card__link"
-                onClick={() => setActiveView("meetings")}
-              >
-                Xem lịch
-              </button>
-            </div>
-
-            {!nextMeeting && (
-              <div className="tdtu-home-side-empty">
-                <Icon name="video" size={22} />
-                <p>Không có lịch họp sắp diễn ra.</p>
-                <button
-                  type="button"
-                  className="tdtu-home-detail-btn"
-                  onClick={() => setActiveView("meetings")}
-                >
-                  Tạo hoặc vào phòng họp
-                </button>
-              </div>
-            )}
-            {upcomingMeetings.length > 0 && (
-              <div className="tdtu-home-meetings-timeline">
-                {upcomingMeetings.map((item, idx) => (
-                  <div
-                    key={item.id}
-                    className={`tdtu-home-meeting-row ${idx === 0 ? "is-next" : ""}`}
-                  >
-                    <div className="tdtu-home-calendar-tile">
-                      <span className="tdtu-home-calendar-tile__weekday">
-                        {calendarDate(item.startsAt).weekday}
-                      </span>
-                      <span className="tdtu-home-calendar-tile__day">
-                        {calendarDate(item.startsAt).day}
-                      </span>
-                    </div>
-                    <div className="tdtu-home-meeting-info">
-                      <div className="tdtu-home-meeting-name">{item.title}</div>
-                      <div className="tdtu-home-meeting-time">
-                        {new Date(item.startsAt).toLocaleTimeString("vi-VN", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}{" "}
-                        ·{" "}
-                        {Math.max(
-                          1,
-                          Math.round(
-                            (new Date(item.endsAt).getTime() - new Date(item.startsAt).getTime()) /
-                              60000,
-                          ),
-                        )}{" "}
-                        phút
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className={`tdtu-home-detail-btn ${idx === 0 ? "is-primary" : ""}`}
-                      onClick={() => setActiveView("meetings")}
-                    >
-                      {idx === 0 ? "Tham gia" : "Chi tiết"}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Thẻ 2: Lối tắt phân hệ */}
-          <div className="tdtu-home-side-card">
-            <div className="tdtu-home-side-card__head">
-              <h3 className="tdtu-home-side-card__title">
-                <Icon name="sparkles" size={16} />
-                <span>Truy cập nhanh</span>
-              </h3>
-            </div>
-
-            <div className="tdtu-home-shortcuts-grid">
-              <button
-                type="button"
-                className="tdtu-home-shortcut-btn is-blue"
-                onClick={() => setActiveView("call-center")}
-              >
-                <span className="tdtu-home-shortcut-btn__icon">
-                  <Icon name="headset" size={17} />
-                </span>
-                <span className="tdtu-home-shortcut-btn__text">
-                  <strong>Tổng đài</strong>
-                  <small>Softphone & Hỗ trợ</small>
-                </span>
-              </button>
-
-              <button
-                type="button"
-                className="tdtu-home-shortcut-btn is-emerald"
-                onClick={() => setActiveView("meetings")}
-              >
-                <span className="tdtu-home-shortcut-btn__icon">
-                  <Icon name="video" size={17} />
-                </span>
-                <span className="tdtu-home-shortcut-btn__text">
-                  <strong>Họp trực tuyến</strong>
-                  <small>Phòng họp & Lịch tuần</small>
-                </span>
-              </button>
-
-              <button
-                type="button"
-                className="tdtu-home-shortcut-btn is-violet"
-                onClick={() => setActiveView("elearning")}
-              >
-                <span className="tdtu-home-shortcut-btn__icon">
-                  <Icon name="graduation-cap" size={17} />
-                </span>
-                <span className="tdtu-home-shortcut-btn__text">
-                  <strong>Khóa học</strong>
-                  <small>Bài giảng & Kiểm tra</small>
-                </span>
-              </button>
-
-              <button
-                type="button"
-                className="tdtu-home-shortcut-btn is-amber"
-                onClick={() => setActiveView(menuAccess?.systemAdmin ? "access" : "staff")}
-              >
-                <span className="tdtu-home-shortcut-btn__icon">
-                  <Icon name="building" size={17} />
-                </span>
-                <span className="tdtu-home-shortcut-btn__text">
-                  <strong>Khoa / Phòng ban</strong>
-                  <small>
-                    {menuAccess?.systemAdmin ? "Quản trị & Tổ chức" : "Danh bạ nhân sự"}
-                  </small>
-                </span>
-              </button>
+        {!loadingAnnouncements && posts.length === 0 && (
+          <div className={cn(CARD, "grid justify-items-center gap-2 px-4 py-10 text-center")}>
+            <Icon name={selectedFilter === "saved" ? "bookmark" : "bell"} size={26} />
+            <div className="text-sm text-muted-foreground">
+              {selectedFilter === "saved"
+                ? "Bạn chưa lưu thông báo nào. Bấm Lưu dưới một bài để xem lại ở đây."
+                : "Chưa có thông báo nào trong chuyên mục này."}
             </div>
           </div>
-        </div>
-      </section>
+        )}
+      </div>
 
-      {/* Modal xem chi tiết thông báo */}
-      {selectedAnnouncement && (
-        <AnnouncementDetailModal
-          announcement={selectedAnnouncement}
-          onClose={() => setSelectedAnnouncement(null)}
-        />
-      )}
+      {/* Cột phải đứng yên khi cuộn; trên màn hình hẹp nó lên đầu trang. */}
+      <aside className="order-first grid grid-cols-[minmax(0,1fr)] gap-3.5 lg:sticky lg:top-5 lg:order-none">
+        <RoleHome data={roleData} />
+      </aside>
     </div>
-  );
-}
-
-function FeatureDate({ iso }: { iso: string }) {
-  const date = new Date(iso);
-  return (
-    <time className="tdtu-board-feature__date" dateTime={iso}>
-      <span>Thg {date.getMonth() + 1}</span>
-      <b>{String(date.getDate()).padStart(2, "0")}</b>
-      <span>{date.toLocaleDateString("vi-VN", { weekday: "long" })}</span>
-    </time>
   );
 }

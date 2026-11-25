@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useApp } from "../../app/providers/AppContext";
 import { useGlobalSoftphone } from "../../app/providers/SoftphoneContext";
 import { Icon } from "../../shared/ui/Icon";
+import { cn } from "../../shared/lib/utils";
+import { STRIP_BTN, STRIP_DOT, STRIP_ITEM, TINT } from "./ui";
 
 const clock = (seconds: number) =>
   `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
@@ -29,21 +31,35 @@ export function GlobalCallBar() {
         : "Đang đàm thoại";
   return (
     <div
-      className={`live-strip__item is-${phone.phase}`}
+      className={cn(STRIP_ITEM, TINT[phone.phase === "active" ? "green" : "blue"])}
       role={phone.phase === "incoming" ? "alertdialog" : "status"}
       aria-label={`${label}: ${phone.peer}`}
     >
-      <span className="live-strip__dot" aria-hidden="true" />
-      <strong>{label}</strong>
-      <span className="live-strip__who">{phone.peer || "Không rõ số"}</span>
+      <span
+        className={cn(STRIP_DOT, phone.phase === "incoming" && "animate-pulse")}
+        aria-hidden="true"
+      />
+      <strong className="font-semibold">{label}</strong>
+      <span className="min-w-0 truncate font-medium text-foreground">
+        {phone.peer || "Không rõ số"}
+      </span>
       {since !== null && (
-        <span className="live-strip__time">{clock(Math.floor((Date.now() - since) / 1000))}</span>
+        <span className="font-semibold tabular-nums">
+          {clock(Math.floor((Date.now() - since) / 1000))}
+        </span>
       )}
-      {phone.held && <span className="live-strip__chip">Đang giữ máy</span>}
+      {phone.held && (
+        <span className={cn("rounded-full px-2 py-px text-[11.5px] font-semibold", TINT.amber)}>
+          Đang giữ máy
+        </span>
+      )}
       {phone.phase === "incoming" && (
         <button
           type="button"
-          className="live-strip__btn is-answer"
+          className={cn(
+            STRIP_BTN,
+            "ml-auto border-transparent bg-primary text-primary-foreground hover:bg-primary/90",
+          )}
           onClick={phone.answer}
           title="Alt+A"
         >
@@ -53,7 +69,7 @@ export function GlobalCallBar() {
       {phone.phase === "active" && (
         <button
           type="button"
-          className="live-strip__btn"
+          className={cn(STRIP_BTN, phone.phase === "active" && "ml-auto")}
           onClick={phone.toggleMute}
           title="Alt+M"
           aria-pressed={phone.muted}
@@ -65,7 +81,7 @@ export function GlobalCallBar() {
       {phone.phase === "active" && (
         <button
           type="button"
-          className="live-strip__btn"
+          className={STRIP_BTN}
           onClick={phone.toggleHold}
           aria-pressed={phone.held}
         >
@@ -73,12 +89,17 @@ export function GlobalCallBar() {
           {phone.held ? "Tiếp tục" : "Giữ máy"}
         </button>
       )}
-      <button type="button" className="live-strip__btn is-end" onClick={phone.hangup} title="Alt+H">
+      <button
+        type="button"
+        className={cn(STRIP_BTN, "border-transparent bg-red-600 text-white hover:bg-red-600/90")}
+        onClick={phone.hangup}
+        title="Alt+H"
+      >
         Gác máy
       </button>
       <button
         type="button"
-        className="live-strip__btn is-quiet"
+        className={cn(STRIP_BTN, "border-transparent bg-transparent text-current hover:bg-card/60")}
         onClick={() => navigate({ view: "call-center" })}
       >
         Mở bàn làm việc

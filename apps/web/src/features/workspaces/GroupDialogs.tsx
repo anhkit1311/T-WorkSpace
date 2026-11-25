@@ -2,11 +2,11 @@ import { type FormEvent, useEffect, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import type { DirectUserItem, WorkspaceItem } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
-import { Avatar, Button, Field, Modal } from "../../shared/ui/Primitives";
+import { Button, Modal } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
+import { UserAvatar } from "../../shared/ui/kit/user-avatar";
 import { createWorkspaceApi } from "../chat/api";
 import { governanceApi } from "./api";
-import "./group-dialogs.css";
 
 /** Messenger's default group name: the first names of who is in it. */
 function defaultGroupName(people: DirectUserItem[]) {
@@ -86,13 +86,27 @@ export function CreateGroupDialog({
       setBusy(false);
     }
   };
+  const fallbackName = picked.length >= 2 ? defaultGroupName(picked) : "";
+  const label = "text-xs font-semibold tracking-[.05em] text-muted-foreground uppercase";
   return (
     <Modal
       title="Tạo nhóm mới"
+      eyebrow="Chọn ít nhất 2 người"
+      icon="users"
       initialFocus="input:not(:disabled)"
       onClose={() => !busy && onClose()}
       footer={
-        <div className="modal-footer-actions">
+        <>
+          <span className="mr-auto min-w-0 text-[12.5px] text-muted-foreground">
+            {picked.length ? (
+              <>
+                <b className="font-semibold text-foreground">{picked.length} người</b>
+                {fallbackName && !name.trim() && ` · nhóm sẽ tên “${fallbackName}” nếu để trống`}
+              </>
+            ) : (
+              "Chưa chọn ai"
+            )}
+          </span>
           <Button variant="ghost" disabled={busy} onClick={onClose}>
             Hủy
           </Button>
@@ -104,118 +118,104 @@ export function CreateGroupDialog({
           >
             Tạo nhóm
           </Button>
-        </div>
+        </>
       }
     >
-      <form onSubmit={(event) => void submit(event)} className="ws-modal-form group-create">
-        <Field label="Tên nhóm (không bắt buộc)">
-          <input
-            type="text"
-            placeholder={
-              picked.length >= 2 ? defaultGroupName(picked) : "Ví dụ: Bộ môn Mạng máy tính"
-            }
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            maxLength={80}
-          />
-        </Field>
+      <form
+        onSubmit={(event) => void submit(event)}
+        className="tw grid gap-3.5 text-sm text-foreground"
+      >
+        <input
+          type="text"
+          className="w-full border-0 border-b bg-transparent pt-0.5 pb-2.5 text-lg font-semibold text-foreground outline-none placeholder:font-medium placeholder:text-muted-foreground focus:border-foreground"
+          aria-label="Tên nhóm (không bắt buộc)"
+          placeholder={fallbackName || "Tên nhóm (không bắt buộc)"}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          maxLength={80}
+        />
         {picked.length > 0 && (
-          <ul className="group-create__chips" aria-label="Người đã chọn">
-            {picked.map((person) => (
-              <li key={person.userId}>
-                <Avatar name={person.displayName} size="xs" />
-                <span>{person.displayName}</span>
-                <button
-                  type="button"
-                  aria-label={`Bỏ chọn ${person.displayName}`}
-                  onClick={() => toggle(person)}
+          <div className="grid gap-2">
+            <span className={label}>Đã chọn ({picked.length})</span>
+            <ul className="flex flex-wrap gap-1.5" aria-label="Người đã chọn">
+              {picked.map((person) => (
+                <li
+                  key={person.userId}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-secondary py-0.5 pr-1 pl-0.5 text-[12.5px]"
                 >
-                  <Icon name="x" size={12} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <Field label="Thêm người" error={error}>
-          <input
-            type="search"
-            placeholder="Tìm tên hoặc email…"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </Field>
-        <ul className="group-create__results" aria-label="Kết quả tìm kiếm">
-          {search.trim().length < 2 ? (
-            <li className="group-create__hint">Nhập ít nhất 2 ký tự để tìm đồng nghiệp.</li>
-          ) : !results.length ? (
-            <li className="group-create__hint">Không tìm thấy người phù hợp.</li>
-          ) : (
-            results.map((person) => {
-              const checked = picked.some((p) => p.userId === person.userId);
-              return (
-                <li key={person.userId}>
-                  <label className="group-create__person">
-                    <Avatar name={person.displayName} size="sm" />
-                    <span className="group-create__who">
-                      <strong>{person.displayName}</strong>
-                      <span>{person.email}</span>
-                    </span>
-                    <input type="checkbox" checked={checked} onChange={() => toggle(person)} />
-                  </label>
+                  <UserAvatar name={person.displayName} className="size-5 text-[9px]" />
+                  {person.displayName}
+                  <button
+                    type="button"
+                    className="grid size-4 cursor-pointer place-items-center rounded-full text-muted-foreground hover:bg-card hover:text-foreground"
+                    aria-label={`Bỏ chọn ${person.displayName}`}
+                    onClick={() => toggle(person)}
+                  >
+                    <Icon name="x" size={11} />
+                  </button>
                 </li>
-              );
-            })
+              ))}
+            </ul>
+          </div>
+        )}
+        <div className="grid gap-2">
+          <span className={label}>Thêm người</span>
+          <div className="overflow-hidden rounded-[10px] border bg-card">
+            <label className="flex items-center gap-2 border-b px-3 py-2 text-muted-foreground">
+              <Icon name="search" size={14} />
+              <input
+                type="search"
+                className="w-0 min-w-0 flex-1 bg-transparent text-[13.5px] text-foreground outline-none"
+                aria-label="Thêm người"
+                aria-invalid={Boolean(error) || undefined}
+                placeholder="Tìm tên hoặc email…"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </label>
+            <ul className="max-h-[240px] overflow-y-auto p-1" aria-label="Kết quả tìm kiếm">
+              {search.trim().length < 2 ? (
+                <li className="px-3 py-6 text-center text-[13px] text-muted-foreground">
+                  Nhập ít nhất 2 ký tự để tìm đồng nghiệp hoặc sinh viên.
+                </li>
+              ) : !results.length ? (
+                <li className="px-3 py-6 text-center text-[13px] text-muted-foreground">
+                  Không tìm thấy người phù hợp.
+                </li>
+              ) : (
+                results.map((person) => {
+                  const checked = picked.some((p) => p.userId === person.userId);
+                  return (
+                    <li key={person.userId}>
+                      <label className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-secondary">
+                        <UserAvatar name={person.displayName} className="size-[30px] text-[11px]" />
+                        <span className="grid min-w-0 flex-1">
+                          <strong className="truncate text-[13.5px] font-medium">
+                            {person.displayName}
+                          </strong>
+                          <span className="truncate text-xs text-muted-foreground">
+                            {person.email}
+                          </span>
+                        </span>
+                        <input
+                          type="checkbox"
+                          className="size-4 shrink-0 accent-foreground"
+                          checked={checked}
+                          onChange={() => toggle(person)}
+                        />
+                      </label>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          </div>
+          {error && (
+            <small className="text-[12.5px] font-medium text-destructive" role="alert">
+              {error}
+            </small>
           )}
-        </ul>
-      </form>
-    </Modal>
-  );
-}
-
-/** "Nhập mã mời": takes a pasted invitation link or bare token to the invitation page. */
-export function JoinGroupDialog({ onClose }: { onClose: () => void }) {
-  const { navigate } = useApp();
-  const [value, setValue] = useState("");
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    const raw = value.trim();
-    if (!raw) return;
-    const match = raw.match(/token=([^&#]+)/);
-    onClose();
-    navigate({ view: "invitation", invitationToken: match ? decodeURIComponent(match[1]) : raw });
-  };
-  return (
-    <Modal
-      title="Nhập mã mời"
-      initialFocus="input:not(:disabled)"
-      onClose={onClose}
-      footer={
-        <div className="modal-footer-actions">
-          <Button variant="ghost" onClick={onClose}>
-            Đóng
-          </Button>
-          <Button
-            icon="check"
-            disabled={!value.trim()}
-            onClick={(event) => submit(event as unknown as FormEvent)}
-          >
-            Tiếp tục
-          </Button>
         </div>
-      }
-    >
-      <form onSubmit={submit} className="ws-modal-form">
-        <p className="modal-lead">
-          Dán liên kết lời mời hoặc mã mà quản trị viên nhóm đã gửi cho bạn.
-        </p>
-        <Field label="Liên kết hoặc mã mời">
-          <input
-            type="text"
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            required
-          />
-        </Field>
       </form>
     </Modal>
   );
@@ -224,27 +224,27 @@ export function JoinGroupDialog({ onClose }: { onClose: () => void }) {
 /** Empty state for the pages that gather every group, shown while the user has none. */
 export function NoGroups({ text }: { text: string }) {
   const { navigate } = useApp();
-  const [dialog, setDialog] = useState<"create" | "join" | null>(null);
+  const [creating, setCreating] = useState(false);
   return (
-    <div className="no-groups" role="status">
-      <h2>Bạn chưa ở trong nhóm nào</h2>
-      <p>{text}</p>
-      <div className="no-groups__actions">
-        <Button icon="plus" onClick={() => setDialog("create")}>
-          Tạo nhóm
-        </Button>
-        <Button variant="secondary" icon="link" onClick={() => setDialog("join")}>
-          Nhập mã mời
-        </Button>
-      </div>
+    <div
+      className="tw mx-auto my-10 grid w-[min(100%,520px)] justify-items-center gap-2.5 rounded-[14px] border border-dashed bg-card px-6 py-10 text-center text-sm text-foreground"
+      role="status"
+    >
+      <span className="grid size-14 place-items-center rounded-2xl bg-[var(--tint-blue-bg)] text-[var(--tint-blue-fg)]">
+        <Icon name="users" size={26} />
+      </span>
+      <h2 className="text-lg! font-semibold! text-foreground!">Bạn chưa ở trong nhóm nào</h2>
+      <p className="max-w-[360px] text-muted-foreground!">{text}</p>
+      <Button icon="plus" className="mt-1" onClick={() => setCreating(true)}>
+        Tạo nhóm
+      </Button>
       <AnimatePresence>
-        {dialog === "create" && (
+        {creating && (
           <CreateGroupDialog
-            onClose={() => setDialog(null)}
+            onClose={() => setCreating(false)}
             onCreated={(group) => navigate({ view: "chat", workspaceId: group.id })}
           />
         )}
-        {dialog === "join" && <JoinGroupDialog onClose={() => setDialog(null)} />}
       </AnimatePresence>
     </div>
   );

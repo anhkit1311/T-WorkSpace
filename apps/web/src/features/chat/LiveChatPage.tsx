@@ -36,15 +36,18 @@ import {
   getMessagesApi,
   getWorkspacesApi,
   getWorkspaceMembersApi,
+  rejectMemberApi,
   setChannelPreferenceApi,
   setMessagePreferenceApi,
   uploadAttachmentApi,
 } from "./api";
-import { Avatar, Button, Modal } from "../../shared/ui/Primitives";
+import { Button, ConfirmDialog, Modal } from "../../shared/ui/Primitives";
+import { cn } from "../../shared/lib/utils";
+import { Emoji } from "../../shared/ui/Emoji";
+import { UserAvatar } from "../../shared/ui/kit/user-avatar";
 import { Icon } from "../../shared/ui/Icon";
 import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
-import "./chat.css";
 import { AttachmentView } from "./ChatAttachment";
 import { useUserAvatars } from "./useUserAvatars";
 import { governanceApi } from "../workspaces/api";
@@ -66,9 +69,33 @@ const stickers = [
   { id: "focus", emoji: "💪", label: "Cố lên" },
   { id: "thanks", emoji: "🙏", label: "Cảm ơn" },
   { id: "like", emoji: "👍", label: "Thích" },
+  { id: "adore", emoji: "😍", label: "Mê quá" },
+  { id: "clap", emoji: "👏", label: "Vỗ tay" },
+  { id: "fire", emoji: "🔥", label: "Quá đỉnh" },
+  { id: "heart", emoji: "❤️", label: "Thương" },
+  { id: "think", emoji: "🤔", label: "Suy nghĩ" },
+  { id: "wow", emoji: "😮", label: "Wow" },
+  { id: "sad", emoji: "😢", label: "Buồn" },
+  { id: "sleepy", emoji: "😴", label: "Buồn ngủ" },
+  { id: "done", emoji: "✅", label: "Đã xong" },
 ] as const;
 
 const linkPattern = /https?:\/\/[^\s<>()]+/gi;
+
+/** Glides a chat list to its newest message; a long way (opening a channel) lands at once. */
+function glideToBottom(container: HTMLElement) {
+  const away = container.scrollHeight - container.scrollTop - container.clientHeight;
+  container.scrollTo({ top: container.scrollHeight, behavior: away < 1200 ? "smooth" : "instant" });
+}
+
+/** Scrolls a message into the middle of the list and pulses a ring around it. */
+function glideToMessage(target: HTMLElement) {
+  target.scrollIntoView({ block: "center", behavior: "smooth" });
+  target.animate(
+    [{ boxShadow: "0 0 0 3px rgb(47 107 255 / .45)" }, { boxShadow: "0 0 0 3px transparent" }],
+    { duration: 1600, delay: 250, easing: "ease-out" },
+  );
+}
 
 function firstLink(text: string): URL | null {
   const candidate = text.match(linkPattern)?.[0]?.replace(/[.,!?;:]+$/, "");
@@ -85,8 +112,12 @@ function MessageText({ content }: { content: string }) {
   const sticker = stickers.find((item) => content === `[[sticker:${item.id}]]`);
   if (sticker)
     return (
-      <span className="chat-sticker" role="img" aria-label={`Sticker ${sticker.label}`}>
-        <span>{sticker.emoji}</span>
+      <span
+        className="tw inline-grid justify-items-center gap-0.5 rounded-xl border bg-card px-3 py-1.5 [&>small]:text-[11px] [&>small]:text-muted-foreground"
+        role="img"
+        aria-label={`Sticker ${sticker.label}`}
+      >
+        <Emoji emoji={sticker.emoji} className="size-10" />
         <small>{sticker.label}</small>
       </span>
     );
@@ -130,27 +161,34 @@ function shortTime(iso: string) {
 /** A Messenger-style collapsible group in the details panel. */
 function InfoSection({
   title,
+  count,
   open,
   onToggle,
   children,
 }: {
   title: string;
+  count?: number;
   open: boolean;
   onToggle: () => void;
   children: ReactNode;
 }) {
   return (
-    <section className="chat-info-section">
+    <section className="border-t py-1">
       <button
         type="button"
-        className="chat-info-section__toggle"
+        className="flex w-full cursor-pointer items-center justify-between rounded-md px-1.5 py-2 text-left text-sm font-semibold text-foreground hover:bg-secondary"
         aria-expanded={open}
         onClick={onToggle}
       >
-        <span>{title}</span>
+        <span>
+          {title}
+          {count !== undefined && (
+            <small className="ml-1 font-normal text-muted-foreground">{count}</small>
+          )}
+        </span>
         <Icon name={open ? "chevron-up" : "chevron-down"} size={16} />
       </button>
-      {open && <div className="chat-info-section__body">{children}</div>}
+      {open && <div className="grid gap-px pb-1">{children}</div>}
     </section>
   );
 }
@@ -183,6 +221,28 @@ function continuesRun(previous?: ChatMessageItem, next?: ChatMessageItem) {
   );
 }
 
+const HEADER_ICON =
+  "grid size-8 shrink-0 cursor-pointer place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground";
+const MESSAGE_TOOL =
+  "grid size-7 cursor-pointer place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground";
+const COMPOSER_ICON =
+  "grid size-9 shrink-0 cursor-pointer place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50";
+const COMPOSER_CHIP =
+  "mb-1.5 flex items-center gap-2 rounded-lg bg-secondary px-2.5 py-1.5 text-[13px] text-muted-foreground";
+const CHIP_CLOSE =
+  "grid size-6 shrink-0 cursor-pointer place-items-center rounded-full hover:bg-background hover:text-foreground";
+const INFO_QUICK =
+  "grid w-[66px] cursor-pointer justify-items-center gap-1 rounded-[10px] px-1 py-2 text-xs text-muted-foreground no-underline transition-colors hover:bg-secondary hover:text-foreground";
+const INFO_ITEM =
+  "flex w-full cursor-pointer items-center gap-2.5 rounded-md p-1.5 text-left text-sm text-foreground transition-colors hover:bg-secondary disabled:cursor-default disabled:hover:bg-transparent [&>svg]:shrink-0 [&>svg]:text-muted-foreground";
+// Strips under the header: pinned message, in-chat search, saved views, errors.
+const STRIP =
+  "tw flex shrink-0 items-center gap-2.5 border-b px-4 py-1.5 text-[13px] text-foreground";
+const STRIP_BUTTON =
+  "h-7 shrink-0 cursor-pointer rounded-md border bg-background px-2.5 text-xs font-medium text-foreground hover:bg-secondary";
+const CONVERSATION_ROW =
+  "flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left text-foreground transition-colors";
+
 export function ChatPage() {
   const safe = useMotionSafe();
   const {
@@ -194,6 +254,7 @@ export function ChatPage() {
     openChannel,
     chatNavigation,
     clearChatNavigation,
+    notify,
   } = useApp();
   const {
     socket,
@@ -226,6 +287,7 @@ export function ChatPage() {
   const [editingContent, setEditingContent] = useState("");
   const [attachmentPreview, setAttachmentPreview] = useState("");
   const [members, setMembers] = useState<GroupMemberItem[]>([]);
+  const [removingMember, setRemovingMember] = useState<GroupMemberItem | null>(null);
   const [showStickers, setShowStickers] = useState(false);
   // The details panel opens from the header's info button, so the conversation gets the width.
   const [showInfoPanel, setShowInfoPanel] = useState(false);
@@ -236,12 +298,12 @@ export function ChatPage() {
   const infoPanelRef = usePanelDialog(
     () => setShowInfoPanel(false),
     showInfoPanel && !wideInfoLayout,
-    ".live-chat-info-backdrop",
+    "[data-info-backdrop]",
   );
   const channelsPanelRef = usePanelDialog(
     () => setMobileChannelDrawerOpen(false),
     mobileChannelDrawerOpen,
-    ".live-chat-mobile-backdrop",
+    "[data-list-backdrop]",
   );
   const [deleteTarget, setDeleteTarget] = useState<ChatMessageItem | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -299,6 +361,8 @@ export function ChatPage() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const isPrependingRef = useRef(false);
   const followNewMessagesRef = useRef(true);
+  /** Messages from others that arrived live: they slide in; loaded history does not. */
+  const freshIdsRef = useRef(new Set<string>());
   const pendingScroll = useRef<number | undefined>(undefined);
   const activeChannelRef = useRef(channelId);
   activeChannelRef.current = channelId;
@@ -781,6 +845,7 @@ export function ChatPage() {
           return;
         }
         if (message.authorId !== user?.id) {
+          freshIdsRef.current.add(message.id);
           const container = chatContainerRef.current;
           const inContext = Boolean(routeRef.current.messageId);
           followNewMessagesRef.current =
@@ -964,7 +1029,7 @@ export function ChatPage() {
     const target = Array.from(
       chatContainerRef.current?.querySelectorAll<HTMLElement>("[data-message-id]") ?? [],
     ).find((element) => element.dataset.messageId === searchHighlight.messageId);
-    if (target) target.scrollIntoView({ block: "center" });
+    if (target) glideToMessage(target);
   }, [searchResults, messagesLoading, searchHighlight, channelId, messageSearch]);
 
   useEffect(() => {
@@ -980,7 +1045,7 @@ export function ChatPage() {
       return;
     }
     if (followNewMessagesRef.current && chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      glideToBottom(chatContainerRef.current);
     }
     followNewMessagesRef.current = false;
   }, [messages, messagesLoading, messagesChannelId, channelId]);
@@ -990,7 +1055,7 @@ export function ChatPage() {
     if (!jumpPendingRef.current || searchResults) return;
     jumpPendingRef.current = false;
     const container = chatContainerRef.current;
-    if (container) container.scrollTop = container.scrollHeight;
+    if (container) glideToBottom(container);
   }, [searchResults, messages]);
 
   const trackLatest = () => {
@@ -1015,7 +1080,7 @@ export function ChatPage() {
     const container = chatContainerRef.current;
     // Already on the live list: nothing re-renders, so scroll now. A context window
     // scrolls once the live list replaces it (see the effect above).
-    if (!searchResults && container) container.scrollTop = container.scrollHeight;
+    if (!searchResults && container) glideToBottom(container);
     else jumpPendingRef.current = true;
     if (!accessToken || !channelId) return;
     const target = channelId;
@@ -1095,7 +1160,7 @@ export function ChatPage() {
 
   useEffect(() => {
     const root = chatContainerRef.current;
-    const trigger = root?.querySelector(".chat-load-more-btn");
+    const trigger = root?.querySelector("[data-load-more]");
     if (!root || !trigger || !hasMore || loadingOlder || messagesLoading || searchResults) return;
     const observer = new IntersectionObserver(
       (entries) => {
@@ -1405,7 +1470,7 @@ export function ChatPage() {
         setMobileChannelDrawerOpen(false);
         return;
       }
-      if (!(event.target as Element | null)?.closest(".chat-reaction-picker-anchor"))
+      if (!(event.target as Element | null)?.closest("[data-reaction-anchor]"))
         setReactionPickerId("");
     };
     document.addEventListener("pointerdown", close);
@@ -1422,7 +1487,7 @@ export function ChatPage() {
     const sync = () => {
       setWideInfoLayout(wide.matches);
       if (!wide.matches) setShowInfoPanel(false);
-      if (window.matchMedia("(min-width: 769px)").matches) setMobileChannelDrawerOpen(false);
+      if (window.matchMedia("(min-width: 1024px)").matches) setMobileChannelDrawerOpen(false);
     };
     wide.addEventListener("change", sync);
     window.addEventListener("resize", sync);
@@ -1534,6 +1599,27 @@ export function ChatPage() {
   }
 
   const visibleMessages = searchResults ?? messages;
+  /** "Bạn đã trả lời …" above a reply; the original's author is known only while it is loaded. */
+  const replyLabel = (m: ChatMessageItem, isMine: boolean) => {
+    const original = messages.find((item) => item.id === m.replyToId);
+    const to = !original
+      ? ""
+      : original.authorId === user?.id
+        ? isMine
+          ? " chính mình"
+          : " bạn"
+        : ` ${original.authorName}`;
+    return `${isMine ? "Bạn" : m.authorName} đã trả lời${to}`;
+  };
+  /** Scrolls to a loaded message and flashes it. */
+  const jumpToMessage = (id: string) => {
+    const target = chatContainerRef.current?.querySelector<HTMLElement>(
+      `[data-message-id="${CSS.escape(id)}"]`,
+    );
+    if (!target)
+      return notify("Tin nhắn gốc chưa được tải, hãy cuộn lên để xem.", undefined, "info");
+    glideToMessage(target);
+  };
   const avatarOf = useUserAvatars(
     useMemo(
       () => [
@@ -1553,30 +1639,37 @@ export function ChatPage() {
 
   return (
     <section
-      className={`live-chat is-inbox ${channel && !isDirect ? "is-group" : ""}`}
+      className="relative flex size-full min-h-0 overflow-hidden bg-background text-[13px] text-foreground"
       aria-label="Tin nhắn"
     >
-      {/* 1. Panel: Conversation List matching mockup */}
+      {/* 1. Conversation list (Tailwind). On phones it is a drawer opened from the chat header. */}
       {mobileChannelDrawerOpen && (
         <button
           type="button"
-          className="live-chat-mobile-backdrop"
+          data-list-backdrop
+          className="tw fixed inset-0 z-40 cursor-default bg-black/30 lg:hidden"
           aria-label="Đóng danh sách kênh"
           onClick={() => setMobileChannelDrawerOpen(false)}
         />
       )}
       <aside
-        className={`live-chat-nav ${mobileChannelDrawerOpen ? "is-mobile-open" : ""}`}
+        className={cn(
+          "tw flex min-h-0 w-[280px] shrink-0 flex-col gap-2.5 border-r bg-background px-2.5 pt-3.5 text-foreground",
+          "max-lg:fixed max-lg:top-16 max-lg:bottom-[72px] max-lg:left-3 max-lg:z-[41] max-lg:w-[min(300px,calc(100vw-24px))] max-lg:rounded-xl max-lg:border max-lg:shadow-lg max-lg:transition-transform max-lg:duration-200 motion-reduce:transition-none",
+          !mobileChannelDrawerOpen && "max-lg:invisible max-lg:-translate-x-[calc(100%+24px)]",
+        )}
         ref={channelsPanelRef}
         aria-label="Danh sách hội thoại"
         role={mobileChannelDrawerOpen ? "dialog" : undefined}
         aria-modal={mobileChannelDrawerOpen || undefined}
       >
-        <div className="live-chat-nav__header">
-          <h2 className="live-chat-nav__title">Đoạn chat</h2>
+        <div className="flex items-center justify-between px-1">
+          <h2 className="m-0 text-lg leading-7 font-bold tracking-normal text-foreground">
+            Tin nhắn
+          </h2>
           <button
             type="button"
-            className="chat-nav-compose-btn"
+            className="grid size-8 cursor-pointer place-items-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
             title="Tạo nhóm"
             aria-label="Tạo nhóm"
             onClick={() => setCreatingGroup(true)}
@@ -1585,19 +1678,20 @@ export function ChatPage() {
           </button>
         </div>
 
-        <div className="chat-search-pill-box">
-          <Icon name="search" size={15} />
+        <label className="flex items-center gap-2 rounded-full bg-secondary px-2.5 py-1.5 text-[13.5px] text-muted-foreground focus-within:ring-2 focus-within:ring-ring">
+          <Icon name="search" size={16} />
           <input
             type="search"
-            className="chat-search-pill-input"
+            className="w-full min-w-0 bg-transparent text-foreground !outline-none placeholder:text-muted-foreground"
             aria-label="Tìm cuộc trò chuyện hoặc người để nhắn tin"
-            placeholder="Tìm người (tên, email, MSSV) hoặc đoạn chat…"
+            placeholder="Tìm người hoặc đoạn chat…"
+            title="Tìm theo tên, email, MSSV hoặc tên đoạn chat"
             value={channelSearch}
             onChange={(e) => setChannelSearch(e.target.value)}
           />
-        </div>
+        </label>
 
-        <div className="chat-nav-filter-tabs" role="tablist" aria-label="Lọc hội thoại">
+        <div className="flex gap-1" role="tablist" aria-label="Lọc hội thoại">
           {(
             [
               ["all", "Tất cả"],
@@ -1611,7 +1705,12 @@ export function ChatPage() {
               type="button"
               role="tab"
               aria-selected={filterTab === key}
-              className={`chat-filter-pill ${filterTab === key ? "is-active" : ""}`}
+              className={cn(
+                "cursor-pointer rounded-full border px-[7px] py-[3px] text-xs whitespace-nowrap transition-colors",
+                filterTab === key
+                  ? "border-foreground bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
               onClick={() => setFilterTab(key)}
             >
               {label}
@@ -1619,9 +1718,12 @@ export function ChatPage() {
           ))}
         </div>
 
-        <nav className="chat-channels-scroll" aria-label="Hội thoại">
+        <nav
+          className="-mx-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-1 pb-3"
+          aria-label="Hội thoại"
+        >
           {conversations.length === 0 && newPeople.length === 0 && (
-            <p className="live-chat-nav__empty">
+            <div className="px-2 py-1 text-[12.5px] text-muted-foreground">
               {channelSearch.trim()
                 ? "Không tìm thấy cuộc trò chuyện hoặc người phù hợp"
                 : filterTab === "favorites"
@@ -1631,7 +1733,7 @@ export function ChatPage() {
                     : filterTab === "groups"
                       ? "Bạn chưa ở trong nhóm chat nào"
                       : "Tìm tên, email hoặc MSSV ở ô trên để bắt đầu trò chuyện"}
-            </p>
+            </div>
           )}
           {conversations.map((c) => {
             const latest = channelPreviews[c.id];
@@ -1643,82 +1745,90 @@ export function ChatPage() {
                 : latest && !peer
                   ? `${latest.authorName.trim().split(/\s+/).pop()}: `
                   : "";
+            const unread = Boolean(c.unreadCount);
             return (
-              <div key={c.id} className="chat-conversation-item-wrap">
-                <button
-                  type="button"
-                  className={`chat-conversation-card ${c.id === channelId ? "is-active" : ""} ${c.unreadCount ? "is-unread" : ""}`}
-                  aria-current={c.id === channelId ? "page" : undefined}
-                  onClick={() => {
-                    openConversation(c.id);
-                    setMobileChannelDrawerOpen(false);
-                  }}
-                >
-                  <Avatar
-                    name={title}
-                    size="lg"
-                    image={peer ? avatarOf(peer.userId) : undefined}
-                    status={peer && onlineUserIds.includes(peer.userId) ? "online" : undefined}
-                  />
-                  <div className="chat-convo-info">
-                    <strong className="chat-convo-name">{title}</strong>
-                    <div className="chat-convo-bottom">
-                      <span className="chat-convo-preview">
-                        {latest
-                          ? `${author}${latest.content || (latest.attachment ? "Đã gửi tệp đính kèm" : "")}`
-                          : "Chưa có tin nhắn"}
+              <button
+                key={c.id}
+                type="button"
+                className={cn(
+                  CONVERSATION_ROW,
+                  c.id === channelId ? "bg-secondary" : "hover:bg-secondary",
+                )}
+                aria-current={c.id === channelId ? "page" : undefined}
+                onClick={() => {
+                  openConversation(c.id);
+                  setMobileChannelDrawerOpen(false);
+                }}
+              >
+                <UserAvatar
+                  name={title}
+                  group={!peer}
+                  image={peer ? avatarOf(peer.userId) : undefined}
+                  online={Boolean(peer && onlineUserIds.includes(peer.userId))}
+                />
+                <span className="grid min-w-0 flex-1">
+                  <strong
+                    className={cn("truncate text-[13.5px]", unread ? "font-bold" : "font-semibold")}
+                  >
+                    {title}
+                  </strong>
+                  <span
+                    className={cn(
+                      "truncate text-xs",
+                      unread ? "text-foreground" : "text-muted-foreground",
+                    )}
+                  >
+                    {latest
+                      ? `${author}${latest.content || (latest.attachment ? "Đã gửi tệp đính kèm" : "")}`
+                      : "Chưa có tin nhắn"}
+                  </span>
+                </span>
+                <span className="grid shrink-0 justify-items-end gap-0.5 text-muted-foreground">
+                  {latest && (
+                    <time className="text-[11.5px]" dateTime={latest.createdAt}>
+                      {shortTime(latest.createdAt)}
+                    </time>
+                  )}
+                  <span className="flex items-center gap-1">
+                    {c.muted && <Icon name="bell-off" size={14} aria-label="Đã tắt thông báo" />}
+                    {unread ? (
+                      <span
+                        className="rounded-full bg-brand px-1.5 text-[11.5px] leading-[18px] font-semibold text-white"
+                        aria-label={`${c.unreadCount} tin chưa đọc`}
+                      >
+                        {c.unreadCount}
                       </span>
-                      {latest && (
-                        <time dateTime={latest.createdAt}>· {shortTime(latest.createdAt)}</time>
-                      )}
-                      <span className="chat-convo-indicators">
-                        {c.muted && (
-                          <Icon
-                            name="bell-off"
-                            size={12}
-                            className="chat-muted-icon"
-                            aria-label="Đã tắt thông báo"
-                          />
-                        )}
-                        {c.unreadCount ? (
-                          <span
-                            className="chat-unread-badge-circle"
-                            aria-label={`${c.unreadCount} tin chưa đọc`}
-                          >
-                            {c.unreadCount}
-                          </span>
-                        ) : c.pinned ? (
-                          <Icon name="star" size={13} className="chat-pinned-star-icon" />
-                        ) : null}
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              </div>
+                    ) : c.pinned ? (
+                      <Icon name="star" size={13} />
+                    ) : null}
+                  </span>
+                </span>
+              </button>
             );
           })}
           {newPeople.length > 0 && (
             <>
-              <h3 className="chat-nav-section">Bắt đầu trò chuyện mới</h3>
+              <h3 className="m-0 px-2 pt-3 pb-1 text-[11.5px] leading-[1.5] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+                Bắt đầu trò chuyện mới
+              </h3>
               {newPeople.map((person) => (
-                <div key={person.userId} className="chat-conversation-item-wrap">
-                  <button
-                    type="button"
-                    className="chat-conversation-card"
-                    disabled={busy}
-                    onClick={() => void startDirect(person)}
-                  >
-                    <Avatar name={person.displayName} size="sm" />
-                    <div className="chat-convo-info">
-                      <strong className="chat-convo-name">{person.displayName}</strong>
-                      <div className="chat-convo-bottom">
-                        <span className="chat-convo-preview">
-                          {person.userCode ? `${person.userCode} · ${person.email}` : person.email}
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-                </div>
+                <button
+                  key={person.userId}
+                  type="button"
+                  className={cn(CONVERSATION_ROW, "hover:bg-secondary disabled:cursor-progress")}
+                  disabled={busy}
+                  onClick={() => void startDirect(person)}
+                >
+                  <UserAvatar name={person.displayName} />
+                  <span className="grid min-w-0 flex-1">
+                    <strong className="truncate text-[13.5px] font-semibold">
+                      {person.displayName}
+                    </strong>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {person.userCode ? `${person.userCode} · ${person.email}` : person.email}
+                    </span>
+                  </span>
+                </button>
               ))}
             </>
           )}
@@ -1726,101 +1836,121 @@ export function ChatPage() {
       </aside>
 
       {/* 2. Main Chat Area */}
-      <div className="live-chat-main">
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         {readOnly && (
-          <p role="status" className="chat-compose-preview">
+          <p
+            role="status"
+            className="tw border-b bg-secondary px-4 py-2 text-[13px] text-muted-foreground"
+          >
             Nhóm hoặc kênh đã lưu trữ: chỉ xem lịch sử, không thể gửi hay sửa tin nhắn.
           </p>
         )}
         {navigationError && (
-          <div className="live-chat-error" role="alert">
+          <div
+            className={cn(
+              STRIP,
+              "flex-wrap bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300",
+            )}
+            role="alert"
+          >
             <strong>Không thể mở liên kết</strong>
-            <p>{navigationError}</p>
-            <Button size="sm" variant="secondary" onClick={() => setActiveView("overview")}>
+            <span className="flex-1">{navigationError}</span>
+            <button
+              type="button"
+              className={STRIP_BUTTON}
+              onClick={() => setActiveView("overview")}
+            >
               Về trang chủ
-            </Button>
+            </button>
           </div>
         )}
 
-        {/* Active Channel Sub-Header */}
-        <header className="chat-main-header">
+        {/* Active conversation header (Tailwind) */}
+        <header className="tw flex shrink-0 items-center gap-2.5 border-b px-4 py-2 text-foreground max-lg:pl-1.5">
           <button
             type="button"
-            className="chat-icon-btn chat-mobile-list-btn"
+            className={cn(HEADER_ICON, "lg:hidden")}
             aria-label="Mở danh sách hội thoại"
             onClick={() => setMobileChannelDrawerOpen(true)}
           >
             <Icon name="chevron-left" size={18} />
           </button>
-          <div className="chat-header-identity">
-            {channel && (
-              <Avatar
-                name={titleOf(channel)}
-                size="md"
-                image={directPeer ? avatarOf(directPeer.userId) : undefined}
-                status={
-                  directPeer && onlineUserIds.includes(directPeer.userId) ? "online" : undefined
-                }
-              />
-            )}
-            <div className="chat-header-title-box">
-              <h2 className="chat-header-room-name">
-                {channel ? titleOf(channel) : "Chọn cuộc trò chuyện"}
-              </h2>
-              <span className="chat-header-room-subtitle">
-                {directPeer ? (
-                  onlineUserIds.includes(directPeer.userId) ? (
-                    "Đang hoạt động"
-                  ) : (
-                    "Không hoạt động"
-                  )
-                ) : channel ? (
-                  <>
-                    {mentionMembers.length || members.length} thành viên •{" "}
-                    {isConnected
-                      ? `${members.filter((m) => onlineUserIds.includes(m.userId)).length} đang hoạt động`
-                      : connectionStatus === "disconnected"
-                        ? "Mất kết nối"
-                        : "Đang kết nối lại…"}
-                  </>
-                ) : null}
-              </span>
-            </div>
+          {channel && (
+            <UserAvatar
+              name={titleOf(channel)}
+              group={!directPeer}
+              image={directPeer ? avatarOf(directPeer.userId) : undefined}
+              online={Boolean(directPeer && onlineUserIds.includes(directPeer.userId))}
+            />
+          )}
+          <div className="grid min-w-0 flex-1">
+            <h2 className="m-0 truncate text-[15px] leading-5 font-semibold tracking-normal text-foreground">
+              {channel ? titleOf(channel) : "Chọn cuộc trò chuyện"}
+            </h2>
+            <span className="truncate text-[12.5px] leading-[1.4] text-muted-foreground">
+              {directPeer ? (
+                onlineUserIds.includes(directPeer.userId) ? (
+                  "Đang hoạt động"
+                ) : (
+                  "Không hoạt động"
+                )
+              ) : channel ? (
+                <>
+                  {mentionMembers.length || members.length} thành viên ·{" "}
+                  {isConnected
+                    ? `${members.filter((m) => onlineUserIds.includes(m.userId)).length} đang hoạt động`
+                    : connectionStatus === "disconnected"
+                      ? "Mất kết nối"
+                      : "Đang kết nối lại…"}
+                </>
+              ) : null}
+            </span>
           </div>
 
           {channel && (
-            <div className="chat-header-action-group">
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                className={cn(HEADER_ICON, showInChannelSearch && "bg-secondary text-foreground")}
+                title="Tìm trong cuộc trò chuyện"
+                aria-label="Tìm trong cuộc trò chuyện"
+                aria-expanded={showInChannelSearch}
+                onClick={() => setShowInChannelSearch(!showInChannelSearch)}
+              >
+                <Icon name="search" size={18} />
+              </button>
               {peerExtension && (
                 <button
                   type="button"
-                  className="chat-icon-btn"
+                  className={HEADER_ICON}
                   title={`Gọi máy lẻ ${peerExtension}`}
                   aria-label={`Gọi máy lẻ ${peerExtension}`}
                   onClick={() => navigate({ view: "call-center", query: peerExtension })}
                 >
-                  <Icon name="phone" size={19} />
+                  <Icon name="phone" size={18} />
                 </button>
               )}
               {workspace && !isDirect && !readOnly && (
                 <button
                   type="button"
-                  className="chat-icon-btn"
+                  className="flex h-8 cursor-pointer items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-semibold whitespace-nowrap text-primary-foreground hover:bg-primary/90"
                   title={`Họp ngay trong phòng của ${workspace.name}`}
                   aria-label="Họp ngay"
                   onClick={openMeetingRoom}
                 >
-                  <Icon name="video" size={20} />
+                  <Icon name="video" size={16} />
+                  <span className="max-sm:hidden">Họp ngay</span>
                 </button>
               )}
               <button
                 type="button"
-                className={`chat-icon-btn ${showInfoPanel ? "is-active" : ""}`}
+                className={cn(HEADER_ICON, showInfoPanel && "bg-secondary text-foreground")}
                 title="Thông tin về đoạn chat"
                 aria-label="Thông tin về đoạn chat"
                 aria-expanded={showInfoPanel}
                 onClick={() => setShowInfoPanel(!showInfoPanel)}
               >
-                <Icon name="info" size={19} />
+                <Icon name="info" size={18} />
               </button>
             </div>
           )}
@@ -1829,39 +1959,39 @@ export function ChatPage() {
         {pinnedMessage && (
           <button
             type="button"
-            className="chat-pinned-banner"
+            className={cn(
+              STRIP,
+              "w-full cursor-pointer bg-secondary text-left hover:bg-brand-soft",
+            )}
             onClick={() => {
               setMessageSearch("");
               setSavedMode(null);
               navigate({ ...route, messageId: pinnedMessage.id });
             }}
           >
-            <div className="chat-pinned-banner-left">
-              <div className="chat-pinned-pin-icon-circle">
-                <Icon name="pin" size={15} />
-              </div>
-              <div className="chat-pinned-text">
-                <strong>Tin nhắn ghim</strong>
-                <span>{pinnedMessage.content || "Tệp đính kèm"}</span>
-              </div>
-            </div>
+            <Icon name="pin" size={15} className="shrink-0 text-brand" />
+            <strong className="shrink-0">Tin nhắn ghim</strong>
+            <span className="min-w-0 flex-1 truncate text-muted-foreground">
+              {pinnedMessage.content || "Tệp đính kèm"}
+            </span>
             <Icon name="chevron-right" size={16} />
           </button>
         )}
 
         {channel && (showInChannelSearch || messageSearch) && (
-          <div className="chat-message-search">
+          <div className={cn(STRIP, "text-muted-foreground")}>
             <Icon name="search" size={14} />
             <input
               id="message-search"
               type="search"
+              className="h-8 min-w-0 flex-1 rounded-md border bg-background px-2.5 text-[13px] text-foreground placeholder:text-muted-foreground"
               value={messageSearch}
               onChange={(event) => setMessageSearch(event.target.value)}
               placeholder="Tìm trong cuộc trò chuyện…"
               aria-label="Tìm tin nhắn trong cuộc trò chuyện"
             />
             {searchResults && (
-              <span>
+              <span className="shrink-0 text-xs">
                 {route.messageId
                   ? "Ngữ cảnh tin nhắn"
                   : savedMode === "pins"
@@ -1875,42 +2005,50 @@ export function ChatPage() {
         )}
 
         {error && (
-          <div className="inline-alert inline-alert--flush" role="alert">
-            <span>{error}</span>
-            <Button size="sm" variant="ghost" onClick={() => setRevision((n) => n + 1)}>
+          <div
+            className={cn(STRIP, "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300")}
+            role="alert"
+          >
+            <span className="flex-1">{error}</span>
+            <button
+              type="button"
+              className={STRIP_BUTTON}
+              onClick={() => setRevision((n) => n + 1)}
+            >
               Tải lại
-            </Button>
+            </button>
           </div>
         )}
 
         {savedMode && (
-          <div className="chat-saved-mode-banner" role="status">
+          <div className={cn(STRIP, "bg-brand-soft")} role="status">
             <Icon name={savedMode === "pins" ? "pin" : "bookmark"} size={15} />
-            <span>
+            <span className="flex-1">
               Đang xem{" "}
               <strong>{savedMode === "pins" ? "Tin nhắn đã ghim" : "Tin nhắn đã đánh dấu"}</strong>
               {searchResults ? ` · ${searchResults.length} tin` : ""}
             </span>
-            <Button size="sm" variant="secondary" icon="chevron-left" onClick={exitSavedMode}>
+            <button type="button" className={STRIP_BUTTON} onClick={exitSavedMode}>
               Quay lại tất cả tin nhắn
-            </Button>
+            </button>
           </div>
         )}
 
-        {/* Messages List */}
+        {/* Messages list (Tailwind): bubbles, mine on the right */}
         <div
           ref={chatContainerRef}
-          className="chat-messages"
+          className="tw flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-5 py-3 text-foreground max-md:px-3"
           role="log"
           aria-label="Lịch sử tin nhắn"
           aria-live="polite"
           onScroll={trackLatest}
         >
           {!searchResults && messagesChannelId === channelId && hasMore && messages.length > 0 && (
-            <div className="chat-load-more-wrap">
+            <div className="flex justify-center pb-2">
               <button
                 type="button"
-                className="chat-load-more-btn"
+                data-load-more
+                className="h-7 cursor-pointer rounded-full border bg-card px-3 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
                 onClick={() => void loadOlderMessages()}
                 disabled={loadingOlder}
               >
@@ -1919,36 +2057,32 @@ export function ChatPage() {
             </div>
           )}
           {loading || messagesLoading || (channelId && messagesChannelId !== channelId) ? (
-            <p role="status" className="loading-note">
+            <div role="status" className="m-auto text-sm text-muted-foreground">
               Đang tải cuộc trò chuyện…
-            </p>
+            </div>
           ) : !workspaces.length && !channels.length ? (
             <NoGroups text="Nhóm chat của bạn sẽ hiện ở đây. Bạn cũng có thể tìm tên hoặc email ở ô bên trái để nhắn riêng." />
-          ) : !channel ? (
-            <div className="chat-empty-state">
-              <div className="chat-empty-icon">
+          ) : !channel || !visibleMessages.length ? (
+            <div className="m-auto grid max-w-[360px] justify-items-center gap-1 p-6 text-center">
+              <span className="mb-2 grid size-12 place-items-center rounded-xl bg-secondary text-foreground">
                 <Icon name="message" size={24} />
-              </div>
-              <h3>Chưa chọn cuộc trò chuyện</h3>
-              <p>Chọn một đoạn chat ở bên trái, hoặc tìm tên/email để bắt đầu trò chuyện.</p>
-            </div>
-          ) : !visibleMessages.length ? (
-            <div className="chat-empty-state">
-              <div className="chat-empty-icon">
-                <Icon name="message" size={24} />
-              </div>
-              <h3>
-                {messageSearch
-                  ? "Không tìm thấy tin nhắn"
-                  : isDirect
-                    ? `Bắt đầu trò chuyện với ${channel.name}`
-                    : `Chào mừng đến với ${titleOf(channel)}`}
+              </span>
+              <h3 className="m-0 text-[15px] leading-snug font-semibold tracking-normal text-foreground">
+                {!channel
+                  ? "Chưa chọn cuộc trò chuyện"
+                  : messageSearch
+                    ? "Không tìm thấy tin nhắn"
+                    : isDirect
+                      ? `Bắt đầu trò chuyện với ${channel.name}`
+                      : `Chào mừng đến với ${titleOf(channel)}`}
               </h3>
-              <p>
-                {messageSearch
-                  ? "Thử một từ khóa khác."
-                  : "Gửi tin nhắn đầu tiên để bắt đầu cuộc trò chuyện với mọi người trong nhóm."}
-              </p>
+              <div className="text-sm leading-normal text-muted-foreground">
+                {!channel
+                  ? "Chọn một đoạn chat ở bên trái, hoặc tìm tên/email để bắt đầu trò chuyện."
+                  : messageSearch
+                    ? "Thử một từ khóa khác."
+                    : "Gửi tin nhắn đầu tiên để bắt đầu cuộc trò chuyện với mọi người trong nhóm."}
+              </div>
             </div>
           ) : (
             visibleMessages.map((m, index) => {
@@ -1963,62 +2097,87 @@ export function ChatPage() {
               // Consecutive messages share one name/avatar; the receipt sits on the last one.
               const grouped = continuesRun(previous, m);
               const endsRun = !continuesRun(m, visibleMessages[index + 1]);
+              const seen = (m.seenCount ?? 0) > 0;
 
               return (
                 <Fragment key={m.id}>
                   {showDate && (
-                    <div className="chat-date-separator">
-                      <span>
-                        {new Date(m.createdAt).toDateString() === new Date().toDateString()
-                          ? "Hôm nay"
-                          : new Date(m.createdAt).toLocaleDateString("vi-VN", {
-                              day: "numeric",
-                              month: "long",
-                              year: "numeric",
-                            })}
-                      </span>
+                    <div className="mt-3 mb-1 text-center text-xs text-muted-foreground">
+                      {new Date(m.createdAt).toDateString() === new Date().toDateString()
+                        ? "Hôm nay"
+                        : new Date(m.createdAt).toLocaleDateString("vi-VN", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          })}
                     </div>
                   )}
                   <article
                     data-message-id={m.id}
-                    className={`message-row ${isMine ? "is-mine" : ""} ${grouped ? "is-grouped" : ""} ${searchHighlight?.messageId === m.id ? "is-search-target" : ""}`}
+                    className={cn(
+                      "group/msg flex items-end gap-2 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      grouped ? "mt-0.5" : "mt-2",
+                      isMine && "flex-row-reverse",
+                      freshIdsRef.current.has(m.id) && "msg-in",
+                      searchHighlight?.messageId === m.id && "bg-amber-50 dark:bg-amber-950/40",
+                    )}
                     tabIndex={0}
                   >
-                    <div className="message-row__gutter">
-                      {!isMine && endsRun && (
-                        <Avatar name={m.authorName} image={avatarOf(m.authorId)} size="sm" />
+                    {!isMine && (
+                      <div className="w-6 shrink-0">
+                        {endsRun && (
+                          <UserAvatar
+                            name={m.authorName}
+                            image={avatarOf(m.authorId)}
+                            className="size-6 text-[10px]"
+                          />
+                        )}
+                      </div>
+                    )}
+                    <div
+                      className={cn(
+                        "flex max-w-[72%] min-w-0 flex-col gap-0.5 max-md:max-w-[85%]",
+                        isMine ? "items-end" : "items-start",
                       )}
-                    </div>
-                    <div className="message-row__main">
-                      {!grouped && (
-                        <div className="message-row__head">
-                          <strong>{m.authorName}</strong>
+                    >
+                      {!grouped && !isMine && !isDirect && (
+                        <span className="pl-1 text-[11.5px] text-muted-foreground">
+                          {m.authorName} ·{" "}
                           <time
                             dateTime={m.createdAt}
                             title={new Date(m.createdAt).toLocaleString("vi-VN")}
                           >
                             {formattedTime}
                           </time>
-                        </div>
+                        </span>
                       )}
                       {m.replyToId && (
-                        <div className="message-row__quote">
-                          <Icon name="arrow-right" size={12} />
-                          <span>
+                        <>
+                          <span className="flex items-center gap-1 px-1.5 pt-1 text-[11.5px] text-muted-foreground">
+                            <Icon name="reply" size={12} />
+                            {replyLabel(m, isMine)}
+                          </span>
+                          <button
+                            type="button"
+                            className="-mb-2.5 max-w-full cursor-pointer rounded-2xl whitespace-pre-line [overflow-wrap:anywhere] bg-secondary/70 px-3 pt-1.5 pb-3.5 text-left text-[13px] text-muted-foreground hover:bg-secondary"
+                            title="Xem tin nhắn gốc"
+                            onClick={() => jumpToMessage(m.replyToId!)}
+                          >
                             {m.replyToContent === ""
                               ? "Tệp đính kèm"
                               : (m.replyToContent ?? "Tin nhắn đã xóa")}
-                          </span>
-                        </div>
+                          </button>
+                        </>
                       )}
                       {editingId === m.id ? (
-                        <div className="chat-edit-box">
+                        <div className="flex w-[min(100%,76ch)] min-w-[240px] flex-col gap-1.5">
                           <textarea
+                            className="min-h-[60px] w-full resize-y rounded-md border border-primary bg-card px-2.5 py-2 text-sm leading-normal text-foreground"
                             value={editingContent}
                             maxLength={4000}
                             onChange={(event) => setEditingContent(event.target.value)}
                           />
-                          <div className="chat-edit-box__actions">
+                          <div className="flex justify-end gap-1.5">
                             <Button size="sm" variant="ghost" onClick={() => setEditingId("")}>
                               Hủy
                             </Button>
@@ -2037,11 +2196,19 @@ export function ChatPage() {
                         <>
                           {m.content && (
                             <div
-                              className="message-row__text"
+                              data-message-text
+                              className={cn(
+                                "w-fit max-w-full rounded-2xl px-[11px] py-1.5 text-[13.5px] leading-[1.4] [overflow-wrap:anywhere] whitespace-pre-wrap [&_a]:underline [&_a]:underline-offset-2",
+                                isMine
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-secondary text-foreground [&_a]:text-brand",
+                              )}
                               title={`${m.authorName} · ${new Date(m.createdAt).toLocaleString("vi-VN")}`}
                             >
                               <MessageText content={m.content.trim()} />
-                              {m.editedAt && <span className="message-row__edited"> (đã sửa)</span>}
+                              {m.editedAt && (
+                                <span className="text-[11.5px] opacity-70"> (đã sửa)</span>
+                              )}
                             </div>
                           )}
                           {m.attachment && accessToken && (
@@ -2051,14 +2218,14 @@ export function ChatPage() {
                       )}
 
                       {(m.pinned || m.bookmarked) && (
-                        <div className="message-row__flags">
+                        <div className="flex gap-2 text-[11px] text-amber-600">
                           {m.pinned && (
-                            <span>
+                            <span className="flex items-center gap-1">
                               <Icon name="pin" size={11} /> Đã ghim
                             </span>
                           )}
                           {m.bookmarked && (
-                            <span>
+                            <span className="flex items-center gap-1">
                               <Icon name="bookmark" size={11} /> Đã đánh dấu
                             </span>
                           )}
@@ -2066,12 +2233,17 @@ export function ChatPage() {
                       )}
 
                       {m.reactions && m.reactions.length > 0 && (
-                        <div className="message-reactions">
+                        <div className="flex flex-wrap gap-1">
                           {m.reactions.map((reaction) => (
                             <button
                               type="button"
                               key={reaction.emoji}
-                              className={`message-reaction ${reaction.reacted ? "is-active" : ""}`}
+                              className={cn(
+                                "flex h-[22px] cursor-pointer items-center gap-1 rounded-full border px-[7px] text-xs",
+                                reaction.reacted
+                                  ? "border-brand bg-brand-soft text-brand"
+                                  : "bg-card text-muted-foreground hover:border-foreground",
+                              )}
                               aria-label={`${reaction.emoji} ${reaction.count} cảm xúc`}
                               onClick={() =>
                                 void messageAction("react_message", {
@@ -2080,34 +2252,43 @@ export function ChatPage() {
                                 }).catch(fail)
                               }
                             >
-                              <span>{reaction.emoji}</span> <ReactionCount value={reaction.count} />
+                              <Emoji emoji={reaction.emoji} className="size-3.5" />{" "}
+                              <ReactionCount value={reaction.count} />
                             </button>
                           ))}
                         </div>
                       )}
+
+                      {isMine && endsRun && (
+                        <span
+                          className={cn(
+                            "text-[11.5px]",
+                            seen ? "text-foreground" : "text-muted-foreground",
+                          )}
+                          title={seen ? `${m.seenCount} người đã xem` : "Đã gửi, chưa ai xem"}
+                        >
+                          {seen ? "✓✓ Đã xem" : "✓ Đã gửi"}
+                        </span>
+                      )}
                     </div>
 
-                    {isMine && endsRun && (
-                      <span
-                        className={`message-row__receipt ${(m.seenCount ?? 0) > 0 ? "is-seen" : ""}`}
-                        title={
-                          (m.seenCount ?? 0) > 0
-                            ? `${m.seenCount} người đã xem`
-                            : "Đã gửi, chưa ai xem"
-                        }
-                      >
-                        {(m.seenCount ?? 0) > 0 ? "✓✓ Đã xem" : "✓ Đã gửi"}
-                      </span>
-                    )}
-
+                    {/* Tools beside the bubble: shown on hover or focus, always on touch screens. */}
                     {!readOnly && (
                       <div
-                        className={`message-actions ${reactionPickerId === m.id ? "is-open" : ""}`}
+                        className={cn(
+                          "flex shrink-0 items-center gap-px self-center rounded-full border bg-card p-0.5 shadow-md transition-opacity",
+                          reactionPickerId === m.id
+                            ? "visible opacity-100"
+                            : "invisible opacity-0 group-focus-within/msg:visible group-focus-within/msg:opacity-100 group-hover/msg:visible group-hover/msg:opacity-100 [@media(hover:none)]:visible [@media(hover:none)]:opacity-100",
+                        )}
                       >
-                        <div className="chat-reaction-picker-anchor">
+                        <div className="relative" data-reaction-anchor>
                           <button
                             type="button"
-                            className={reactionPickerId === m.id ? "is-active" : ""}
+                            className={cn(
+                              MESSAGE_TOOL,
+                              reactionPickerId === m.id && "bg-secondary text-foreground",
+                            )}
                             title="Thả cảm xúc"
                             aria-label="Chọn biểu cảm"
                             aria-expanded={reactionPickerId === m.id}
@@ -2115,12 +2296,15 @@ export function ChatPage() {
                               setReactionPickerId((current) => (current === m.id ? "" : m.id))
                             }
                           >
-                            <Icon name="smile" size={14} />
+                            <Icon name="smile" size={15} />
                           </button>
                           <AnimatePresence>
                             {reactionPickerId === m.id && (
                               <motion.div
-                                className="chat-reaction-picker"
+                                className={cn(
+                                  "absolute bottom-[calc(100%+6px)] z-[6] grid grid-cols-[repeat(8,30px)] gap-0.5 rounded-xl border bg-card p-1 shadow-lg",
+                                  isMine ? "right-0" : "left-0",
+                                )}
                                 initial={safe.reduced ? false : { opacity: 0, scale: 0.95, y: 4 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0 }}
@@ -2128,7 +2312,7 @@ export function ChatPage() {
                                   duration: safe.duration(DURATION.micro),
                                   ease: EASE.out,
                                 }}
-                                style={{ transformOrigin: "bottom left" }}
+                                style={{ transformOrigin: isMine ? "bottom right" : "bottom left" }}
                                 role="group"
                                 aria-label="Chọn biểu cảm"
                               >
@@ -2141,6 +2325,7 @@ export function ChatPage() {
                                       delay: safe.duration(idx * 0.02),
                                     }}
                                     type="button"
+                                    className="grid size-[30px] cursor-pointer place-items-center rounded-md text-[17px] hover:bg-secondary"
                                     key={emoji}
                                     aria-label={`Thả cảm xúc ${emoji}`}
                                     onClick={() => {
@@ -2151,7 +2336,7 @@ export function ChatPage() {
                                       }).catch(fail);
                                     }}
                                   >
-                                    {emoji}
+                                    <Emoji emoji={emoji} className="size-5" />
                                   </motion.button>
                                 ))}
                               </motion.div>
@@ -2160,6 +2345,7 @@ export function ChatPage() {
                         </div>
                         <button
                           type="button"
+                          className={MESSAGE_TOOL}
                           title="Trả lời"
                           aria-label="Trả lời tin nhắn"
                           onClick={() => {
@@ -2167,31 +2353,35 @@ export function ChatPage() {
                             composerRef.current?.focus();
                           }}
                         >
-                          <Icon name="arrow-right" size={14} />
+                          <Icon name="reply" size={15} />
                         </button>
                         <button
                           type="button"
-                          className={m.pinned ? "is-active" : ""}
+                          className={cn(MESSAGE_TOOL, m.pinned && "bg-secondary text-foreground")}
                           title={m.pinned ? "Bỏ ghim" : "Ghim tin nhắn"}
                           aria-label={m.pinned ? "Bỏ ghim" : "Ghim tin nhắn"}
                           aria-pressed={Boolean(m.pinned)}
                           onClick={() => void toggleMessageFlag(m, "pinned")}
                         >
-                          <Icon name="pin" size={14} />
+                          <Icon name="pin" size={15} />
                         </button>
                         <button
                           type="button"
-                          className={m.bookmarked ? "is-active" : ""}
+                          className={cn(
+                            MESSAGE_TOOL,
+                            m.bookmarked && "bg-secondary text-foreground",
+                          )}
                           title={m.bookmarked ? "Bỏ đánh dấu" : "Đánh dấu tin nhắn"}
                           aria-label={m.bookmarked ? "Bỏ đánh dấu" : "Đánh dấu tin nhắn"}
                           aria-pressed={Boolean(m.bookmarked)}
                           onClick={() => void toggleMessageFlag(m, "bookmarked")}
                         >
-                          <Icon name="bookmark" size={14} />
+                          <Icon name="bookmark" size={15} />
                         </button>
                         {isMine && m.content && m.kind !== "meeting_summary" && (
                           <button
                             type="button"
+                            className={MESSAGE_TOOL}
                             title="Sửa tin nhắn"
                             aria-label="Sửa tin nhắn"
                             onClick={() => {
@@ -2199,18 +2389,18 @@ export function ChatPage() {
                               setEditingContent(m.content);
                             }}
                           >
-                            <Icon name="edit" size={14} />
+                            <Icon name="edit" size={15} />
                           </button>
                         )}
                         {isMine && (
                           <button
                             type="button"
-                            className="is-danger"
+                            className={cn(MESSAGE_TOOL, "hover:bg-red-50 hover:text-red-600")}
                             title="Thu hồi tin nhắn"
                             aria-label="Thu hồi tin nhắn"
                             onClick={() => setDeleteTarget(m)}
                           >
-                            <Icon name="trash" size={14} />
+                            <Icon name="trash" size={15} />
                           </button>
                         )}
                       </div>
@@ -2224,14 +2414,11 @@ export function ChatPage() {
         </div>
 
         {/* Zero-height anchor: the jump button floats over the bottom of the list. */}
-        <div className="chat-jump-latest-anchor">
+        <div className="tw relative h-0">
           {showJumpToLatest && (
-            <Button
+            <button
               type="button"
-              size="sm"
-              variant="secondary"
-              icon="chevron-down"
-              className="chat-jump-latest"
+              className="absolute bottom-2.5 left-1/2 z-[4] flex h-8 -translate-x-1/2 cursor-pointer items-center gap-1.5 rounded-full border bg-card px-3 text-[13px] font-medium whitespace-nowrap text-foreground shadow-md hover:bg-secondary"
               aria-label={jumpToLatestLabel(newWhileAway)}
               onClick={() => {
                 jumpToLatest();
@@ -2239,18 +2426,22 @@ export function ChatPage() {
                 composerRef.current?.focus({ preventScroll: true });
               }}
             >
+              <Icon name="chevron-down" size={15} />
               Xuống tin mới nhất
               {newWhileAway > 0 && (
-                <span className="chat-jump-latest__count" aria-hidden="true">
+                <span
+                  className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-primary px-1 text-[11px] text-primary-foreground"
+                  aria-hidden="true"
+                >
                   {newWhileAway > 99 ? "99+" : newWhileAway}
                 </span>
               )}
-            </Button>
+            </button>
           )}
         </div>
 
         {/* Typing indicator */}
-        <div className="live-chat-typing" role="status">
+        <div className="tw min-h-5 shrink-0 px-5 text-xs text-muted-foreground" role="status">
           {typingUsers.some((t) => t.channelId === channelId && t.userId !== user?.id) && (
             <span>
               {typingUsers
@@ -2262,30 +2453,44 @@ export function ChatPage() {
           )}
         </div>
 
-        {/* Floating Bottom Compose Dock matching mockup */}
+        {/* Composer (Tailwind): pending chips above, then tools, the message box and send */}
         <fieldset
-          className="live-chat-compose-container"
+          className="tw min-w-0 shrink-0 border-t px-3.5 py-2 text-foreground max-md:px-2"
           disabled={readOnly}
-          style={{ border: 0, minWidth: 0, margin: 0 }}
         >
           {replyTo && (
-            <div className="chat-compose-preview">
-              <span>
-                Đang trả lời <strong>{replyTo.authorName}</strong>: {replyTo.content}
+            <div className={cn(COMPOSER_CHIP, "border-l-[3px] border-brand")}>
+              <span className="grid min-w-0 flex-1">
+                <b className="text-xs font-semibold text-brand">
+                  Đang trả lời {replyTo.authorId === user?.id ? "chính mình" : replyTo.authorName}
+                </b>
+                <span className="truncate">{replyTo.content || "Tệp đính kèm"}</span>
               </span>
-              <button type="button" aria-label="Bỏ trả lời" onClick={() => setReplyTo(null)}>
+              <button
+                type="button"
+                className={CHIP_CLOSE}
+                aria-label="Bỏ trả lời"
+                onClick={() => setReplyTo(null)}
+              >
                 <Icon name="x" size={14} />
               </button>
             </div>
           )}
           {attachmentFile && (
-            <div className="chat-compose-preview">
-              {attachmentPreview && <img src={attachmentPreview} alt="Xem trước ảnh sẽ gửi" />}
-              <span>
+            <div className={COMPOSER_CHIP}>
+              {attachmentPreview && (
+                <img
+                  src={attachmentPreview}
+                  alt="Xem trước ảnh sẽ gửi"
+                  className="size-10 rounded-md object-cover"
+                />
+              )}
+              <span className="min-w-0 flex-1 truncate">
                 {attachmentFile.name} · {formatFileSize(attachmentFile.size)}
               </span>
               <button
                 type="button"
+                className={CHIP_CLOSE}
                 aria-label="Bỏ tệp đính kèm"
                 onClick={() => setAttachmentFile(null)}
               >
@@ -2294,19 +2499,29 @@ export function ChatPage() {
             </div>
           )}
           {recording && (
-            <div className="chat-recording-banner" role="status">
-              <span className="chat-recording-dot" />
-              Đang ghi âm · tự dừng sau 2 phút
-              <button type="button" onClick={() => stopRecording(true)}>
+            <div
+              className={cn(
+                COMPOSER_CHIP,
+                "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300",
+              )}
+              role="status"
+            >
+              <span className="size-2 rounded-full bg-red-500 motion-safe:animate-pulse" />
+              <span className="flex-1">Đang ghi âm · tự dừng sau 2 phút</span>
+              <button
+                type="button"
+                className="cursor-pointer font-semibold underline"
+                onClick={() => stopRecording(true)}
+              >
                 Hủy
               </button>
             </div>
           )}
           {draftLink && (
-            <div className="chat-compose-preview chat-link-preview">
+            <div className={COMPOSER_CHIP}>
               <Icon name="link" size={15} />
-              <span>
-                Liên kết sẽ gửi: <strong>{draftLink.hostname}</strong> ·{" "}
+              <span className="min-w-0 flex-1 truncate">
+                Liên kết sẽ gửi: <strong className="text-foreground">{draftLink.hostname}</strong> ·{" "}
                 {draftLink.pathname === "/" ? draftLink.href : draftLink.pathname}
               </span>
             </div>
@@ -2316,10 +2531,15 @@ export function ChatPage() {
             .map((draft) => (
               <div
                 key={draft.clientMessageId}
-                className={`chat-send-error-banner ${draft.status === "failed" ? "is-failed" : ""}`}
+                className={cn(
+                  COMPOSER_CHIP,
+                  "flex-wrap",
+                  draft.status === "failed" &&
+                    "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300",
+                )}
                 role={draft.status === "failed" ? "alert" : "status"}
               >
-                <span>
+                <span className="min-w-0 flex-1">
                   <strong>{draft.status === "sending" ? "Đang gửi…" : "Gửi lỗi"}</strong> ·{" "}
                   {draft.content || draft.fileName}
                   {draft.error && <small> · {draft.error}</small>}
@@ -2362,7 +2582,7 @@ export function ChatPage() {
               </div>
             ))}
 
-          <form className="chat-floating-dock-form" onSubmit={submit}>
+          <form className="flex items-end gap-1" onSubmit={submit}>
             <input
               ref={fileInputRef}
               type="file"
@@ -2375,47 +2595,67 @@ export function ChatPage() {
             />
             <button
               type="button"
-              className={`chat-dock-icon-btn ${recording ? "is-recording" : ""}`}
+              className={cn(
+                COMPOSER_ICON,
+                recording && "bg-red-50 text-red-600 hover:bg-red-50 hover:text-red-600",
+              )}
               title="Tin nhắn thoại"
               aria-label={recording ? "Dừng ghi âm" : "Tin nhắn thoại"}
               disabled={!channel || (sending && !recording)}
-              onClick={() => (recording ? stopRecording() : void startRecording())}
+              onClick={() => {
+                setShowStickers(false);
+                if (recording) stopRecording();
+                else void startRecording();
+              }}
             >
-              <Icon name="mic" size={20} />
+              <Icon name="mic" size={18} />
             </button>
             <button
               type="button"
-              className="chat-dock-icon-btn"
+              className={COMPOSER_ICON}
               title="Đính kèm ảnh hoặc tệp"
               aria-label="Đính kèm tệp"
               disabled={!channel || sending}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => {
+                setShowStickers(false);
+                fileInputRef.current?.click();
+              }}
             >
-              <Icon name="image" size={20} />
+              <Icon name="paperclip" size={18} />
             </button>
-            <div className="chat-sticker-control">
+            <div className="relative">
               <button
                 type="button"
-                className="chat-dock-icon-btn"
+                className={cn(COMPOSER_ICON, showStickers && "bg-secondary text-foreground")}
                 title="Nhãn dán"
                 aria-label="Chọn sticker"
                 aria-expanded={showStickers}
                 disabled={!channel || sending}
                 onClick={() => setShowStickers((value) => !value)}
               >
-                <Icon name="smile" size={20} />
+                <Icon name="smile" size={18} />
               </button>
               {showStickers && (
-                <div className="chat-sticker-picker" role="group" aria-label="Chọn sticker">
+                <div
+                  className="motion-pop absolute bottom-[calc(100%+8px)] left-0 z-10 grid w-[312px] grid-cols-4 gap-1 rounded-xl border bg-card p-2 shadow-lg"
+                  role="group"
+                  aria-label="Chọn sticker"
+                >
                   {stickers.map((sticker) => (
                     <button
                       key={sticker.id}
                       type="button"
+                      className="group grid cursor-pointer justify-items-center gap-1 rounded-lg px-1 py-2 hover:bg-secondary"
                       title={sticker.label}
                       onClick={() => void sendSticker(sticker.id)}
                     >
-                      <span>{sticker.emoji}</span>
-                      <small>{sticker.label}</small>
+                      <Emoji
+                        emoji={sticker.emoji}
+                        className="size-9 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"
+                      />
+                      <small className="text-[11px] whitespace-nowrap text-muted-foreground">
+                        {sticker.label}
+                      </small>
                     </button>
                   ))}
                 </div>
@@ -2424,7 +2664,7 @@ export function ChatPage() {
             <textarea
               id="chat-message"
               ref={composerRef}
-              className="chat-dock-textarea"
+              className="mx-1.5 max-h-[120px] min-h-9 flex-1 resize-none rounded-[18px] bg-secondary px-3.5 py-2 text-sm leading-5 text-foreground !outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
               maxLength={4000}
               rows={1}
               disabled={!channel || busy || readOnly || !draftReady}
@@ -2432,7 +2672,7 @@ export function ChatPage() {
                 !isConnected
                   ? "Mất kết nối. Đang thử lại…"
                   : channel
-                    ? "Aa"
+                    ? "Nhập tin nhắn…"
                     : "Chọn một đoạn chat để nhắn tin"
               }
               aria-label={channel ? `Nhắn tin tới ${titleOf(channel)}` : "Nhắn tin"}
@@ -2452,35 +2692,36 @@ export function ChatPage() {
             {content.trim() || attachmentFile ? (
               <button
                 type="submit"
-                className="chat-dock-send-btn"
+                className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                 ref={sendRef}
                 title="Gửi tin nhắn"
                 aria-label="Gửi tin nhắn"
                 disabled={!isConnected || !channel || busy || sending}
               >
-                <Icon name="send" size={20} />
+                <Icon name="send" size={18} />
               </button>
             ) : (
               <button
                 type="button"
-                className="chat-dock-send-btn"
+                className={COMPOSER_ICON}
                 title="Gửi lượt thích"
                 aria-label="Gửi lượt thích"
                 disabled={!isConnected || !channel || busy || sending}
                 onClick={() => void sendSticker("like")}
               >
-                <Icon name="thumbs-up" size={20} />
+                <Icon name="thumbs-up" size={18} />
               </button>
             )}
           </form>
         </fieldset>
       </div>
 
-      {/* 3. Panel: Right Info Card — Distinguishes Channel Info vs Group Info */}
+      {/* Details panel (Tailwind): a third column on wide screens, an overlay card up to 960px */}
       {showInfoPanel && (workspace || isDirect) && (
         <button
           type="button"
-          className="live-chat-info-backdrop"
+          data-info-backdrop
+          className="tw fixed inset-0 z-40 hidden cursor-default bg-black/30 max-[960px]:block"
           aria-label="Đóng thông tin kênh"
           onClick={() => setShowInfoPanel(false)}
         />
@@ -2492,13 +2733,13 @@ export function ChatPage() {
           role={wideInfoLayout ? undefined : "dialog"}
           aria-modal={wideInfoLayout ? undefined : true}
           tabIndex={-1}
-          className="live-chat-info-panel"
+          className="tw flex min-h-0 w-[300px] shrink-0 flex-col border-l bg-background text-foreground !outline-none max-[960px]:fixed max-[960px]:top-16 max-[960px]:right-3 max-[960px]:bottom-3 max-[960px]:z-[41] max-[960px]:w-[min(320px,calc(100vw-24px))] max-[960px]:rounded-xl max-[960px]:border max-[960px]:bg-card max-[960px]:shadow-lg"
           aria-label="Thông tin về đoạn chat"
         >
-          <div className="chat-info-head">
+          <div className="flex shrink-0 justify-end px-2 pt-2">
             <button
               type="button"
-              className="chat-info-close-btn"
+              className={HEADER_ICON}
               title="Đóng bảng thông tin"
               aria-label="Đóng thông tin đoạn chat"
               onClick={() => setShowInfoPanel(false)}
@@ -2507,73 +2748,66 @@ export function ChatPage() {
             </button>
           </div>
 
-          <div className="chat-info-scrollable">
-            <div className="chat-info-identity-card">
-              <Avatar
+          <div className="min-h-0 flex-1 overflow-y-auto px-3.5 pb-5">
+            <div className="grid justify-items-center gap-1 pb-2.5 text-center">
+              <UserAvatar
                 name={channel ? titleOf(channel) : (workspace?.name ?? "")}
                 image={directPeer ? avatarOf(directPeer.userId) : undefined}
-                status={
-                  directPeer && onlineUserIds.includes(directPeer.userId) ? "online" : undefined
-                }
-                size="lg"
+                online={Boolean(directPeer && onlineUserIds.includes(directPeer.userId))}
+                group={!directPeer}
+                className="mb-1 size-14 text-lg"
               />
-              <h2 className="chat-info-title">{channel ? titleOf(channel) : workspace?.name}</h2>
-              <span className="chat-info-member-subtitle">
+              <h2 className="m-0 text-[15px] leading-5 font-semibold tracking-normal text-foreground">
+                {channel ? titleOf(channel) : workspace?.name}
+              </h2>
+              <span className="text-[13px] text-muted-foreground">
                 {directPeer
                   ? onlineUserIds.includes(directPeer.userId)
                     ? "Đang hoạt động"
                     : "Không hoạt động"
-                  : `${mentionMembers.length || members.length} thành viên`}
+                  : `Nhóm · ${mentionMembers.length || members.length} thành viên`}
               </span>
-            </div>
 
-            <div className="chat-info-action-row">
-              {directPeer && (
-                <a
-                  className="chat-info-circle-action"
-                  href={`mailto:${directPeer.email}`}
-                  title={directPeer.email}
-                >
-                  <div className="circle-action-icon">
+              <div className="mt-2.5 flex justify-center gap-1">
+                {directPeer && (
+                  <a
+                    className={INFO_QUICK}
+                    href={`mailto:${directPeer.email}`}
+                    title={directPeer.email}
+                  >
                     <Icon name="mail" size={18} />
-                  </div>
-                  <span>Email</span>
-                </a>
-              )}
-              {workspace && !isDirect && !readOnly && (
-                <button type="button" className="chat-info-circle-action" onClick={openMeetingRoom}>
-                  <div className="circle-action-icon">
+                    <span>Email</span>
+                  </a>
+                )}
+                {workspace && !isDirect && !readOnly && (
+                  <button type="button" className={INFO_QUICK} onClick={openMeetingRoom}>
                     <Icon name="video" size={18} />
-                  </div>
-                  <span>Họp nhóm</span>
-                </button>
-              )}
-              {channel && (
+                    <span>Họp nhóm</span>
+                  </button>
+                )}
+                {channel && (
+                  <button
+                    type="button"
+                    className={INFO_QUICK}
+                    aria-pressed={Boolean(channel.muted)}
+                    onClick={() => void toggleChannelFlag("muted")}
+                  >
+                    <Icon name={channel.muted ? "bell-off" : "bell"} size={18} />
+                    <span>{channel.muted ? "Bật báo" : "Tắt báo"}</span>
+                  </button>
+                )}
                 <button
                   type="button"
-                  className="chat-info-circle-action"
-                  aria-pressed={Boolean(channel.muted)}
-                  onClick={() => void toggleChannelFlag("muted")}
+                  className={INFO_QUICK}
+                  onClick={() => {
+                    setShowInChannelSearch(true);
+                    requestAnimationFrame(() => document.getElementById("message-search")?.focus());
+                  }}
                 >
-                  <div className="circle-action-icon">
-                    <Icon name={channel.muted ? "bell-off" : "bell"} size={18} />
-                  </div>
-                  <span>{channel.muted ? "Bật thông báo" : "Tắt thông báo"}</span>
-                </button>
-              )}
-              <button
-                type="button"
-                className="chat-info-circle-action"
-                onClick={() => {
-                  setShowInChannelSearch(true);
-                  requestAnimationFrame(() => document.getElementById("message-search")?.focus());
-                }}
-              >
-                <div className="circle-action-icon">
                   <Icon name="search" size={18} />
-                </div>
-                <span>Tìm kiếm</span>
-              </button>
+                  <span>Tìm kiếm</span>
+                </button>
+              </div>
             </div>
 
             <InfoSection
@@ -2583,106 +2817,89 @@ export function ChatPage() {
             >
               <button
                 type="button"
-                className="chat-info-menu-item"
+                className={INFO_ITEM}
                 onClick={() => {
                   setMessageSearch("");
                   setSavedMode("pins");
                 }}
               >
-                <div className="menu-item-left">
-                  <Icon name="pin" size={18} />
-                  <span>Xem tin nhắn đã ghim</span>
-                </div>
+                <Icon name="pin" size={17} />
+                <span>Xem tin nhắn đã ghim</span>
               </button>
               <button
                 type="button"
-                className="chat-info-menu-item"
+                className={INFO_ITEM}
                 onClick={() => {
                   setMessageSearch("");
                   setSavedMode("bookmarks");
                 }}
               >
-                <div className="menu-item-left">
-                  <Icon name="bookmark" size={18} />
-                  <span>Tin đã đánh dấu của bạn</span>
-                </div>
+                <Icon name="bookmark" size={17} />
+                <span>Tin đã đánh dấu của bạn</span>
               </button>
             </InfoSection>
 
-            {channel && (
-              <InfoSection
-                title="Tùy chỉnh đoạn chat"
-                open={openSections.includes("custom")}
-                onToggle={() => toggleSection("custom")}
-              >
-                <button
-                  type="button"
-                  className="chat-info-menu-item"
-                  aria-pressed={Boolean(channel.pinned)}
-                  onClick={() => void toggleChannelFlag("pinned")}
-                >
-                  <div className="menu-item-left">
-                    <Icon name="star" size={18} fill={channel.pinned ? "currentColor" : "none"} />
-                    <span>{channel.pinned ? "Bỏ ghim đoạn chat" : "Ghim đoạn chat"}</span>
-                  </div>
-                </button>
-                {workspace && !isDirect && isAdmin && (
-                  <button
-                    type="button"
-                    className="chat-info-menu-item"
-                    onClick={() => navigate({ view: "admin", workspaceId: workspace.id })}
-                  >
-                    <div className="menu-item-left">
-                      <Icon name="settings" size={18} />
-                      <span>Cài đặt và quản trị nhóm</span>
-                    </div>
-                  </button>
-                )}
-              </InfoSection>
-            )}
-
             {workspace && !isDirect && (
               <InfoSection
-                title={`Thành viên trong đoạn chat (${members.length})`}
+                title="Thành viên"
+                count={members.length}
                 open={openSections.includes("members")}
                 onToggle={() => toggleSection("members")}
               >
-                <div className="chat-info-members-list">
-                  {members.map((m) => (
-                    <div key={m.userId} className="chat-info-member-pill">
-                      <Avatar
-                        name={m.displayName}
-                        image={avatarOf(m.userId)}
-                        size="sm"
-                        status={onlineUserIds.includes(m.userId) ? "online" : undefined}
-                      />
-                      <div className="member-pill-text">
-                        <strong>{m.displayName}</strong>
-                        <small>
-                          {m.role === "owner"
-                            ? "Chủ nhóm"
-                            : m.role === "admin"
-                              ? "Quản trị viên"
-                              : "Thành viên"}
+                {members.map((m) => (
+                  <div key={m.userId} className="flex items-center gap-2.5 p-1.5">
+                    <UserAvatar
+                      name={m.displayName}
+                      image={avatarOf(m.userId)}
+                      online={onlineUserIds.includes(m.userId)}
+                      className="size-8 text-[11px]"
+                    />
+                    <span className="grid min-w-0 flex-1">
+                      <span className="truncate text-sm">{m.displayName}</span>
+                      {m.role !== "member" && (
+                        <small className="text-xs text-muted-foreground">
+                          {m.role === "owner" ? "Chủ nhóm" : "Quản trị viên"}
                         </small>
-                      </div>
-                    </div>
-                  ))}
-                  {isAdmin && (
-                    <form className="chat-info-add-member-form" onSubmit={addMember}>
-                      <input
-                        type="email"
-                        placeholder="Thêm người bằng email…"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                      />
-                      <Button size="sm" type="submit" disabled={busy}>
-                        Thêm
-                      </Button>
-                    </form>
-                  )}
-                </div>
+                      )}
+                    </span>
+                    {/* The owner can remove anyone else; an admin only plain members. */}
+                    {isAdmin &&
+                      m.userId !== user?.id &&
+                      m.role !== "owner" &&
+                      (workspace.role === "owner" || m.role === "member") && (
+                        <button
+                          type="button"
+                          className="grid size-7 shrink-0 cursor-pointer place-items-center rounded-md text-muted-foreground hover:bg-secondary hover:text-destructive"
+                          aria-label={`Loại ${m.displayName} khỏi nhóm`}
+                          title="Loại khỏi nhóm"
+                          disabled={busy}
+                          onClick={() => setRemovingMember(m)}
+                        >
+                          <Icon name="x" size={14} />
+                        </button>
+                      )}
+                  </div>
+                ))}
+                {isAdmin && (
+                  <form className="flex gap-1.5 p-1.5" onSubmit={addMember}>
+                    <input
+                      type="email"
+                      className="h-8 min-w-0 flex-1 rounded-md border bg-background px-2.5 text-[13px] text-foreground !outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                      placeholder="Thêm người bằng email…"
+                      aria-label="Email người cần thêm"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                    <button
+                      type="submit"
+                      className="h-8 cursor-pointer rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={busy}
+                    >
+                      Thêm
+                    </button>
+                  </form>
+                )}
               </InfoSection>
             )}
 
@@ -2701,31 +2918,33 @@ export function ChatPage() {
                   ["file", "File", chatFiles.filter((file) => !file.mimeType.startsWith("image/"))],
                 ] as const
               ).map(([icon, label, files]) => (
-                <div key={label} className="chat-info-file-group">
-                  <div className="chat-info-file-group__label">
-                    <Icon name={icon} size={18} />
-                    <span>{label}</span>
+                <div key={label}>
+                  <div className="px-1.5 pt-1.5 pb-0.5 text-xs font-medium text-muted-foreground">
+                    {label}
                   </div>
                   {files.length === 0 ? (
-                    <p className="chat-info-empty">Chưa có {label.toLowerCase()} nào.</p>
+                    <p className="m-0 px-1.5 pb-1.5 text-[13px] text-muted-foreground">
+                      Chưa có {label.toLowerCase()} nào.
+                    </p>
                   ) : (
                     files.map((file) => (
                       <button
                         key={file.id}
                         type="button"
-                        className="chat-info-menu-item"
+                        className={INFO_ITEM}
                         title={`${file.uploaderName} · ${new Date(file.createdAt).toLocaleString("vi-VN")}`}
                         disabled={!file.messageId}
                         onClick={() =>
                           file.messageId && navigate({ ...route, messageId: file.messageId })
                         }
                       >
-                        <div className="menu-item-left chat-info-file">
-                          <span>{file.fileName}</span>
-                        </div>
-                        <small className="chat-info-file-size">
-                          {formatFileSize(file.fileSize)}
-                        </small>
+                        <Icon name={icon} size={17} />
+                        <span className="grid min-w-0">
+                          <span className="truncate">{file.fileName}</span>
+                          <small className="text-xs text-muted-foreground">
+                            {formatFileSize(file.fileSize)}
+                          </small>
+                        </span>
                       </button>
                     ))
                   )}
@@ -2735,20 +2954,36 @@ export function ChatPage() {
 
             {channel && (
               <InfoSection
+                title="Tùy chỉnh đoạn chat"
+                open={openSections.includes("custom")}
+                onToggle={() => toggleSection("custom")}
+              >
+                <button
+                  type="button"
+                  className={INFO_ITEM}
+                  aria-pressed={Boolean(channel.pinned)}
+                  onClick={() => void toggleChannelFlag("pinned")}
+                >
+                  <Icon name="star" size={17} fill={channel.pinned ? "currentColor" : "none"} />
+                  <span>{channel.pinned ? "Bỏ ghim đoạn chat" : "Ghim đoạn chat"}</span>
+                </button>
+              </InfoSection>
+            )}
+
+            {channel && (
+              <InfoSection
                 title="Quyền riêng tư và hỗ trợ"
                 open={openSections.includes("privacy")}
                 onToggle={() => toggleSection("privacy")}
               >
                 <button
                   type="button"
-                  className="chat-info-menu-item"
+                  className={INFO_ITEM}
                   aria-pressed={Boolean(channel.muted)}
                   onClick={() => void toggleChannelFlag("muted")}
                 >
-                  <div className="menu-item-left">
-                    <Icon name={channel.muted ? "bell-off" : "bell"} size={18} />
-                    <span>{channel.muted ? "Bật thông báo" : "Tắt thông báo"}</span>
-                  </div>
+                  <Icon name={channel.muted ? "bell-off" : "bell"} size={17} />
+                  <span>{channel.muted ? "Bật thông báo" : "Tắt thông báo"}</span>
                 </button>
               </InfoSection>
             )}
@@ -2761,11 +2996,13 @@ export function ChatPage() {
           <Modal
             title="Thu hồi tin nhắn"
             eyebrow="TIN NHẮN"
+            icon="trash"
+            iconTone="red"
             onClose={() => {
               if (!deleting) setDeleteTarget(null);
             }}
             footer={
-              <div className="modal-footer-actions">
+              <>
                 <Button variant="ghost" disabled={deleting} onClick={() => setDeleteTarget(null)}>
                   Giữ lại
                 </Button>
@@ -2777,20 +3014,38 @@ export function ChatPage() {
                 >
                   Thu hồi tin nhắn
                 </Button>
-              </div>
+              </>
             }
           >
-            <p className="modal-lead">
+            <p className="tw text-muted-foreground">
               Tin nhắn sẽ bị gỡ khỏi cuộc trò chuyện với mọi thành viên. Thao tác này không thể hoàn
               tác.
             </p>
             {deleteTarget.content && (
-              <blockquote className="chat-delete-preview">{deleteTarget.content}</blockquote>
+              <blockquote className="tw mt-3 border-l-[3px] bg-secondary px-3 py-2 whitespace-pre-wrap text-muted-foreground">
+                {deleteTarget.content}
+              </blockquote>
             )}
           </Modal>
         )}
       </AnimatePresence>
       <AnimatePresence>
+        {removingMember && workspaceId && (
+          <ConfirmDialog
+            title="Loại thành viên"
+            description={`${removingMember.displayName} sẽ không còn xem và gửi tin trong nhóm này nữa.`}
+            confirmLabel="Loại khỏi nhóm"
+            loading={busy}
+            onClose={() => setRemovingMember(null)}
+            onConfirm={() =>
+              void mutate(async () => {
+                await rejectMemberApi(accessToken!, workspaceId, removingMember.userId);
+                setMembers(await getWorkspaceMembersApi(accessToken!, workspaceId));
+                setRemovingMember(null);
+              })
+            }
+          />
+        )}
         {creatingGroup && (
           <CreateGroupDialog
             onClose={() => setCreatingGroup(false)}

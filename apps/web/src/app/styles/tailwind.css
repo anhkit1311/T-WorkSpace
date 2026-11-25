@@ -1,0 +1,163 @@
+/* shortcut: theme + utilities only, no Tailwind preflight and no cascade layer, because the legacy
+   stylesheets still rely on browser defaults and are unlayered. Switch to `@import "tailwindcss"`
+   once the last legacy stylesheet is deleted. */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Hướng B: trung tính (zinc), một màu nhấn xanh. Legacy tokens in styles.css alias these. */
+:root {
+  --radius: 10px;
+  --background: #fafafa;
+  --foreground: #09090b;
+  --card: #ffffff;
+  --card-foreground: #09090b;
+  --popover: #ffffff;
+  --popover-foreground: #09090b;
+  --primary: #18181b;
+  --primary-foreground: #fafafa;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+  --destructive: #dc2626;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #a1a1aa;
+  --brand: #2f6bff;
+  --brand-soft: #e8efff;
+  color-scheme: light;
+}
+
+.dark {
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #111113;
+  --card-foreground: #fafafa;
+  --popover: #111113;
+  --popover-foreground: #fafafa;
+  --primary: #fafafa;
+  --primary-foreground: #18181b;
+  --secondary: #1c1c1f;
+  --secondary-foreground: #fafafa;
+  --muted: #1c1c1f;
+  --muted-foreground: #a1a1aa;
+  --accent: #1c1c1f;
+  --accent-foreground: #fafafa;
+  --destructive: #f87171;
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #71717a;
+  --brand: #6b95ff;
+  --brand-soft: #16203d;
+  color-scheme: dark;
+}
+
+/* shortcut: px instead of rem, because the legacy stylesheet sets the root font size to 13.5px
+   and that would shrink every rem-based utility. Drop this block when that rule is gone. */
+@theme {
+  --spacing: 4px;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+}
+
+@keyframes like-pop {
+  50% {
+    transform: scale(1.35);
+  }
+}
+
+@theme inline {
+  --font-sans: "Be Vietnam Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+}
+
+/* The slice of preflight the new UI needs, scoped to it: `.tw` marks a migrated subtree,
+   `[data-slot]` is every shadcn component (their menus render outside the tree). */
+:where(.tw, .tw *, [data-slot], [data-slot] *) {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0 solid var(--border);
+}
+:where(.tw, [data-slot]) :where(button),
+:where(button[data-slot]) {
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+:where(.tw) :where(ul, ol) {
+  list-style: none;
+}
+
+/* The legacy Icon draws a fixed 1.7px stroke at any size; the new UI uses the lighter stroke of
+   the mockups (1.8 on the 24px grid, so it thins with the icon). */
+:where(.tw, [data-slot]) svg.lucide {
+  stroke-width: 1.8;
+}
+
+/* Native controls of a migrated form (.tw-form) get one look without a class on each of them;
+   .tw-row lays controls out in a wrapping row. :where() keeps utilities on the element in charge. */
+:where(.tw-form)
+  :is(
+    input:not([type="checkbox"], [type="radio"], [type="file"], [type="search"]),
+    select,
+    textarea
+  ) {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 14px;
+}
+:where(.tw-form) label {
+  display: grid;
+  gap: 4px;
+  /* A row of fields stretches to the tallest one: keep the extra height below, not in the input. */
+  align-content: start;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+:where(.tw-row) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+:where(.tw-row) :is(input:not([type="checkbox"], [type="radio"]), select, textarea) {
+  flex: 1;
+  min-width: 140px;
+}

@@ -41,8 +41,11 @@ export async function listActivity(userId: string, params: URLSearchParams) {
          SELECT a.id::text, a.created_at, 'workspace', u.display_name, a.action, w.name
          FROM audit_events a JOIN workspaces w ON w.id=a.workspace_id LEFT JOIN users u ON u.id=a.actor_id
          UNION ALL
-         SELECT a.id::text, a.created_at, 'academic', u.display_name, a.action, COALESCE(un.name, a.entity)
+         -- The affected person first (account and role events point at the user), else what details name.
+         SELECT a.id::text, a.created_at, 'academic', u.display_name, a.action,
+           COALESCE(tu.display_name, a.details->>'email', a.details->>'name', a.details->>'staffCode', un.name, a.entity)
          FROM academic_audit_events a LEFT JOIN academic_units un ON un.id=a.unit_id LEFT JOIN users u ON u.id=a.actor_id
+         LEFT JOIN users tu ON tu.id=a.entity_id
        ) x
        WHERE ($1::text IS NULL OR x.source=$1) AND ($2::timestamptz IS NULL OR x.at < $2)
        ORDER BY x.at DESC, x.id DESC LIMIT 100`,

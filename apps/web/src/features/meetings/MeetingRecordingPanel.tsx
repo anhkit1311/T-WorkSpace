@@ -13,7 +13,8 @@ import {
   startMeetingRecordingApi,
   stopMeetingRecordingApi,
 } from "./api";
-import "./meeting-attendance.css";
+import { Icon } from "../../shared/ui/Icon";
+import { META, PANEL, PANEL_TITLE } from "./panel-ui";
 
 const STATUS: Record<MeetingRecording["status"], string> = {
   recording: "Đang ghi",
@@ -108,15 +109,19 @@ export function MeetingRecordingPanel({ sessionId, live }: { sessionId: string; 
   if (!data.recordings.length && !(live && data.canManage)) return null;
 
   return (
-    <section className="meeting-attendance" aria-labelledby="meeting-recording-title">
-      <div className="meeting-attendance-head">
-        <h4 id="meeting-recording-title">Ghi hình</h4>
+    <section className={PANEL} aria-labelledby={`recording-${sessionId}`}>
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 id={`recording-${sessionId}`} className={PANEL_TITLE}>
+          <Icon name="video" size={16} className="text-muted-foreground" />
+          Ghi hình
+        </h3>
         {live &&
           data.canManage &&
           (active ? (
             <Button
               size="sm"
-              variant="secondary"
+              variant="danger"
+              className="ml-auto"
               disabled={busy}
               onClick={() => void run(() => stopMeetingRecordingApi(accessToken!, active.id))}
             >
@@ -126,6 +131,7 @@ export function MeetingRecordingPanel({ sessionId, live }: { sessionId: string; 
             <Button
               size="sm"
               variant="secondary"
+              className="ml-auto"
               disabled={busy}
               onClick={() => void run(() => startMeetingRecordingApi(accessToken!, sessionId))}
             >
@@ -134,71 +140,96 @@ export function MeetingRecordingPanel({ sessionId, live }: { sessionId: string; 
           ))}
       </div>
       {active && (
-        <p className="meeting-recording-live" role="status">
-          ● Cuộc họp đang được ghi hình từ {clock(active.startedAt)}
+        <p className="flex items-center gap-2 text-[13px] font-medium text-red-600" role="status">
+          <i className="size-2 rounded-full bg-red-500 motion-safe:animate-pulse" />
+          Cuộc họp đang được ghi hình từ {clock(active.startedAt)}
         </p>
       )}
-      {error && <p role="alert">{error}</p>}
-      <ul className="meeting-recording-list">
+      {error && (
+        <p className={META} role="alert">
+          {error}
+        </p>
+      )}
+      {playing && src && (
+        <div className="overflow-hidden rounded-lg bg-black">
+          <HlsPlayer
+            src={src}
+            label="Bản ghi cuộc họp"
+            captions={
+              data.recordings.find((item) => item.id === playing)?.transcriptStatus === "ready"
+            }
+          />
+        </div>
+      )}
+      <ul className="grid gap-2.5">
         {data.recordings.map((item) => (
-          <li key={item.id}>
-            <span>
-              {clock(item.startedAt)}
-              {item.durationSeconds
-                ? ` · ${Math.max(1, Math.round(item.durationSeconds / 60))} phút`
-                : ""}{" "}
-              · {STATUS[item.status]}
-              {item.transcriptStatus ? ` · ${CAPTIONS[item.transcriptStatus]}` : ""}
-            </span>
-            {data.canManage &&
-              item.status === "ready" &&
-              item.transcriptStatus !== "ready" &&
-              item.transcriptStatus !== "processing" && (
+          <li key={item.id} className="grid gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {item.status === "ready" && (
                 <Button
                   size="sm"
-                  variant="ghost"
-                  disabled={busy}
-                  onClick={() =>
-                    void run(() => requestRecordingTranscriptApi(accessToken!, item.id))
-                  }
+                  variant={playing === item.id ? "secondary" : "primary"}
+                  icon={playing === item.id ? "x" : "play"}
+                  onClick={() => setPlaying(playing === item.id ? null : item.id)}
                 >
-                  Tạo phụ đề
+                  {playing === item.id ? "Đóng" : "Xem lại"}
                 </Button>
               )}
-            {item.status === "ready" && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setPlaying(playing === item.id ? null : item.id)}
-              >
-                {playing === item.id ? "Đóng" : "Xem lại"}
-              </Button>
+              <span className="min-w-0 flex-1 text-[13px] text-muted-foreground">
+                Bắt đầu {clock(item.startedAt)}
+                {item.durationSeconds
+                  ? ` · ${Math.max(1, Math.round(item.durationSeconds / 60))} phút`
+                  : ""}{" "}
+                · {STATUS[item.status]}
+                {item.transcriptStatus ? ` · ${CAPTIONS[item.transcriptStatus]}` : ""}
+              </span>
+              {data.canManage &&
+                item.status === "ready" &&
+                item.transcriptStatus !== "ready" &&
+                item.transcriptStatus !== "processing" && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() =>
+                      void run(() => requestRecordingTranscriptApi(accessToken!, item.id))
+                    }
+                  >
+                    Tạo phụ đề
+                  </Button>
+                )}
+              {data.canManage && item.status !== "failed" && (
+                <label className="flex cursor-pointer items-center gap-1.5 text-[13px]">
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-foreground"
+                    checked={item.shared}
+                    disabled={busy}
+                    onChange={(event) =>
+                      void run(() =>
+                        shareMeetingRecordingApi(accessToken!, item.id, event.target.checked),
+                      )
+                    }
+                  />
+                  Cả phòng xem được
+                </label>
+              )}
+            </div>
+            {item.status === "failed" && item.error && (
+              <small className="text-xs text-red-600">{item.error}</small>
             )}
-            {data.canManage && item.status !== "failed" && (
-              <label>
-                <input
-                  type="checkbox"
-                  checked={item.shared}
-                  disabled={busy}
-                  onChange={(event) =>
-                    void run(() =>
-                      shareMeetingRecordingApi(accessToken!, item.id, event.target.checked),
-                    )
-                  }
-                />
-                Cả phòng xem được
-              </label>
-            )}
-            {item.status === "failed" && item.error && <small>{item.error}</small>}
             {item.aiSummary && (
-              <div className="meeting-ai-summary">
-                <strong>Tóm tắt (AI, cần kiểm tra lại)</strong>
-                <p>{item.aiSummary}</p>
+              <div className="grid gap-2 rounded-lg bg-[var(--tint-violet-bg)] px-3.5 py-3">
+                <strong className="flex items-center gap-1.5 text-[13px] font-semibold text-[var(--tint-violet-fg)]">
+                  <Icon name="sparkles" size={14} />
+                  Tóm tắt (AI, cần kiểm tra lại)
+                </strong>
+                <p className="leading-relaxed whitespace-pre-wrap">{item.aiSummary}</p>
                 {item.aiActions.length > 0 && (
-                  <ul>
+                  <ul className="grid gap-1">
                     {item.aiActions.map((action) => (
-                      <li key={action}>
-                        <span>{action}</span>
+                      <li key={action} className="flex flex-wrap items-center gap-2 text-[13px]">
+                        <span className="min-w-0 flex-1">• {action}</span>
                         {data.canManage && (
                           <Button
                             size="sm"
@@ -228,17 +259,6 @@ export function MeetingRecordingPanel({ sessionId, live }: { sessionId: string; 
           </li>
         ))}
       </ul>
-      {playing && src && (
-        <div className="meeting-recording-player">
-          <HlsPlayer
-            src={src}
-            label="Bản ghi cuộc họp"
-            captions={
-              data.recordings.find((item) => item.id === playing)?.transcriptStatus === "ready"
-            }
-          />
-        </div>
-      )}
     </section>
   );
 }

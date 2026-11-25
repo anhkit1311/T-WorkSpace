@@ -91,7 +91,7 @@ function harness({ webSessions = {}, online = () => true } = {}) {
       ),
       isExtensionOnline: async (extension) => online(extension),
       linkedId: async (channelId) => `linked-${channelId}`,
-      snoop: async () => "snoop-1",
+      snoop: async (channelId, input) => (pbxCalls.push(["snoop", channelId, input]), "snoop-1"),
     },
     {
       get: (target, name) =>
@@ -484,7 +484,7 @@ test("CC-11: a supervisor listens through a snoop channel and leaves when the ca
   await acd.handle({ type: "dtmf", channelId: "caller", digit: "1" });
   await acd.handle({ type: "channel_up", channelId: "agent-leg-3" });
   const key = acd.snapshot("sales").agents.find((agent) => agent.userId === "alice").callId;
-  assert.equal(acd.departmentOfCall(key), "sales");
+  assert.deepEqual(acd.departmentsOfCall(key), ["sales"]);
   await acd.monitor("boss", "2199", key, "whisper");
   await acd.handle({ type: "channel_up", channelId: "agent-leg-4" });
   assert.ok(
@@ -668,4 +668,35 @@ test("BR-20: an agent's outside call holds them on_call (no offers), then restor
   assert.equal(agentState("bob"), "on_call");
   await acd.handle({ type: "channel_ended", channelId: "bob-out" });
   assert.equal(agentState("bob"), "not_ready", "a paused agent stays paused");
+});
+
+test("CC-11 on an outside call: the supervisor barges in through a snoop on the agent's channel", async () => {
+  const { acd, pbxCalls } = harness();
+  await acd.handle({ type: "connected" });
+  await acd.requestState("alice", "ready");
+  await acd.handle({
+    type: "dialplan",
+    channelId: "alice-out",
+    linkedId: "alice-out",
+    context: "outbound",
+    exten: "0938709049",
+    app: "Dial",
+    appData: "PJSIP/0938709049@trunk,60,S(1800)",
+    callerNumber: "2101",
+  });
+  const key = acd.snapshot("sales").agents.find((agent) => agent.userId === "alice").callId;
+  assert.ok(key, "the board can offer monitoring");
+  assert.deepEqual(acd.departmentsOfCall(key), ["sales"]);
+
+  await acd.monitor("boss", "2199", key, "barge");
+  const leg = "agent-leg-1"; // the supervisor's extension rings first
+  await acd.handle({ type: "channel_up", channelId: leg });
+  const snoop = pbxCalls.find(([name]) => name === "snoop");
+  assert.equal(snoop[1], "alice-out");
+  assert.equal(snoop[2].whisper, "both", "barge: both sides hear the supervisor");
+  assert.ok(pbxCalls.some(([name, a, b]) => name === "bridge" && a === "snoop-1" && b === leg));
+
+  await acd.handle({ type: "channel_ended", channelId: "alice-out" });
+  assert.ok(pbxCalls.some(([name, channel]) => name === "hangup" && channel === leg));
+  assert.deepEqual(acd.departmentsOfCall(key), [], "call gone");
 });

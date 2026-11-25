@@ -80,7 +80,8 @@ export async function unitReport(userId: string, params: URLSearchParams) {
        CROSS JOIN LATERAL (SELECT count(*)::int AS published FROM courses WHERE unit_id=u.id AND status='published') k
        CROSS JOIN LATERAL (
          SELECT count(*) FILTER (WHERE e.enrolled_at>=span.since AND e.enrolled_at<span.until)::int AS enrolled,
-           count(*) FILTER (WHERE e.completed_at>=span.since AND e.completed_at<span.until)::int AS completed
+           -- Of the range's enrollments, those finished: the completion rate stays within 100%.
+           count(*) FILTER (WHERE e.enrolled_at>=span.since AND e.enrolled_at<span.until AND e.completed_at IS NOT NULL)::int AS completed
          FROM course_enrollments e JOIN courses co ON co.id=e.course_id WHERE co.unit_id=u.id) e
        WHERE $3::uuid[] IS NULL OR u.id=ANY($3::uuid[])
        ORDER BY u.code`,

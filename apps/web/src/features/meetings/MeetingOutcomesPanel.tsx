@@ -18,7 +18,16 @@ import {
 } from "./api";
 import { MeetingAttendancePanel } from "./MeetingAttendancePanel";
 import { MeetingRecordingPanel } from "./MeetingRecordingPanel";
-import "./meeting-outcomes.css";
+import { cn } from "../../shared/lib/utils";
+import { COUNT, INPUT, META, NOTE_BOX, PANEL, PANEL_TITLE } from "./panel-ui";
+
+export type OutcomeSection = "channel" | "agenda" | "notes" | "tasks" | "recording" | "attendance";
+const ALL: OutcomeSection[] = ["channel", "agenda", "notes", "tasks", "recording", "attendance"];
+const TASK_TONE = {
+  todo: "bg-secondary text-muted-foreground",
+  doing: "bg-[var(--tint-blue-bg)] text-[var(--tint-blue-fg)]",
+  done: "bg-[var(--tint-green-bg)] text-[var(--tint-green-fg)]",
+} as const;
 
 const SAVE_DELAY_MS = 800;
 const statusLabel = { todo: "Cần làm", doing: "Đang làm", done: "Xong" } as const;
@@ -27,7 +36,16 @@ type SaveState = "idle" | "saving" | "saved" | "error";
 
 // Agenda, shared notes and tasks of one meeting session. While the session runs it follows
 // realtime changes; after it ends the same view is read-only history.
-export function MeetingOutcomesPanel({ sessionId, live }: { sessionId: string; live: boolean }) {
+export function MeetingOutcomesPanel({
+  sessionId,
+  live,
+  sections = ALL,
+}: {
+  sessionId: string;
+  live: boolean;
+  /** Which parts to show; the meeting report lays them out in two columns. */
+  sections?: OutcomeSection[];
+}) {
   const { accessToken } = useApp();
   const { controlSocket } = useMeeting();
   const { socket } = useSocket();
@@ -243,239 +261,297 @@ export function MeetingOutcomesPanel({ sessionId, live }: { sessionId: string; l
 
   if (!outcomes)
     return (
-      <div className="meeting-outcomes">
-        <p className="meeting-outcomes-empty" role={error ? "alert" : "status"}>
-          {error || "Đang tải ghi chú cuộc họp…"}
-        </p>
-      </div>
+      <p className={cn("tw", META)} role={error ? "alert" : "status"}>
+        {error || "Đang tải ghi chú cuộc họp…"}
+      </p>
     );
 
   const editable = live && outcomes.canEdit;
   const doneCount = outcomes.agenda.filter((item) => item.done).length;
+  const show = (part: OutcomeSection) => sections.includes(part);
   return (
-    <div className="meeting-outcomes">
+    <div className="tw grid min-w-0 content-start gap-3 text-sm text-foreground">
       {error && (
-        <p className="meeting-outcomes-alert" role="alert">
+        <p className={NOTE_BOX} role="alert">
           {error}
         </p>
       )}
 
-      <section aria-labelledby="outcome-channel-title">
-        <h4 id="outcome-channel-title">Kênh nhận kết quả</h4>
-        {outcomes.canManage && editable ? (
-          <select
-            aria-label="Kênh nhận việc và tổng kết"
-            value={outcomes.outcomeChannelId ?? ""}
-            disabled={busy}
-            onChange={(event) =>
-              void run(() => setOutcomeChannelApi(accessToken!, sessionId, event.target.value))
-            }
-          >
-            {!outcomes.outcomeChannelId && <option value="">Chọn kênh văn bản…</option>}
-            {channels.map((channel) => (
-              <option key={channel.id} value={channel.id}>
-                #{channel.name}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <p className="meeting-outcomes-meta">
-            {outcomes.outcomeChannelName
-              ? `#${outcomes.outcomeChannelName}`
-              : "Chưa chọn kênh văn bản"}
-          </p>
-        )}
-        <small>
-          Việc tạo trong họp vào bảng công việc của kênh này; tổng kết được đăng khi kết thúc.
-        </small>
-      </section>
-
-      <section aria-labelledby="agenda-title">
-        <h4 id="agenda-title">
-          Agenda{" "}
-          {outcomes.agenda.length > 0 && (
-            <span className="meeting-outcomes-count">
-              {doneCount}/{outcomes.agenda.length}
-            </span>
-          )}
-        </h4>
-        {outcomes.agenda.length ? (
-          <ul className="meeting-agenda">
-            {outcomes.agenda.map((item) => (
-              <li key={item.id} className={item.done ? "is-done" : ""}>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={item.done}
-                    disabled={!editable || busy}
-                    onChange={(event) =>
-                      void run(() =>
-                        updateAgendaItemApi(accessToken!, sessionId, item.id, {
-                          done: event.target.checked,
-                        }),
-                      )
-                    }
-                  />
-                  <span>{item.label}</span>
-                </label>
-                {item.done && item.doneByName && <small>{item.doneByName}</small>}
-                {editable && !item.fromSchedule && (
-                  <IconButton
-                    icon="x"
-                    label={`Xóa mục ${item.label}`}
-                    onClick={() =>
-                      void run(() => deleteAgendaItemApi(accessToken!, sessionId, item.id))
-                    }
-                  />
-                )}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="meeting-outcomes-meta">Chưa có mục nào.</p>
-        )}
-        {editable && (
-          <form className="meeting-outcomes-inline" onSubmit={(event) => void addAgenda(event)}>
-            <input
-              value={agendaDraft}
-              maxLength={200}
-              onChange={(event) => setAgendaDraft(event.target.value)}
-              placeholder="Thêm mục agenda…"
-              aria-label="Mục agenda mới"
-            />
-            <IconButton
-              icon="plus"
-              label="Thêm mục agenda"
-              type="submit"
-              disabled={busy || !agendaDraft.trim()}
-            />
-          </form>
-        )}
-      </section>
-
-      <section aria-labelledby="notes-title">
-        <h4 id="notes-title">
-          Ghi chú chung
-          <span className="meeting-outcomes-save" role="status">
-            {saveState === "saving"
-              ? "Đang lưu…"
-              : saveState === "saved"
-                ? "Đã lưu"
-                : saveState === "error"
-                  ? "Chưa lưu"
-                  : ""}
-          </span>
-        </h4>
-        {conflict && (
-          <div className="meeting-notes-conflict" role="alert">
-            <p>
-              {conflict.updatedByName ?? "Người khác"} vừa cập nhật ghi chú trong lúc bạn đang sửa.
-            </p>
-            <div>
-              <Button size="sm" variant="secondary" onClick={() => resolveConflict(false)}>
-                Dùng bản mới
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => resolveConflict(true)}>
-                Giữ bản của tôi
-              </Button>
-            </div>
-          </div>
-        )}
-        {editable ? (
-          <textarea
-            value={draft}
-            maxLength={20000}
-            rows={7}
-            onChange={(event) => onNotesChange(event.target.value)}
-            onBlur={() => void saveNotes()}
-            placeholder="Mọi người trong phòng cùng ghi chú tại đây…"
-            aria-label="Ghi chú chung của cuộc họp"
-          />
-        ) : (
-          <p className="meeting-notes-readonly">{outcomes.notes.content || "Không có ghi chú."}</p>
-        )}
-        {outcomes.notes.updatedByName && (
-          <small>
-            Cập nhật bởi {outcomes.notes.updatedByName}
-            {outcomes.notes.updatedAt
-              ? ` lúc ${new Date(outcomes.notes.updatedAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`
-              : ""}
-          </small>
-        )}
-      </section>
-
-      <section aria-labelledby="meeting-tasks-title">
-        <h4 id="meeting-tasks-title">
-          Việc cần làm{" "}
-          {outcomes.tasks.length > 0 && (
-            <span className="meeting-outcomes-count">{outcomes.tasks.length}</span>
-          )}
-        </h4>
-        {outcomes.tasks.length ? (
-          <ul className="meeting-task-list">
-            {outcomes.tasks.map((task) => (
-              <li key={task.id}>
-                <div
-                  className="meeting-task-item-label"
-                  style={{ display: "flex", alignItems: "center", gap: 6 }}
+      {show("agenda") && (
+        <section className={PANEL} aria-labelledby={`agenda-${sessionId}`}>
+          <h3 id={`agenda-${sessionId}`} className={PANEL_TITLE}>
+            Agenda
+            {outcomes.agenda.length > 0 && (
+              <span className={COUNT}>
+                {doneCount}/{outcomes.agenda.length}
+              </span>
+            )}
+          </h3>
+          {outcomes.agenda.length ? (
+            <ul className="grid">
+              {outcomes.agenda.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex items-center gap-2 border-t py-1.5 first:border-t-0"
                 >
-                  <Icon name="check-square" size={14} />
-                  <span>{task.title}</span>
-                </div>
-                <small>
-                  {statusLabel[task.status]}
-                  {task.assigneeName ? ` · ${task.assigneeName}` : ""}
-                  {task.dueAt ? ` · hạn ${new Date(task.dueAt).toLocaleDateString("vi-VN")}` : ""}
-                </small>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="meeting-outcomes-meta">Chưa có việc nào được giao trong cuộc họp.</p>
-        )}
-        {editable && outcomes.outcomeChannelId && (
-          <form className="meeting-task-form" onSubmit={(event) => void addTask(event)}>
-            <input
-              value={taskTitle}
-              maxLength={160}
-              onChange={(event) => setTaskTitle(event.target.value)}
-              placeholder="Việc cần làm…"
-              aria-label="Tên việc cần làm"
-            />
-            <div>
-              <select
-                value={taskAssignee}
-                onChange={(event) => setTaskAssignee(event.target.value)}
-                aria-label="Người phụ trách"
-              >
-                <option value="">Chưa giao</option>
-                {outcomes.attendees.map((person) => (
-                  <option key={person.userId} value={person.userId}>
-                    {person.displayName}
-                  </option>
-                ))}
-              </select>
+                  <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5">
+                    <input
+                      type="checkbox"
+                      className="size-4 shrink-0 accent-foreground"
+                      checked={item.done}
+                      disabled={!editable || busy}
+                      onChange={(event) =>
+                        void run(() =>
+                          updateAgendaItemApi(accessToken!, sessionId, item.id, {
+                            done: event.target.checked,
+                          }),
+                        )
+                      }
+                    />
+                    <span
+                      className={cn("min-w-0", item.done && "text-muted-foreground line-through")}
+                    >
+                      {item.label}
+                    </span>
+                  </label>
+                  {item.done && item.doneByName && (
+                    <small className="text-xs text-muted-foreground">{item.doneByName}</small>
+                  )}
+                  {editable && !item.fromSchedule && (
+                    <IconButton
+                      icon="x"
+                      className="size-7"
+                      label={`Xóa mục ${item.label}`}
+                      onClick={() =>
+                        void run(() => deleteAgendaItemApi(accessToken!, sessionId, item.id))
+                      }
+                    />
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className={META}>Chưa có mục nào.</p>
+          )}
+          {editable && (
+            <form className="flex gap-1.5" onSubmit={(event) => void addAgenda(event)}>
               <input
-                type="date"
-                value={taskDue}
-                onChange={(event) => setTaskDue(event.target.value)}
-                aria-label="Hạn chót"
+                className={cn(INPUT, "flex-1")}
+                value={agendaDraft}
+                maxLength={200}
+                onChange={(event) => setAgendaDraft(event.target.value)}
+                placeholder="Thêm mục agenda…"
+                aria-label="Mục agenda mới"
               />
-              <Button
-                size="sm"
-                variant="primary"
+              <IconButton
+                icon="plus"
+                label="Thêm mục agenda"
                 type="submit"
-                disabled={busy || !taskTitle.trim()}
-              >
-                Tạo việc
-              </Button>
-            </div>
-          </form>
-        )}
-      </section>
+                disabled={busy || !agendaDraft.trim()}
+              />
+            </form>
+          )}
+        </section>
+      )}
 
-      <MeetingRecordingPanel sessionId={sessionId} live={live} />
-      <MeetingAttendancePanel sessionId={sessionId} />
+      {show("notes") && (
+        <section className={PANEL} aria-labelledby={`notes-${sessionId}`}>
+          <h3 id={`notes-${sessionId}`} className={PANEL_TITLE}>
+            Ghi chú chung
+            <span className="ml-auto text-xs font-normal text-muted-foreground" role="status">
+              {saveState === "saving"
+                ? "Đang lưu…"
+                : saveState === "saved"
+                  ? "Đã lưu"
+                  : saveState === "error"
+                    ? "Chưa lưu"
+                    : ""}
+            </span>
+          </h3>
+          {conflict && (
+            <div className={cn(NOTE_BOX, "grid gap-2")} role="alert">
+              <p>
+                {conflict.updatedByName ?? "Người khác"} vừa cập nhật ghi chú trong lúc bạn đang
+                sửa.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="secondary" onClick={() => resolveConflict(false)}>
+                  Dùng bản mới
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => resolveConflict(true)}>
+                  Giữ bản của tôi
+                </Button>
+              </div>
+            </div>
+          )}
+          {editable ? (
+            <textarea
+              className={cn(INPUT, "h-auto resize-y py-2 leading-relaxed")}
+              value={draft}
+              maxLength={20000}
+              rows={7}
+              onChange={(event) => onNotesChange(event.target.value)}
+              onBlur={() => void saveNotes()}
+              placeholder="Mọi người trong phòng cùng ghi chú tại đây…"
+              aria-label="Ghi chú chung của cuộc họp"
+            />
+          ) : (
+            <p className="leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">
+              {outcomes.notes.content || (
+                <span className="text-muted-foreground">Không có ghi chú.</span>
+              )}
+            </p>
+          )}
+          {outcomes.notes.updatedByName && (
+            <small className="text-xs text-muted-foreground">
+              Cập nhật bởi {outcomes.notes.updatedByName}
+              {outcomes.notes.updatedAt
+                ? ` lúc ${new Date(outcomes.notes.updatedAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`
+                : ""}
+            </small>
+          )}
+        </section>
+      )}
+
+      {show("tasks") && (
+        <section className={PANEL} aria-labelledby={`tasks-${sessionId}`}>
+          <h3 id={`tasks-${sessionId}`} className={PANEL_TITLE}>
+            Việc cần làm
+            {outcomes.tasks.length > 0 && (
+              <span className={COUNT}>
+                {outcomes.tasks.filter((task) => task.status === "done").length}/
+                {outcomes.tasks.length}
+              </span>
+            )}
+          </h3>
+          {outcomes.tasks.length ? (
+            <ul className="grid">
+              {outcomes.tasks.map((task) => (
+                <li
+                  key={task.id}
+                  className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-t py-2 first:border-t-0"
+                >
+                  <Icon
+                    name="check-square"
+                    size={15}
+                    className={
+                      task.status === "done" ? "text-emerald-600" : "text-muted-foreground"
+                    }
+                  />
+                  <span
+                    className={cn(
+                      "min-w-0 flex-1",
+                      task.status === "done" && "text-muted-foreground line-through",
+                    )}
+                  >
+                    {task.title}
+                  </span>
+                  {task.dueAt && (
+                    <span className="text-xs text-muted-foreground">
+                      hạn {new Date(task.dueAt).toLocaleDateString("vi-VN")}
+                    </span>
+                  )}
+                  <span className="text-xs text-muted-foreground">
+                    {task.assigneeName ?? "Chưa giao"}
+                  </span>
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-px text-[11.5px] font-semibold",
+                      TASK_TONE[task.status],
+                    )}
+                  >
+                    {statusLabel[task.status]}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className={META}>Chưa có việc nào được giao trong cuộc họp.</p>
+          )}
+          {editable && outcomes.outcomeChannelId && (
+            <form className="grid gap-1.5" onSubmit={(event) => void addTask(event)}>
+              <input
+                className={INPUT}
+                value={taskTitle}
+                maxLength={160}
+                onChange={(event) => setTaskTitle(event.target.value)}
+                placeholder="Việc cần làm…"
+                aria-label="Tên việc cần làm"
+              />
+              <div className="flex flex-wrap gap-1.5">
+                <select
+                  className={cn(INPUT, "min-w-[120px] flex-1")}
+                  value={taskAssignee}
+                  onChange={(event) => setTaskAssignee(event.target.value)}
+                  aria-label="Người phụ trách"
+                >
+                  <option value="">Chưa giao</option>
+                  {outcomes.attendees.map((person) => (
+                    <option key={person.userId} value={person.userId}>
+                      {person.displayName}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  className={INPUT}
+                  type="date"
+                  value={taskDue}
+                  onChange={(event) => setTaskDue(event.target.value)}
+                  aria-label="Hạn chót"
+                />
+                <Button
+                  size="sm"
+                  type="submit"
+                  className="h-[34px]"
+                  disabled={busy || !taskTitle.trim()}
+                >
+                  Tạo việc
+                </Button>
+              </div>
+            </form>
+          )}
+        </section>
+      )}
+
+      {show("channel") && (
+        <section className={PANEL} aria-labelledby={`channel-${sessionId}`}>
+          <h3 id={`channel-${sessionId}`} className={PANEL_TITLE}>
+            Kênh nhận kết quả
+          </h3>
+          {outcomes.canManage && editable ? (
+            <select
+              className={INPUT}
+              aria-label="Kênh nhận việc và tổng kết"
+              value={outcomes.outcomeChannelId ?? ""}
+              disabled={busy}
+              onChange={(event) =>
+                void run(() => setOutcomeChannelApi(accessToken!, sessionId, event.target.value))
+              }
+            >
+              {!outcomes.outcomeChannelId && <option value="">Chọn kênh văn bản…</option>}
+              {channels.map((channel) => (
+                <option key={channel.id} value={channel.id}>
+                  #{channel.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <p>
+              {outcomes.outcomeChannelName ? (
+                `#${outcomes.outcomeChannelName}`
+              ) : (
+                <span className="text-muted-foreground">Chưa chọn kênh văn bản</span>
+              )}
+            </p>
+          )}
+          <small className="text-xs text-muted-foreground">
+            Việc tạo trong họp vào bảng công việc của kênh này; tổng kết được đăng khi kết thúc.
+          </small>
+        </section>
+      )}
+
+      {show("recording") && <MeetingRecordingPanel sessionId={sessionId} live={live} />}
+      {show("attendance") && <MeetingAttendancePanel sessionId={sessionId} />}
     </div>
   );
 }

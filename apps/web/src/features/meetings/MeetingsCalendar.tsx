@@ -3,37 +3,42 @@ import { AnimatePresence } from "motion/react";
 import type { MeetingCalendar, MeetingScheduleItem, WorkspaceItem } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import { Icon } from "../../shared/ui/Icon";
-import {
-  Avatar,
-  Button,
-  ConfirmDialog,
-  Field,
-  IconButton,
-  Modal,
-  PageHeader,
-} from "../../shared/ui/Primitives";
+import { Button, ConfirmDialog, Field, Modal } from "../../shared/ui/Primitives";
+import { UserAvatar } from "../../shared/ui/kit/user-avatar";
+import { cn } from "../../shared/lib/utils";
 import { NoGroups } from "../workspaces/GroupDialogs";
 import { cancelMeetingScheduleApi, getMeetingCalendarApi, saveMeetingScheduleApi } from "./api";
-import {
-  calendarEvents,
-  FIRST_HOUR,
-  LAST_HOUR,
-  layoutDay,
-  weekStart,
-  type CalendarEvent,
-} from "./calendar";
+import { SEG, SEG_BTN } from "../admin/ui";
+import { calendarEvents, weekStart, type CalendarEvent } from "./calendar";
 import { MeetingAttendancePanel } from "./MeetingAttendancePanel";
+import { DatePicker, isoDay, TimePicker } from "./DateTimeFields";
 import { MeetingClock } from "./MeetingClock";
 import { MeetingOutcomesPanel } from "./MeetingOutcomesPanel";
 import { MeetingRecordingPanel } from "./MeetingRecordingPanel";
 import { inviteInput, ScheduleInviteFields, type InviteState } from "./ScheduleInviteFields";
-import "./meetings-calendar.css";
 
 export type MeetingRoom = { id: string; name: string; workspace: string; workspaceId: string };
 
 const DAY = 86_400_000;
 const LAST_WORKSPACE = "meeting:lastWorkspace";
-const STATUS_LABEL = { live: "Đang diễn ra", upcoming: "Sắp tới", past: "Đã qua" } as const;
+const BTN =
+  "inline-flex h-9 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md px-3.5 text-[13.5px] font-semibold whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+const BTN_PRIMARY = `${BTN} bg-primary text-primary-foreground hover:bg-primary/90`;
+const BTN_GHOST = `${BTN} border bg-card text-foreground hover:bg-secondary`;
+const BTN_SM = "h-[30px] px-3 text-[13px]";
+const LINK =
+  "h-[30px] cursor-pointer rounded-md px-2 text-[13px] font-medium text-muted-foreground hover:bg-secondary hover:text-foreground";
+const GROUP_LABEL =
+  "grid! gap-1.5! text-xs! font-semibold tracking-[.05em] text-muted-foreground! uppercase";
+const INPUT =
+  "h-[38px] w-full rounded-lg! bg-card! px-3! py-0! text-sm! font-normal tracking-normal text-foreground normal-case outline-none focus:border-foreground!";
+// Grows with its text instead of a drag handle (field-sizing: Chromium; others keep `rows`).
+const AREA =
+  "min-h-[60px] w-full resize-none rounded-lg! bg-card! px-3! py-2! text-sm! leading-relaxed text-foreground outline-none [field-sizing:content] focus:border-foreground!";
+const ICON_BTN =
+  "grid size-8 shrink-0 cursor-pointer place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground";
+const CHIP =
+  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11.5px] font-semibold whitespace-nowrap";
 const WEEKDAYS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"];
 
 // Day labels and times in Vietnam time, matching how the week is cut.
@@ -105,10 +110,8 @@ export function MeetingsCalendar({
   const [cancelId, setCancelId] = useState("");
   const [cancelling, setCancelling] = useState(false);
 
-  const [viewMode, setViewMode] = useState<"cards" | "calendar">("cards");
   const [searchQuery, setSearchQuery] = useState("");
-  const [quickRoomId, setQuickRoomId] = useState("");
-  const [agendaFilter, setAgendaFilter] = useState<"next" | "past" | "all">("next");
+  const [tab, setTab] = useState<"next" | "past" | "rooms">("next");
 
   const groupId = route.workspaceId ?? "";
 
@@ -149,7 +152,6 @@ export function MeetingsCalendar({
     weekStart(now).getTime() === week.getTime()
       ? Math.floor((now.getTime() - week.getTime()) / DAY)
       : -1;
-  const selected = events.find((item) => item.key === selectedKey);
   const schedule = (item: CalendarEvent) =>
     data?.schedules.find((entry) => entry.id === item.scheduleId);
   const openRoom = (item: { workspaceId: string; roomId: string; scheduleId?: string | null }) =>
@@ -162,10 +164,6 @@ export function MeetingsCalendar({
 
   // Counts & sessions
   const activeSessions = useMemo(() => data?.sessions.filter((s) => !s.endedAt) ?? [], [data]);
-  const pastSessions = useMemo(
-    () => data?.sessions.filter((s) => Boolean(s.endedAt)).slice(0, 5) ?? [],
-    [data],
-  );
 
   // Filtered rooms based on the search query
   const filteredRooms = useMemo(() => {
@@ -213,22 +211,6 @@ export function MeetingsCalendar({
   if (groups?.length === 0)
     return <NoGroups text="Cuộc họp của các nhóm bạn tham gia sẽ hiện ở đây." />;
 
-  const eventButton = (item: CalendarEvent, style?: React.CSSProperties) => (
-    <button
-      key={item.key}
-      type="button"
-      className={`meeting-event is-${item.status} ${item.key === selectedKey ? "is-selected" : ""}`}
-      style={style}
-      aria-pressed={item.key === selectedKey}
-      onClick={() => setSelectedKey(item.key)}
-    >
-      <strong>{item.title}</strong>
-      <span>
-        {clock(item.start)}–{clock(item.end)} · {item.workspaceName}
-      </span>
-    </button>
-  );
-
   // Day of the loaded week (Vietnam time), so labels match how the week is cut.
   const dayIndex = (date: Date) => Math.floor((date.getTime() - week.getTime()) / DAY);
   const dayLabel = (date: Date) => {
@@ -250,18 +232,13 @@ export function MeetingsCalendar({
         (session.title ?? session.roomName).toLowerCase().includes(query) ||
         session.workspaceName.toLowerCase().includes(query)),
   );
-  const livePeople = liveSessions.reduce((sum, session) => sum + session.people.length, 0);
   const liveIn = (roomId: string) => activeSessions.find((session) => session.roomId === roomId);
-  const readyRooms = rooms.filter((room) => !liveIn(room.id)).length;
   const counts = {
     next: filteredEvents.filter((item) => item.status !== "past").length,
     past: filteredEvents.filter((item) => item.status === "past").length,
-    all: filteredEvents.length,
   };
   const agendaDays = filteredEvents
-    .filter(
-      (item) => agendaFilter === "all" || (agendaFilter === "past") === (item.status === "past"),
-    )
+    .filter((item) => (tab === "past") === (item.status === "past"))
     .sort((a, b) => a.start.getTime() - b.start.getTime())
     .reduce<{ label: string; items: CalendarEvent[] }[]>((list, item) => {
       const label = dayLabel(item.start);
@@ -270,599 +247,466 @@ export function MeetingsCalendar({
       else list.push({ label, items: [item] });
       return list;
     }, []);
-  const quickRoom = rooms.find((room) => room.id === quickRoomId) ?? rooms[0];
   const roomOf = (roomId: string) => rooms.find((room) => room.id === roomId)?.name ?? "Phòng họp";
   const weekTitle = `Tuần ${dayMonth(days[0]).slice(0, 2)}–${dayMonth(days[6])}`;
   const weekNav = (
-    <div className="mt-weeknav">
-      <IconButton
-        label="Tuần trước"
-        icon="chevron-left"
+    <div className="flex items-center gap-1 text-[13px]">
+      <button
+        type="button"
+        className={ICON_BTN}
+        aria-label="Tuần trước"
+        title="Tuần trước"
         onClick={() => setWeek(new Date(week.getTime() - 7 * DAY))}
-      />
-      <span>{weekTitle}</span>
-      <IconButton
-        label="Tuần sau"
-        icon="chevron-right"
+      >
+        <Icon name="chevron-left" size={16} />
+      </button>
+      <span className="font-medium text-foreground">{weekTitle}</span>
+      <button
+        type="button"
+        className={ICON_BTN}
+        aria-label="Tuần sau"
+        title="Tuần sau"
         onClick={() => setWeek(new Date(week.getTime() + 7 * DAY))}
-      />
+      >
+        <Icon name="chevron-right" size={16} />
+      </button>
       {today < 0 && (
-        <Button size="sm" variant="secondary" onClick={() => setWeek(weekStart(new Date()))}>
+        <button
+          type="button"
+          className={cn(BTN_GHOST, BTN_SM, "ml-auto")}
+          onClick={() => setWeek(weekStart(new Date()))}
+        >
           Hôm nay
-        </Button>
+        </button>
       )}
     </div>
   );
 
-  const detail = selected && (
-    <aside className="meeting-detail" aria-label="Chi tiết cuộc họp">
-      <div className="meeting-detail__head">
-        <span className={`meeting-detail__status is-${selected.status}`}>
-          {STATUS_LABEL[selected.status]}
+  const listed = agendaDays.flatMap((day) => day.items);
+  const current = listed.find((item) => item.key === selectedKey) ?? listed[0];
+  const statusChip = (item: CalendarEvent) =>
+    item.status === "live" ? (
+      <span className={cn(CHIP, "bg-[var(--tint-red-bg)] text-[var(--tint-red-fg)]")}>
+        <i className="size-1.5 rounded-full bg-current motion-safe:animate-pulse" />
+        Đang họp
+      </span>
+    ) : item.status === "past" ? (
+      <span className={cn(CHIP, "bg-secondary text-muted-foreground")}>Đã kết thúc</span>
+    ) : (
+      <span className={cn(CHIP, "bg-brand-soft text-brand")}>Sắp tới</span>
+    );
+  const facts = (item: CalendarEvent) => (
+    <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
+      <span className="inline-flex items-center gap-1.5">
+        <Icon name="calendar" size={14} />
+        {dayLabel(item.start)}
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <Icon name="clock" size={14} />
+        {clock(item.start)}–{clock(item.end)} ·{" "}
+        {Math.max(1, Math.round((item.end.getTime() - item.start.getTime()) / 60_000))} phút
+      </span>
+      {item.people.length > 0 && (
+        <span className="inline-flex items-center gap-1.5">
+          <Icon name="users" size={14} />
+          {item.people.length} người {item.status === "live" ? "trong phòng" : "tham gia"}
         </span>
-        <IconButton label="Đóng chi tiết" icon="x" onClick={() => setSelectedKey("")} />
-      </div>
-      <h2>{selected.title}</h2>
-      <p>
-        {selected.workspaceName} · {roomOf(selected.roomId)}
-      </p>
-      <p className="meeting-detail__time">
-        <Icon name="clock" size={14} /> {dayMonth(selected.start)} · {clock(selected.start)}–
-        {clock(selected.end)}
-      </p>
-      {schedule(selected)?.description && (
-        <p className="meeting-detail__note">{schedule(selected)?.description}</p>
       )}
-      {selected.status !== "past" && (
-        <>
-          {selected.status === "live" && (
-            <p className="meeting-detail__people">
-              <Icon name="users" size={14} />{" "}
-              {selected.people.length
-                ? `Đang trong phòng: ${selected.people.join(", ")}`
-                : "Chưa có ai trong phòng"}
-            </p>
-          )}
-          <div className="meeting-detail__actions">
-            <Button icon="video" onClick={() => openRoom(selected)}>
-              Vào phòng
-            </Button>
-            {schedule(selected) && (
-              <Button
-                variant="text"
-                size="sm"
-                icon="calendar"
-                onClick={() => downloadCalendarEvent(schedule(selected)!)}
-              >
-                Tải .ics
-              </Button>
-            )}
-            {selected.canManage && schedule(selected) && (
-              <>
-                <Button
-                  variant="text"
-                  size="sm"
-                  icon="edit"
-                  onClick={() => setForm({ item: schedule(selected) })}
-                >
-                  Sửa
-                </Button>
-                <Button
-                  variant="text"
-                  size="sm"
-                  onClick={() => setCancelId(selected.scheduleId ?? "")}
-                >
-                  Huỷ
-                </Button>
-              </>
-            )}
-          </div>
-        </>
-      )}
-      {selected.status !== "live" && selected.sessionId ? (
-        <div className="meeting-detail__past">
-          {selected.people.length > 0 && <p>Đã tham gia: {selected.people.join(", ")}</p>}
-          <MeetingRecordingPanel sessionId={selected.sessionId} live={false} />
-          <MeetingOutcomesPanel sessionId={selected.sessionId} live={false} />
-          <MeetingAttendancePanel sessionId={selected.sessionId} />
-        </div>
-      ) : selected.status === "past" ? (
-        <p>Cuộc họp này đã qua giờ mà chưa ai vào phòng.</p>
-      ) : null}
-    </aside>
+    </div>
   );
 
-  return (
-    <section className="meetings-calendar" aria-labelledby="meetings-title">
-      <PageHeader
-        className="mt-head"
-        title="Họp"
-        titleId="meetings-title"
-        live={activeSessions.length > 0}
-        meta={
-          activeSessions.length
-            ? `${activeSessions.length} phiên đang diễn ra`
-            : "Chưa có phiên nào đang diễn ra"
-        }
-      >
-        <div className="mt-seg" role="group" aria-label="Chế độ xem">
+  // Upcoming or live: when, where, who is in, and how to get in.
+  const detailOf = (item: CalendarEvent) => {
+    const plan = schedule(item);
+    return (
+      <div className="grid content-start gap-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {statusChip(item)}
+          {item.status === "live" && (
+            <span className="text-[13px] text-muted-foreground">
+              <MeetingClock since={item.start.toISOString()} />
+            </span>
+          )}
+          <span className="flex-1" />
+          {plan && (
+            <button
+              type="button"
+              className={cn(BTN_GHOST, BTN_SM)}
+              onClick={() => downloadCalendarEvent(plan)}
+            >
+              <Icon name="calendar" size={15} />
+              Tải .ics
+            </button>
+          )}
+          {plan && item.canManage && (
+            <>
+              <button type="button" className={LINK} onClick={() => setForm({ item: plan })}>
+                Sửa
+              </button>
+              <button
+                type="button"
+                className={cn(LINK, "text-red-600 hover:text-red-600")}
+                onClick={() => setCancelId(item.scheduleId ?? "")}
+              >
+                Hủy họp
+              </button>
+            </>
+          )}
+        </div>
+        <h2 className="text-[22px]! leading-tight font-bold! tracking-tight text-foreground!">
+          {item.title}
+        </h2>
+        <dl className="grid grid-cols-[110px_minmax(0,1fr)] gap-x-3 gap-y-2 text-[13.5px] [&_dt]:text-muted-foreground">
+          <dt>Thời gian</dt>
+          <dd>
+            {clock(item.start)}–{clock(item.end)} · {dayLabel(item.start)}
+          </dd>
+          <dt>Nhóm / phòng</dt>
+          <dd>
+            {item.workspaceName} · {roomOf(item.roomId)}
+          </dd>
+          {plan?.description && (
+            <>
+              <dt>Mô tả</dt>
+              <dd className="whitespace-pre-wrap">{plan.description}</dd>
+            </>
+          )}
+          {item.canManage && (
+            <>
+              <dt>Quyền</dt>
+              <dd>Bạn quản lý cuộc họp này</dd>
+            </>
+          )}
+        </dl>
+        <div className="grid gap-2.5 rounded-xl border p-4">
+          <b className="text-sm font-semibold">
+            {item.status === "live" ? `Trong phòng (${item.people.length})` : "Người tham gia"}
+          </b>
+          {item.people.length ? (
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+              {item.people.map((name) => (
+                <span key={name} className="inline-flex items-center gap-2 text-[13px]">
+                  <UserAvatar name={name} className="size-7 text-[11px]" />
+                  {name}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <span className="text-[13px] text-muted-foreground">
+              {item.status === "live" ? "Chưa có ai trong phòng." : "Chưa có ai vào phòng."}
+            </span>
+          )}
+        </div>
+        <div>
           <button
             type="button"
-            className={viewMode === "cards" ? "is-active" : ""}
-            aria-pressed={viewMode === "cards"}
-            onClick={() => setViewMode("cards")}
+            className={cn(BTN_PRIMARY, "h-[42px] px-5")}
+            onClick={() => openRoom(item)}
           >
-            <Icon name="grid-2x2" size={13} /> Tổng quan
-          </button>
-          <button
-            type="button"
-            className={viewMode === "calendar" ? "is-active" : ""}
-            aria-pressed={viewMode === "calendar"}
-            onClick={() => setViewMode("calendar")}
-          >
-            <Icon name="calendar" size={13} /> Lịch tuần
+            <Icon name="video" size={17} />
+            Vào phòng họp
           </button>
         </div>
-        <select
-          className="mt-select"
-          value={groupId}
-          aria-label="Lọc theo nhóm"
-          onChange={(event) =>
-            navigate({ view: "meetings", workspaceId: event.target.value || undefined }, true)
-          }
+      </div>
+    );
+  };
+
+  // Past: the meeting report, read top to bottom like minutes; agenda and notes stay beside it.
+  const reportOf = (item: CalendarEvent) => (
+    <div className="grid content-start gap-4">
+      <div className="grid gap-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          {statusChip(item)}
+          <span className="text-[13px] text-muted-foreground">
+            {item.workspaceName} · {roomOf(item.roomId)}
+          </span>
+        </div>
+        <h2 className="text-[22px]! leading-tight font-bold! tracking-tight text-foreground!">
+          {item.title}
+        </h2>
+        {facts(item)}
+      </div>
+      {item.sessionId ? (
+        <div className="grid min-w-0 items-start gap-4 min-[1300px]:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="grid min-w-0 gap-4">
+            <MeetingRecordingPanel sessionId={item.sessionId} live={false} />
+            <MeetingOutcomesPanel sessionId={item.sessionId} live={false} sections={["tasks"]} />
+            <MeetingAttendancePanel sessionId={item.sessionId} auto />
+          </div>
+          <div className="min-w-0 min-[1300px]:sticky min-[1300px]:top-2">
+            <MeetingOutcomesPanel
+              sessionId={item.sessionId}
+              live={false}
+              sections={["agenda", "notes", "channel"]}
+            />
+          </div>
+        </div>
+      ) : (
+        <p className="rounded-xl border border-dashed p-6 text-center text-[13px] text-muted-foreground">
+          Đã qua giờ mà chưa ai vào phòng, nên không có biên bản.
+        </p>
+      )}
+    </div>
+  );
+
+  const empty = (text: string, action?: React.ReactNode) => (
+    <div className="grid justify-items-center gap-3 px-4 py-10 text-center text-sm text-muted-foreground">
+      <Icon name="calendar" size={22} />
+      <span>{text}</span>
+      {action}
+    </div>
+  );
+  const group = groups?.find((item) => item.id === groupId);
+
+  return (
+    <section
+      className="tw flex w-full flex-col gap-4 text-sm text-foreground"
+      aria-labelledby="meetings-title"
+    >
+      <header className="flex flex-wrap items-center gap-2.5">
+        <h1
+          id="meetings-title"
+          className="mr-auto text-[22px] leading-8 font-bold tracking-normal text-foreground"
         >
-          <option value="">Tất cả nhóm / Khoa</option>
-          {groups?.map((group) => (
-            <option key={group.id} value={group.id}>
-              {group.name}
-            </option>
-          ))}
-        </select>
-        <label className="mt-search">
-          <Icon name="search" size={14} />
+          Họp
+        </h1>
+        <label className="flex h-[34px] w-[280px] items-center gap-2 rounded-md border bg-card px-2.5 text-muted-foreground focus-within:border-foreground max-md:order-last max-md:w-full">
+          <Icon name="search" size={15} />
           <input
             type="search"
-            placeholder="Tìm phòng hoặc cuộc họp…"
-            aria-label="Tìm phòng hoặc cuộc họp"
+            className="w-0 min-w-0 flex-1 bg-transparent text-[13px] text-foreground !outline-none placeholder:text-muted-foreground"
+            placeholder="Tìm cuộc họp, phòng hoặc nhóm"
+            aria-label="Tìm cuộc họp, phòng hoặc nhóm"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
           />
         </label>
-        <Button
-          size="sm"
-          variant="secondary"
-          icon="video"
+        <button
+          type="button"
+          className={BTN_GHOST}
+          disabled={!rooms.length}
+          onClick={() => setForm({})}
+        >
+          <Icon name="calendar" size={17} />
+          Lên lịch
+        </button>
+        <button
+          type="button"
+          className={BTN_PRIMARY}
           disabled={!rooms.length}
           onClick={() => setStartNow(true)}
         >
+          <Icon name="video" size={17} />
           Họp ngay
-        </Button>
-        <Button size="sm" icon="plus" disabled={!rooms.length} onClick={() => setForm({})}>
-          Lên lịch
-        </Button>
-      </PageHeader>
+        </button>
+      </header>
 
       {error && (
-        <p className="inline-alert" role="alert">
+        <p
+          className="rounded-md bg-[var(--tint-red-bg)] px-3 py-2 text-[13px] text-[var(--tint-red-fg)]"
+          role="alert"
+        >
           {error}
         </p>
       )}
       {!data && !error && (
-        <p role="status" className="loading-note">
+        <p role="status" className="text-[13px] text-muted-foreground">
           Đang tải dữ liệu cuộc họp…
         </p>
       )}
 
-      {viewMode === "cards" && (
-        <section className="mt-rack" aria-labelledby="mt-live-title">
-          <div className="mt-rack__head">
-            <h2 id="mt-live-title">Đang diễn ra</h2>
-            <span>
-              {liveSessions.length} phiên · {livePeople} người trong phòng
+      {/* Rooms in use right now, scheduled or not. */}
+      {liveSessions.map((session) => (
+        <article
+          key={session.id}
+          className="flex flex-wrap items-center gap-3.5 rounded-[14px] bg-primary px-4.5 py-3.5 text-primary-foreground"
+        >
+          <span className="size-2.5 shrink-0 rounded-full bg-red-500 ring-4 ring-red-500/25 motion-safe:animate-pulse" />
+          <div className="grid min-w-0 flex-1 basis-56">
+            <b className="truncate text-base font-semibold">{session.title ?? session.roomName}</b>
+            <span className="truncate text-[13px] opacity-70">
+              Đang diễn ra · {session.roomName} · {session.workspaceName} ·{" "}
+              <MeetingClock since={session.startedAt} />
+              {session.people.length > 0 && ` · ${session.people.length} người trong phòng`}
             </span>
           </div>
-          <div className="mt-rack__grid">
-            {liveSessions.map((session) => {
-              const plan = data?.schedules.find((item) => item.id === session.scheduleId);
-              return (
-                <article key={session.id} className="mt-unit is-live">
-                  <div className="mt-unit__top">
-                    <span className="mt-led is-pulse" />
-                    <span className="mt-unit__room">
-                      {session.roomName} · {session.workspaceName}
-                    </span>
-                    <MeetingClock since={session.startedAt} className="mt-unit__clock" />
-                  </div>
-                  <h3 className="mt-unit__title">{session.title ?? session.roomName}</h3>
-                  {(plan?.autoRecord || plan?.waitingRoom) && (
-                    <div className="mt-unit__chips">
-                      {plan.autoRecord && (
-                        <span className="mt-chip">
-                          <span className="mt-led tone-red" /> Tự ghi hình
-                        </span>
-                      )}
-                      {plan.waitingRoom && (
-                        <span className="mt-chip">
-                          <span className="mt-led tone-amber" /> Có phòng chờ
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  <div className="mt-unit__foot">
-                    <PeopleStack names={session.people} />
-                    <span className="mt-unit__people">
-                      {session.people.length
-                        ? `${session.people.length} người trong phòng`
-                        : "Chưa có ai trong phòng"}
-                    </span>
-                    <Button
-                      size="sm"
-                      icon="video"
-                      onClick={() =>
-                        openRoom({
-                          workspaceId: session.workspaceId,
-                          roomId: session.roomId,
-                          scheduleId: session.scheduleId,
-                        })
-                      }
-                    >
-                      Vào ngay
-                    </Button>
-                  </div>
-                </article>
-              );
-            })}
-            {!liveSessions.length && (
-              <div className="mt-unit is-empty">
-                <Icon name="video" size={18} />
-                <p>Chưa có phiên nào đang diễn ra. Chọn một phòng sẵn sàng hoặc bấm “Họp ngay”.</p>
-              </div>
-            )}
-            <div className="mt-unit is-quick">
-              <span className="mt-unit__label">Vào nhanh</span>
-              <select
-                className="mt-select is-dark"
-                aria-label="Chọn phòng để vào nhanh"
-                value={quickRoom?.id ?? ""}
-                disabled={!rooms.length}
-                onChange={(event) => setQuickRoomId(event.target.value)}
-              >
-                {rooms.map((room) => (
-                  <option key={room.id} value={room.id}>
-                    {room.name} ({room.workspace})
-                  </option>
-                ))}
-              </select>
-              <div className="mt-unit__row">
-                <Button
-                  size="sm"
-                  disabled={!quickRoom}
-                  onClick={() =>
-                    quickRoom &&
-                    navigate({
-                      view: "meetings",
-                      workspaceId: quickRoom.workspaceId,
-                      channelId: quickRoom.id,
-                    })
-                  }
-                >
-                  Vào phòng
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="mt-ghost-dark"
-                  disabled={!rooms.length}
-                  onClick={() => setStartNow(true)}
-                >
-                  Họp ngay
-                </Button>
-              </div>
-              <span className="mt-unit__hint">
-                {readyRooms} phòng sẵn sàng · không cần đặt trước
-              </span>
-            </div>
-          </div>
-        </section>
-      )}
+          <PeopleStack names={session.people} />
+          <button
+            type="button"
+            className={cn(BTN, "bg-primary-foreground text-primary hover:bg-primary-foreground/90")}
+            onClick={() =>
+              openRoom({
+                workspaceId: session.workspaceId,
+                roomId: session.roomId,
+                scheduleId: session.scheduleId,
+              })
+            }
+          >
+            Tham gia
+          </button>
+        </article>
+      ))}
 
-      <div className={`mt-body is-${viewMode} ${selected ? "has-detail" : ""}`}>
-        {viewMode === "cards" ? (
-          <section className="mt-card mt-agenda" aria-labelledby="mt-agenda-title">
-            <div className="mt-card__head">
-              <h2 id="mt-agenda-title">Lịch họp</h2>
-              <div className="mt-chips" role="group" aria-label="Lọc lịch họp">
-                {(
-                  [
-                    ["next", "Sắp tới"],
-                    ["past", "Đã qua"],
-                    ["all", "Tất cả"],
-                  ] as const
-                ).map(([value, label]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={`mt-chip-btn ${agendaFilter === value ? "is-active" : ""}`}
-                    aria-pressed={agendaFilter === value}
-                    onClick={() => setAgendaFilter(value)}
-                  >
-                    {label} <small>{counts[value]}</small>
-                  </button>
-                ))}
-              </div>
-              {weekNav}
+      <div className="grid min-h-[560px] min-w-0 overflow-hidden rounded-xl border bg-card min-[900px]:grid-cols-[340px_minmax(0,1fr)]">
+        <div className="grid min-w-0 content-start border-b bg-background max-[899px]:max-h-[420px] max-[899px]:overflow-y-auto min-[900px]:border-r min-[900px]:border-b-0">
+          <div className="sticky top-0 z-[1] grid gap-2 border-b bg-background p-3">
+            <div className={cn(SEG, "w-full")} role="tablist" aria-label="Cuộc họp">
+              {(
+                [
+                  ["next", "Sắp tới", counts.next],
+                  ["past", "Đã họp", counts.past],
+                  ["rooms", "Phòng", filteredRooms.length],
+                ] as const
+              ).map(([value, label, count]) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === value}
+                  aria-pressed={tab === value}
+                  className={cn(SEG_BTN, "flex-1")}
+                  onClick={() => {
+                    setTab(value);
+                    setSelectedKey("");
+                  }}
+                >
+                  {label}
+                  <small className="ml-1 text-xs font-normal text-muted-foreground">{count}</small>
+                </button>
+              ))}
             </div>
-            {agendaDays.length === 0 ? (
-              <div className="mt-empty">
-                <Icon name="calendar" size={22} />
-                <p>
-                  {agendaFilter === "past"
-                    ? "Tuần này chưa có cuộc họp nào đã qua."
-                    : "Chưa có cuộc họp nào được lên lịch theo bộ lọc này."}
-                </p>
-                {agendaFilter !== "past" && (
-                  <Button
-                    size="sm"
-                    icon="plus"
-                    disabled={!rooms.length}
-                    onClick={() => setForm({})}
-                  >
-                    Lên lịch cuộc họp mới
-                  </Button>
-                )}
-              </div>
+            {tab !== "rooms" && weekNav}
+            {group && (
+              <button
+                type="button"
+                className={cn(CHIP, "w-max cursor-pointer bg-secondary text-foreground")}
+                title="Bỏ lọc theo nhóm"
+                onClick={() => navigate({ view: "meetings" }, true)}
+              >
+                {group.name} <Icon name="x" size={12} />
+              </button>
+            )}
+          </div>
+
+          {tab === "rooms" ? (
+            filteredRooms.length === 0 ? (
+              empty("Không tìm thấy phòng họp phù hợp.")
             ) : (
-              agendaDays.map((day) => (
-                <div key={day.label} className="mt-day">
-                  <h3 className="mt-day__label">{day.label}</h3>
-                  {day.items.map((item) => {
-                    const isSelected = item.key === selectedKey;
-                    return (
-                      <div
-                        key={item.key}
-                        className={`mt-ev is-${item.status} ${isSelected ? "is-selected" : ""}`}
+              <ul className="py-1">
+                {filteredRooms.map((room) => {
+                  const live = liveIn(room.id);
+                  return (
+                    <li key={room.id} className="flex items-center gap-3 px-3.5 py-2.5">
+                      <span
+                        className={cn(
+                          "size-2 shrink-0 rounded-full",
+                          live ? "bg-emerald-500" : "bg-border",
+                        )}
+                      />
+                      <span className="grid min-w-0 flex-1">
+                        <b className="truncate text-[13.5px] font-semibold">{room.name}</b>
+                        <small className="truncate text-xs text-muted-foreground">
+                          {live ? `Đang họp · ${live.people.length} người` : "Sẵn sàng"} ·{" "}
+                          {room.workspace}
+                        </small>
+                      </span>
+                      <button
+                        type="button"
+                        className={cn(live ? BTN_PRIMARY : BTN_GHOST, BTN_SM)}
+                        aria-label={`Vào ${room.name}`}
+                        onClick={() =>
+                          navigate({
+                            view: "meetings",
+                            workspaceId: room.workspaceId,
+                            channelId: room.id,
+                          })
+                        }
                       >
-                        <div className="mt-ev__time">
-                          <b>{clock(item.start)}</b>
-                          <span>{clock(item.end)}</span>
-                        </div>
-                        <span className="mt-ev__rail" aria-hidden="true">
-                          <i />
-                        </span>
-                        <div className="mt-ev__body">
-                          <div className="mt-ev__title">
-                            <span>{item.title}</span>
-                            <span className={`mt-status is-${item.status}`}>
-                              {STATUS_LABEL[item.status]}
-                            </span>
-                          </div>
-                          <div className="mt-ev__meta">
-                            {item.workspaceName} · {roomOf(item.roomId)}
-                          </div>
-                        </div>
-                        <div className="mt-ev__actions">
-                          <PeopleStack names={item.people} />
-                          {item.status !== "past" && (
-                            <Button
-                              size="sm"
-                              variant={item.status === "live" ? "primary" : "secondary"}
-                              icon="video"
-                              onClick={() => openRoom(item)}
-                            >
-                              Vào họp
-                            </Button>
-                          )}
-                          {schedule(item) && (
-                            <IconButton
-                              label="Tải lịch .ics"
-                              icon="calendar"
-                              onClick={() => downloadCalendarEvent(schedule(item)!)}
-                            />
-                          )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            aria-expanded={isSelected}
-                            onClick={() => setSelectedKey(isSelected ? "" : item.key)}
-                          >
-                            {isSelected ? "Đóng" : "Chi tiết"}
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))
-            )}
-          </section>
-        ) : (
-          <div className="mt-week-wrap">
-            <div className="meetings-calendar__bar">
-              {weekNav}
-              <span className="meetings-calendar__hint">Bấm vào ô cuộc họp để xem chi tiết</span>
-            </div>
-            <div className="meeting-week" role="grid" aria-label="Lịch tuần">
-              <div className="meeting-week__head" role="row">
-                <span />
-                {days.map((day, index) => (
-                  <span
-                    key={index}
-                    role="columnheader"
-                    className={index === today ? "is-today" : ""}
-                  >
-                    {WEEKDAYS[index]} <strong>{dayMonth(day)}</strong>
-                  </span>
-                ))}
-              </div>
-              <div
-                className="meeting-week__grid"
-                role="row"
-                style={{ "--hours": LAST_HOUR - FIRST_HOUR } as React.CSSProperties}
-              >
-                <div className="meeting-week__hours" aria-hidden="true">
-                  {Array.from({ length: LAST_HOUR - FIRST_HOUR }, (_, index) => (
-                    <span key={index}>{FIRST_HOUR + index}:00</span>
-                  ))}
-                </div>
-                {days.map((day, index) => (
-                  <div
-                    key={index}
-                    role="gridcell"
-                    className={`meeting-week__day ${index === today ? "is-today" : ""}`}
-                  >
-                    {layoutDay(events, day).map(({ event, top, height, column, columns }) =>
-                      eventButton(event, {
-                        top: `${top}%`,
-                        height: `${height}%`,
-                        left: `${(column / columns) * 100}%`,
-                        width: `${100 / columns}%`,
-                      }),
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <ol className="meeting-days" aria-label="Lịch tuần theo ngày">
-              {days.map((day, index) => {
-                const items = layoutDay(events, day).map(({ event }) => event);
-                return (
-                  <li key={index} className={index === today ? "is-today" : ""}>
-                    <h3>
-                      {WEEKDAYS[index]} {dayMonth(day)}
-                    </h3>
-                    {items.length ? (
-                      items.map((item) => eventButton(item))
-                    ) : (
-                      <p>Không có cuộc họp</p>
-                    )}
-                  </li>
-                );
-              })}
-            </ol>
-          </div>
-        )}
-
-        {(viewMode === "cards" || selected) && (
-          <div className="mt-side">
-            {detail || (
-              <>
-                <section className="mt-card" aria-labelledby="mt-week-title">
-                  <div className="mt-card__head">
-                    <h2 id="mt-week-title">{weekTitle}</h2>
-                    <button
-                      type="button"
-                      className="mt-link"
-                      onClick={() => setViewMode("calendar")}
-                    >
-                      Xem lịch tuần
-                    </button>
-                  </div>
-                  <div className="mt-cal">
-                    {days.map((day, index) => {
-                      const count = events.filter((item) => dayIndex(item.start) === index).length;
-                      return (
-                        <button
-                          key={index}
-                          type="button"
-                          className={`mt-cal__day ${index === today ? "is-today" : ""}`}
-                          title={`${WEEKDAYS[index]} ${dayMonth(day)} · ${count} cuộc họp`}
-                          onClick={() => setViewMode("calendar")}
-                        >
-                          <small>
-                            {WEEKDAYS[index].replace("Thứ ", "T").replace("Chủ nhật", "CN")}
-                          </small>
-                          <b>{dayMonth(day).slice(0, 2)}</b>
-                          <i className={count ? "" : "is-empty"} />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-
-                <section className="mt-card" aria-labelledby="mt-rooms-title">
-                  <div className="mt-card__head">
-                    <h2 id="mt-rooms-title">Phòng họp</h2>
-                    <span className="mt-card__meta">
-                      {filteredRooms.length} phòng ·{" "}
-                      {filteredRooms.filter((room) => liveIn(room.id)).length} đang dùng
-                    </span>
-                  </div>
-                  {filteredRooms.length === 0 ? (
-                    <p className="mt-muted">
-                      Không tìm thấy phòng họp phù hợp với bộ lọc hiện tại.
-                    </p>
-                  ) : (
-                    <ul className="mt-rooms">
-                      {filteredRooms.map((room) => {
-                        const live = liveIn(room.id);
-                        return (
-                          <li key={room.id} className="mt-room">
-                            <span className={`mt-led ${live ? "" : "is-off"}`} />
-                            <div>
-                              <b title={room.name}>{room.name}</b>
-                              <small title={room.workspace}>
-                                {live ? `Đang họp · ${live.people.length} người` : "Sẵn sàng"} ·{" "}
-                                {room.workspace}
-                              </small>
-                            </div>
-                            <button
-                              type="button"
-                              className="mt-link"
-                              aria-label={`Vào ${room.name}`}
-                              onClick={() =>
-                                navigate({
-                                  view: "meetings",
-                                  workspaceId: room.workspaceId,
-                                  channelId: room.id,
-                                })
-                              }
-                            >
-                              Vào
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
+                        {live ? "Tham gia" : "Vào"}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )
+          ) : agendaDays.length === 0 ? (
+            empty(
+              tab === "past"
+                ? "Tuần này chưa có cuộc họp nào đã qua."
+                : "Tuần này chưa có cuộc họp nào sắp tới.",
+              tab === "next" && (
+                <button
+                  type="button"
+                  className={cn(BTN_PRIMARY, BTN_SM)}
+                  disabled={!rooms.length}
+                  onClick={() => setForm({})}
+                >
+                  Lên lịch cuộc họp mới
+                </button>
+              ),
+            )
+          ) : (
+            agendaDays.map((day) => (
+              <div key={day.label} className="pb-1">
+                <h2
+                  className={cn(
+                    "px-3.5 pt-3 pb-1 text-[11.5px]! leading-4 font-semibold! tracking-wider uppercase",
+                    day.label.startsWith("Hôm nay") ? "text-brand!" : "text-muted-foreground!",
                   )}
-                </section>
+                >
+                  {day.label}
+                </h2>
+                {day.items.map((item) => {
+                  const on = item.key === current?.key;
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      data-meeting-row
+                      aria-current={on || undefined}
+                      onClick={() => setSelectedKey(item.key)}
+                      className={cn(
+                        "flex w-full cursor-pointer items-center gap-3 border-l-[3px] border-transparent px-3 py-2.5 text-left hover:bg-card",
+                        on && "border-brand bg-card",
+                      )}
+                    >
+                      <span className="w-11 shrink-0 text-[13px] leading-tight font-semibold tabular-nums">
+                        {clock(item.start)}
+                        <small className="block text-[11px] font-normal text-muted-foreground">
+                          {clock(item.end)}
+                        </small>
+                      </span>
+                      <span className="grid min-w-0 flex-1">
+                        <b className="truncate text-[13.5px] font-semibold">{item.title}</b>
+                        <small className="truncate text-xs text-muted-foreground">
+                          {item.workspaceName} · {roomOf(item.roomId)}
+                        </small>
+                      </span>
+                      {item.status === "live" && (
+                        <span
+                          className="size-2 shrink-0 rounded-full bg-red-500 ring-4 ring-red-500/20"
+                          aria-label="Đang họp"
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ))
+          )}
+        </div>
 
-                {pastSessions.length > 0 && (
-                  <section className="mt-card" aria-labelledby="mt-minutes-title">
-                    <div className="mt-card__head">
-                      <h2 id="mt-minutes-title">Biên bản &amp; ghi hình gần đây</h2>
-                    </div>
-                    <ul className="mt-minutes">
-                      {pastSessions.map((session) => (
-                        <li key={session.id}>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setSelectedKey(
-                                events.find((item) => item.sessionId === session.id)?.key ??
-                                  session.id,
-                              )
-                            }
-                          >
-                            <span className="mt-minutes__icon">
-                              <Icon name="file" size={15} />
-                            </span>
-                            <span className="mt-minutes__text">
-                              <b>{session.title || session.roomName}</b>
-                              <small>
-                                {dayMonth(new Date(session.startedAt))} · {session.workspaceName}
-                              </small>
-                            </span>
-                            <Icon name="chevron-right" size={14} />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                )}
-              </>
-            )}
-          </div>
-        )}
+        <div className="min-w-0 px-6 py-5 max-md:px-4" aria-label="Chi tiết cuộc họp">
+          {tab === "rooms" || !current
+            ? empty(
+                tab === "rooms"
+                  ? "Chọn một phòng để vào họp bất cứ lúc nào."
+                  : "Chọn một cuộc họp ở cột trái để xem chi tiết.",
+              )
+            : current.status === "past"
+              ? reportOf(current)
+              : detailOf(current)}
+        </div>
       </div>
 
       <AnimatePresence>
@@ -872,10 +716,12 @@ export function MeetingsCalendar({
             groups={groups}
             rooms={rooms}
             defaultGroupId={groupId}
+            busyDays={new Set(events.map((event) => isoDay(event.start)))}
             onClose={() => setForm(null)}
             onSaved={(saved) => {
               setForm(null);
               setWeek(weekStart(new Date(saved.startsAt)));
+              setTab("next");
               setSelectedKey(saved.id);
               setRevision((value) => value + 1);
               notify(
@@ -913,11 +759,19 @@ export function MeetingsCalendar({
 function PeopleStack({ names, max = 3 }: { names: string[]; max?: number }) {
   if (!names.length) return null;
   return (
-    <span className="mt-stack" title={names.join(", ")}>
+    <span className="tw flex shrink-0" title={names.join(", ")}>
       {names.slice(0, max).map((name, index) => (
-        <Avatar key={`${name}-${index}`} name={name} size="xs" />
+        <UserAvatar
+          key={`${name}-${index}`}
+          name={name}
+          className="-ml-2 size-[26px] text-[10.5px] ring-2 ring-background first:ml-0"
+        />
       ))}
-      {names.length > max && <span className="mt-stack__more">+{names.length - max}</span>}
+      {names.length > max && (
+        <span className="-ml-2 grid size-[26px] place-items-center rounded-full bg-secondary text-[10.5px] font-semibold text-foreground ring-2 ring-background">
+          +{names.length - max}
+        </span>
+      )}
     </span>
   );
 }
@@ -944,10 +798,12 @@ function ScheduleDialog({
   groups,
   rooms,
   defaultGroupId,
+  busyDays,
   onClose,
   onSaved,
 }: {
   item?: MeetingScheduleItem;
+  busyDays?: Set<string>;
   groups: WorkspaceItem[];
   rooms: MeetingRoom[];
   defaultGroupId: string;
@@ -1026,127 +882,226 @@ function ScheduleDialog({
     }
   };
 
+  // One day per meeting: the date and the two times are edited apart, `start`/`end` stay the source.
+  const date = start.slice(0, 10);
+  const minutes = Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60_000);
+  const setDate = (value: string) => {
+    if (!value) return;
+    setStart(`${value}T${start.slice(11, 16)}`);
+    setEnd(`${value}T${end.slice(11, 16)}`);
+  };
+  const setDuration = (length: number) =>
+    setEnd(localDateTime(new Date(new Date(start).getTime() + length * 60_000)));
+  const startDate = new Date(start);
+  const summary = Number.isFinite(startDate.getTime())
+    ? `${WEEKDAYS[(startDate.getDay() + 6) % 7]} ${dayMonth(startDate)} · ${start.slice(11, 16)}–${end.slice(11, 16)}`
+    : "";
+  const picked = invite.userIds.length + invite.workspaceIds.length + invite.unitIds.length;
+  const groupName = choices.find((group) => group.id === groupId)?.name;
+
   return (
     <Modal
       title={item ? "Sửa lịch họp" : "Lên lịch họp"}
+      eyebrow={groupName}
+      icon="calendar"
+      size="wide"
       initialFocus="input"
       onClose={() => !saving && onClose()}
       footer={
-        <div className="modal-footer-actions">
+        <>
+          <span className="mr-auto min-w-0 text-[12.5px] text-muted-foreground">
+            <b className="font-semibold text-foreground">{summary}</b>
+            {" · "}
+            {invite.mode === "all" ? "cả nhóm" : `${picked} lựa chọn mời`}
+          </span>
           <Button variant="ghost" disabled={saving} onClick={onClose}>
             Hủy
           </Button>
           <Button
+            icon="check"
             loading={saving}
-            disabled={!roomId || title.trim().length < 3}
+            disabled={!roomId || title.trim().length < 3 || minutes <= 0}
             onClick={() => void submit()}
           >
             {item ? "Lưu thay đổi" : "Tạo lịch họp"}
           </Button>
-        </div>
+        </>
       }
     >
       <form
-        className="ws-modal-form meeting-schedule-dialog"
+        className="tw tw-form grid min-[820px]:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]"
         onSubmit={(event) => void submit(event)}
       >
-        <Field label="Tên cuộc họp" error={error}>
-          <input
-            required
-            minLength={3}
-            maxLength={120}
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder="Ví dụ: Họp tiến độ đồ án"
-          />
-        </Field>
-        <Field label="Nhóm">
-          <select
-            value={groupId}
-            disabled={Boolean(item)}
-            onChange={(event) => {
-              setGroupId(event.target.value);
-              setRoomId(roomsOf(rooms, event.target.value)[0]?.id ?? "");
-            }}
-          >
-            {choices.map((group) => (
-              <option key={group.id} value={group.id}>
-                {group.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        {roomsOf(rooms, groupId).length > 1 && (
-          <Field label="Phòng họp">
-            <select value={roomId} onChange={(event) => setRoomId(event.target.value)}>
-              {roomsOf(rooms, groupId).map((room) => (
-                <option key={room.id} value={room.id}>
-                  {room.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-        )}
-        <div className="meeting-schedule-dialog__times">
-          <Field label="Bắt đầu">
+        <div className="grid content-start gap-[18px] px-5 py-[18px]">
+          <div className="grid gap-1">
             <input
+              className={cn(
+                "w-full rounded-none! border-0! border-b! bg-transparent! px-0! pt-1! pb-2.5! text-xl! font-semibold outline-none placeholder:font-medium placeholder:text-muted-foreground focus:border-foreground!",
+                error && "border-destructive!",
+              )}
+              aria-label="Tên cuộc họp"
               required
-              type="datetime-local"
-              value={start}
-              onChange={(event) => setStart(event.target.value)}
+              minLength={3}
+              maxLength={120}
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Tên cuộc họp, ví dụ: Họp tiến độ đồ án"
             />
-          </Field>
-          <Field label="Kết thúc">
-            <input
-              required
-              type="datetime-local"
-              value={end}
-              onChange={(event) => setEnd(event.target.value)}
-            />
-          </Field>
-        </div>
-        <Field label="Nội dung chuẩn bị">
-          <textarea
-            rows={2}
-            maxLength={1000}
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="Nội dung, tài liệu cần chuẩn bị…"
-          />
-        </Field>
-        <Field label="Agenda (mỗi dòng một mục)" hint="Thời gian theo múi giờ của thiết bị bạn.">
-          <textarea
-            rows={3}
-            value={agenda}
-            onChange={(event) => setAgenda(event.target.value)}
-            placeholder={"Báo cáo tiến độ\nPhân công tuần tới"}
-          />
-        </Field>
-        <ScheduleInviteFields
-          workspaceId={groupId}
-          groups={groups}
-          value={invite}
-          onChange={setInvite}
-        />
-        <fieldset className="meeting-room-settings">
-          <legend>Cấu hình phòng</legend>
-          {(
-            [
-              ["waitingRoom", "Bật phòng chờ (người ngoài danh sách mời chờ duyệt)"],
-              ["autoRecord", "Tự động ghi hình khi bắt đầu"],
-              ["muteOnJoin", "Tắt micro khi vào phòng"],
-            ] as const
-          ).map(([key, label]) => (
-            <label key={key}>
-              <input
-                type="checkbox"
-                checked={settings[key]}
-                onChange={(event) => setSettings({ ...settings, [key]: event.target.checked })}
-              />
-              {label}
+            {error && (
+              <small className="text-[12.5px] font-medium text-destructive" role="alert">
+                {error}
+              </small>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            <label className={GROUP_LABEL}>
+              Nhóm
+              <select
+                className={INPUT}
+                value={groupId}
+                disabled={Boolean(item)}
+                onChange={(event) => {
+                  setGroupId(event.target.value);
+                  setRoomId(roomsOf(rooms, event.target.value)[0]?.id ?? "");
+                }}
+              >
+                {choices.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
             </label>
-          ))}
-        </fieldset>
+            <label className={GROUP_LABEL}>
+              Phòng họp
+              <select
+                className={INPUT}
+                value={roomId}
+                disabled={roomsOf(rooms, groupId).length < 2}
+                onChange={(event) => setRoomId(event.target.value)}
+              >
+                {roomsOf(rooms, groupId).map((room) => (
+                  <option key={room.id} value={room.id}>
+                    {room.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <fieldset className="grid gap-2">
+            <legend className={cn(GROUP_LABEL, "mb-2")}>Thời gian</legend>
+            <DatePicker label="Ngày họp" value={date} onChange={setDate} marked={busyDays} />
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+              <TimePicker
+                label="Bắt đầu"
+                value={start.slice(11, 16)}
+                onChange={(time) => {
+                  const next = `${date}T${time}`;
+                  // Moving the start keeps the length of the meeting.
+                  setEnd(
+                    localDateTime(
+                      new Date(new Date(next).getTime() + Math.max(minutes, 15) * 60_000),
+                    ),
+                  );
+                  setStart(next);
+                }}
+              />
+              <span className="text-muted-foreground">–</span>
+              <TimePicker
+                label="Kết thúc"
+                value={end.slice(11, 16)}
+                from={start.slice(11, 16)}
+                invalid={minutes <= 0}
+                onChange={(time) => setEnd(`${date}T${time}`)}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {(
+                [
+                  [30, "30 phút"],
+                  [60, "1 giờ"],
+                  [90, "1,5 giờ"],
+                  [120, "2 giờ"],
+                ] as const
+              ).map(([length, label]) => (
+                <button
+                  key={length}
+                  type="button"
+                  aria-pressed={minutes === length}
+                  className="cursor-pointer rounded-full border bg-card px-[11px] py-1 text-[12.5px] text-muted-foreground hover:bg-secondary aria-pressed:border-foreground aria-pressed:bg-foreground aria-pressed:font-semibold aria-pressed:text-background"
+                  onClick={() => setDuration(length)}
+                >
+                  {label}
+                </button>
+              ))}
+              <span
+                className={cn(
+                  "ml-auto text-xs",
+                  minutes <= 0 ? "font-medium text-destructive" : "text-muted-foreground",
+                )}
+              >
+                {minutes <= 0 ? "Giờ kết thúc phải sau giờ bắt đầu" : "Giờ theo thiết bị của bạn"}
+              </span>
+            </div>
+          </fieldset>
+          <div className="grid gap-2">
+            <span className={GROUP_LABEL}>Nội dung</span>
+            <textarea
+              className={AREA}
+              rows={2}
+              maxLength={1000}
+              aria-label="Nội dung chuẩn bị"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Nội dung, tài liệu cần chuẩn bị…"
+            />
+            <textarea
+              className={AREA}
+              rows={3}
+              aria-label="Agenda (mỗi dòng một mục)"
+              value={agenda}
+              onChange={(event) => setAgenda(event.target.value)}
+              placeholder={"Agenda — mỗi dòng một mục\nBáo cáo tiến độ\nPhân công tuần tới"}
+            />
+          </div>
+        </div>
+
+        <div className="grid content-start gap-[18px] border-t bg-background px-5 py-[18px] min-[820px]:border-t-0 min-[820px]:border-l">
+          <ScheduleInviteFields
+            workspaceId={groupId}
+            groups={groups}
+            value={invite}
+            onChange={setInvite}
+          />
+          <div className="grid gap-1">
+            <span className={GROUP_LABEL}>Cấu hình phòng</span>
+            {(
+              [
+                ["waitingRoom", "Phòng chờ", "Người ngoài danh sách mời phải chờ duyệt"],
+                ["autoRecord", "Tự động ghi hình", "Bắt đầu ghi khi cuộc họp bắt đầu"],
+                ["muteOnJoin", "Tắt micro khi vào", "Mọi người vào phòng ở trạng thái tắt micro"],
+              ] as const
+            ).map(([key, label, hint]) => (
+              <div
+                key={key}
+                className="flex items-center gap-3 border-t py-2.5 first-of-type:border-t-0"
+              >
+                <span className="min-w-0 flex-1">
+                  <b className="block text-[13.5px] font-semibold">{label}</b>
+                  <small className="text-[12.5px] text-muted-foreground">{hint}</small>
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={settings[key]}
+                  aria-label={label}
+                  className="relative h-5 w-9 shrink-0 cursor-pointer rounded-full bg-border transition-colors after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-all aria-checked:bg-foreground aria-checked:after:left-[18px]"
+                  onClick={() => setSettings({ ...settings, [key]: !settings[key] })}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
       </form>
     </Modal>
   );
@@ -1175,21 +1130,23 @@ function StartNowDialog({
   return (
     <Modal
       title="Họp ngay"
+      icon="video"
+      iconTone="blue"
       initialFocus="select"
       onClose={onClose}
       footer={
-        <div className="modal-footer-actions">
+        <>
           <Button variant="ghost" onClick={onClose}>
             Hủy
           </Button>
           <Button icon="video" disabled={!roomId} onClick={go}>
             Tiếp tục
           </Button>
-        </div>
+        </>
       }
     >
       <form
-        className="ws-modal-form"
+        className="grid gap-3.5"
         onSubmit={(event) => {
           event.preventDefault();
           go();

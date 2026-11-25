@@ -1,112 +1,8 @@
-/* EL-8 certificate: on screen inside a dialog or the public verify page, and alone on paper. */
-.certificate {
-  display: grid;
-  gap: 6px;
-  padding: 28px 32px;
-  border: 2px solid var(--blue-700);
-  outline: 6px double var(--blue-200);
-  outline-offset: -14px;
-  border-radius: var(--radius-md);
-  background: var(--white);
-  color: var(--slate-900);
-  text-align: center;
-}
-.certificate__head {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  font-size: var(--fs-body);
-  color: var(--slate-700);
-}
-.certificate__eyebrow {
-  margin: 12px 0 0;
-  font-size: var(--fs-badge);
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--blue-700);
-}
-.certificate__lead {
-  margin: 0;
-  font-style: italic;
-  color: var(--slate-600);
-}
-.certificate__name {
-  margin: 4px 0;
-  font-size: 30px;
-  line-height: 1.2;
-}
-.certificate__course {
-  margin: 4px 0;
-  font-size: var(--fs-big);
-}
-.certificate__meta {
-  margin: 0;
-  font-size: var(--fs-body);
-  color: var(--slate-600);
-}
-.certificate__foot {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 18px;
-  text-align: left;
-  font-size: var(--fs-subtext);
-}
-.certificate__foot p {
-  margin: 2px 0;
-}
-.certificate__url {
-  color: var(--slate-500);
-  word-break: break-all;
-}
-.certificate__qr {
-  width: 96px;
-  height: 96px;
-  flex: none;
-}
-.certificate-verify {
-  display: grid;
-  gap: 16px;
-  max-width: 760px;
-  margin: 40px auto;
-  padding: 0 16px;
-}
-.certificate-verify__ok,
-.certificate-verify__bad {
-  margin: 0;
-  padding: 10px 14px;
-  border-radius: var(--radius-lg);
-  font-weight: 600;
-}
-.certificate-verify__ok {
-  background: var(--badge-green-bg);
-  color: #166534;
-}
-.certificate-verify__bad {
-  background: #fee2e2;
-  color: #991b1b;
-}
-@media (max-width: 640px) {
-  .certificate {
-    padding: 20px 16px;
-  }
-  .certificate__name {
-    font-size: var(--fs-hero);
-  }
-  .certificate__foot {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-}
-/* Print only the certificate, landscape, without the app around it. */
+/* Print only the certificate, A4 landscape, without the app around it (no Tailwind for this). */
 @media print {
   @page {
     size: A4 landscape;
-    margin: 12mm;
+    margin: 0;
   }
   body * {
     visibility: hidden;
@@ -118,11 +14,7 @@
   .certificate {
     position: fixed;
     inset: 0;
-    padding: 18mm;
+    max-width: none;
+    box-shadow: none;
   }
-}
-
-/* The certificate is always a white page, whatever the app theme. */
-.certificate .tdtu-logo {
-  color: #002d62;
 }

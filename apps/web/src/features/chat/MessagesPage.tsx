@@ -1,19 +1,11 @@
-import { PageHeader } from "../../shared/ui/Primitives";
 import { ChatPage } from "./LiveChatPage";
-import "./messages-page.css";
 
-/** Top-level "Tin nhắn" view: group chats and direct conversations in the TDTU page frame. */
+/** Top-level "Tin nhắn" view: the chat fills the area under the top bar, edge to edge. */
 export function MessagesPage() {
   return (
-    <div className="messages-page">
-      <PageHeader
-        className="messages-page__header"
-        title="Tin nhắn"
-        meta="Nhóm chat và trò chuyện riêng với đồng nghiệp"
-      />
-      <div className="messages-page__card">
-        <ChatPage />
-      </div>
+    <div className="flex min-h-0 flex-1">
+      <h1 className="sr-only">Tin nhắn</h1>
+      <ChatPage />
     </div>
   );
 }

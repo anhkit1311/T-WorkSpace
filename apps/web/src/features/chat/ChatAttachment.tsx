@@ -30,45 +30,49 @@ export function AttachmentView({
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [attachment.id, accessToken]);
-  if (error) return <span className="chat-attachment-error">Không tải được tệp</span>;
-  if (!url) return <span className="chat-attachment-loading">Đang tải tệp…</span>;
+  if (error) return <span className="text-xs text-muted-foreground">Không tải được tệp</span>;
+  if (!url) return <span className="text-xs text-muted-foreground">Đang tải tệp…</span>;
   return attachment.mimeType.startsWith("audio/") ? (
-    <div className="chat-audio-attachment">
+    <div className="tw mt-0.5 flex items-center gap-2">
       <audio
         controls
+        className="h-9 max-w-[min(100%,300px)]"
         preload="metadata"
         src={url}
         aria-label={`Tin nhắn thoại: ${attachment.fileName}`}
       />
-      <a href={url} download={attachment.fileName}>
+      <a className="text-xs text-brand" href={url} download={attachment.fileName}>
         Tải bản ghi âm
       </a>
     </div>
   ) : (
     <a
-      className="chat-attachment-card"
+      className="tw group/att mt-0.5 block max-w-[min(100%,360px)] text-foreground no-underline"
       href={url}
       download={attachment.fileName}
       target="_blank"
       rel="noreferrer"
     >
       {attachment.mimeType.startsWith("image/") ? (
-        <div className="attachment-image-wrap">
-          <img src={url} alt={attachment.fileName} loading="lazy" />
-        </div>
+        <img
+          src={url}
+          alt={attachment.fileName}
+          loading="lazy"
+          className="max-h-[280px] max-w-full rounded-xl border object-cover"
+        />
       ) : (
-        <div className="attachment-file-wrap">
-          <div className="attachment-doc-badge">
+        <div className="flex items-center gap-2.5 rounded-xl border bg-card px-2.5 py-2 group-hover/att:border-brand">
+          <div className="grid size-[34px] shrink-0 place-items-center rounded-md bg-brand-soft text-brand">
             <Icon name="file" size={20} />
           </div>
-          <div className="attachment-text-meta">
-            <strong className="attachment-filename">{attachment.fileName}</strong>
-            <span className="attachment-filesize">
+          <div className="grid min-w-0">
+            <strong className="truncate text-sm font-semibold">{attachment.fileName}</strong>
+            <span className="text-xs text-muted-foreground">
               {formatFileSize(attachment.fileSize)} ·{" "}
               {attachment.fileName.split(".").pop()?.toUpperCase() || "Tệp đính kèm"}
             </span>
           </div>
-          <span className="attachment-download-circle" aria-hidden="true">
+          <span className="ml-auto text-muted-foreground" aria-hidden="true">
             <Icon name="download" size={16} />
           </span>
         </div>

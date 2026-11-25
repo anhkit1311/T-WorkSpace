@@ -1,4 +1,8 @@
-import type { CreateAnnouncementInput, UpdateAnnouncementInput } from "@doan/shared";
+import type {
+  AnnouncementMark,
+  CreateAnnouncementInput,
+  UpdateAnnouncementInput,
+} from "@doan/shared";
 import type { RouteContext } from "../../shared/http/context.js";
 import { getAuthUserId, readJson, sendJson } from "../../shared/http/utils.js";
 import { HttpError } from "../../shared/http/http-error.js";
@@ -9,6 +13,7 @@ import {
   listAnnouncements,
   listPublishers,
   revokePublisher,
+  setAnnouncementMark,
   updateAnnouncement,
 } from "./service.js";
 
@@ -69,6 +74,15 @@ export async function announcementRoutes({
     const res = await revokePublisher(userId, targetUserId);
     io?.emit("announcements_changed");
     sendJson(response, 200, res);
+    return;
+  }
+
+  // POST | DELETE /api/announcements/:id/like, /save: the reader's own heart and bookmark
+  const markMatch = pathname.match(/^\/api\/announcements\/([0-9a-fA-F-]{36})\/(like|save)$/);
+  if (markMatch && (request.method === "POST" || request.method === "DELETE")) {
+    const kind = markMatch[2] as AnnouncementMark;
+    const result = await setAnnouncementMark(userId, markMatch[1], kind, request.method === "POST");
+    sendJson(response, 200, result);
     return;
   }
 

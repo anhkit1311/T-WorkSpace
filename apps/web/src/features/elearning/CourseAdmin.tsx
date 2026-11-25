@@ -63,15 +63,15 @@ export function CourseLearners({ course }: { course: CourseDetail }) {
 
   const quizzes = report?.lessons.filter((lesson) => lesson.kind === "quiz") ?? [];
   return (
-    <div className="course-panel">
+    <div className="tw tw-form grid min-w-0 gap-4 rounded-[10px] border bg-card p-4 text-sm text-foreground">
       <form
-        className="courses-form"
+        className="tw tw-form grid gap-2.5"
         onSubmit={(event) => {
           event.preventDefault();
           void assign();
         }}
       >
-        <fieldset className="course-inline-form">
+        <fieldset className="tw tw-form tw-row">
           <legend>Gán học viên</legend>
           <select
             value={target}
@@ -115,14 +115,17 @@ export function CourseLearners({ course }: { course: CourseDetail }) {
         </fieldset>
       </form>
       {error && (
-        <p role="alert" className="courses-error">
+        <p
+          role="alert"
+          className="tw rounded-md bg-red-50 px-3 py-2 text-[13px] text-red-700 dark:bg-red-950 dark:text-red-300"
+        >
           {error}
         </p>
       )}
       {report && report.requests.length > 0 && (
         <>
           <h3>Yêu cầu ghi danh ({report.requests.length})</h3>
-          <ul className="course-requests">
+          <ul className="grid gap-1.5 [&>li]:flex [&>li]:items-center [&>li]:gap-2 [&>li>span]:mr-auto [&>li>span]:grid [&_small]:text-muted-foreground">
             {report.requests.map((item) => (
               <li key={item.userId}>
                 <span>
@@ -150,7 +153,7 @@ export function CourseLearners({ course }: { course: CourseDetail }) {
           </ul>
         </>
       )}
-      <div className="course-outline__tools">
+      <div className="tw flex flex-wrap items-center gap-2 [&>h3]:mr-auto">
         <h3>Tiến độ học viên ({report?.learners.length ?? 0})</h3>
         <Button
           size="sm"
@@ -166,8 +169,8 @@ export function CourseLearners({ course }: { course: CourseDetail }) {
         </Button>
       </div>
       {report && (
-        <div className="course-table-wrap">
-          <table className="course-table">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm [&_:is(th,td)]:border-b [&_:is(th,td)]:p-2 [&_:is(th,td)]:text-left [&_:is(th,td)]:align-middle [&_:is(th,td)]:font-normal [&_thead_th]:font-semibold [&_tbody_th_small]:block [&_tbody_th_small]:text-muted-foreground">
             <thead>
               <tr>
                 <th scope="col">Học viên</th>
@@ -178,7 +181,7 @@ export function CourseLearners({ course }: { course: CourseDetail }) {
                   </th>
                 ))}
                 <th scope="col">
-                  <span className="visually-hidden">Thao tác</span>
+                  <span className="sr-only">Thao tác</span>
                 </th>
               </tr>
             </thead>
@@ -193,8 +196,14 @@ export function CourseLearners({ course }: { course: CourseDetail }) {
                     </small>
                   </th>
                   <td>
-                    <span className="course-progress course-progress--inline" aria-hidden="true">
-                      <span style={{ width: `${learner.percent}%` }} />
+                    <span
+                      className="mr-1.5 inline-block h-1.5 w-20 overflow-hidden rounded-full bg-secondary align-middle"
+                      aria-hidden="true"
+                    >
+                      <span
+                        className="block h-full bg-primary"
+                        style={{ width: `${learner.percent}%` }}
+                      />
                     </span>
                     {learner.percent}%
                   </td>
@@ -285,16 +294,16 @@ export function QuestionBank({ course }: { course: CourseDetail }) {
     }));
 
   return (
-    <div className="course-panel course-bank">
+    <div className="tw tw-form grid min-w-0 gap-4 rounded-[10px] border bg-card p-4 text-sm text-foreground">
       <form
-        className="courses-form"
+        className="tw tw-form grid gap-2.5"
         onSubmit={(event) => {
           event.preventDefault();
           void save();
         }}
       >
         <h3>{draft.id ? "Sửa câu hỏi" : "Thêm câu hỏi"}</h3>
-        <div className="course-inline-form">
+        <div className="tw tw-form tw-row">
           <select
             value={draft.kind}
             onChange={(event) =>
@@ -339,7 +348,7 @@ export function QuestionBank({ course }: { course: CourseDetail }) {
             maxLength={2000}
           />
         </label>
-        <fieldset className="course-question-picker">
+        <fieldset className="grid gap-1.5 rounded-md border bg-secondary/50 px-3 py-2.5 [&_label]:flex [&_label]:items-center [&_label]:gap-2 [&_label]:text-foreground">
           <legend>Phương án — đánh dấu đáp án đúng</legend>
           {draft.kind === "true_false"
             ? [true, false].map((value) => (
@@ -354,7 +363,7 @@ export function QuestionBank({ course }: { course: CourseDetail }) {
                 </label>
               ))
             : draft.options.map((option, index) => (
-                <div key={option.id} className="course-inline-form">
+                <div key={option.id} className="tw tw-form tw-row">
                   <input
                     type={draft.kind === "multiple" ? "checkbox" : "radio"}
                     name="correct"
@@ -425,11 +434,14 @@ export function QuestionBank({ course }: { course: CourseDetail }) {
           />
         </label>
         {error && (
-          <p role="alert" className="courses-error">
+          <p
+            role="alert"
+            className="tw rounded-md bg-red-50 px-3 py-2 text-[13px] text-red-700 dark:bg-red-950 dark:text-red-300"
+          >
             {error}
           </p>
         )}
-        <div className="course-outline__tools">
+        <div className="tw flex flex-wrap items-center gap-2 [&>h3]:mr-auto">
           <Button type="submit" disabled={!draft.answer.length}>
             {draft.id ? "Lưu câu hỏi" : "Thêm vào ngân hàng"}
           </Button>
@@ -440,7 +452,7 @@ export function QuestionBank({ course }: { course: CourseDetail }) {
           )}
         </div>
       </form>
-      <ol className="course-bank__list">
+      <ol className="grid gap-1.5 [&>li]:flex [&>li]:items-center [&>li]:gap-2 [&>li>span]:grid [&>li>span]:flex-1 [&_small]:text-muted-foreground">
         {questions.map((question) => (
           <li key={question.id}>
             <span>
@@ -466,7 +478,9 @@ export function QuestionBank({ course }: { course: CourseDetail }) {
             </Button>
           </li>
         ))}
-        {!questions.length && <li className="course-card__meta">Chưa có câu hỏi nào.</li>}
+        {!questions.length && (
+          <li className="m-0 text-[13px] text-muted-foreground">Chưa có câu hỏi nào.</li>
+        )}
       </ol>
     </div>
   );

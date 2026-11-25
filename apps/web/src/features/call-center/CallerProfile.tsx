@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import type { CcCallerProfile } from "@doan/shared";
 import { Badge } from "../../shared/ui/Primitives";
 import { TICKET_STATUS } from "./TicketsPanel";
+import { MUTED } from "./ui";
+
+const SECTION =
+  "grid gap-1 [&_h3]:text-[11.5px] [&_h3]:font-semibold [&_h3]:tracking-[.05em] [&_h3]:text-muted-foreground [&_h3]:uppercase [&_li]:flex [&_li]:items-center [&_li]:justify-between [&_li]:gap-2 [&_li]:py-1 [&_li]:text-[13px]";
 
 type Api = <T>(path: string, method?: string, body?: object) => Promise<T>;
 
@@ -37,19 +41,19 @@ export function CallerProfile({
   if (!profile) return null;
   const empty =
     !profile.student && !profile.tickets.length && !profile.courses.length && !profile.calls.length;
-  if (empty) return <p className="desk-muted">Lần đầu liên hệ — chưa có lịch sử.</p>;
+  if (empty) return <p className={`tw ${MUTED}`}>Lần đầu liên hệ — chưa có lịch sử.</p>;
   return (
-    <div className="desk-profile" aria-label="Hồ sơ người gọi">
+    <div className="tw grid gap-2.5 text-sm" aria-label="Hồ sơ người gọi">
       {profile.student && (
-        <p className="desk-profile__student">
-          <strong>MSSV {profile.student.code}</strong>
-          <span>
+        <p className="flex flex-wrap items-baseline gap-2 rounded-lg bg-secondary px-2.5 py-2">
+          <strong className="font-semibold">MSSV {profile.student.code}</strong>
+          <span className={MUTED}>
             {[profile.student.className, profile.student.faculty].filter(Boolean).join(" · ")}
           </span>
         </p>
       )}
       {profile.tickets.length > 0 && (
-        <section>
+        <section className={SECTION}>
           <h3>Phiếu hỗ trợ</h3>
           <ul>
             {profile.tickets.map((ticket) => (
@@ -70,7 +74,7 @@ export function CallerProfile({
         </section>
       )}
       {profile.courses.length > 0 && (
-        <section>
+        <section className={SECTION}>
           <h3>Khóa học</h3>
           <ul>
             {profile.courses.map((course) => (
@@ -87,7 +91,7 @@ export function CallerProfile({
         </section>
       )}
       {profile.calls.length > 0 && (
-        <section>
+        <section className={SECTION}>
           <h3>Cuộc gọi trước</h3>
           <ul>
             {profile.calls.map((call) => (
@@ -95,7 +99,7 @@ export function CallerProfile({
                 <span>
                   {when(call.startedAt)} · {call.departmentName ?? "—"}
                   {call.agentName ? ` · ${call.agentName}` : ""}
-                  {call.notes && <em> — {call.notes}</em>}
+                  {call.notes && <em className="text-muted-foreground"> — {call.notes}</em>}
                 </span>
                 {call.outcome && (
                   <Badge tone={call.outcome === "answered" ? "green" : "amber"}>

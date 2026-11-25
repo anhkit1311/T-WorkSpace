@@ -481,6 +481,9 @@ export * from "./elearning.js";
 
 export type AnnouncementCategory = "general" | "training" | "event" | "urgent";
 
+/** "staff": only staff and lecturers read it; students never receive it. */
+export type AnnouncementAudience = "all" | "staff";
+
 export interface PortalAnnouncement {
   id: string;
   title: string;
@@ -489,6 +492,7 @@ export interface PortalAnnouncement {
   summary: string;
   content: string;
   scope: string;
+  audience: AnnouncementAudience;
   pinned: boolean;
   authorId?: string | null;
   authorName: string;
@@ -497,7 +501,13 @@ export interface PortalAnnouncement {
   createdAt: string;
   updatedAt: string;
   canManage?: boolean;
+  /** Reader marks, present on the feed list. */
+  likeCount?: number;
+  liked?: boolean;
+  saved?: boolean;
 }
+
+export type AnnouncementMark = "like" | "save";
 
 export interface CreateAnnouncementInput {
   title: string;
@@ -506,6 +516,7 @@ export interface CreateAnnouncementInput {
   summary: string;
   content: string;
   scope?: string;
+  audience?: AnnouncementAudience;
   pinned?: boolean;
 }
 
@@ -516,6 +527,7 @@ export interface UpdateAnnouncementInput {
   summary?: string;
   content?: string;
   scope?: string;
+  audience?: AnnouncementAudience;
   pinned?: boolean;
 }
 

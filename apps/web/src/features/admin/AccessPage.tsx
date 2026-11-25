@@ -1,15 +1,23 @@
 import { useCallback, useEffect, useState } from "react";
 import { useApp } from "../../app/providers/AppContext";
 import { AnimatePresence } from "motion/react";
-import { Badge, Button, ConfirmDialog, PageHeader } from "../../shared/ui/Primitives";
+import { ConfirmDialog } from "../../shared/ui/Primitives";
+import { Icon, type IconName } from "../../shared/ui/Icon";
+import { UserAvatar } from "../../shared/ui/kit/user-avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../../shared/ui/kit/dropdown-menu";
+import { cn } from "../../shared/lib/utils";
 import { academicApi, type AcademicProfile } from "./api";
-import { parseAccountLines } from "./labels";
-import { AccountForm } from "./AccountForm";
+import { AccountsTab } from "./AccountForm";
 import { FacultyPanel } from "./FacultyPanel";
 import { HealthPanel } from "./HealthPanel";
 import { ActivityPanel } from "./ActivityPanel";
-import "../workspaces/workspace-admin.css";
-import "./admin.css";
+import { CHIP, CODE, MUTED, SEARCH, TABLE, TABLE_CARD, TINT } from "./ui";
 
 type Role = "system_admin" | "unit_admin";
 interface AccessRow {
@@ -22,9 +30,18 @@ interface AccessRow {
   staff: { unitId: string; active: boolean } | null;
 }
 
-type Run = <T>(label: string, action: () => Promise<T>) => Promise<T | undefined>;
+export type Run = <T>(label: string, action: () => Promise<T>) => Promise<T | undefined>;
 type Unit = AcademicProfile["units"][number];
-const unitLabel = (unit: Unit) => `${unit.idPrefix ?? "--"} · ${unit.name}`;
+export const unitLabel = (unit: Unit) => `${unit.idPrefix ?? "--"} · ${unit.name}`;
+
+type Tab = "departments" | "permissions" | "accounts" | "health" | "activity";
+const TABS: [Tab, string, IconName][] = [
+  ["departments", "Khoa & Phòng ban", "building"],
+  ["permissions", "Phân quyền", "shield"],
+  ["accounts", "Tạo tài khoản", "user-plus"],
+  ["health", "Sức khỏe hệ thống", "activity"],
+  ["activity", "Nhật ký hoạt động", "menu"],
+];
 
 /** "Quản trị hệ thống" (sidebar, system admins only): accounts and system / faculty roles. */
 export function AccessPage() {
@@ -49,25 +66,23 @@ export function AccessPage() {
     [notify],
   );
 
-  if (failed)
-    return (
-      <p className="loading-note" role="alert">
-        Không tải được dữ liệu phân quyền.
-      </p>
-    );
-  if (!profile)
-    return (
-      <p className="loading-note" role="status">
-        Đang tải…
-      </p>
-    );
   return (
-    <div className="workspace-admin admin-page">
-      <PageHeader
-        title="Quản lý Khoa / Phòng ban & Hệ thống"
-        meta="Quản lý cơ cấu khoa, phòng ban, tài khoản và phân quyền."
-      />
-      {profile.systemAdmin ? (
+    <div className="tw tw-form grid min-w-0 gap-3.5 px-7 pt-5 pb-10 text-sm text-foreground max-md:px-3.5">
+      <div>
+        <h1 className="text-[22px] font-bold">Quản trị hệ thống</h1>
+        <p className={MUTED}>
+          Cơ cấu khoa, phòng ban, tài khoản, phân quyền và tình trạng vận hành
+        </p>
+      </div>
+      {failed ? (
+        <p className={MUTED} role="alert">
+          Không tải được dữ liệu phân quyền.
+        </p>
+      ) : !profile ? (
+        <p className={MUTED} role="status">
+          Đang tải…
+        </p>
+      ) : profile.systemAdmin ? (
         <AccessPanel
           token={token}
           run={run}
@@ -82,7 +97,7 @@ export function AccessPage() {
           }
         />
       ) : (
-        <p className="admin-note" role="alert">
+        <p className={MUTED} role="alert">
           Trang này chỉ dành cho tài khoản quản trị hệ thống.
         </p>
       )}
@@ -102,9 +117,7 @@ function AccessPanel({
   onUnitCreated: (unit: Unit) => void;
 }) {
   const { user } = useApp();
-  const [activeTab, setActiveTab] = useState<
-    "departments" | "permissions" | "accounts" | "health" | "activity"
-  >("departments");
+  const [activeTab, setActiveTab] = useState<Tab>("departments");
   const [query, setQuery] = useState("");
   const [unitFilter, setUnitFilter] = useState("");
   const [rows, setRows] = useState<AccessRow[] | null>(null);
@@ -158,124 +171,51 @@ function AccessPanel({
     if (done) await load();
     setBusy(false);
   };
-  const box = (row: AccessRow, role: Role, unitId: string | null, label: string) => (
-    <input
-      type="checkbox"
-      checked={has(row, role, unitId)}
-      disabled={busy || (role === "system_admin" && row.id === user?.id)}
-      onChange={(event) => void toggle(row, role, unitId, event.target.checked)}
-      aria-label={`${label}: ${row.displayName}`}
-      title={
-        role === "system_admin" && row.id === user?.id
-          ? "Không thể tự thu hồi quyền quản trị hệ thống"
-          : label
-      }
-    />
-  );
-  // One cell instead of a column per unit: the units the person is giáo vụ of, ✕ to revoke, a select to add.
-  const unitAdminCell = (row: AccessRow) => {
-    const granted = units.filter((unit) => has(row, "unit_admin", unit.id));
-    const others = units.filter((unit) => !has(row, "unit_admin", unit.id));
-    return (
-      <div className="admin-toolbar">
-        {granted.map((unit) => (
-          <Badge key={unit.id} tone="blue">
-            {unit.name}{" "}
-            <button
-              type="button"
-              className="dept-action-btn"
-              disabled={busy}
-              onClick={() => void toggle(row, "unit_admin", unit.id, false)}
-              aria-label={`Thu hồi giáo vụ ${unit.name}: ${row.displayName}`}
-              title="Thu hồi"
-            >
-              ✕
-            </button>
-          </Badge>
-        ))}
-        {others.length > 0 && (
-          <select
-            value=""
-            disabled={busy}
-            onChange={(event) => void toggle(row, "unit_admin", event.target.value, true)}
-            aria-label={`Thêm giáo vụ đơn vị: ${row.displayName}`}
-          >
-            <option value="">+ Thêm đơn vị…</option>
-            {others.map((unit) => (
-              <option key={unit.id} value={unit.id}>
-                {unitLabel(unit)}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
-    );
-  };
 
   return (
-    <div className="admin-stack">
-      {/* Tab Navigation */}
-      <nav className="admin-tabs" aria-label="Phân hệ quản trị">
-        <button
-          type="button"
-          className={`admin-tab-btn ${activeTab === "departments" ? "is-active" : ""}`}
-          onClick={() => setActiveTab("departments")}
-        >
-          Khoa & Phòng ban
-        </button>
-        <button
-          type="button"
-          className={`admin-tab-btn ${activeTab === "permissions" ? "is-active" : ""}`}
-          onClick={() => setActiveTab("permissions")}
-        >
-          Phân quyền
-        </button>
-        <button
-          type="button"
-          className={`admin-tab-btn ${activeTab === "accounts" ? "is-active" : ""}`}
-          onClick={() => setActiveTab("accounts")}
-        >
-          Tạo tài khoản
-        </button>
-        <button
-          type="button"
-          className={`admin-tab-btn ${activeTab === "health" ? "is-active" : ""}`}
-          onClick={() => setActiveTab("health")}
-        >
-          Sức khỏe hệ thống
-        </button>
-        <button
-          type="button"
-          className={`admin-tab-btn ${activeTab === "activity" ? "is-active" : ""}`}
-          onClick={() => setActiveTab("activity")}
-        >
-          Nhật ký hoạt động
-        </button>
+    <>
+      <nav
+        className="flex gap-0.5 overflow-x-auto overflow-y-hidden border-b"
+        role="tablist"
+        aria-label="Phân hệ quản trị"
+      >
+        {TABS.map(([key, label, icon]) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === key}
+            className={cn(
+              "-mb-px flex cursor-pointer items-center gap-[7px] border-b-2 border-transparent px-3 py-2.5 font-medium whitespace-nowrap text-muted-foreground hover:text-foreground",
+              activeTab === key && "border-foreground font-semibold text-foreground",
+            )}
+            onClick={() => setActiveTab(key)}
+          >
+            <Icon name={icon} size={16} />
+            {label}
+          </button>
+        ))}
       </nav>
 
-      {/* Tab 1: Khoa & Phòng ban (Mặc định) */}
       {activeTab === "departments" && (
         <FacultyPanel token={token} run={run} units={units} onUnitCreated={onUnitCreated} />
       )}
 
-      {/* Tab 2: Phân quyền */}
       {activeTab === "permissions" && (
-        <section>
-          <h2>Phân quyền</h2>
-          <p className="admin-note">
-            Quản trị hệ thống: tích để cấp, bỏ tích để thu hồi. Giáo vụ đơn vị: chọn đơn vị để cấp,
-            bấm ✕ để thu hồi. Tài khoản được tạo ở tab "Tạo tài khoản"; nút Xoá xoá vĩnh viễn tài
-            khoản.
-          </p>
-          <div className="admin-toolbar">
-            <input
-              type="search"
-              placeholder="Tìm theo tên, email hoặc mã số"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              aria-label="Tìm người dùng"
-            />
+        <section className="grid min-w-0 gap-3.5" aria-label="Phân quyền">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className={cn(SEARCH, "w-[300px] max-md:w-full")}>
+              <Icon name="search" size={15} />
+              <input
+                type="search"
+                placeholder="Tìm theo tên, email hoặc mã số"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                aria-label="Tìm người dùng"
+              />
+            </label>
             <select
+              className="h-[34px]! py-0! text-[13px]! whitespace-nowrap"
               value={unitFilter}
               onChange={(event) => setUnitFilter(event.target.value)}
               aria-label="Lọc theo khoa / phòng ban"
@@ -288,83 +228,147 @@ function AccessPanel({
                 </option>
               ))}
             </select>
-            <span className="admin-note">
+            <span className={MUTED}>
               {rows
                 ? `${rows.length} người${rows.length === 100 ? " (tối đa 100, hãy lọc thêm)" : ""}`
                 : "Đang tải…"}
             </span>
           </div>
-          <div className="admin-scroll">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Người dùng</th>
-                  <th>Mã số</th>
-                  <th>Đơn vị</th>
-                  <th>Quản trị hệ thống</th>
-                  <th>Giáo vụ đơn vị</th>
-                  <th>Hồ sơ</th>
-                  <th>Mật khẩu</th>
-                  <th>Xoá</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows?.map((row) => (
-                  <tr key={row.id}>
-                    <td>
-                      {row.displayName}
-                      <br />
-                      <small>{row.email}</small>
-                    </td>
-                    {/* Keyed by the code so a mã số issued with a new unit replaces the cell's draft. */}
-                    <td>
-                      <CodeCell key={row.userCode ?? ""} token={token} run={run} row={row} />
-                    </td>
-                    <td>
-                      <UnitCell
-                        token={token}
-                        run={run}
-                        row={row}
-                        units={units}
-                        onSaved={() => void load()}
-                      />
-                    </td>
-                    <td>{box(row, "system_admin", null, "Quản trị hệ thống")}</td>
-                    <td>{unitAdminCell(row)}</td>
-                    <td>
-                      {row.staff && (
-                        <Badge tone={row.staff.active ? "blue" : "neutral"}>
-                          Giảng viên {unitCode(row.staff.unitId)}
-                          {row.staff.active ? "" : " (ngừng)"}
-                        </Badge>
-                      )}
-                      {!row.staff && "—"}
-                    </td>
-                    <td>
-                      <PasswordCell token={token} run={run} row={row} />
-                    </td>
-                    <td>
-                      <Button
-                        type="button"
-                        variant="danger"
-                        disabled={busy || row.id === user?.id}
-                        title={
-                          row.id === user?.id
-                            ? "Không thể tự xoá tài khoản đang đăng nhập"
-                            : undefined
-                        }
-                        onClick={() => setDeleting(row)}
-                        aria-label={`Xoá tài khoản ${row.displayName}`}
-                      >
-                        Xoá
-                      </Button>
-                    </td>
+          {!units.length && (
+            <p className={MUTED}>
+              Chưa có khoa nào: tạo khoa ở tab "Khoa & Phòng ban" để cấp quyền giáo vụ.
+            </p>
+          )}
+          <div className={TABLE_CARD}>
+            <div className="overflow-x-auto">
+              <table className={TABLE}>
+                <thead>
+                  <tr>
+                    <th scope="col">Người dùng</th>
+                    <th scope="col">Mã số</th>
+                    <th scope="col" className="max-md:hidden">
+                      Đơn vị
+                    </th>
+                    <th scope="col">Quản trị hệ thống</th>
+                    <th scope="col">Giáo vụ đơn vị</th>
+                    <th scope="col" className="hidden min-[1500px]:table-cell">
+                      Hồ sơ
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {rows?.map((row) => {
+                    const self = row.id === user?.id;
+                    const granted = units.filter((unit) => has(row, "unit_admin", unit.id));
+                    const others = units.filter((unit) => !has(row, "unit_admin", unit.id));
+                    return (
+                      <tr key={row.id}>
+                        <td className="min-w-[220px]">
+                          <PersonCell
+                            token={token}
+                            run={run}
+                            row={row}
+                            self={self}
+                            busy={busy}
+                            onDelete={() => setDeleting(row)}
+                          />
+                        </td>
+                        {/* Keyed by the code so a mã số issued with a new unit replaces the cell's draft. */}
+                        <td>
+                          <CodeCell key={row.userCode ?? ""} token={token} run={run} row={row} />
+                        </td>
+                        <td className="max-md:hidden">
+                          <UnitCell
+                            token={token}
+                            run={run}
+                            row={row}
+                            units={units}
+                            onSaved={() => void load()}
+                          />
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={has(row, "system_admin")}
+                            aria-label={`Quản trị hệ thống: ${row.displayName}`}
+                            title={
+                              self ? "Không thể tự thu hồi quyền quản trị hệ thống" : undefined
+                            }
+                            disabled={busy || self}
+                            className={cn(
+                              "relative h-5 w-[34px] shrink-0 cursor-pointer rounded-full bg-border transition-colors disabled:cursor-not-allowed disabled:opacity-45",
+                              "after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-[left]",
+                              has(row, "system_admin") &&
+                                "bg-foreground after:left-4 dark:after:bg-background",
+                            )}
+                            onClick={() =>
+                              void toggle(row, "system_admin", null, !has(row, "system_admin"))
+                            }
+                          />
+                        </td>
+                        <td>
+                          {/* One cell instead of a column per unit: ✕ revokes, the select adds. */}
+                          <div className="flex max-w-[280px] flex-wrap items-center gap-1">
+                            {granted.map((unit) => (
+                              <span key={unit.id} className={cn(CHIP, TINT.blue, "pr-1")}>
+                                {unit.name}
+                                <button
+                                  type="button"
+                                  className="grid size-4 cursor-pointer place-items-center rounded-full hover:bg-black/10"
+                                  disabled={busy}
+                                  onClick={() => void toggle(row, "unit_admin", unit.id, false)}
+                                  aria-label={`Thu hồi giáo vụ ${unit.name}: ${row.displayName}`}
+                                  title="Thu hồi"
+                                >
+                                  <Icon name="x" size={10} />
+                                </button>
+                              </span>
+                            ))}
+                            {others.length > 0 && (
+                              <select
+                                value=""
+                                disabled={busy}
+                                className="h-[22px]! w-auto cursor-pointer rounded-full! border-dashed! bg-transparent! px-2! py-0! text-[11.5px]! font-semibold whitespace-nowrap text-muted-foreground! hover:text-foreground!"
+                                onChange={(event) =>
+                                  void toggle(row, "unit_admin", event.target.value, true)
+                                }
+                                aria-label={`Thêm giáo vụ đơn vị: ${row.displayName}`}
+                              >
+                                <option value="">+ Thêm</option>
+                                {others.map((unit) => (
+                                  <option key={unit.id} value={unit.id}>
+                                    {unitLabel(unit)}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
+                        </td>
+                        <td className="hidden min-[1500px]:table-cell">
+                          {row.staff ? (
+                            <span className={cn(CHIP, row.staff.active && TINT.blue)}>
+                              Giảng viên {unitCode(row.staff.unitId)}
+                              {row.staff.active ? "" : " (ngừng)"}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {rows && !rows.length && (
+                    <tr>
+                      <td colSpan={6} className={cn(MUTED, "py-8 text-center")}>
+                        Không có người dùng khớp.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-          {rows && !rows.length && <p className="admin-note">Không có người dùng khớp.</p>}
           <AnimatePresence>
             {deleting && (
               <ConfirmDialog
@@ -377,97 +381,156 @@ function AccessPanel({
               />
             )}
           </AnimatePresence>
-          {!units.length && (
-            <p className="admin-note">
-              Chưa có khoa nào: tạo khoa ở mục "Khoa & Phòng ban" để cấp quyền giáo vụ.
-            </p>
-          )}
         </section>
       )}
 
-      {/* Tab 3: Tạo tài khoản */}
       {activeTab === "accounts" && (
-        <>
-          <AccountForm token={token} run={run} onSaved={() => void load()} />
-          <AccountsCard token={token} run={run} units={units} onCreated={() => void load()} />
-        </>
+        <AccountsTab token={token} run={run} onSaved={() => void load()} />
       )}
-
-      {/* Tab 4: Sức khỏe hệ thống */}
       {activeTab === "health" && <HealthPanel token={token} />}
-
-      {/* Tab 5: Nhật ký hoạt động */}
       {activeTab === "activity" && <ActivityPanel token={token} />}
-    </div>
+    </>
   );
 }
 
-/** Passwords are stored hashed, so the admin can only set a new one; it is shown once after saving. */
-function PasswordCell({ token, run, row }: { token: string; run: Run; row: AccessRow }) {
+/**
+ * Name and email, with the row's ⋯ menu. Passwords are stored hashed, so the admin can only set a
+ * new one; it is shown once, under the name, after saving.
+ */
+function PersonCell({
+  token,
+  run,
+  row,
+  self,
+  busy,
+  onDelete,
+}: {
+  token: string;
+  run: Run;
+  row: AccessRow;
+  self: boolean;
+  busy: boolean;
+  onDelete: () => void;
+}) {
+  const { notify } = useApp();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
   const [saved, setSaved] = useState<string | null>(null);
-  if (saved)
-    return (
-      <span className="admin-toolbar">
-        <code>{saved}</code>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => void navigator.clipboard.writeText(saved)}
-        >
-          Sao chép
-        </Button>
-        <Button type="button" variant="secondary" onClick={() => setSaved(null)}>
-          Ẩn
-        </Button>
-      </span>
-    );
-  if (!editing)
-    return (
-      <Button type="button" variant="secondary" onClick={() => setEditing(true)}>
-        Đặt lại
-      </Button>
+  const copy = (text: string, label: string) =>
+    void navigator.clipboard.writeText(text).then(
+      () => notify(`Đã sao chép ${label}`),
+      () => notify(`Không sao chép được ${label}`, undefined, "warning"),
     );
   return (
-    <form
-      className="admin-toolbar"
-      onSubmit={async (event) => {
-        event.preventDefault();
-        const result = await run(`Đã đặt mật khẩu mới cho ${row.displayName}`, () =>
-          academicApi<{ password: string }>(token, `accounts/${row.id}/password`, "POST", {
-            password: value,
-          }),
-        );
-        if (result) {
-          setSaved(result.password);
-          setEditing(false);
-          setValue("");
-        }
-      }}
-    >
-      <input
-        type="text"
-        autoComplete="new-password"
-        minLength={8}
-        maxLength={128}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="Trống = tạo ngẫu nhiên"
-        aria-label={`Mật khẩu mới: ${row.displayName}`}
-      />
-      <Button type="submit">Lưu</Button>
-      <Button
-        type="button"
-        variant="secondary"
-        onClick={() => {
-          setEditing(false);
-          setValue("");
-        }}
-      >
-        Huỷ
-      </Button>
-    </form>
+    <div className="grid gap-1">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <UserAvatar name={row.displayName} />
+        <span className="min-w-0 flex-1">
+          <b className="flex items-center gap-1.5 truncate font-semibold">
+            {row.displayName}
+            {self && <span className={CHIP}>Bạn</span>}
+          </b>
+          <small className="block truncate text-xs text-muted-foreground">{row.email}</small>
+        </span>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="grid size-[30px] shrink-0 cursor-pointer place-items-center rounded-[7px] text-muted-foreground hover:bg-secondary hover:text-foreground"
+            aria-label={`Thao tác với ${row.displayName}`}
+          >
+            <Icon name="more-horizontal" size={16} />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="z-[100] w-52 p-1">
+            <DropdownMenuItem className="gap-2" onSelect={() => setEditing(true)}>
+              <Icon name="lock" size={15} /> Đặt lại mật khẩu
+            </DropdownMenuItem>
+            <DropdownMenuItem className="gap-2" onSelect={() => copy(row.email, "email")}>
+              <Icon name="copy" size={15} /> Sao chép email
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="gap-2 text-destructive focus:text-destructive"
+              disabled={busy || self}
+              title={self ? "Không thể tự xoá tài khoản đang đăng nhập" : undefined}
+              onSelect={onDelete}
+            >
+              <Icon name="trash" size={15} /> Xoá tài khoản
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      {saved && (
+        <div
+          className={cn(
+            "flex w-max max-w-full flex-wrap items-center gap-1.5 rounded-[7px] py-1 pr-1 pl-2 text-xs",
+            TINT.amber,
+          )}
+        >
+          <Icon name="lock" size={13} />
+          Mật khẩu mới: <code className="font-mono font-bold">{saved}</code>
+          <button
+            type="button"
+            className="h-[22px] cursor-pointer rounded-[5px] bg-black/5 px-[7px] text-[11.5px] font-semibold"
+            onClick={() => copy(saved, "mật khẩu")}
+          >
+            Sao chép
+          </button>
+          <button
+            type="button"
+            className="h-[22px] cursor-pointer rounded-[5px] bg-black/5 px-[7px] text-[11.5px] font-semibold"
+            onClick={() => setSaved(null)}
+          >
+            Ẩn
+          </button>
+        </div>
+      )}
+      {editing && (
+        <form
+          className="flex flex-wrap items-center gap-1.5"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            const result = await run(`Đã đặt mật khẩu mới cho ${row.displayName}`, () =>
+              academicApi<{ password: string }>(token, `accounts/${row.id}/password`, "POST", {
+                password: value,
+              }),
+            );
+            if (result) {
+              setSaved(result.password);
+              setEditing(false);
+              setValue("");
+            }
+          }}
+        >
+          <input
+            type="text"
+            className="h-[30px]! w-44 py-0! text-[12.5px]!"
+            autoComplete="new-password"
+            minLength={8}
+            maxLength={128}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="Trống = tạo ngẫu nhiên"
+            aria-label={`Mật khẩu mới: ${row.displayName}`}
+            autoFocus
+          />
+          <button
+            type="submit"
+            className="h-[30px] cursor-pointer rounded-[7px] bg-primary px-2.5 text-xs font-semibold text-primary-foreground"
+          >
+            Lưu
+          </button>
+          <button
+            type="button"
+            className="h-[30px] cursor-pointer rounded-[7px] border bg-card px-2.5 text-xs font-semibold hover:bg-secondary"
+            onClick={() => {
+              setEditing(false);
+              setValue("");
+            }}
+          >
+            Huỷ
+          </button>
+        </form>
+      )}
+    </div>
   );
 }
 
@@ -477,7 +540,7 @@ function CodeCell({ token, run, row }: { token: string; run: Run; row: AccessRow
   const [value, setValue] = useState(saved);
   return (
     <form
-      className="admin-toolbar"
+      className="flex items-center gap-1.5"
       onSubmit={async (event) => {
         event.preventDefault();
         const result = await run(`Đã lưu mã số của ${row.displayName}`, () =>
@@ -493,15 +556,22 @@ function CodeCell({ token, run, row }: { token: string; run: Run; row: AccessRow
     >
       <input
         type="text"
+        className={cn(CODE, "h-[30px]! w-24 py-0! font-mono! text-[12.5px]!")}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         pattern="[A-Za-z0-9]{4,20}"
         maxLength={20}
-        size={10}
         placeholder="—"
         aria-label={`Mã số: ${row.displayName}`}
       />
-      {value.trim().toUpperCase() !== saved && <Button type="submit">Lưu</Button>}
+      {value.trim().toUpperCase() !== saved && (
+        <button
+          type="submit"
+          className="h-[30px] cursor-pointer rounded-[7px] bg-primary px-2.5 text-xs font-semibold text-primary-foreground"
+        >
+          Lưu
+        </button>
+      )}
     </form>
   );
 }
@@ -523,6 +593,7 @@ function UnitCell({
   const [unitId, setUnitId] = useState(row.unitId ?? "");
   return (
     <select
+      className="h-[30px]! w-max py-0! text-[12.5px]! whitespace-nowrap"
       value={unitId}
       aria-label={`Đơn vị: ${row.displayName}`}
       onChange={async (event) => {
@@ -552,241 +623,5 @@ function UnitCell({
         </option>
       ))}
     </select>
-  );
-}
-
-type CreatedAccount = {
-  email: string;
-  displayName: string;
-  userCode: string | null;
-  extension: string | null;
-  status: "created" | "exists";
-  password: string | null;
-};
-
-/** No self sign-up: the system administrator creates accounts here, one or a list pasted from Excel. */
-function AccountsCard({
-  token,
-  run,
-  units,
-  onCreated,
-}: {
-  token: string;
-  run: Run;
-  units: Unit[];
-  onCreated: () => void;
-}) {
-  const [lines, setLines] = useState("");
-  const [unitId, setUnitId] = useState("");
-  const [kind, setKind] = useState<"student" | "lecturer" | "staff">("staff");
-  const [cohort, setCohort] = useState(String(new Date().getFullYear()).slice(2));
-  const unit = units.find((item) => item.id === unitId);
-  const parsed = parseAccountLines(lines).filter((row) => row.email);
-  const needCodes = parsed.filter((row) => !row.userCode).length;
-  // The codes the server would hand out now, in order, for the rows that leave mã số blank.
-  const [nextCodes, setNextCodes] = useState<string[]>([]);
-  useEffect(() => {
-    setNextCodes([]);
-    if (!unit?.idPrefix || !needCodes || (kind === "student" && !/^[0-9]{2}$/.test(cohort))) return;
-    const timer = window.setTimeout(() => {
-      const query = new URLSearchParams({
-        kind,
-        count: String(needCodes),
-        ...(kind === "student" ? { cohort } : {}),
-      });
-      academicApi<{ codes: string[] }>(token, `units/${unit.id}/next-codes?${query}`).then(
-        (data) => setNextCodes(data.codes),
-        () => setNextCodes([]),
-      );
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [token, unit?.id, unit?.idPrefix, kind, cohort, needCodes]);
-  let codeIndex = 0;
-  const preview = parsed.map((row) => ({
-    ...row,
-    code: row.userCode?.toUpperCase() ?? nextCodes[codeIndex++] ?? null,
-  }));
-  const [created, setCreated] = useState<CreatedAccount[]>([]);
-  const [phoneNote, setPhoneNote] = useState<string | null>(null);
-  const copy = () =>
-    void navigator.clipboard.writeText(
-      created
-        .map((row) =>
-          [
-            row.email,
-            row.displayName,
-            row.userCode ?? "",
-            row.extension ?? "",
-            row.password ?? "(đã có tài khoản)",
-          ].join("\t"),
-        )
-        .join("\n"),
-    );
-  return (
-    <section>
-      <h2>Tạo nhiều tài khoản</h2>
-      <form
-        className="admin-form"
-        onSubmit={async (event) => {
-          event.preventDefault();
-          const result = await run("Đã xử lý danh sách tài khoản", () =>
-            academicApi<{ accounts: CreatedAccount[]; phoneWarning: string | null }>(
-              token,
-              "accounts",
-              "POST",
-              {
-                accounts: parseAccountLines(lines),
-                unitId,
-                kind,
-                cohort: kind === "student" ? cohort : undefined,
-              },
-            ),
-          );
-          if (result) {
-            setCreated(result.accounts);
-            setPhoneNote(result.phoneWarning);
-            setLines("");
-            onCreated();
-          }
-        }}
-      >
-        <div className="admin-toolbar">
-          <select
-            value={unitId}
-            onChange={(e) => {
-              setUnitId(e.target.value);
-              const picked = units.find((item) => item.id === e.target.value);
-              // Faculties have prefixes 01–49 (default GV), offices 50–99 (default CB).
-              if (picked?.idPrefix && kind !== "student")
-                setKind(Number(picked.idPrefix) < 50 ? "lecturer" : "staff");
-            }}
-            aria-label="Khoa / phòng ban"
-            required
-          >
-            <option value="">Khoa / phòng ban…</option>
-            {units.map((item) => (
-              <option key={item.id} value={item.id}>
-                {unitLabel(item)}
-              </option>
-            ))}
-          </select>
-          <select
-            value={kind}
-            onChange={(e) => setKind(e.target.value as typeof kind)}
-            aria-label="Loại tài khoản"
-            required
-          >
-            <option value="student">Sinh viên (SV)</option>
-            <option value="lecturer">Giảng viên (GV)</option>
-            <option value="staff">Cán bộ (CB)</option>
-          </select>
-          {kind === "student" && (
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]{2}"
-              maxLength={2}
-              size={3}
-              value={cohort}
-              onChange={(e) => setCohort(e.target.value)}
-              aria-label="Khóa (2 số cuối năm nhập học)"
-              title="Khóa: 2 số cuối năm nhập học"
-              required
-            />
-          )}
-        </div>
-        <p className="admin-note">
-          {!unit
-            ? "Chọn khoa / phòng ban: mỗi tài khoản đều thuộc một đơn vị và được cấp mã số tự động. "
-            : null}
-          Mỗi tài khoản mới được cấp luôn máy lẻ trong dải của đơn vị
-          {unit?.idPrefix ? (
-            <>
-              {" "}
-              (<code>1{unit.idPrefix}01</code>–<code>1{unit.idPrefix}99</code>)
-            </>
-          ) : null}{" "}
-          để gọi nội bộ.
-          {unit && !unit.idPrefix
-            ? "Đơn vị này chưa có mã định danh 2 số: đặt ở tab Khoa & Phòng ban. "
-            : null}
-          Mỗi dòng: <code>email, Họ tên, Mã số</code> (dán thẳng từ Excel cũng được; cột mã số bỏ
-          trống để tự cấp), tối đa 200 dòng.
-        </p>
-        <textarea
-          rows={5}
-          value={lines}
-          onChange={(e) => setLines(e.target.value)}
-          required
-          aria-label="Danh sách tài khoản"
-          placeholder={"gv.lan@tdtu.edu.vn, Trần Thị Lan\ncb.minh@tdtu.edu.vn, Lê Văn Minh"}
-        />
-        {unit && preview.length > 0 && (
-          <table className="admin-table" aria-label="Mã số sẽ cấp">
-            <thead>
-              <tr>
-                <th>Email</th>
-                <th>Họ tên</th>
-                <th>Mã số sẽ cấp</th>
-              </tr>
-            </thead>
-            <tbody>
-              {preview.map((row, index) => (
-                <tr key={`${row.email}-${index}`}>
-                  <td>{row.email}</td>
-                  <td>{row.displayName || "—"}</td>
-                  <td>
-                    {row.code ? <code>{row.code}</code> : unit.idPrefix ? "Đang lấy mã…" : "—"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        <Button type="submit" disabled={!unit?.idPrefix}>
-          Tạo tài khoản
-        </Button>
-      </form>
-      {created.length > 0 && (
-        <>
-          {phoneNote && (
-            <p className="admin-note" role="alert">
-              {phoneNote}
-            </p>
-          )}
-          <p className="admin-note" role="status">
-            Mật khẩu chỉ hiện một lần. Hãy sao chép và gửi cho từng người; họ có thể đổi trong trang
-            Hồ sơ.
-          </p>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Email</th>
-                <th>Họ tên</th>
-                <th>Mã số</th>
-                <th>Máy lẻ</th>
-                <th>Mật khẩu</th>
-              </tr>
-            </thead>
-            <tbody>
-              {created.map((row) => (
-                <tr key={row.email}>
-                  <td>{row.email}</td>
-                  <td>{row.displayName}</td>
-                  <td>{row.userCode ?? "—"}</td>
-                  <td>{row.extension ?? "—"}</td>
-                  <td>
-                    {row.password ? <code>{row.password}</code> : "Đã có tài khoản, giữ nguyên"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <Button type="button" variant="secondary" onClick={copy}>
-            Sao chép danh sách
-          </Button>
-        </>
-      )}
-    </section>
   );
 }

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import "./motion-debug.css";
 import { setMotionPreview, useMotionSafe } from "./MotionProvider";
 
 type Sample = {
@@ -20,6 +19,9 @@ const empty: Sample = {
   blurNodes: 0,
   blurDepth: 0,
 };
+
+const DEBUG_BTN =
+  "cursor-pointer justify-self-start rounded-full border border-[#263450] px-3 py-[5px]";
 
 /** Diagnostic only, dynamically imported behind DEV + ?motion-debug=1. Never a production loop. */
 export default function MotionDebug() {
@@ -114,7 +116,7 @@ export default function MotionDebug() {
   }, [epoch]);
   return (
     <aside
-      className="motion-debug"
+      className="tw fixed right-3 bottom-3 z-(--z-top) grid max-w-[min(380px,calc(100vw-24px))] gap-1 rounded-xl border border-[#263450] bg-[#f6f8fc] p-3 text-xs leading-normal text-[#17233e]"
       data-motion-debug
       aria-label="Motion debug — chỉ môi trường phát triển"
     >
@@ -133,13 +135,19 @@ export default function MotionDebug() {
         Motion: {safe.reduced ? "reduced" : "full"} · canvases:{" "}
         {document.querySelectorAll("canvas").length}
       </output>
-      <button type="button" onClick={() => setEpoch((n) => n + 1)}>
+      <button type="button" className={DEBUG_BTN} onClick={() => setEpoch((n) => n + 1)}>
         Đo lại
       </button>
       <div>
-        <button onClick={() => setMotionPreview("system")}>Theo máy</button>
-        <button onClick={() => setMotionPreview("reduced")}>Giảm</button>
-        <button onClick={() => setMotionPreview("full")}>Đầy đủ</button>
+        <button className={DEBUG_BTN} onClick={() => setMotionPreview("system")}>
+          Theo máy
+        </button>
+        <button className={DEBUG_BTN} onClick={() => setMotionPreview("reduced")}>
+          Giảm
+        </button>
+        <button className={DEBUG_BTN} onClick={() => setMotionPreview("full")}>
+          Đầy đủ
+        </button>
       </div>
       <small>rAF không phải GPU FPS; blur là cây DOM, không phải layer compositor.</small>
     </aside>

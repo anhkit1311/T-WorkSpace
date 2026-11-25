@@ -8,7 +8,6 @@ export interface AppRoute {
   threadId?: string;
   scheduleId?: string;
   query?: string;
-  invitationToken?: string;
   invalid?: boolean;
 }
 
@@ -17,11 +16,9 @@ const views = new Set([
   "workspace",
   "chat",
   "meetings",
-  "files",
   "profile",
-  "admin",
-  "invitation",
   "notifications",
+  "bulletin",
   "call-center",
   "call-directory",
   "call-monitoring",
@@ -29,7 +26,6 @@ const views = new Set([
   "staff",
   "access",
   "reports",
-  "groups",
 ]);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -61,8 +57,6 @@ export function readAppRoute(url: URL): AppRoute {
   if (route.view === "workspace") route.view = "chat";
   const query = url.searchParams.get("q");
   if (query) route.query = query;
-  if (route.view === "invitation")
-    route.invitationToken = new URLSearchParams(url.hash.slice(1)).get("token") ?? undefined;
   return route;
 }
 
@@ -79,5 +73,5 @@ export function appRouteUrl(route: AppRoute): string {
   if (route.threadId) params.set("thread", route.threadId);
   if (route.scheduleId) params.set("schedule", route.scheduleId);
   if (route.query) params.set("q", route.query);
-  return `/app/${route.view}${params.size ? `?${params}` : ""}${route.invitationToken ? `#token=${encodeURIComponent(route.invitationToken)}` : ""}`;
+  return `/app/${route.view}${params.size ? `?${params}` : ""}`;
 }

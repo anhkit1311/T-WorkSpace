@@ -6,6 +6,8 @@ import { Badge, Button, Modal } from "../../shared/ui/Primitives";
 import { HlsPlayer } from "../../shared/ui/HlsPlayer";
 import { coursesApi, lessonFileUrl, openLessonFile, uploadLessonFile } from "./courses-api";
 import { KIND } from "./CourseView";
+import { Icon } from "../../shared/ui/Icon";
+import { cn } from "../../shared/lib/utils";
 import { WebCallDialog } from "../call-center/ContactCenter";
 import { QuizRunner } from "./QuizRunner";
 
@@ -17,6 +19,13 @@ const MEDIA = {
   ready: "Sẵn sàng",
   failed: "Lỗi xử lý",
 } as const;
+const BTN =
+  "inline-flex h-[34px] shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md px-3 text-[13px] font-semibold whitespace-nowrap transition-colors";
+const BTN_PRIMARY = `${BTN} bg-primary text-primary-foreground hover:bg-primary/90`;
+const BTN_GHOST = `${BTN} border bg-card text-foreground hover:bg-secondary`;
+const CHIP = "rounded-[5px] px-[7px] py-[3px] text-xs leading-none font-semibold whitespace-nowrap";
+const GREEN = "bg-[var(--tint-green-bg)] text-[var(--tint-green-fg)]";
+const AMBER = "bg-[var(--tint-amber-bg)] text-[var(--tint-amber-fg)]";
 const minutes = (seconds: number) => Math.max(0, Math.round(seconds / 60));
 
 export function LessonView({
@@ -24,11 +33,14 @@ export function LessonView({
   course,
   onChanged,
   onDeleted,
+  onOpen,
 }: {
   lessonId: string;
   course: CourseDetail;
   onChanged: () => void;
   onDeleted: () => void;
+  /** Opens another lesson of the course (the previous/next buttons). */
+  onOpen?: (lessonId: string) => void;
 }) {
   const { accessToken, notify } = useApp();
   const [lesson, setLesson] = useState<LessonDetail | null>(null);
@@ -102,44 +114,80 @@ export function LessonView({
         () => undefined, // a lost report only delays completion; the next one carries on
       );
 
+  const order = course.chapters.flatMap((chapter) => chapter.lessons);
+  const at = order.findIndex((item) => item.id === lesson.id);
+  const previous = at > 0 ? order[at - 1] : null;
+  const next = at >= 0 && at < order.length - 1 ? order[at + 1] : null;
+  const player = !editing && lesson.kind === "video" && lesson.mediaStatus === "ready" && (
+    <HlsPlayer
+      src={lessonFileUrl(lesson.id, "index.m3u8")}
+      label={lesson.title}
+      captions={lesson.transcriptStatus === "ready"}
+      startAt={lesson.watch?.positionSeconds}
+      onPlayed={lesson.watch ? reportWatch : undefined}
+    />
+  );
+
   return (
-    <article className="lesson">
-      <header className="lesson-head">
-        <div>
-          <span className="course-card__code">
+    <article className="grid min-w-0 gap-4">
+      {player}
+      <header className="tw flex flex-wrap items-start gap-x-3 gap-y-2">
+        <div className="grid min-w-0 flex-1 basis-64 gap-0.5">
+          <small className="text-xs text-muted-foreground">
             {KIND[lesson.kind][0]}
             {lesson.durationSeconds
               ? ` · ${Math.max(1, Math.round(lesson.durationSeconds / 60))} phút`
               : ""}
-          </span>
-          <h2>{lesson.title}</h2>
+          </small>
+          <h2 className="m-0 text-xl leading-snug font-bold tracking-normal text-foreground">
+            {lesson.title}
+          </h2>
         </div>
-        <div className="course-actions">
-          {lesson.completed && <Badge tone="green">Đã hoàn thành</Badge>}
+        <div className="flex flex-wrap items-center gap-2">
+          {lesson.completed && <span className={cn(CHIP, GREEN)}>Đã hoàn thành</span>}
           {lesson.canManage && (
-            <Badge tone={lesson.status === "published" ? "green" : "amber"}>
+            <span className={cn(CHIP, lesson.status === "published" ? GREEN : AMBER)}>
               {lesson.status === "published" ? "Đã xuất bản" : "Nháp"}
-            </Badge>
+            </span>
           )}
           {learner && (
-            <Button size="sm" variant="secondary" icon="headset" onClick={() => setSupport(true)}>
+            <button type="button" className={BTN_GHOST} onClick={() => setSupport(true)}>
+              <Icon name="headset" size={15} />
               Cần hỗ trợ
-            </Button>
+            </button>
           )}
           {lesson.canManage && (
-            <Button
-              size="sm"
-              variant="ghost"
-              icon="pencil"
+            <button
+              type="button"
+              className={BTN_GHOST}
               onClick={() => setEditing((value) => !value)}
             >
+              <Icon name="pencil" size={15} />
               {editing ? "Xem như học viên" : "Soạn bài"}
-            </Button>
+            </button>
           )}
+          {!editing &&
+            learner &&
+            !lesson.completed &&
+            (lesson.kind === "document" || (lesson.kind === "video" && !lesson.watch)) && (
+              <button
+                type="button"
+                className={BTN_PRIMARY}
+                onClick={() =>
+                  void run("Đã hoàn thành bài học", () => coursesApi.complete(token, lesson.id))
+                }
+              >
+                <Icon name="check" size={15} />
+                Đánh dấu đã học xong
+              </button>
+            )}
         </div>
       </header>
       {error && (
-        <p role="alert" className="courses-error">
+        <p
+          role="alert"
+          className="tw rounded-md bg-red-50 px-3 py-2 text-[13px] text-red-700 dark:bg-red-950 dark:text-red-300"
+        >
           {error}
         </p>
       )}
@@ -148,33 +196,43 @@ export function LessonView({
         <LessonEditor lesson={lesson} courseId={course.id} run={run} onDeleted={onDeleted} />
       ) : (
         <>
-          {lesson.kind === "video" &&
-            (lesson.mediaStatus === "ready" ? (
-              <HlsPlayer
-                src={lessonFileUrl(lesson.id, "index.m3u8")}
-                label={lesson.title}
-                captions={lesson.transcriptStatus === "ready"}
-                startAt={lesson.watch?.positionSeconds}
-                onPlayed={lesson.watch ? reportWatch : undefined}
-              />
-            ) : (
-              <p className="courses-empty">{MEDIA[lesson.mediaStatus]}</p>
-            ))}
+          {lesson.kind === "video" && lesson.mediaStatus !== "ready" && (
+            <p className="tw rounded-[10px] border border-dashed py-10 text-center text-sm text-muted-foreground">
+              {MEDIA[lesson.mediaStatus]}
+            </p>
+          )}
+          {lesson.watch && lesson.durationSeconds && !lesson.completed && (
+            <p className="tw text-[13px] text-muted-foreground" role="status">
+              Đã xem {minutes(lesson.watch.watchedSeconds)}/{minutes(lesson.durationSeconds)} phút ·
+              xem ít nhất 90% video để hoàn thành bài học.
+            </p>
+          )}
           {lesson.kind === "document" && (
             <>
               {lesson.body && <LessonBody body={lesson.body} />}
               {lesson.mediaStatus === "ready" && (
-                <Button
-                  variant="secondary"
-                  icon="file"
-                  onClick={() =>
-                    void openLessonFile(token, lesson.id, "document.pdf").catch((failure) =>
-                      setError(failure.message),
-                    )
-                  }
-                >
-                  Mở tài liệu {lesson.mediaName ? `(${lesson.mediaName})` : "PDF"}
-                </Button>
+                <div className="tw flex items-center gap-2.5 rounded-[10px] border bg-card px-3 py-2.5">
+                  <span className="grid size-[34px] shrink-0 place-items-center rounded-md bg-secondary text-muted-foreground">
+                    <Icon name="file" size={17} />
+                  </span>
+                  <span className="grid min-w-0 flex-1">
+                    <b className="truncate text-sm font-medium">
+                      {lesson.mediaName || "Tài liệu PDF"}
+                    </b>
+                    <small className="text-xs text-muted-foreground">Tệp đính kèm</small>
+                  </span>
+                  <button
+                    type="button"
+                    className={BTN_GHOST}
+                    onClick={() =>
+                      void openLessonFile(token, lesson.id, "document.pdf").catch((failure) =>
+                        setError(failure.message),
+                      )
+                    }
+                  >
+                    Mở tài liệu
+                  </button>
+                </div>
               )}
             </>
           )}
@@ -182,31 +240,25 @@ export function LessonView({
             lesson.canManage &&
             lesson.mediaStatus === "ready" &&
             !lesson.recordingId && (
-              <p className="lesson-captions">
+              <p className="tw flex items-center gap-2 text-[13px] text-muted-foreground">
                 {lesson.transcriptStatus === "processing" ? (
                   "Đang tạo phụ đề tự động…"
                 ) : lesson.transcriptStatus === "ready" ? (
                   "Đã có phụ đề và bản chép lời."
                 ) : (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    icon="file"
+                  <button
+                    type="button"
+                    className={BTN_GHOST}
                     onClick={() =>
                       void run("Đang tạo phụ đề", () => coursesApi.transcript(token, lesson.id))
                     }
                   >
+                    <Icon name="file" size={15} />
                     {lesson.transcriptStatus === "failed" ? "Tạo lại phụ đề" : "Tạo phụ đề tự động"}
-                  </Button>
+                  </button>
                 )}
               </p>
             )}
-          {lesson.watch && lesson.durationSeconds && !lesson.completed && (
-            <p className="lesson-watch" role="status">
-              Đã xem {minutes(lesson.watch.watchedSeconds)}/{minutes(lesson.durationSeconds)} phút ·
-              xem ít nhất 90% video để hoàn thành bài học.
-            </p>
-          )}
           {lesson.kind === "quiz" && lesson.quiz && (
             <QuizRunner
               lesson={lesson}
@@ -217,19 +269,36 @@ export function LessonView({
             />
           )}
           {lesson.kind === "live" && lesson.live && <LivePanel lesson={lesson} run={run} />}
-          {learner &&
-            !lesson.completed &&
-            (lesson.kind === "document" || (lesson.kind === "video" && !lesson.watch)) && (
-              <Button
-                icon="check"
-                onClick={() =>
-                  void run("Đã hoàn thành bài học", () => coursesApi.complete(token, lesson.id))
-                }
-              >
-                Đánh dấu đã học xong
-              </Button>
-            )}
         </>
+      )}
+      {onOpen && !editing && (previous || next) && (
+        <nav
+          className="tw flex justify-between gap-2.5 border-t pt-3.5"
+          aria-label="Bài trước và bài tiếp"
+        >
+          {previous ? (
+            <button
+              type="button"
+              className={cn(BTN_GHOST, "min-w-0")}
+              onClick={() => onOpen(previous.id)}
+            >
+              <Icon name="chevron-left" size={15} />
+              <span className="truncate">{previous.title}</span>
+            </button>
+          ) : (
+            <span />
+          )}
+          {next && (
+            <button
+              type="button"
+              className={cn(BTN_PRIMARY, "min-w-0")}
+              onClick={() => onOpen(next.id)}
+            >
+              <span className="truncate">Bài tiếp: {next.title}</span>
+              <Icon name="chevron-right" size={15} />
+            </button>
+          )}
+        </nav>
       )}
       {support && (
         <SupportDialog
@@ -264,7 +333,7 @@ function LivePanel({
     now >= +new Date(live.startsAt) - 15 * 60_000 &&
     now <= +new Date(live.endsAt);
   return (
-    <div className="lesson-live">
+    <div className="tw grid justify-items-start gap-2.5">
       <p>
         Lịch học: {when(live.startsAt)} –{" "}
         {live.endsAt
@@ -286,7 +355,7 @@ function LivePanel({
           {open ? "Vào lớp học" : "Mở phòng học"}
         </Button>
       )}
-      <p className="course-card__meta">
+      <p className="m-0 text-[13px] text-muted-foreground">
         Có mặt từ 70% thời lượng buổi học được tính là tham dự. Bản ghi buổi học được đăng thành bài
         xem lại ngay sau buổi.
       </p>
@@ -309,7 +378,7 @@ function LivePanel({
         </Button>
       )}
       {rows && (
-        <table className="course-table">
+        <table className="w-full border-collapse text-sm [&_:is(th,td)]:border-b [&_:is(th,td)]:p-2 [&_:is(th,td)]:text-left [&_:is(th,td)]:align-middle [&_:is(th,td)]:font-normal [&_thead_th]:font-semibold [&_tbody_th_small]:block [&_tbody_th_small]:text-muted-foreground">
           <caption>
             Điểm danh ({rows.filter((row) => row.attended).length}/{rows.length} tham dự)
           </caption>
@@ -397,7 +466,7 @@ function SupportDialog({
       }
     >
       {result ? (
-        <div className="lesson-support">
+        <div className="[&_p]:mb-2">
           <p>
             Đã tạo phiếu <strong>{result.ticketNumber}</strong>. Tổng đài viên thấy ngay khóa học và
             bài học bạn đang học.
@@ -410,7 +479,7 @@ function SupportDialog({
           )}
         </div>
       ) : (
-        <label className="courses-form">
+        <label className="tw tw-form grid gap-2.5">
           Bạn gặp khó khăn gì? (không bắt buộc)
           <textarea
             rows={3}
@@ -419,12 +488,17 @@ function SupportDialog({
             onChange={(event) => setMessage(event.target.value)}
           />
           {hotline && (
-            <span className="course-card__meta">Hotline đơn vị phụ trách: {hotline}</span>
+            <span className="m-0 text-[13px] text-muted-foreground">
+              Hotline đơn vị phụ trách: {hotline}
+            </span>
           )}
         </label>
       )}
       {error && (
-        <p role="alert" className="courses-error">
+        <p
+          role="alert"
+          className="tw rounded-md bg-red-50 px-3 py-2 text-[13px] text-red-700 dark:bg-red-950 dark:text-red-300"
+        >
           {error}
         </p>
       )}
@@ -492,7 +566,7 @@ function LessonEditor({
     );
 
   return (
-    <div className="courses-form">
+    <div className="tw tw-form grid gap-2.5">
       <label>
         Tên bài học
         <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={160} />
@@ -533,15 +607,21 @@ function LessonEditor({
             }}
           />
           {upload !== null && <progress max={100} value={upload} aria-label="Tiến độ tải lên" />}
-          {lesson.mediaError && <span className="courses-error">{lesson.mediaError}</span>}
+          {lesson.mediaError && (
+            <span className="tw rounded-md bg-red-50 px-3 py-2 text-[13px] text-red-700 dark:bg-red-950 dark:text-red-300">
+              {lesson.mediaError}
+            </span>
+          )}
         </label>
       )}
       {lesson.recordingId && (
-        <p className="course-card__meta">Bài xem lại dùng bản ghi của buổi live.</p>
+        <p className="m-0 text-[13px] text-muted-foreground">
+          Bài xem lại dùng bản ghi của buổi live.
+        </p>
       )}
       {lesson.kind === "quiz" && (
         <>
-          <div className="course-inline-form">
+          <div className="tw tw-form tw-row">
             <label>
               Thời gian (phút, để trống = không giới hạn)
               <input
@@ -583,7 +663,7 @@ function LessonEditor({
               />
             </label>
           </div>
-          <label className="course-check">
+          <label className="flex items-center gap-2">
             <input
               type="checkbox"
               checked={shuffle}
@@ -591,10 +671,10 @@ function LessonEditor({
             />
             Xáo trộn thứ tự câu hỏi và phương án cho mỗi lượt làm
           </label>
-          <fieldset className="course-question-picker">
+          <fieldset className="grid gap-1.5 rounded-md border bg-secondary/50 px-3 py-2.5 [&_label]:flex [&_label]:items-center [&_label]:gap-2 [&_label]:text-foreground">
             <legend>Câu hỏi trong bài ({picked.length}) — lấy từ ngân hàng câu hỏi</legend>
             {!bank.length && (
-              <p className="course-card__meta">
+              <p className="m-0 text-[13px] text-muted-foreground">
                 Ngân hàng câu hỏi trống; thêm câu hỏi ở tab "Ngân hàng câu hỏi".
               </p>
             )}
@@ -618,11 +698,11 @@ function LessonEditor({
         </>
       )}
       {lesson.kind === "live" && lesson.live && (
-        <p className="course-card__meta">
+        <p className="m-0 text-[13px] text-muted-foreground">
           Lịch học: {when(lesson.live.startsAt)}. Đổi giờ trong mục Họp trực tuyến.
         </p>
       )}
-      <div className="course-outline__tools">
+      <div className="tw flex flex-wrap items-center gap-2 [&>h3]:mr-auto">
         <Button onClick={() => void save()}>Lưu</Button>
         {lesson.status === "draft" ? (
           <Button

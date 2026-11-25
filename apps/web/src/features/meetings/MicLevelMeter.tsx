@@ -60,13 +60,22 @@ export function MicLevelMeter({
 
   if (!track) return null;
   return (
-    <div className="mic-level" aria-live="polite">
-      <span className="mic-level__label">{enabled ? "Mức âm micro" : "Micro đang tắt"}</span>
-      <span className="mic-level__track" aria-hidden="true">
-        <span ref={fillRef} className="mic-level__fill" />
+    <div
+      className="tw flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground"
+      aria-live="polite"
+    >
+      <span>{enabled ? "Mức âm micro" : "Micro đang tắt"}</span>
+      <span
+        className="h-1.5 min-w-24 flex-1 overflow-hidden rounded-full bg-secondary"
+        aria-hidden="true"
+      >
+        <span
+          ref={fillRef}
+          className="block size-full origin-left scale-x-0 rounded-full bg-emerald-500"
+        />
       </span>
       {enabled && silent && (
-        <span className="mic-level__hint">
+        <span className="basis-full">
           Chưa nghe thấy tiếng. Hãy thử nói, hoặc chọn micro khác bên dưới.
         </span>
       )}

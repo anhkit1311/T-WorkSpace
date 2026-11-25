@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 /** Time since a meeting started (m:ss, h:mm:ss after an hour), ticking every second. */
 export function MeetingClock({
   since,
-  className = "meeting-topbar__clock",
+  className = "tabular-nums",
 }: {
   since: string;
   className?: string;

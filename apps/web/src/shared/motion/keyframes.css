@@ -68,3 +68,72 @@
     transform: rotate(360deg);
   }
 }
+
+/* Enter/leave blur. data-motion="lite" (set when the device can't hold 50fps) drops it. */
+:root {
+  --blur-k: 1;
+}
+:root[data-motion="lite"] {
+  --blur-k: 0;
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(-4px);
+    filter: blur(calc(6px * var(--blur-k)));
+  }
+}
+@keyframes pop-out {
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+    filter: blur(calc(4px * var(--blur-k)));
+  }
+}
+@keyframes block-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(calc(6px * var(--blur-k)));
+  }
+}
+/* Menus and popovers. backwards, not both: a filter kept after the end would trap fixed children. */
+.motion-pop {
+  transform-origin: var(
+    --radix-popover-content-transform-origin,
+    var(--radix-dropdown-menu-content-transform-origin, top)
+  );
+  animation: pop-in 0.26s var(--ease-out) backwards;
+}
+.motion-pop[data-state="closed"] {
+  animation: pop-out 0.12s var(--ease-out) forwards;
+}
+/* Page enter: each block of the page arrives in turn (AppShell's page wrapper).
+   backwards, not both: a transform kept after the animation traps position: fixed dialogs. */
+.page-blocks > * > * {
+  animation: block-in 0.42s var(--ease-out) backwards;
+}
+.page-blocks > * > :nth-child(2) {
+  animation-delay: 0.03s;
+}
+.page-blocks > * > :nth-child(3) {
+  animation-delay: 0.06s;
+}
+.page-blocks > * > :nth-child(4) {
+  animation-delay: 0.09s;
+}
+.page-blocks > * > :nth-child(n + 5) {
+  animation-delay: 0.12s;
+}
+/* A chat message that just arrived rises in from below. */
+@keyframes msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+    filter: blur(calc(4px * var(--blur-k)));
+  }
+}
+.msg-in {
+  transform-origin: bottom left;
+  animation: msg-in 0.34s var(--ease-out) backwards;
+}

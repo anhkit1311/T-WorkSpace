@@ -17,7 +17,7 @@
         "run",
         "dev:web"
       ],
-      "port": 5173
+      "port": 5176
     },
     {
       "name": "web-preview",

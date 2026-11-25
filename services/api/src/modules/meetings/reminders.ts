@@ -35,7 +35,14 @@ export async function noticeSchedule(
   );
   const first = audience.rows[0];
   if (!first) return;
-  const when = new Date(first.startsAt).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
+  const when = new Date(first.startsAt).toLocaleString("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
   await addNotices(
     audience.rows.map((row) => row.userId),
     {

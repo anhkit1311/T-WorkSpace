@@ -1,5 +1,5 @@
 import { Component, type ReactNode, type ErrorInfo } from "react";
-import { Button } from "./Primitives";
+import { Button, STATE_CARD } from "./Primitives";
 export class PageErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() {
@@ -10,7 +10,7 @@ export class PageErrorBoundary extends Component<{ children: ReactNode }, { fail
   }
   render() {
     return this.state.failed ? (
-      <section className="page-load-error" role="alert">
+      <section className={STATE_CARD} role="alert">
         <h2>Không mở được trang</h2>
         <p>Hãy tải lại trang để tiếp tục. Bản nháp đã lưu vẫn được giữ.</p>
         <Button icon="refresh" onClick={() => window.location.reload()}>

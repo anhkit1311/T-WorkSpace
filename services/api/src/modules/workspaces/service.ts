@@ -647,11 +647,11 @@ export async function createWorkspace(
     }
 
     await client.query(
-      `INSERT INTO channels (id, workspace_id, created_by, name, type, position) VALUES ($1, $2, $3, 'tong-quan', 'text', 1)`,
+      `INSERT INTO channels (id, workspace_id, created_by, name, type, position) VALUES ($1, $2, $3, 'Tổng quan', 'text', 1)`,
       [randomUUID(), workspaceId, userId],
     );
     await client.query(
-      `INSERT INTO channels (id, workspace_id, created_by, name, type, position) VALUES ($1, $2, $3, 'phong-hop', 'video', 2)`,
+      `INSERT INTO channels (id, workspace_id, created_by, name, type, position) VALUES ($1, $2, $3, 'Phòng họp', 'video', 2)`,
       [randomUUID(), workspaceId, userId],
     );
 

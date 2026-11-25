@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import type { MeetingCalendarSession, MeetingScheduleItem } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
-import { Avatar, Button } from "../../shared/ui/Primitives";
+import { UserAvatar } from "../../shared/ui/kit/user-avatar";
+import { cn } from "../../shared/lib/utils";
 import { Icon } from "../../shared/ui/Icon";
 import { getDialInApi, getMeetingCalendarApi } from "./api";
 import { MicLevelMeter } from "./MicLevelMeter";
@@ -16,6 +17,21 @@ const QUALITY: { value: Quality; label: string; title: string }[] = [
   { value: "standard", label: "720p", title: "Rõ nét · 720p" },
   { value: "high", label: "1080p", title: "Full HD · 1080p" },
 ];
+const BTN =
+  "inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-md px-3.5 text-[13.5px] font-semibold whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+const BTN_PRIMARY = `${BTN} bg-primary text-primary-foreground hover:bg-primary/90`;
+const BTN_GHOST = `${BTN} border bg-card text-foreground hover:bg-secondary`;
+const GLASS =
+  "absolute flex items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-0.5 text-[12.5px] text-white";
+const DEVICE = "grid gap-1 text-xs text-muted-foreground";
+const SELECT = "h-[34px] w-full min-w-0 rounded-md border bg-card px-2 text-[13px] text-foreground";
+// Keyed by the device check's tone.
+const DOT: Record<string, string> = {
+  "": "bg-emerald-500",
+  "tone-red": "bg-red-500",
+  "tone-amber": "bg-amber-500",
+  "is-off": "bg-border",
+};
 const clock = (iso: string) =>
   new Date(iso).toLocaleTimeString("vi-VN", {
     timeZone: "Asia/Ho_Chi_Minh",
@@ -212,32 +228,49 @@ export function PreJoinScreen({
         </option>
       ));
 
+  const displayName = user?.displayName || "Bạn";
+  const check = (tone: string, label: string, text: string) => (
+    <li className="flex items-center gap-2.5 py-1.5 text-[13px]">
+      <span className={cn("size-2 shrink-0 rounded-full", DOT[tone])} />
+      <b className="font-medium">{label}</b>
+      <span className="ml-auto text-muted-foreground">{text}</span>
+    </li>
+  );
+
   return (
-    <section className="meeting-prejoin" aria-labelledby="prejoin-title">
-      <nav className="pj-crumbs" aria-label="Vị trí">
-        <Button
-          variant="secondary"
-          size="sm"
-          icon="chevron-left"
-          onClick={onBack}
-          disabled={joining}
-        >
+    <section
+      className="tw mx-auto grid w-full max-w-[1080px] gap-4 text-foreground"
+      aria-labelledby="prejoin-title"
+    >
+      <nav
+        className="flex items-center gap-2.5 text-[13px] text-muted-foreground"
+        aria-label="Vị trí"
+      >
+        <button type="button" className={BTN_GHOST} onClick={onBack} disabled={joining}>
+          <Icon name="chevron-left" size={16} />
           Họp
-        </Button>
-        <span>
-          Họp / {room.name} / <b>Phòng chờ</b>
+        </button>
+        <span className="truncate">
+          Họp / {room.name} / <b className="font-semibold text-foreground">Phòng chờ</b>
         </span>
       </nav>
 
-      <div className="pj-grid">
-        <div className="pj-stage-col">
-          <div className="pj-stage">
+      <div className="grid grid-cols-[minmax(0,1fr)_340px] items-start gap-9 max-lg:grid-cols-1 max-lg:gap-5">
+        <div className="grid gap-2.5">
+          {/* The preview is a dark stage in both themes. */}
+          <div className="relative grid aspect-[16/10] place-items-center overflow-hidden rounded-[14px] bg-zinc-900 text-zinc-50">
             {previewCam && previewStream ? (
-              <video ref={previewVideoRef} autoPlay playsInline muted className="pj-stage__video" />
+              <video
+                ref={previewVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="absolute inset-0 size-full -scale-x-100 object-cover"
+              />
             ) : (
-              <div className="pj-stage__placeholder">
-                <span className="pj-stage__avatar">
-                  {(user?.displayName || "Bạn").slice(0, 1).toUpperCase()}
+              <div className="grid justify-items-center gap-3 text-[13px] text-zinc-300">
+                <span className="grid size-20 place-items-center rounded-full bg-[#2f3a55] text-[28px] font-semibold text-[#cfdcff]">
+                  {displayName.slice(0, 1).toUpperCase()}
                 </span>
                 <span>
                   {!previewEnabled
@@ -247,82 +280,79 @@ export function PreJoinScreen({
                       : "Camera đang tắt"}
                 </span>
                 {!previewEnabled && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    icon="camera"
+                  <button
+                    type="button"
+                    className={cn(BTN, "bg-zinc-50 text-zinc-900 hover:bg-zinc-200")}
                     onClick={() => setPreviewEnabled(true)}
                   >
+                    <Icon name="camera" size={16} />
                     Kiểm tra camera và micro
-                  </Button>
+                  </button>
                 )}
               </div>
             )}
-            <span className="pj-glass is-top-left">
-              <span className={`mt-led ${previewStream ? "" : "is-off"}`} /> Xem trước ·{" "}
-              {qualityLabel}
+            <span className={cn(GLASS, "top-3 left-3.5")}>{displayName} (bạn)</span>
+            <span className={cn(GLASS, "top-3 right-3.5")}>
+              <span
+                className={cn("size-2 rounded-full", isConnected ? "bg-emerald-400" : "bg-red-400")}
+              />
+              {isConnected ? `Đã kết nối · ${qualityLabel}` : "Mất kết nối"}
             </span>
-            <span className="pj-glass is-top-right">
-              <span className={`mt-led ${isConnected ? "" : "tone-red"}`} />{" "}
-              {isConnected ? "Máy chủ đã kết nối" : "Mất kết nối"}
-            </span>
-            <span className="pj-glass is-name">{user?.displayName || "Bạn"} (bạn)</span>
-            <div className="pj-controls">
-              <button
-                type="button"
-                className={`pj-ctl ${previewMic ? "is-on" : "is-off"}`}
-                disabled={joining}
-                aria-pressed={previewMic}
-                aria-label={previewMic ? "Tắt micro" : "Bật micro"}
-                title={previewMic ? "Tắt micro" : "Bật micro"}
-                onClick={togglePreviewMic}
-              >
-                <Icon name={previewMic ? "mic" : "mic-off"} size={18} />
-              </button>
-              <button
-                type="button"
-                className={`pj-ctl ${previewCam ? "is-on" : "is-off"}`}
-                disabled={joining}
-                aria-pressed={previewCam}
-                aria-label={previewCam ? "Tắt camera" : "Bật camera"}
-                title={previewCam ? "Tắt camera" : "Bật camera"}
-                onClick={togglePreviewCam}
-              >
-                <Icon name={previewCam ? "camera" : "camera-off"} size={18} />
-              </button>
+            <div className="absolute bottom-3.5 left-1/2 flex -translate-x-1/2 gap-2.5">
+              {(
+                [
+                  [previewMic, "micro", "mic", "mic-off", togglePreviewMic],
+                  [previewCam, "camera", "camera", "camera-off", togglePreviewCam],
+                ] as const
+              ).map(([on, name, iconOn, iconOff, toggle]) => (
+                <button
+                  key={name}
+                  type="button"
+                  className={cn(
+                    "grid size-[46px] cursor-pointer place-items-center rounded-full text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                    on ? "bg-white/15 hover:bg-white/25" : "bg-red-500 hover:bg-red-600",
+                  )}
+                  disabled={joining}
+                  aria-pressed={on}
+                  aria-label={`${on ? "Tắt" : "Bật"} ${name}`}
+                  title={`${on ? "Tắt" : "Bật"} ${name}`}
+                  onClick={toggle}
+                >
+                  <Icon name={on ? iconOn : iconOff} size={19} />
+                </button>
+              ))}
             </div>
           </div>
 
           {previewLoading && (
-            <p className="meeting-device-status" role="status">
+            <p className="m-0 text-[13px] text-muted-foreground" role="status">
               Đang chờ quyền truy cập thiết bị…
             </p>
           )}
           {previewError && (
-            <div className="meeting-device-error" role="alert">
-              <span>{previewError}</span>
-              <Button
-                variant="ghost"
-                size="sm"
+            <div
+              className="flex items-center gap-2.5 rounded-md bg-red-50 px-3 py-2 text-[13px] text-red-700 dark:bg-red-950 dark:text-red-300"
+              role="alert"
+            >
+              <span className="flex-1">{previewError}</span>
+              <button
+                type="button"
+                className={BTN_GHOST}
                 onClick={() => setPreviewRetry((value) => value + 1)}
               >
                 Thử lại
-              </Button>
+              </button>
             </div>
           )}
 
-          {previewStream && (
-            <div className="pj-meter">
-              <span className="pj-label">Mic</span>
-              <MicLevelMeter stream={previewStream} enabled={previewMic} />
-            </div>
-          )}
+          {previewStream && <MicLevelMeter stream={previewStream} enabled={previewMic} />}
 
           {previewEnabled && (
-            <div className="pj-devices">
-              <label className="pj-dev">
-                <span className="pj-label">Micro</span>
+            <div className="grid grid-cols-4 gap-2 max-md:grid-cols-2">
+              <label className={DEVICE}>
+                Micro
                 <select
+                  className={SELECT}
                   aria-label="Chọn micro"
                   value={audioInputId}
                   onChange={(event) => setAudioInputId(event.target.value)}
@@ -331,9 +361,10 @@ export function PreJoinScreen({
                   {deviceList("audioinput", "Micro")}
                 </select>
               </label>
-              <label className="pj-dev">
-                <span className="pj-label">Camera</span>
+              <label className={DEVICE}>
+                Camera
                 <select
+                  className={SELECT}
                   aria-label="Chọn camera"
                   value={videoInputId}
                   onChange={(event) => setVideoInputId(event.target.value)}
@@ -343,9 +374,10 @@ export function PreJoinScreen({
                 </select>
               </label>
               {"setSinkId" in HTMLMediaElement.prototype && (
-                <label className="pj-dev">
-                  <span className="pj-label">Loa</span>
+                <label className={DEVICE}>
+                  Loa
                   <select
+                    className={SELECT}
                     aria-label="Chọn loa"
                     value={outputDeviceId}
                     onChange={(event) => setOutputDeviceId(event.target.value)}
@@ -355,16 +387,23 @@ export function PreJoinScreen({
                   </select>
                 </label>
               )}
-              <div className="pj-dev">
-                <span className="pj-label" id="pj-quality">
-                  Chất lượng
-                </span>
-                <div className="pj-seg" role="group" aria-labelledby="pj-quality">
+              <div className={DEVICE}>
+                <span id="pj-quality">Chất lượng</span>
+                <div
+                  className="flex h-[34px] rounded-md bg-secondary p-[3px]"
+                  role="group"
+                  aria-labelledby="pj-quality"
+                >
                   {QUALITY.map((item) => (
                     <button
                       key={item.value}
                       type="button"
-                      className={quality === item.value ? "is-active" : ""}
+                      className={cn(
+                        "flex-1 cursor-pointer rounded-[5px] text-xs font-medium",
+                        quality === item.value
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground",
+                      )}
                       aria-pressed={quality === item.value}
                       title={item.title}
                       onClick={() => setQuality(item.value)}
@@ -378,41 +417,51 @@ export function PreJoinScreen({
           )}
         </div>
 
-        <aside className="pj-side">
-          <div>
-            <p className="mt-eyebrow">
-              <span className={`mt-led ${live ? "is-pulse" : "is-off"}`} />
+        <aside className="grid gap-3.5">
+          <div className="grid gap-1">
+            <span className="flex items-center gap-2 text-[13px] text-muted-foreground">
+              <span
+                className={cn(
+                  "size-2 rounded-full",
+                  live ? "bg-red-500 motion-safe:animate-pulse" : "bg-border",
+                )}
+              />
               {live
                 ? `Đang diễn ra · bắt đầu ${clock(live.startedAt)}`
                 : plan
                   ? `Lịch họp · ${clock(plan.startsAt)}–${clock(plan.endsAt)}`
                   : "Phòng họp · chưa có phiên nào"}
-            </p>
-            <h1 id="prejoin-title" className="pj-title">
+            </span>
+            <h1
+              id="prejoin-title"
+              className="m-0 text-2xl leading-[1.25] font-bold tracking-normal text-foreground"
+            >
               {title}
             </h1>
-            <p className="pj-sub">
+            <span className="text-[13px] text-muted-foreground">
               {room.workspace}
               {title !== room.name ? ` · ${room.name}` : ""}
-              {dialIn && <span className="pj-mono"> · Mã {code}</span>}
-            </p>
+              {dialIn && <span className="font-mono"> · Mã {code}</span>}
+            </span>
           </div>
 
           {calendarLoaded && (
-            <div className="pj-card pj-people" role="status">
+            <div
+              className="flex items-center gap-2.5 text-[13px] text-muted-foreground"
+              role="status"
+            >
               {people.length ? (
-                <span className="mt-stack">
+                <span className="flex shrink-0">
                   {people.slice(0, 3).map((name, index) => (
-                    <Avatar key={`${name}-${index}`} name={name} size="sm" />
+                    <UserAvatar
+                      key={`${name}-${index}`}
+                      name={name}
+                      className="-ml-2 size-[26px] text-[10.5px] ring-2 ring-background first:ml-0"
+                    />
                   ))}
-                  {people.length > 3 && (
-                    <span className="mt-stack__more">+{people.length - 3}</span>
-                  )}
                 </span>
               ) : (
-                <span className="pj-people__icon">
-                  <Icon name="users" size={16} />
-                </span>
+                <Icon name="users" size={16} />
               )}
               <span>
                 {people.length === 0
@@ -424,13 +473,67 @@ export function PreJoinScreen({
             </div>
           )}
 
+          <div className="grid gap-2">
+            <button
+              type="button"
+              className={cn(BTN_PRIMARY, "h-11 text-[15px]")}
+              disabled={joining || !isConnected}
+              onClick={() => void join()}
+            >
+              <Icon name="video" size={18} />
+              {joining ? "Đang kết nối…" : plan?.waitingRoom ? "Xin vào phòng" : "Vào phòng"}
+            </button>
+            {joining ? (
+              <button type="button" className={BTN_GHOST} onClick={onCancelJoin}>
+                Hủy tham gia
+              </button>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  className={BTN_GHOST}
+                  disabled={!isConnected}
+                  onClick={() => void join({ mic: false })}
+                >
+                  <Icon name="mic-off" size={16} />
+                  Vào với mic tắt
+                </button>
+                <button
+                  type="button"
+                  className={BTN_GHOST}
+                  disabled={!isConnected}
+                  onClick={() => void join({ mic: false, camera: false })}
+                >
+                  <Icon name="volume" size={16} />
+                  Chỉ nghe
+                </button>
+              </div>
+            )}
+          </div>
+
+          <ul className="border-t pt-2" aria-label="Kiểm tra trước khi vào">
+            {check(micTone, "Micro", micText)}
+            {check(camTone, "Camera", camTone === "" ? `${camText} · ${qualityLabel}` : camText)}
+            {check(
+              isConnected ? "" : "tone-red",
+              "Máy chủ họp",
+              isConnected ? "Đã kết nối" : "Mất kết nối",
+            )}
+            {plan?.waitingRoom && check("tone-amber", "Phòng chờ đang bật", "Chủ trì sẽ duyệt")}
+            {plan?.muteOnJoin && check("tone-amber", "Tắt mic khi vào", "Theo cài đặt phòng")}
+          </ul>
+
           {plan?.agenda?.length ? (
-            <div className="pj-card">
-              <p className="pj-label">Chương trình</p>
-              <ol className="pj-agenda">
+            <div className="border-t pt-3">
+              <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                Chương trình
+              </span>
+              <ol className="mt-1.5 grid gap-1.5 text-[13px]">
                 {plan.agenda.map((item, index) => (
-                  <li key={index}>
-                    <b>{String(index + 1).padStart(2, "0")}</b>
+                  <li key={index} className="flex gap-2.5">
+                    <b className="font-mono font-medium text-muted-foreground">
+                      {String(index + 1).padStart(2, "0")}
+                    </b>
                     <span>{item}</span>
                   </li>
                 ))}
@@ -438,90 +541,22 @@ export function PreJoinScreen({
             </div>
           ) : null}
 
-          <div className="pj-checks">
-            <p className="pj-label">Kiểm tra trước khi vào</p>
-            <ul>
-              <li>
-                <span className={`mt-led ${micTone}`} />
-                <b>Micro</b>
-                <em>{micText}</em>
-              </li>
-              <li>
-                <span className={`mt-led ${camTone}`} />
-                <b>Camera</b>
-                <em>{camTone === "" ? `${camText} · ${qualityLabel}` : camText}</em>
-              </li>
-              <li>
-                <span className={`mt-led ${isConnected ? "" : "tone-red"}`} />
-                <b>Máy chủ họp</b>
-                <em>{isConnected ? "Đã kết nối" : "Mất kết nối"}</em>
-              </li>
-              {plan?.waitingRoom && (
-                <li>
-                  <span className="mt-led tone-amber" />
-                  <b>Phòng chờ đang bật</b>
-                  <em>Chủ trì sẽ duyệt</em>
-                </li>
-              )}
-              {plan?.muteOnJoin && (
-                <li>
-                  <span className="mt-led tone-amber" />
-                  <b>Tắt mic khi vào</b>
-                  <em>Theo cài đặt phòng</em>
-                </li>
-              )}
-            </ul>
-          </div>
-
-          <div className="pj-actions">
-            <Button
-              size="lg"
-              icon="video"
-              disabled={joining || !isConnected}
-              loading={joining}
-              onClick={() => void join()}
-            >
-              {joining ? "Đang kết nối…" : plan?.waitingRoom ? "Xin vào phòng" : "Vào phòng"}
-            </Button>
-            {joining ? (
-              <Button variant="secondary" onClick={onCancelJoin}>
-                Hủy tham gia
-              </Button>
-            ) : (
-              <div className="pj-actions__row">
-                <Button
-                  variant="secondary"
-                  icon="mic-off"
-                  disabled={!isConnected}
-                  onClick={() => void join({ mic: false })}
-                >
-                  Vào với mic tắt
-                </Button>
-                <Button
-                  variant="secondary"
-                  icon="volume"
-                  disabled={!isConnected}
-                  onClick={() => void join({ mic: false, camera: false })}
-                >
-                  Chỉ nghe
-                </Button>
-              </div>
-            )}
-          </div>
-
           {(plan?.autoRecord || dialIn) && (
-            <p className="pj-note">
-              {plan?.autoRecord && <span className="mt-led tone-red" />}
+            <p className="m-0 flex items-start gap-2 border-t pt-3 text-[13px] text-muted-foreground">
+              {plan?.autoRecord && (
+                <span className="mt-1.5 size-2 shrink-0 rounded-full bg-red-500" />
+              )}
               <span>
                 {plan?.autoRecord && (
                   <>
-                    Phiên này <b>tự động ghi hình</b>.{" "}
+                    Phiên này <b className="font-semibold text-foreground">tự động ghi hình</b>
+                    .{" "}
                   </>
                 )}
                 {dialIn && (
                   <>
-                    Không có mic? Gọi <b className="pj-mono">{dialIn.number}</b> từ máy lẻ, nhập{" "}
-                    <b className="pj-mono">{dialIn.code}#</b>.
+                    Không có mic? Gọi <b className="font-mono">{dialIn.number}</b> từ máy lẻ, nhập{" "}
+                    <b className="font-mono">{dialIn.code}#</b>.
                   </>
                 )}
               </span>

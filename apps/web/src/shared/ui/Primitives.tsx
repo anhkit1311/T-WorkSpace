@@ -20,8 +20,35 @@ import "./interaction.css";
 import { useControlMotion } from "../motion/useControlMotion";
 import { useControlTooltip } from "../motion/ControlTooltip";
 import { useMotionSafe } from "../motion/MotionProvider";
-import { DURATION, EASE } from "../motion/tokens";
+import { DURATION, EASE, SPRING } from "../motion/tokens";
 import { useAnimate } from "motion/react";
+import { cn } from "../lib/utils";
+
+const BUTTON_BASE =
+  "button tw inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-transparent font-semibold whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+const BUTTON_SIZE = {
+  sm: "h-[30px] px-2.5 text-[12.5px]",
+  md: "h-9 px-3.5 text-[13.5px]",
+  lg: "h-11 px-5 text-[14.5px]",
+  icon: "size-9",
+};
+const BUTTON_VARIANT = {
+  primary: "bg-primary text-primary-foreground hover:bg-primary/90",
+  secondary: "bg-secondary text-foreground hover:bg-accent",
+  ghost: "border-border bg-card text-foreground hover:bg-secondary",
+  danger: "bg-destructive text-white hover:bg-destructive/90",
+  text: "px-1 text-muted-foreground hover:text-foreground",
+  icon: "text-muted-foreground hover:bg-secondary hover:text-foreground",
+  soft: "bg-[var(--tint-blue-bg)] text-[var(--tint-blue-fg)] hover:opacity-90",
+};
+const TONE = {
+  neutral: "bg-secondary text-muted-foreground",
+  blue: "bg-[var(--tint-blue-bg)] text-[var(--tint-blue-fg)]",
+  green: "bg-[var(--tint-green-bg)] text-[var(--tint-green-fg)]",
+  amber: "bg-[var(--tint-amber-bg)] text-[var(--tint-amber-fg)]",
+  red: "bg-[var(--tint-red-bg)] text-[var(--tint-red-fg)]",
+  violet: "bg-[var(--tint-violet-bg)] text-[var(--tint-violet-fg)]",
+};
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "text" | "icon" | "ghost" | "danger" | "soft";
@@ -68,7 +95,7 @@ export function Button({
   const resolvedSize = variant === "icon" ? "icon" : size;
   return (
     <button
-      className={`button button--${variant} button--${resolvedSize} ${loading ? "button--loading" : ""} ${className}`.trim()}
+      className={cn(BUTTON_BASE, BUTTON_SIZE[resolvedSize], BUTTON_VARIANT[variant], className)}
       disabled={disabled || loading}
       {...props}
       data-motion-control
@@ -112,7 +139,7 @@ export function Button({
     >
       {loading ? (
         <svg
-          className="button-spinner"
+          className="animate-spin"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -130,117 +157,6 @@ export function Button({
         icon && <Icon name={icon} size={resolvedSize === "sm" ? 15 : 18} />
       )}
       {children}
-    </button>
-  );
-}
-
-export function Chip({
-  icon,
-  children,
-  className = "",
-  ...props
-}: ComponentProps<"span"> & {
-  icon?: IconName;
-  children: ReactNode;
-}) {
-  return (
-    <span className={`tws-chip ${className}`.trim()} {...props}>
-      {icon && <Icon name={icon} size={14} />}
-      <span>{children}</span>
-    </span>
-  );
-}
-
-export interface ListItemProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "title"> {
-  icon: IconName;
-  title: ReactNode;
-  subtitle?: ReactNode;
-  metaPrimary?: ReactNode;
-  metaSecondary?: ReactNode;
-}
-
-export function ListItem({
-  icon,
-  title,
-  subtitle,
-  metaPrimary,
-  metaSecondary,
-  className = "",
-  disabled,
-  ...props
-}: ListItemProps) {
-  const control = useControlMotion(Boolean(disabled));
-  const body = (
-    <>
-      <span className="tws-list-item__icon" aria-hidden="true">
-        <Icon name={icon} size={18} />
-      </span>
-      <span className="tws-list-item__body">
-        <span className="tws-list-item__content">
-          <strong className="tws-list-item__title">{title}</strong>
-          {subtitle && <span className="tws-list-item__subtitle">{subtitle}</span>}
-        </span>
-        {(metaPrimary || metaSecondary) && (
-          <span className="tws-list-item__meta">
-            {metaPrimary && <strong className="tws-list-item__meta-primary">{metaPrimary}</strong>}
-            {metaSecondary && (
-              <span className="tws-list-item__meta-secondary">{metaSecondary}</span>
-            )}
-          </span>
-        )}
-      </span>
-    </>
-  );
-  // Rows without an action are information, not controls.
-  if (!props.onClick) {
-    return (
-      <div role={props.role} className={`tws-list-item is-static ${className}`.trim()}>
-        {body}
-      </div>
-    );
-  }
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      className={`tws-list-item ${className}`.trim()}
-      {...props}
-      data-motion-control
-      ref={control.setRef}
-      onPointerEnter={(event) => {
-        control.handlers.onPointerEnter(event);
-        props.onPointerEnter?.(event);
-      }}
-      onPointerLeave={(event) => {
-        control.handlers.onPointerLeave();
-        props.onPointerLeave?.(event);
-      }}
-      onPointerDown={(event) => {
-        control.handlers.onPointerDown();
-        props.onPointerDown?.(event);
-      }}
-      onPointerUp={(event) => {
-        control.handlers.onPointerUp();
-        props.onPointerUp?.(event);
-      }}
-      onPointerCancel={(event) => {
-        control.handlers.onPointerCancel();
-        props.onPointerCancel?.(event);
-      }}
-      onBlur={(event) => {
-        control.handlers.onBlur();
-        props.onBlur?.(event);
-      }}
-      onKeyDown={(event) => {
-        control.handlers.onKeyDown(event);
-        props.onKeyDown?.(event);
-      }}
-      onKeyUp={(event) => {
-        control.handlers.onKeyUp();
-        props.onKeyUp?.(event);
-      }}
-    >
-      {body}
     </button>
   );
 }
@@ -266,7 +182,11 @@ export function IconButton({
       <button
         aria-label={label}
         title={tooltip.id ? undefined : label}
-        className={`icon-button button--icon ${active ? "is-active" : ""} ${className}`.trim()}
+        className={cn(
+          "icon-button tw inline-grid size-[34px] shrink-0 cursor-pointer place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40",
+          active && "is-active bg-secondary text-foreground",
+          className,
+        )}
         {...props}
         data-motion-control
         ref={(node) => {
@@ -339,6 +259,7 @@ export function Avatar({
 }) {
   const initials = name
     .split(" ")
+    .filter((part) => /^[\p{L}\p{N}]/u.test(part))
     .slice(-2)
     .map((part) => part[0])
     .join("")
@@ -347,7 +268,19 @@ export function Avatar({
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const showImage = Boolean(image) && failedImage !== image;
   return (
-    <span className={`avatar avatar--${size}`} aria-label={name} title={name}>
+    <span
+      className={cn(
+        "relative inline-grid shrink-0 place-items-center overflow-visible rounded-full bg-[var(--tint-blue-bg)] font-semibold text-[var(--tint-blue-fg)] [&_img]:size-full [&_img]:rounded-full [&_img]:object-cover",
+        {
+          xs: "size-6 text-[10px]",
+          sm: "size-8 text-xs",
+          md: "size-9 text-[13px]",
+          lg: "size-12 text-base",
+        }[size],
+      )}
+      aria-label={name}
+      title={name}
+    >
       {showImage ? (
         <img
           src={image}
@@ -358,7 +291,14 @@ export function Avatar({
       ) : (
         <span>{initials}</span>
       )}
-      {status && <i className={`avatar-status avatar-status--${status}`} />}
+      {status && (
+        <i
+          className={cn(
+            "absolute right-0 bottom-0 size-2.5 rounded-full ring-2 ring-card",
+            { online: "bg-emerald-500", away: "bg-amber-500", busy: "bg-red-500" }[status],
+          )}
+        />
+      )}
     </span>
   );
 }
@@ -373,8 +313,13 @@ export function Badge({
   dot?: boolean;
 }) {
   return (
-    <span className={`badge badge--${tone}`}>
-      {dot && <i />}
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap",
+        TONE[tone],
+      )}
+    >
+      {dot && <i className="size-1.5 rounded-full bg-current" />}
       {children}
     </span>
   );
@@ -387,9 +332,20 @@ export function Modal({
   footer,
   onClose,
   initialFocus,
+  icon,
+  iconTone = "blue",
+  size = "default",
 }: {
   title: string;
   eyebrow?: string;
+  /** Shown in a tinted square before the title. */
+  icon?: IconName;
+  iconTone?: keyof typeof TONE;
+  /**
+   * "reading" (720px) and "wide" (940px, a two-column form) lay their body out themselves (no
+   * padding) and rule off the footer.
+   */
+  size?: "default" | "reading" | "wide";
   children: ReactNode;
   footer?: ReactNode;
   onClose: () => void;
@@ -456,7 +412,7 @@ export function Modal({
 
   return (
     <motion.div
-      className="modal-backdrop"
+      className="fixed inset-0 z-[var(--z-modal)] grid place-items-center bg-zinc-950/45 p-4 backdrop-blur-[3px]"
       inert={!isPresent}
       style={isPresent ? undefined : { pointerEvents: "none" }}
       role="presentation"
@@ -468,30 +424,78 @@ export function Modal({
     >
       <motion.section
         ref={dialogRef}
-        className="modal"
+        className={cn(
+          "modal flex max-h-[calc(100dvh-2rem)] flex-col",
+          {
+            default: "w-[min(520px,100%)]",
+            reading: "w-[min(720px,100%)]",
+            wide: "w-[min(940px,100%)]",
+          }[size],
+          "overflow-hidden rounded-xl border bg-card text-sm text-foreground shadow-[0_24px_60px_rgba(0,0,0,.25)] outline-none",
+        )}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        initial={safe.reduced ? false : { opacity: 0, scale: 0.98, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
+        initial={safe.reduced ? false : { opacity: 0, scale: 0.94, y: 14, filter: safe.blur(10) }}
+        animate={{ opacity: 1, scale: 1, y: 0, filter: safe.blur(0) }}
         exit={{
           opacity: safe.reduced ? 1 : 0,
-          scale: safe.reduced ? 1 : 0.98,
-          y: safe.reduced ? 0 : 6,
-          transition: { duration: safe.duration(DURATION.panelExit) },
+          scale: safe.reduced ? 1 : 0.96,
+          y: safe.reduced ? 0 : 8,
+          filter: safe.blur(6),
+          transition: { duration: safe.duration(DURATION.panelExit), ease: EASE.out },
         }}
-        transition={{ duration: safe.duration(DURATION.overlay), ease: EASE.out }}
+        transition={{
+          default: SPRING.pop,
+          opacity: { duration: 0.28, ease: EASE.out },
+          filter: { duration: 0.3, ease: EASE.out },
+        }}
       >
-        <header className="modal__header">
-          <div>
-            {eyebrow && <span className="eyebrow">{eyebrow}</span>}
-            <h2 id={titleId}>{title}</h2>
+        <header className="tw flex shrink-0 items-center gap-3 border-b px-[18px] py-3.5">
+          {icon && (
+            <span
+              className={cn(
+                "grid size-9 shrink-0 place-items-center rounded-[9px]",
+                TONE[iconTone],
+              )}
+            >
+              <Icon name={icon} size={17} />
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <h2
+              id={titleId}
+              className="truncate text-base! leading-snug font-semibold! text-foreground!"
+            >
+              {title}
+            </h2>
+            {eyebrow && (
+              <small className="block truncate text-xs font-medium text-muted-foreground">
+                {eyebrow}
+              </small>
+            )}
           </div>
-          <IconButton label="Đóng" icon="x" onClick={onClose} />
+          <IconButton label="Đóng" icon="x" onClick={onClose} className="size-[30px]" />
         </header>
-        <div className="modal__body">{children}</div>
-        {footer && <footer className="modal__footer">{footer}</footer>}
+        <div
+          className={cn(
+            "min-h-0 flex-1 overflow-y-auto",
+            size === "default" && "grid gap-3.5 px-[18px] py-4",
+          )}
+        >
+          {children}
+        </div>
+        {footer && (
+          <footer
+            className={cn(
+              "tw flex shrink-0 flex-wrap items-center justify-end gap-2 px-[18px] pb-4",
+              size !== "default" && "border-t pt-3",
+            )}
+          >
+            {footer}
+          </footer>
+        )}
       </motion.section>
     </motion.div>
   );
@@ -560,15 +564,24 @@ export function Field({
     });
   const controls = attach(children);
   return (
-    <label ref={fieldRef} className="field" htmlFor={firstId}>
+    <label
+      ref={fieldRef}
+      className={cn(
+        "field tw-form grid gap-1.5 text-[13px] font-semibold text-foreground [&_:is(input,select,textarea)]:w-full [&_:is(input,select,textarea)]:font-normal [&_:is(input,select,textarea)]:outline-none [&_:is(input,select,textarea):focus]:border-foreground [&_:is(input,select,textarea):focus]:ring-3 [&_:is(input,select,textarea):focus]:ring-foreground/10",
+        error && "[&_:is(input,select,textarea)]:border-destructive",
+      )}
+      htmlFor={firstId}
+    >
       <span id={`${generatedId}-label`}>{label}</span>
       {controls}
       {error ? (
-        <small className="field__error" id={messageId} role="alert">
+        <small className="text-[12.5px] font-medium text-destructive" id={messageId} role="alert">
           {error}
         </small>
       ) : hint ? (
-        <small id={messageId}>{hint}</small>
+        <small className="text-[12.5px] font-normal text-muted-foreground" id={messageId}>
+          {hint}
+        </small>
       ) : null}
     </label>
   );
@@ -578,7 +591,12 @@ export function ToastViewport() {
   const { toasts, dismissToast, route } = useApp();
   return (
     <div
-      className={`toast-viewport ${route.view === "chat" || route.view === "meetings" ? "toast-viewport--raised" : ""}`}
+      className={cn(
+        "pointer-events-none fixed right-5 z-[var(--z-toast)] grid w-[min(380px,calc(100vw-2rem))] gap-2.5",
+        route.view === "chat" || route.view === "meetings"
+          ? "top-[calc(76px+env(safe-area-inset-top))]"
+          : "bottom-5",
+      )}
     >
       <AnimatePresence>
         {toasts.map((toast) => (
@@ -622,13 +640,22 @@ function TimedToast({
   return (
     <motion.article
       layout="position"
-      className={`toast toast--${toast.tone}`}
+      className="tw pointer-events-auto relative flex items-start gap-3 rounded-[10px] border bg-card py-3 pr-10 pl-3.5 text-sm text-foreground shadow-[0_10px_30px_rgba(0,0,0,.12)]"
       role={toast.tone === "warning" ? "alert" : "status"}
       aria-atomic="true"
-      initial={safe.reduced ? false : { opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: safe.reduced ? 1 : 0, x: safe.reduced ? 0 : 16 }}
-      transition={{ duration: safe.duration(DURATION.overlay), ease: EASE.out }}
+      initial={safe.reduced ? false : { opacity: 0, y: 16, scale: 0.96, filter: safe.blur(8) }}
+      animate={{ opacity: 1, x: 0, y: 0, scale: 1, filter: safe.blur(0) }}
+      exit={{
+        opacity: safe.reduced ? 1 : 0,
+        x: safe.reduced ? 0 : 16,
+        filter: safe.blur(6),
+        transition: { duration: DURATION.panelExit, ease: EASE.out },
+      }}
+      transition={{
+        default: SPRING.pop,
+        opacity: { duration: 0.25, ease: EASE.out },
+        filter: { duration: 0.3, ease: EASE.out },
+      }}
       drag={safe.reduced ? false : "x"}
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.15}
@@ -655,31 +682,40 @@ function TimedToast({
         }
       }}
     >
-      <span className="toast__icon">
+      <span
+        className={cn(
+          "grid size-7 shrink-0 place-items-center rounded-full",
+          TONE[toast.tone === "warning" ? "amber" : toast.tone === "success" ? "green" : "blue"],
+        )}
+      >
         <Icon
           name={
             toast.icon ??
             (toast.tone === "warning" ? "warning" : toast.tone === "success" ? "check" : "info")
           }
-          size={18}
+          size={15}
         />
       </span>
       {toast.onOpen ? (
         <button
           type="button"
-          className="toast__open"
+          className="min-w-0 flex-1 cursor-pointer text-left"
           onClick={() => {
             toast.onOpen?.();
             dismiss();
           }}
         >
-          <strong>{toast.title}</strong>
-          {toast.description && <p>{toast.description}</p>}
+          <strong className="block font-semibold">{toast.title}</strong>
+          {toast.description && (
+            <p className="text-[13px]! text-muted-foreground!">{toast.description}</p>
+          )}
         </button>
       ) : (
-        <div>
-          <strong>{toast.title}</strong>
-          {toast.description && <p>{toast.description}</p>}
+        <div className="min-w-0 flex-1">
+          <strong className="block font-semibold">{toast.title}</strong>
+          {toast.description && (
+            <p className="text-[13px]! text-muted-foreground!">{toast.description}</p>
+          )}
         </div>
       )}
       {toast.action && (
@@ -687,7 +723,12 @@ function TimedToast({
           {toast.action.label}
         </Button>
       )}
-      <IconButton className="toast-close" icon="x" label="Đóng thông báo" onClick={dismiss} />
+      <IconButton
+        className="absolute top-2 right-2 size-[26px]"
+        icon="x"
+        label="Đóng thông báo"
+        onClick={dismiss}
+      />
     </motion.article>
   );
 }
@@ -714,6 +755,8 @@ export function ConfirmDialog({
         if (!loading) onClose();
       }}
       initialFocus="[data-cancel]"
+      icon="warning"
+      iconTone="red"
       footer={
         <>
           <Button variant="ghost" data-cancel disabled={loading} onClick={onClose}>
@@ -727,42 +770,6 @@ export function ConfirmDialog({
     >
       <p>{description}</p>
     </Modal>
-  );
-}
-
-export interface FilterPillOption {
-  key: string;
-  label: string;
-  count?: number;
-}
-
-export interface FilterPillsProps {
-  options: FilterPillOption[];
-  activeKey: string;
-  onChange: (key: string) => void;
-  className?: string;
-}
-
-export function FilterPills({ options, activeKey, onChange, className = "" }: FilterPillsProps) {
-  return (
-    <div className={`filter-pills ${className}`.trim()}>
-      {options.map((opt) => {
-        const isActive = activeKey === opt.key;
-        return (
-          <button
-            key={opt.key}
-            type="button"
-            className={`filter-pill-btn ${isActive ? "is-active" : ""}`}
-            onClick={() => onChange(opt.key)}
-          >
-            {opt.label}
-            {typeof opt.count === "number" && (
-              <span className="filter-pill-btn__count">{opt.count}</span>
-            )}
-          </button>
-        );
-      })}
-    </div>
   );
 }
 
@@ -783,68 +790,30 @@ export function KpiStatCard({
   onClick,
   className = "",
 }: KpiStatCardProps) {
-  // Tint tokens follow the light/dark theme.
-  const tint = tone === "purple" ? "violet" : tone;
-  const toneBg = `var(--tint-${tint}-bg)`;
-  const toneText = `var(--tint-${tint}-fg)`;
-
   return (
     <div
-      className={`kpi-stat-card ${onClick ? "is-clickable" : ""} ${className}`.trim()}
+      className={cn(
+        "tw flex items-center gap-3 rounded-[10px] border bg-card px-3.5 py-3",
+        onClick && "cursor-pointer hover:bg-secondary",
+        className,
+      )}
       onClick={onClick}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
-      style={{
-        background: "var(--bg-surface, #FFFFFF)",
-        border: "1px solid var(--border-color, #E2E8F0)",
-        borderRadius: "10px",
-        padding: "12px 15px",
-        boxShadow: "0 1px 3px rgba(15, 23, 42, 0.03), 0 1px 2px rgba(15, 23, 42, 0.02)",
-        display: "flex",
-        alignItems: "center",
-        gap: "12px",
-        cursor: onClick ? "pointer" : "default",
-        transition: "all 0.15s ease",
-      }}
     >
       <div
-        className="kpi-stat-card__icon"
-        style={{
-          width: "36px",
-          height: "36px",
-          borderRadius: "8px",
-          background: toneBg,
-          color: toneText,
-          display: "grid",
-          placeItems: "center",
-          flexShrink: 0,
-        }}
+        className={cn(
+          "grid size-9 shrink-0 place-items-center rounded-lg",
+          TONE[tone === "purple" ? "violet" : tone],
+        )}
       >
         <Icon name={icon} size={18} strokeWidth={1.8} />
       </div>
-      <div className="kpi-stat-card__body" style={{ display: "flex", flexDirection: "column" }}>
-        <span
-          className="kpi-stat-card__number"
-          style={{
-            fontSize: "18px",
-            fontWeight: 700,
-            color: "var(--text, #0F172A)",
-            lineHeight: 1.15,
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
+      <div className="flex min-w-0 flex-col">
+        <span className="text-lg leading-tight font-bold text-foreground tabular-nums">
           {value}
         </span>
-        <span
-          className="kpi-stat-card__label"
-          style={{
-            fontSize: "11.5px",
-            color: "var(--text-muted, #64748B)",
-            marginTop: "1px",
-          }}
-        >
-          {label}
-        </span>
+        <span className="text-[11.5px] text-muted-foreground">{label}</span>
       </div>
     </div>
   );
@@ -863,6 +832,26 @@ export interface PageHeaderProps {
 }
 
 /** The title block of every top-level page, so they all share one size, order and spacing. */
+/** A page's error or empty state: a dashed card with a heading, a line and an action. */
+export const STATE_CARD =
+  "tw mx-auto my-6 grid w-[min(460px,100%)] justify-items-center gap-2 rounded-xl border border-dashed bg-card px-6 py-10 text-center text-sm text-foreground [&_h2]:m-0! [&_h2]:text-lg! [&_h2]:text-foreground! [&_h3]:m-0! [&_h3]:text-base! [&_h3]:text-foreground! [&_p]:m-0! [&_p]:mb-2! [&_p]:text-muted-foreground!";
+
+/** Skeleton shown while a page's code loads. */
+export function PageFallback({ label }: { label: string }) {
+  const bar = "rounded-md bg-secondary motion-safe:animate-pulse";
+  return (
+    <div
+      className="tw mx-auto my-9 flex w-[min(840px,92%)] flex-col gap-4"
+      role="status"
+      aria-label={label}
+    >
+      <div className={cn(bar, "h-8 w-2/5")} />
+      <div className={cn(bar, "h-4 w-3/4")} />
+      <div className={cn(bar, "h-40 rounded-lg")} />
+    </div>
+  );
+}
+
 export function PageHeader({
   title,
   titleId,
@@ -872,13 +861,24 @@ export function PageHeader({
   children,
 }: PageHeaderProps) {
   return (
-    <header className={`page-head ${className}`.trim()}>
-      <div className="page-head__text">
-        <h1 id={titleId}>{title}</h1>
+    <header className={cn("tw flex flex-wrap items-end gap-2.5", className)}>
+      <div className="min-w-0 flex-[1_1_240px]">
+        <h1
+          id={titleId}
+          className="m-0! text-[26px]! leading-tight! font-extrabold! tracking-[-.03em]! text-foreground!"
+        >
+          {title}
+        </h1>
         {meta != null && (
-          <p className="page-head__meta">
+          <p className="m-0! mt-0.5! flex items-center gap-2 text-[12.5px] text-muted-foreground!">
             {live !== undefined && (
-              <i className={`page-head__led${live ? " is-live" : ""}`} aria-hidden="true" />
+              <i
+                className={cn(
+                  "size-[7px] flex-none rounded-full",
+                  live ? "bg-green-500" : "bg-zinc-400",
+                )}
+                aria-hidden="true"
+              />
             )}
             <span>{meta}</span>
           </p>

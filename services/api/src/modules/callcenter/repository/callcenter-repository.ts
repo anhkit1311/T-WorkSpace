@@ -82,6 +82,12 @@ const toTicket = (row: TicketRow): CcTicket => ({
 const time = (value: string) => value.slice(0, 5);
 
 /** PostgreSQL access for the call center (Repository pattern). No business rules live here. */
+// A browser caller who left no phone number is stored as "web"; "Gọi lại cho web" reads like a bug.
+const callbackSubject = (callerNumber: string, why: string) =>
+  callerNumber === "web"
+    ? `Liên hệ lại khách gọi từ trình duyệt (${why})`
+    : `Gọi lại cho ${callerNumber} (${why})`;
+
 export class CallCenterRepository implements AcdStore {
   // ---- ACD -----------------------------------------------------------------------------------
 
@@ -273,7 +279,7 @@ export class CallCenterRepository implements AcdStore {
         voicemailId: null,
         callerNumber: input.callerNumber,
         callerUserId: input.callerUserId,
-        subject: `Gọi lại cho ${input.callerNumber} (cuộc gọi nhỡ)`,
+        subject: callbackSubject(input.callerNumber, "cuộc gọi nhỡ"),
         note: "Người gọi gác máy khi đang chờ trong hàng đợi.",
       }),
     );
@@ -288,7 +294,7 @@ export class CallCenterRepository implements AcdStore {
         voicemailId: null,
         callerNumber: input.callerNumber,
         callerUserId: input.callerUserId,
-        subject: `Gọi lại cho ${input.callerNumber} (khách hẹn gọi lại)`,
+        subject: callbackSubject(input.callerNumber, "khách hẹn gọi lại"),
         note: "Người gọi bấm phím hẹn gọi lại khi đang chờ trong hàng đợi.",
         priority: "high",
       }),

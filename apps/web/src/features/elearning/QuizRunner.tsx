@@ -1,7 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { LessonDetail, QuizAttempt } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
-import { Badge, Button } from "../../shared/ui/Primitives";
+import { Icon } from "../../shared/ui/Icon";
+import { cn } from "../../shared/lib/utils";
+
+const BTN =
+  "inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-md px-3.5 text-[13.5px] font-semibold whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+const BTN_PRIMARY = `${BTN} bg-primary text-primary-foreground hover:bg-primary/90`;
+const BTN_GHOST = `${BTN} border bg-card text-foreground hover:bg-secondary`;
+const CHIP = "rounded-[5px] px-[7px] py-[3px] text-xs leading-none font-semibold whitespace-nowrap";
+const GREEN = "bg-[var(--tint-green-bg)] text-[var(--tint-green-fg)]";
+const AMBER = "bg-[var(--tint-amber-bg)] text-[var(--tint-amber-fg)]";
+const ERROR =
+  "rounded-md bg-red-50 px-3 py-2 text-[13px] text-red-700 dark:bg-red-950 dark:text-red-300";
 import { coursesApi } from "./courses-api";
 
 const clock = (ms: number) => {
@@ -82,8 +93,8 @@ export function QuizRunner({
 
   if (!attempt)
     return (
-      <div className="quiz">
-        <p>
+      <div className="tw grid justify-items-start gap-3 rounded-[10px] border bg-card p-4 text-foreground">
+        <p className="text-sm text-muted-foreground">
           {quiz.drawCount && quiz.drawCount < quiz.questionIds.length
             ? `${quiz.drawCount} câu rút ngẫu nhiên từ ${quiz.questionIds.length}`
             : `${quiz.questionIds.length} câu hỏi`}{" "}
@@ -93,32 +104,38 @@ export function QuizRunner({
             : "không giới hạn thời gian"}{" "}
           · đạt từ {quiz.passPercent}%
         </p>
-        {quiz.bestPercent !== null && (
-          <Badge tone={quiz.passed ? "green" : "amber"}>
-            Điểm cao nhất: {quiz.bestPercent}%{quiz.passed ? " · Đạt" : ""}
-          </Badge>
-        )}
-        {quiz.attemptsLeft !== null && (
-          <Badge>
-            Còn {quiz.attemptsLeft}/{quiz.maxAttempts} lần làm
-          </Badge>
+        {(quiz.bestPercent !== null || quiz.attemptsLeft !== null) && (
+          <div className="flex flex-wrap gap-1.5">
+            {quiz.bestPercent !== null && (
+              <span className={cn(CHIP, quiz.passed ? GREEN : AMBER)}>
+                Điểm cao nhất: {quiz.bestPercent}%{quiz.passed ? " · Đạt" : ""}
+              </span>
+            )}
+            {quiz.attemptsLeft !== null && (
+              <span className={cn(CHIP, "bg-secondary text-muted-foreground")}>
+                Còn {quiz.attemptsLeft}/{quiz.maxAttempts} lần làm
+              </span>
+            )}
+          </div>
         )}
         {error && (
-          <p role="alert" className="courses-error">
+          <p role="alert" className={ERROR}>
             {error}
           </p>
         )}
-        <Button
-          icon="play"
+        <button
+          type="button"
+          className={BTN_PRIMARY}
           disabled={!quiz.openAttemptId && quiz.attemptsLeft === 0}
           onClick={() => void start()}
         >
+          <Icon name="play" size={15} />
           {quiz.openAttemptId
             ? "Làm tiếp"
             : quiz.bestPercent === null
               ? "Bắt đầu làm bài"
               : "Làm lại"}
-        </Button>
+        </button>
       </div>
     );
 
@@ -138,40 +155,62 @@ export function QuizRunner({
     });
   };
 
+  const answered = attempt.questions.filter((question) => answers[question.id]?.length).length;
+
   return (
     <form
-      className="quiz"
+      className="tw grid gap-3 text-foreground"
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
       }}
     >
-      {running && left !== null && (
-        <p
-          className={`quiz-timer${left < 60_000 ? " is-urgent" : ""}`}
-          role="timer"
-          aria-live="off"
-        >
-          Còn lại {clock(left)}
-        </p>
-      )}
-      {running && saved !== "idle" && (
-        <p className={`quiz-saved${saved === "failed" ? " is-failed" : ""}`} role="status">
-          {saved === "saving"
-            ? "Đang lưu nháp…"
-            : saved === "saved"
-              ? "Đã lưu nháp"
-              : "Chưa lưu được nháp — kiểm tra kết nối"}
-        </p>
+      {running && (
+        <div className="sticky top-0 z-[1] flex flex-wrap items-center gap-x-3 gap-y-1 bg-background py-2 text-xs text-muted-foreground">
+          <span>
+            Đã trả lời {answered}/{attempt.questions.length}
+          </span>
+          <span className="h-1.5 min-w-24 flex-1 overflow-hidden rounded-full bg-secondary">
+            <span
+              className="block h-full rounded-full bg-primary"
+              style={{ width: `${(answered / Math.max(1, attempt.questions.length)) * 100}%` }}
+            />
+          </span>
+          {saved !== "idle" && (
+            <span className={cn(saved === "failed" && "text-red-600")} role="status">
+              {saved === "saving"
+                ? "Đang lưu nháp…"
+                : saved === "saved"
+                  ? "Đã lưu nháp"
+                  : "Chưa lưu được nháp — kiểm tra kết nối"}
+            </span>
+          )}
+          {left !== null && (
+            <span
+              className={cn(
+                CHIP,
+                "tabular-nums",
+                left < 60_000 ? "bg-[var(--tint-red-bg)] text-[var(--tint-red-fg)]" : AMBER,
+              )}
+              role="timer"
+              aria-live="off"
+            >
+              Còn lại {clock(left)}
+            </span>
+          )}
+        </div>
       )}
       {attempt.submittedAt && (
-        <p className="quiz-result" role="status">
+        <p
+          className={cn("rounded-[10px] px-4 py-3 text-sm", attempt.passed ? GREEN : AMBER)}
+          role="status"
+        >
           Kết quả: {attempt.score}/{attempt.maxScore} điểm ·{" "}
-          <strong>{attempt.passed ? "Đạt" : "Chưa đạt"}</strong>
+          <strong className="font-semibold">{attempt.passed ? "Đạt" : "Chưa đạt"}</strong>
         </p>
       )}
-      <ol className="quiz-questions">
-        {attempt.questions.map((question) => {
+      <ol className="grid gap-3">
+        {attempt.questions.map((question, index) => {
           const result = review.get(question.id);
           const choices =
             question.kind === "true_false"
@@ -184,47 +223,62 @@ export function QuizRunner({
           return (
             <li
               key={question.id}
-              className={result ? (result.correct ? "is-correct" : "is-wrong") : ""}
+              className={cn(
+                "rounded-[10px] border bg-card p-4",
+                result && (result.correct ? "border-emerald-500" : "border-red-400"),
+              )}
             >
-              <fieldset disabled={!running}>
-                <legend>
-                  {question.prompt}{" "}
-                  <small>
-                    ({question.points} điểm{multiple ? ", chọn tất cả đáp án đúng" : ""})
+              <fieldset className="grid min-w-0 gap-2" disabled={!running}>
+                <legend className="mb-2 grid gap-1">
+                  <small className="text-xs text-muted-foreground">
+                    Câu {index + 1} · {question.points} điểm
+                    {multiple ? " · chọn tất cả đáp án đúng" : ""}
+                    {result && (result.correct ? " · Đúng" : " · Sai")}
                   </small>
+                  <b className="text-[15px] leading-snug font-semibold">{question.prompt}</b>
                 </legend>
                 {choices.map((choice) => (
-                  <label key={String(choice.id)}>
+                  <label
+                    key={String(choice.id)}
+                    className="flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm transition-colors hover:bg-secondary has-checked:border-brand has-checked:bg-brand-soft has-disabled:cursor-default has-disabled:hover:bg-transparent has-checked:has-disabled:hover:bg-brand-soft"
+                  >
                     <input
                       type={multiple ? "checkbox" : "radio"}
                       name={question.id}
                       checked={(answers[question.id] ?? []).includes(choice.id)}
                       onChange={() => pick(question.id, choice.id, multiple)}
                     />
-                    {choice.text}
-                    {result?.answer.includes(choice.id) && <small> ✓ đáp án</small>}
+                    <span className="flex-1">{choice.text}</span>
+                    {result?.answer.includes(choice.id) && (
+                      <small className={cn(CHIP, GREEN)}>✓ đáp án</small>
+                    )}
                   </label>
                 ))}
-                {result?.explanation && <p className="course-card__meta">{result.explanation}</p>}
+                {result?.explanation && (
+                  <p className="text-[13px] text-muted-foreground">{result.explanation}</p>
+                )}
               </fieldset>
             </li>
           );
         })}
       </ol>
       {error && (
-        <p role="alert" className="courses-error">
+        <p role="alert" className={ERROR}>
           {error}
         </p>
       )}
-      {running ? (
-        <Button type="submit" icon="send" disabled={busy}>
-          Nộp bài
-        </Button>
-      ) : (
-        <Button variant="secondary" type="button" onClick={() => void start()}>
-          Làm lại
-        </Button>
-      )}
+      <div className="flex justify-end border-t pt-3.5">
+        {running ? (
+          <button type="submit" className={BTN_PRIMARY} disabled={busy}>
+            <Icon name="send" size={15} />
+            Nộp bài
+          </button>
+        ) : (
+          <button type="button" className={BTN_GHOST} onClick={() => void start()}>
+            Làm lại
+          </button>
+        )}
+      </div>
     </form>
   );
 }

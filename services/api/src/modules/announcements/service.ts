@@ -3,7 +3,9 @@ import type { PoolClient } from "pg";
 import { withTransaction } from "../../infrastructure/database/db.js";
 import { HttpError } from "../../shared/http/http-error.js";
 import type {
+  AnnouncementAudience,
   AnnouncementCategory,
+  AnnouncementMark,
   CreateAnnouncementInput,
   PortalAnnouncement,
   UpdateAnnouncementInput,
@@ -55,12 +57,43 @@ export async function checkCanPublish(
   return { canPublish: false, role: "student" };
 }
 
+/**
+ * Readers of staff-only posts: role holders, lecturers and office accounts (a mã số that does not
+ * start with a digit, the staff directory's rule). An account without a mã số counts as a student.
+ */
+async function isStaff(client: PoolClient, userId: string): Promise<boolean> {
+  const res = await client.query(
+    `SELECT 1 FROM users u WHERE u.id=$1 AND (
+       u.user_code ~ '^[^0-9]'
+       OR EXISTS(SELECT 1 FROM academic_role_grants g WHERE g.user_id=u.id)
+       OR EXISTS(SELECT 1 FROM academic_staff s WHERE s.user_id=u.id AND s.active))`,
+    [userId],
+  );
+  return Boolean(res.rowCount);
+}
+
+/** SQL condition: the reader may see the post ($n = staff flag, $n+1 = reader id). */
+const visibleTo = (n: number) => `(audience = 'all' OR $${n}::boolean OR author_id = $${n + 1})`;
+
+/** SQL: the reader ($2) has put this mark on the listed post. */
+const markedBy = (kind: AnnouncementMark) =>
+  `EXISTS(SELECT 1 FROM announcement_marks m WHERE m.announcement_id = portal_announcements.id
+     AND m.user_id = $2 AND m.kind = '${kind}')`;
+
+function audienceOf(value: unknown, staff: boolean): AnnouncementAudience {
+  if (value !== "staff") return "all";
+  if (!staff)
+    throw new HttpError(403, "FORBIDDEN", "Chỉ cán bộ, giảng viên được đăng tin nội bộ cán bộ.");
+  return "staff";
+}
+
 export async function listAnnouncements(
   userId: string,
   category?: string,
-): Promise<{ items: PortalAnnouncement[]; canPublish: boolean; role: string }> {
+): Promise<{ items: PortalAnnouncement[]; canPublish: boolean; role: string; isStaff: boolean }> {
   return withTransaction(async (client) => {
     const perm = await checkCanPublish(client, userId);
+    const staff = await isStaff(client, userId);
     let sql = `
       SELECT
         id,
@@ -70,18 +103,24 @@ export async function listAnnouncements(
         summary,
         content,
         scope,
+        audience,
         pinned,
         author_id AS "authorId",
         author_name AS "authorName",
         author_title AS "authorTitle",
         unit_id AS "unitId",
         created_at AS "createdAt",
-        updated_at AS "updatedAt"
+        updated_at AS "updatedAt",
+        (SELECT count(*)::int FROM announcement_marks m
+          WHERE m.announcement_id = portal_announcements.id AND m.kind = 'like') AS "likeCount",
+        ${markedBy("like")} AS liked,
+        ${markedBy("save")} AS saved
       FROM portal_announcements
+      WHERE ${visibleTo(1)}
     `;
-    const params: unknown[] = [];
+    const params: unknown[] = [staff, userId];
     if (category && category !== "all") {
-      sql += ` WHERE category = $1`;
+      sql += ` AND category = $3`;
       params.push(category);
     }
     sql += ` ORDER BY pinned DESC, created_at DESC LIMIT 50`;
@@ -92,7 +131,7 @@ export async function listAnnouncements(
       canManage: perm.canPublish,
     }));
 
-    return { items, canPublish: perm.canPublish, role: perm.role };
+    return { items, canPublish: perm.canPublish, role: perm.role, isStaff: staff };
   });
 }
 
@@ -133,16 +172,17 @@ export async function createAnnouncement(
     const badge = input.badge || (category === "urgent" ? "Khẩn" : "Mới");
     const scope = input.scope?.trim() || "Toàn trường";
     const pinned = Boolean(input.pinned);
+    const audience = audienceOf(input.audience, await isStaff(client, userId));
 
     const insertRes = await client.query<PortalAnnouncement>(
       `
       INSERT INTO portal_announcements (
         id, title, category, badge, summary, content, scope, pinned,
-        author_id, author_name, author_title, created_at, updated_at
+        author_id, author_name, author_title, audience, created_at, updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), now())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(), now())
       RETURNING
-        id, title, category, badge, summary, content, scope, pinned,
+        id, title, category, badge, summary, content, scope, audience, pinned,
         author_id AS "authorId", author_name AS "authorName", author_title AS "authorTitle",
         unit_id AS "unitId", created_at AS "createdAt", updated_at AS "updatedAt"
       `,
@@ -158,6 +198,7 @@ export async function createAnnouncement(
         userId,
         authorName,
         authorTitle,
+        audience,
       ],
     );
 
@@ -176,9 +217,11 @@ export async function updateAnnouncement(
       throw new HttpError(403, "FORBIDDEN", "Bạn không có quyền chỉnh sửa thông báo.");
     }
 
-    const current = await client.query<PortalAnnouncement>(
-      `SELECT id, author_id AS "authorId" FROM portal_announcements WHERE id=$1`,
-      [announcementId],
+    // A staff-only post does not exist for a publisher who may not read it.
+    const staff = await isStaff(client, userId);
+    const current = await client.query(
+      `SELECT 1 FROM portal_announcements WHERE id=$1 AND ${visibleTo(2)}`,
+      [announcementId, staff, userId],
     );
     if (!current.rowCount) {
       throw new HttpError(404, "NOT_FOUND", "Không tìm thấy thông báo.");
@@ -216,6 +259,10 @@ export async function updateAnnouncement(
       updates.push(`scope = $${idx++}`);
       values.push(input.scope.trim());
     }
+    if (input.audience !== undefined) {
+      updates.push(`audience = $${idx++}`);
+      values.push(audienceOf(input.audience, staff));
+    }
     if (input.pinned !== undefined) {
       updates.push(`pinned = $${idx++}`);
       values.push(Boolean(input.pinned));
@@ -227,7 +274,7 @@ export async function updateAnnouncement(
       SET ${updates.join(", ")}
       WHERE id = $1
       RETURNING
-        id, title, category, badge, summary, content, scope, pinned,
+        id, title, category, badge, summary, content, scope, audience, pinned,
         author_id AS "authorId", author_name AS "authorName", author_title AS "authorTitle",
         unit_id AS "unitId", created_at AS "createdAt", updated_at AS "updatedAt"
       `,
@@ -245,12 +292,41 @@ export async function deleteAnnouncement(userId: string, announcementId: string)
       throw new HttpError(403, "FORBIDDEN", "Bạn không có quyền xóa thông báo.");
     }
 
-    const res = await client.query(`DELETE FROM portal_announcements WHERE id=$1`, [
-      announcementId,
-    ]);
+    const res = await client.query(
+      `DELETE FROM portal_announcements WHERE id=$1 AND ${visibleTo(2)}`,
+      [announcementId, await isStaff(client, userId), userId],
+    );
     if (!res.rowCount) {
       throw new HttpError(404, "NOT_FOUND", "Không tìm thấy thông báo để xóa.");
     }
+  });
+}
+
+/** Sets or clears the reader's heart or bookmark. A post the reader may not see does not exist. */
+export async function setAnnouncementMark(
+  userId: string,
+  announcementId: string,
+  kind: AnnouncementMark,
+  on: boolean,
+): Promise<{ likeCount: number }> {
+  return withTransaction(async (client) => {
+    const post = await client.query(
+      `SELECT 1 FROM portal_announcements WHERE id=$1 AND ${visibleTo(2)}`,
+      [announcementId, await isStaff(client, userId), userId],
+    );
+    if (!post.rowCount) throw new HttpError(404, "NOT_FOUND", "Không tìm thấy thông báo.");
+    await client.query(
+      on
+        ? `INSERT INTO announcement_marks(announcement_id, user_id, kind) VALUES($1,$2,$3)
+           ON CONFLICT DO NOTHING`
+        : `DELETE FROM announcement_marks WHERE announcement_id=$1 AND user_id=$2 AND kind=$3`,
+      [announcementId, userId, kind],
+    );
+    const likes = await client.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM announcement_marks WHERE announcement_id=$1 AND kind='like'`,
+      [announcementId],
+    );
+    return { likeCount: likes.rows[0].n };
   });
 }
 

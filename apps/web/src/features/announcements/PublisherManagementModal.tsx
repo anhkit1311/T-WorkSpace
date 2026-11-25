@@ -132,7 +132,6 @@ export function PublisherManagementModal({ accessToken, onClose, onChanged }: Pr
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="VD: lecturer@tdtu.edu.vn hoặc student@student.tdtu.edu.vn"
-                className="input"
               />
             </Field>
           </div>

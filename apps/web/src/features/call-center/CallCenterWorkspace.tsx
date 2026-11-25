@@ -22,13 +22,31 @@ import { useApp } from "../../app/providers/AppContext";
 import { appRouteUrl } from "../../app/navigation";
 import type { ViewId } from "../../app/types";
 import { useSocket } from "../../app/providers/SocketContext";
-import { Badge, Button, Field, PageHeader } from "../../shared/ui/Primitives";
+import { Button, PageFallback, PageHeader } from "../../shared/ui/Primitives";
 import { Icon, type IconName } from "../../shared/ui/Icon";
 import { ApiError } from "../auth/api";
 import { callCenterApi, recordingUrl } from "./api";
 import { KpiPanel } from "./KpiPanel";
 import { CallLessonDialog, CallTranscriptDialog, QaPanel, QaReviewDialog, qaTone } from "./QaPanel";
 import { TicketsPanel } from "./TicketsPanel";
+import {
+  BTN_GHOST,
+  BTN_PRIMARY,
+  CARD,
+  CHIP,
+  CTL,
+  CTL_ON,
+  DOT,
+  H2,
+  ICON_BTN,
+  LED,
+  MUTED,
+  PILL,
+  PILL_ON,
+  STAT,
+  TEXT,
+  TINT,
+} from "./ui";
 import { TransferPanel } from "./TransferPanel";
 import { VoicemailInbox } from "./VoicemailInbox";
 import { ContactCenter } from "./ContactCenter";
@@ -37,8 +55,8 @@ import { DeskDialer } from "./DeskDialer";
 import { type PhoneStatus } from "./useSoftphone";
 import { useGlobalSoftphone } from "../../app/providers/SoftphoneContext";
 import { STATE_LABEL, STATE_TONE } from "./agent-state";
-import "./call-center.css";
-import "./agent-desk.css";
+import { cn } from "../../shared/lib/utils";
+import { UserAvatar } from "../../shared/ui/kit/user-avatar";
 
 const CallCenterAdmin = lazy(() =>
   import("./CallCenterAdmin").then((m) => ({ default: m.CallCenterAdmin })),
@@ -94,7 +112,6 @@ const clock = (total: number) =>
       : `${pad(Math.floor(total / 60))}:${pad(total % 60)}`;
 /** Queue thresholds of the wallboard: under 30 s fine, under 60 s watch, then late. */
 const waitTone = (waited: number) => (waited >= 60 ? "red" : waited >= 30 ? "amber" : "green");
-
 export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab }) {
   const { accessToken, notify, route, navigate } = useApp();
   const { socket } = useSocket();
@@ -185,10 +202,18 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
   const subnav = useRef<HTMLElement>(null);
   const openTab = (key: Tab) => {
     setTab(key);
-    subnav.current?.scrollIntoView({ block: "start" });
+    subnav.current?.scrollIntoView({ block: "start", behavior: "smooth" });
     const view = TAB_VIEW[key];
     if (view && view !== route.view) navigate({ view });
   };
+  const ringing = useGlobalSoftphone().phase === "incoming";
+  useEffect(() => {
+    // "Trả lời" lives on the desk and the global call strip hides on this page: bring the desk up,
+    // except for a monitor leg the supervisor just asked for (answered on its own, board stays).
+    if (ringing && hasDesk && activeTab !== "desk" && Date.now() >= autoAnswerUntil)
+      openTab("desk");
+    // Only on a new incoming call: openTab and the tab are read as they are at that moment.
+  }, [ringing]);
   const onMonitor = me?.extension
     ? (callId: string, mode: MonitorMode) =>
         api(`live-calls/${callId}/monitor`, "POST", { mode }).then(() => {
@@ -204,10 +229,13 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
 
   if (loadError)
     return (
-      <div className="callcenter-page">
-        <div className="callcenter-panel desk-empty" role="alert">
+      <div className="tw grid min-w-0 gap-4 px-[var(--shell-gutter)] pt-3.5 pb-8 text-sm text-foreground max-md:px-3">
+        <div
+          className={cn(CARD, "justify-items-center px-5 py-10 text-center text-muted-foreground")}
+          role="alert"
+        >
           <Icon name="warning" size={28} />
-          <p>{loadError}</p>
+          <p className="text-muted-foreground!">{loadError}</p>
           <Button
             icon="refresh"
             onClick={() => {
@@ -220,21 +248,13 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
         </div>
       </div>
     );
-  if (!me)
-    return (
-      <div className="page-suspense-fallback" role="status" aria-label="Đang tải tổng đài…">
-        <div className="page-suspense-line is-title" />
-        <div className="page-suspense-line is-body" />
-        <div className="page-suspense-card" />
-      </div>
-    );
+  if (!me) return <PageFallback label="Đang tải tổng đài…" />;
 
   // Everyone else (students, lecturers without a desk): contact a department and follow their requests.
   if (!member && !me.isAdmin && !me.extension)
     return (
-      <div className="callcenter-page">
+      <div className="tw grid min-w-0 gap-4 px-[var(--shell-gutter)] pt-3.5 pb-8 text-sm text-foreground max-md:px-3">
         <PageHeader
-          className="cc-pagehead"
           title="Tổng đài"
           meta="Liên hệ và hỗ trợ: gọi từ trình duyệt, không cần máy lẻ"
         />
@@ -245,14 +265,9 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
   // A personal extension without a department: one phone page, no agent tabs.
   if (!member && !me.isAdmin)
     return (
-      <div className="callcenter-page">
-        <PageHeader
-          className="cc-pagehead"
-          title="Tổng đài"
-          meta="Máy lẻ cá nhân: gọi nội bộ và liên hệ phòng ban"
-        />
+      <div className="tw grid min-w-0 gap-4 px-[var(--shell-gutter)] pt-3.5 pb-8 text-sm text-foreground max-md:px-3">
+        <PageHeader title="Tổng đài" meta="Máy lẻ cá nhân: gọi nội bộ và liên hệ phòng ban" />
         <AgentDesk
-          personal
           me={me}
           isAgent={false}
           canMonitor={false}
@@ -271,26 +286,31 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
 
   return (
     <>
-      <nav ref={subnav} className="tdtu-subnav cc-subnav" aria-label="Tổng đài">
-        <div className="tdtu-subnav__inner">
-          {tabs.map((item) => {
-            const active = item.key === activeTab;
-            return (
-              <button
-                key={item.key}
-                type="button"
-                className={`tdtu-subnav__item ${active ? "is-active" : ""}`}
-                aria-current={active ? "page" : undefined}
-                onClick={() => openTab(item.key)}
-              >
-                <Icon name={item.icon} size={15} strokeWidth={active ? 2.1 : 1.8} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
+      <nav
+        ref={subnav}
+        className="tw flex shrink-0 items-center gap-1 overflow-x-auto overflow-y-hidden border-b bg-background px-6 text-sm max-md:px-3"
+        aria-label="Tổng đài"
+      >
+        {tabs.map((item) => {
+          const active = item.key === activeTab;
+          return (
+            <button
+              key={item.key}
+              type="button"
+              className={cn(
+                "-mb-px flex cursor-pointer items-center gap-[7px] border-b-2 border-transparent px-3 py-[11px] font-medium whitespace-nowrap text-muted-foreground hover:text-foreground",
+                active && "border-foreground font-semibold text-foreground",
+              )}
+              aria-current={active ? "page" : undefined}
+              onClick={() => openTab(item.key)}
+            >
+              <Icon name={item.icon} size={15} strokeWidth={active ? 2.1 : 1.8} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
       </nav>
-      <div className="callcenter-page">
+      <div className="tw grid min-w-0 gap-4 px-[var(--shell-gutter)] pt-3.5 pb-8 text-sm text-foreground max-md:px-3">
         {/* Always mounted: the softphone registration and an unfinished wrap-up survive tab switches. */}
         {hasDesk && (
           <div hidden={activeTab !== "desk"}>
@@ -338,7 +358,7 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
         )}
         {activeTab === "quality" && <QaPanel me={me} api={api} fail={fail} />}
         {activeTab === "admin" && (
-          <Suspense fallback={<div className="callcenter-panel">Đang tải…</div>}>
+          <Suspense fallback={<div className={cn(CARD, MUTED)}>Đang tải…</div>}>
             <CallCenterAdmin api={api} fail={fail} notify={notify} onChanged={loadMe} />
           </Suspense>
         )}
@@ -350,7 +370,6 @@ export function CallCenterWorkspace({ initialTab = "desk" }: { initialTab?: Tab 
 type Api = <T>(path: string, method?: string, body?: object) => Promise<T>;
 
 function AgentDesk({
-  personal = false,
   children,
   me,
   isAgent,
@@ -363,7 +382,6 @@ function AgentDesk({
   autoAnswerUntil,
   token,
 }: {
-  personal?: boolean;
   children?: ReactNode;
   token: string;
   me: CcAgentProfile;
@@ -529,15 +547,25 @@ function AgentDesk({
         : "Chọn “Sẵn sàng” để nhận cuộc gọi từ hàng đợi.";
 
   return (
-    <div className={`cc-console ${personal ? "cc-console--personal" : ""}`}>
-      <section className="cc-statebar" aria-label="Trạng thái nhận cuộc gọi">
+    <div className="grid min-w-0 gap-4">
+      <section
+        className="tw flex flex-wrap items-center gap-x-3.5 gap-y-2.5 text-sm text-foreground"
+        aria-label="Trạng thái nhận cuộc gọi"
+      >
         {isAgent && (
-          <div className="cc-states" role="group" aria-label="Trạng thái trực">
+          <div
+            className="flex rounded-[9px] bg-secondary p-[3px]"
+            role="group"
+            aria-label="Trạng thái trực"
+          >
             {(["ready", "not_ready", "offline"] as const).map((state) => (
               <button
                 key={state}
                 type="button"
-                className={`cc-state tone-${STATE_TONE[state]} ${me.state === state ? "is-active" : ""}`}
+                className={cn(
+                  "flex cursor-pointer items-center gap-[7px] rounded-[7px] px-3 py-1.5 text-[13px] font-medium text-muted-foreground disabled:cursor-not-allowed disabled:opacity-60",
+                  me.state === state && "bg-card font-semibold text-foreground shadow-sm",
+                )}
                 aria-pressed={me.state === state}
                 disabled={
                   busy || inCall || !me.extension || (state === "ready" && me.training.length > 0)
@@ -547,49 +575,48 @@ function AgentDesk({
                   state === "not_ready" ? setPausing((open) => !open) : choose(state)
                 }
               >
-                <span className="cc-led" aria-hidden="true" />
+                <span className={cn(LED, DOT[STATE_TONE[state]])} aria-hidden="true" />
                 {STATE_LABEL[state]}
               </button>
             ))}
           </div>
         )}
-        <p className="cc-statebar__ext">
-          <span>
-            Máy lẻ <b>{me.extension?.number ?? "—"}</b>
-          </span>
-          <span className={`tone-${phoneTone}`}>
-            <span className="cc-led" aria-hidden="true" />
-            {phoneLabel}
-          </span>
-          {departments && <span className="cc-statebar__units">{departments}</span>}
-        </p>
+        <span className={cn(CHIP, TINT[phoneTone])}>
+          <span className={cn(LED, DOT[phoneTone])} aria-hidden="true" />
+          Máy lẻ {me.extension?.number ?? "—"} · {phoneLabel}
+        </span>
+        {departments && <span className={MUTED}>{departments}</span>}
         {isAgent && (
-          <dl className="cc-statebar__stats">
+          <dl className="ml-auto flex gap-[22px] max-md:ml-0">
             <div>
-              <dt>Đã nghe hôm nay</dt>
-              <dd>{mine === null ? "—" : talked.length}</dd>
+              <dd className={STAT}>{mine === null ? "—" : talked.length}</dd>
+              <dt className="text-xs text-muted-foreground">Đã nghe hôm nay</dt>
             </div>
             <div>
-              <dt>Đàm thoại TB</dt>
-              <dd>{talked.length ? clock(Math.round(talkSeconds / talked.length)) : "—"}</dd>
-            </div>
-            <div>
-              <dt>{STATE_LABEL[me.state]}</dt>
-              <dd className={`tone-${STATE_TONE[me.state]}`}>
-                {me.stateSince ? clock(seconds(me.stateSince, null)) : "—"}
+              <dd className={STAT}>
+                {talked.length ? clock(Math.round(talkSeconds / talked.length)) : "—"}
               </dd>
+              <dt className="text-xs text-muted-foreground">Đàm thoại TB</dt>
+            </div>
+            <div>
+              <dd className={STAT}>{me.stateSince ? clock(seconds(me.stateSince, null)) : "—"}</dd>
+              <dt className="text-xs text-muted-foreground">{STATE_LABEL[me.state]}</dt>
             </div>
           </dl>
         )}
       </section>
       {pausing && (
-        <div className="desk-pause" role="group" aria-label="Lý do tạm nghỉ">
-          <span className="desk-muted">Lý do tạm nghỉ:</span>
+        <div
+          className="tw flex flex-wrap items-center gap-1.5 text-sm"
+          role="group"
+          aria-label="Lý do tạm nghỉ"
+        >
+          <span className={MUTED}>Lý do tạm nghỉ:</span>
           {PAUSE_REASONS.map((reason) => (
             <button
               key={reason}
               type="button"
-              className="desk-monitor"
+              className={PILL}
               disabled={busy}
               onClick={() => choose("not_ready", reason)}
             >
@@ -599,32 +626,56 @@ function AgentDesk({
         </div>
       )}
       {!me.extension && (
-        <p className="desk-warning">Bạn chưa được cấp máy lẻ, chưa thể nhận cuộc gọi.</p>
+        <p className={cn("tw rounded-lg px-3 py-2 text-[13px]", TINT.amber)}>
+          Bạn chưa được cấp máy lẻ, chưa thể nhận cuộc gọi.
+        </p>
       )}
       {isAgent && me.training.length > 0 && <TrainingRequired training={me.training} />}
 
-      <div className="cc-console__grid">
-        {/* Left: the agent's own recent calls and voicemail. */}
-        <div className="cc-console__col cc-console__col--mine">
+      <div
+        className={cn(
+          "grid min-w-0 items-start gap-4 min-[900px]:grid-cols-[320px_minmax(0,1fr)]",
+          offer && "min-[1250px]:grid-cols-[320px_minmax(0,1fr)_320px]",
+        )}
+      >
+        {/* Left: dial pad and directory, the agent's own recent calls, voicemail. */}
+        <div className="grid min-w-0 gap-4">
+          <DeskDialer hotlineCall={hotlineCall} />
           {isAgent && (
-            <section className="callcenter-panel">
-              <div className="callcenter-panel__head">
-                <h2 className="callcenter-panel__title">Cuộc gọi gần đây</h2>
+            <section className={CARD}>
+              <div className="flex items-center gap-2">
+                <h2 className={H2}>Cuộc gọi gần đây</h2>
                 {talked.length > 0 && (
-                  <span className="cc-count">Hôm nay {clock(talkSeconds)}</span>
+                  <span className={cn(MUTED, "ml-auto tabular-nums")}>
+                    Hôm nay {clock(talkSeconds)}
+                  </span>
                 )}
               </div>
               {mine === null ? (
-                <p className="desk-muted">Đang tải cuộc gọi gần đây…</p>
+                <p className={MUTED}>Đang tải cuộc gọi gần đây…</p>
               ) : !mine.length ? (
-                <p className="desk-muted">Bạn chưa nhận cuộc gọi nào.</p>
+                <p className={MUTED}>Bạn chưa nhận cuộc gọi nào.</p>
               ) : (
-                <ul className="desk-recent" aria-label="Cuộc gọi gần đây của tôi">
+                <ul className="list-none" aria-label="Cuộc gọi gần đây của tôi">
                   {mine.slice(0, 6).map((call) => (
-                    <li key={call.id}>
-                      <div className="desk-recent__who">
-                        <strong>{call.callerName ?? call.callerNumber}</strong>
-                        <span>
+                    <li
+                      key={call.id}
+                      className="flex items-center gap-2.5 rounded-[7px] px-1 py-[7px] hover:bg-secondary"
+                    >
+                      <span
+                        className={cn(
+                          LED,
+                          DOT[call.outcome ? (OUTCOME_TONE[call.outcome] ?? "neutral") : "red"],
+                        )}
+                        role="img"
+                        aria-label={call.outcome ? OUTCOME_LABEL[call.outcome] : "Đang diễn ra"}
+                        title={call.outcome ? OUTCOME_LABEL[call.outcome] : "Đang diễn ra"}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <strong className="block truncate text-[13.5px] font-medium">
+                          {call.callerName ?? call.callerNumber}
+                        </strong>
+                        <span className="block truncate text-xs text-muted-foreground">
                           {new Date(call.startedAt).toLocaleString("vi-VN", {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -637,18 +688,11 @@ function AgentDesk({
                             : ""}
                         </span>
                       </div>
-                      {call.outcome ? (
-                        <Badge tone={call.outcome === "answered" ? "green" : "amber"}>
-                          {OUTCOME_LABEL[call.outcome]}
-                        </Badge>
-                      ) : (
-                        <Badge tone="red">Đang diễn ra</Badge>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        icon="phone"
+                      <button
+                        type="button"
+                        className={ICON_BTN}
                         disabled={!canDial || !dialable(call.callerNumber)}
+                        aria-label="Gọi lại"
                         title={
                           !dialable(call.callerNumber)
                             ? "Người gọi từ trình duyệt, không có số để gọi lại"
@@ -658,8 +702,8 @@ function AgentDesk({
                         }
                         onClick={() => phone.call(call.callerNumber)}
                       >
-                        <span className="sr-only">Gọi lại</span>
-                      </Button>
+                        <Icon name="phone" size={15} />
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -676,66 +720,81 @@ function AgentDesk({
           )}
         </div>
 
-        {/* Centre: the call itself on the dark panel, then filing it and who is calling. */}
-        <div className="cc-console__col cc-console__col--call">
-          <section className={`cc-call is-${phone.phase}`} aria-label="Cuộc gọi hiện tại">
+        {/* Centre: the call itself, then transferring and filing it. */}
+        <div className="grid min-w-0 gap-4">
+          <section
+            className={cn(
+              CARD,
+              "justify-items-center gap-4 p-[22px] text-center",
+              phone.phase !== "none" && "border-emerald-500/50",
+            )}
+            aria-label="Cuộc gọi hiện tại"
+          >
             {phone.phase !== "none" ? (
               <>
-                <div className="cc-call__top">
-                  <div className="cc-call__id">
-                    <div className="cc-call__chips">
-                      <span className="cc-chip tone-red">
-                        <span className="cc-led" aria-hidden="true" />
-                        {phone.phase === "incoming"
-                          ? "Cuộc gọi đến"
-                          : phone.phase === "outgoing"
-                            ? "Đang gọi"
-                            : "Đang đàm thoại"}
-                      </span>
-                      {offer && (
-                        <span className="cc-chip">
-                          {offer.departmentName} · đã chờ {offer.waitedSeconds}s
-                        </span>
-                      )}
-                      {held && (
-                        <span className="cc-chip tone-amber">
-                          Đang giữ máy · người gọi nghe nhạc chờ
-                        </span>
-                      )}
-                    </div>
-                    <h2 className="cc-call__name">{callerName}</h2>
-                    {callerNumber && callerNumber !== callerName && (
-                      <p className="cc-call__number">{callerNumber}</p>
-                    )}
-                  </div>
-                  {callSince !== null && (
-                    <div className="cc-call__timer">
-                      <small>Thời lượng</small>
-                      <strong>{clock(Math.floor((Date.now() - callSince) / 1000))}</strong>
-                    </div>
+                <div className="flex flex-wrap justify-center gap-1.5">
+                  <span className={cn(CHIP, TINT[phone.phase === "active" ? "green" : "red"])}>
+                    <span
+                      className={cn(LED, DOT[phone.phase === "active" ? "green" : "red"])}
+                      aria-hidden="true"
+                    />
+                    {phone.phase === "incoming"
+                      ? "Cuộc gọi đến"
+                      : phone.phase === "outgoing"
+                        ? "Đang gọi"
+                        : "Đang đàm thoại"}
+                  </span>
+                  {offer && (
+                    <span className={cn(CHIP, "bg-secondary text-muted-foreground")}>
+                      {offer.departmentName} · đã chờ {offer.waitedSeconds}s
+                    </span>
+                  )}
+                  {held && (
+                    <span className={cn(CHIP, TINT.amber)}>
+                      Đang giữ máy · người gọi nghe nhạc chờ
+                    </span>
                   )}
                 </div>
+                <UserAvatar name={callerName} className="size-[72px] text-2xl" />
+                <div>
+                  <h2 className="text-xl font-bold">{callerName}</h2>
+                  {callerNumber && callerNumber !== callerName && (
+                    <p className={MUTED}>{callerNumber}</p>
+                  )}
+                </div>
+                {callSince !== null && (
+                  <strong
+                    className="text-[28px] leading-none font-bold tracking-wide tabular-nums"
+                    aria-label="Thời lượng"
+                  >
+                    {clock(Math.floor((Date.now() - callSince) / 1000))}
+                  </strong>
+                )}
                 {phone.phase === "incoming" ? (
-                  <div className="cc-call__controls">
+                  <div className="flex flex-wrap justify-center gap-2.5">
                     <button
                       type="button"
-                      className="cc-ctl is-answer"
+                      className={cn(CTL, "bg-emerald-600 text-white hover:text-white")}
                       onClick={phone.answer}
                       title="Alt+A"
                     >
                       <Icon name="phone" size={20} />
                       Trả lời
                     </button>
-                    <button type="button" className="cc-ctl" onClick={phone.hangup}>
+                    <button
+                      type="button"
+                      className={cn(CTL, "bg-red-500 text-white hover:text-white")}
+                      onClick={phone.hangup}
+                    >
                       <Icon name="phone-off" size={20} />
                       Từ chối
                     </button>
                   </div>
                 ) : (
-                  <div className="cc-call__controls">
+                  <div className="flex flex-wrap justify-center gap-2.5">
                     <button
                       type="button"
-                      className={`cc-ctl ${phone.muted ? "is-alert" : ""}`}
+                      className={cn(CTL, phone.muted && CTL_ON)}
                       aria-pressed={phone.muted}
                       onClick={phone.toggleMute}
                       title="Alt+M"
@@ -746,7 +805,7 @@ function AgentDesk({
                     {phone.phase === "active" && (
                       <button
                         type="button"
-                        className={`cc-ctl ${held ? "is-warn" : ""}`}
+                        className={cn(CTL, held && CTL_ON)}
                         aria-pressed={held}
                         disabled={holding || Boolean(offer?.transfer)}
                         onClick={toggleHold}
@@ -757,7 +816,7 @@ function AgentDesk({
                     )}
                     <button
                       type="button"
-                      className="cc-ctl is-end"
+                      className={cn(CTL, "bg-red-500 text-white hover:text-white")}
                       onClick={phone.hangup}
                       title="Alt+H"
                     >
@@ -767,36 +826,44 @@ function AgentDesk({
                   </div>
                 )}
               </>
-            ) : wrapUp && !inCall ? (
-              <div className="cc-call__idle">
-                <span className="cc-call__icon tone-blue" aria-hidden="true">
-                  <Icon name="clipboard" size={24} />
-                </span>
-                <div>
-                  <h2>Lưu kết quả trước khi nhận cuộc gọi mới</h2>
-                  <p>
-                    Cuộc gọi với {wrapUp.caller.displayName ?? wrapUp.caller.number} đã kết thúc.
-                    Chọn kết quả và ghi chú ở bên dưới.
-                  </p>
-                </div>
-              </div>
             ) : (
-              <div className="cc-call__idle">
+              <>
                 <span
-                  className={`cc-call__icon tone-${isAgent ? STATE_TONE[me.state] : "blue"}`}
+                  className={cn(
+                    "grid size-14 place-items-center rounded-full",
+                    TINT[wrapUp && !inCall ? "blue" : isAgent ? STATE_TONE[me.state] : "blue"],
+                  )}
                   aria-hidden="true"
                 >
                   <Icon
-                    name={isAgent && me.state === "not_ready" ? "pause" : "headset"}
+                    name={
+                      wrapUp && !inCall
+                        ? "clipboard"
+                        : isAgent && me.state === "not_ready"
+                          ? "pause"
+                          : "headset"
+                    }
                     size={24}
                   />
                 </span>
-                <div>
-                  <h2>{idleTitle}</h2>
-                  <p>{idleText}</p>
-                  {me.stateReason && <p>{me.stateReason}</p>}
-                </div>
-              </div>
+                {wrapUp && !inCall ? (
+                  <div className="grid gap-1">
+                    <h2 className="text-base font-semibold">
+                      Lưu kết quả trước khi nhận cuộc gọi mới
+                    </h2>
+                    <p className={MUTED}>
+                      Cuộc gọi với {wrapUp.caller.displayName ?? wrapUp.caller.number} đã kết thúc.
+                      Chọn kết quả và ghi chú ở bên dưới.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid gap-1">
+                    <h2 className="text-base font-semibold">{idleTitle}</h2>
+                    <p className={cn(MUTED, "max-w-[520px]")}>{idleText}</p>
+                    {me.stateReason && <p className={MUTED}>{me.stateReason}</p>}
+                  </div>
+                )}
+              </>
             )}
           </section>
 
@@ -805,100 +872,67 @@ function AgentDesk({
           )}
 
           {wrapUp && !inCall && (
-            <section className="callcenter-panel" aria-label="Ghi chú sau cuộc gọi">
-              <div className="callcenter-panel__head">
-                <h2 className="callcenter-panel__title">Ghi chú sau cuộc gọi</h2>
-                <Badge tone="blue">{wrapUp.caller.displayName ?? wrapUp.caller.number}</Badge>
+            <section className={cn(CARD, "tw-form")} aria-label="Ghi chú sau cuộc gọi">
+              <div className="flex items-center gap-2">
+                <h2 className={H2}>Ghi chú sau cuộc gọi</h2>
+                <span className={cn(CHIP, TINT.blue, "ml-auto")}>
+                  {wrapUp.caller.displayName ?? wrapUp.caller.number}
+                </span>
               </div>
-              <div className="desk-form">
-                <Field label="Kết quả cuộc gọi">
-                  <select
-                    aria-label="Kết quả cuộc gọi"
-                    value={dispositionId}
-                    onChange={(event) => setDispositionId(event.target.value)}
-                  >
-                    <option value="">— Chọn kết quả —</option>
-                    {dispositions
-                      .filter(
-                        (item) => !item.departmentId || item.departmentId === wrapUp.departmentId,
-                      )
-                      .map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.label}
-                        </option>
-                      ))}
-                  </select>
-                </Field>
-                <Field label="Ghi chú">
-                  <textarea
-                    aria-label="Ghi chú"
-                    rows={4}
-                    maxLength={4000}
-                    value={notes}
-                    onChange={(event) => setNotes(event.target.value)}
-                    placeholder="Nội dung người gọi trình bày, việc cần làm tiếp…"
-                  />
-                </Field>
-                <div className="desk-actions">
-                  {wrapUp.caller.userId && (
-                    <VideoInviteButton callId={wrapUp.callId} api={api} fail={fail} />
-                  )}
-                  {/* BR-07: a hotline call is always filed with a result code. */}
-                  {!dispositionId && (
-                    <span className="desk-muted">Chọn kết quả cuộc gọi để lưu.</span>
-                  )}
-                  <Button
-                    variant="secondary"
-                    disabled={!dispositionId}
-                    onClick={() => void saveWrapUp(true)}
-                    icon="clipboard"
-                  >
-                    Lưu và tạo phiếu
-                  </Button>
-                  <Button
-                    disabled={!dispositionId}
-                    onClick={() => void saveWrapUp(false)}
-                    icon="check"
-                  >
-                    Lưu ghi nhận
-                  </Button>
-                </div>
+              {/* BR-07: a hotline call is always filed with a result code. */}
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Kết quả cuộc gọi">
+                {dispositions
+                  .filter((item) => !item.departmentId || item.departmentId === wrapUp.departmentId)
+                  .map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={cn(PILL, dispositionId === item.id && PILL_ON)}
+                      aria-pressed={dispositionId === item.id}
+                      onClick={() => setDispositionId(dispositionId === item.id ? "" : item.id)}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+              </div>
+              <textarea
+                aria-label="Ghi chú"
+                rows={3}
+                maxLength={4000}
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder="Nội dung người gọi trình bày, việc cần làm tiếp…"
+              />
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {wrapUp.caller.userId && (
+                  <VideoInviteButton callId={wrapUp.callId} api={api} fail={fail} />
+                )}
+                {!dispositionId && (
+                  <span className={cn(MUTED, "mr-auto")}>Chọn kết quả cuộc gọi để lưu.</span>
+                )}
+                <button
+                  type="button"
+                  className={BTN_GHOST}
+                  disabled={!dispositionId}
+                  onClick={() => void saveWrapUp(true)}
+                >
+                  <Icon name="clipboard" size={15} />
+                  Lưu và tạo phiếu
+                </button>
+                <button
+                  type="button"
+                  className={BTN_PRIMARY}
+                  disabled={!dispositionId}
+                  onClick={() => void saveWrapUp(false)}
+                >
+                  <Icon name="check" size={15} />
+                  Lưu ghi nhận
+                </button>
               </div>
             </section>
           )}
 
-          {offer && (
-            <section className="callcenter-panel" aria-label="Người gọi">
-              <div className="callcenter-panel__head">
-                <h2 className="callcenter-panel__title">Người gọi</h2>
-                <Badge tone="blue">{offer.departmentName}</Badge>
-              </div>
-              <div className="desk-caller">
-                <div className="desk-caller__name">
-                  {offer.caller.displayName ?? "Số chưa xác định"}
-                </div>
-                <div className="desk-caller__meta">
-                  <span>{numberLabel(offer.caller.number)}</span>
-                  {offer.caller.email && <span>{offer.caller.email}</span>}
-                </div>
-                <div className="desk-caller__facts">
-                  <span>{offer.caller.recentCalls} cuộc gọi trong 30 ngày</span>
-                  {!offer.caller.userId && <span>Chưa liên kết tài khoản</span>}
-                </div>
-                {offer.context && (
-                  <p className="desk-context">
-                    <Icon name="book" size={14} /> {offer.context}
-                  </p>
-                )}
-                <CallerProfile api={api} callId={offer.callId} outcomeLabel={OUTCOME_LABEL} />
-                {me.state === "on_call" && offer.caller.userId && (
-                  <VideoInviteButton callId={offer.callId} api={api} fail={fail} />
-                )}
-              </div>
-            </section>
-          )}
-
-          <p className="desk-shortcuts">
+          <p className="tw text-xs text-muted-foreground [&_kbd]:rounded [&_kbd]:border [&_kbd]:bg-secondary [&_kbd]:px-1 [&_kbd]:font-[inherit]">
             Phím tắt: <kbd>Alt</kbd>+<kbd>A</kbd> trả lời · <kbd>Alt</kbd>+<kbd>H</kbd> kết thúc ·{" "}
             <kbd>Alt</kbd>+<kbd>M</kbd> micro
             {isAgent && (
@@ -910,10 +944,43 @@ function AgentDesk({
           </p>
         </div>
 
-        {/* Right: dial an extension, the school's directory with busy lamps. */}
-        <div className="cc-console__col cc-console__col--dial">
-          <DeskDialer hotlineCall={hotlineCall} />
-        </div>
+        {/* Right: who is calling, only while a hotline call is on the desk. */}
+        {offer && (
+          <section
+            className="grid min-w-0 gap-2.5 rounded-[10px] border border-solid border-border bg-card p-3.5 text-sm text-foreground max-[1249px]:col-span-full"
+            aria-label="Người gọi"
+          >
+            <div className="tw flex items-center gap-2">
+              <h2 className={H2}>Người gọi</h2>
+              <span className={cn(CHIP, TINT.blue, "ml-auto")}>{offer.departmentName}</span>
+            </div>
+            <div className="tw flex items-center gap-2.5">
+              <UserAvatar name={offer.caller.displayName ?? "?"} className="size-10" />
+              <div className="min-w-0">
+                <b className="block truncate font-semibold">
+                  {offer.caller.displayName ?? "Số chưa xác định"}
+                </b>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {numberLabel(offer.caller.number)}
+                  {offer.caller.email ? ` · ${offer.caller.email}` : ""}
+                </span>
+              </div>
+            </div>
+            <p className={cn("tw", MUTED)}>
+              {offer.caller.recentCalls} cuộc gọi trong 30 ngày
+              {!offer.caller.userId && " · Chưa liên kết tài khoản"}
+            </p>
+            {offer.context && (
+              <p className="tw flex items-start gap-1.5 rounded-lg bg-secondary px-2.5 py-2 text-[13px]">
+                <Icon name="book" size={14} className="mt-0.5 shrink-0" /> {offer.context}
+              </p>
+            )}
+            <CallerProfile api={api} callId={offer.callId} outcomeLabel={OUTCOME_LABEL} />
+            {me.state === "on_call" && offer.caller.userId && (
+              <VideoInviteButton callId={offer.callId} api={api} fail={fail} />
+            )}
+          </section>
+        )}
       </div>
       {children}
     </div>
@@ -1018,94 +1085,135 @@ function LiveBoard({
   ];
   const department = options.find((item) => item.id === departmentId)?.name ?? "";
   return (
-    <div ref={board} className="cc-wall">
-      <div className="cc-pagehead">
-        <div>
-          <p className="cc-eyebrow">
-            <span className="cc-led tone-red is-pulse" aria-hidden="true" />
-            Trực tiếp ·{" "}
-            {new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
-          </p>
-          <h1 className="cc-pagehead__title">Giám sát tổng đài</h1>
-        </div>
-        {options.length > 1 && (
-          <select
-            className="cc-select"
-            aria-label="Phòng ban"
-            value={departmentId}
-            onChange={(event) => setDepartmentId(event.target.value)}
+    <div
+      ref={board}
+      className="grid min-w-0 gap-4 bg-background [&:fullscreen]:overflow-y-auto [&:fullscreen]:p-6"
+    >
+      <div className="tw flex flex-wrap items-center gap-2.5 text-sm text-foreground">
+        <h1 className="text-xl font-bold">Giám sát tổng đài</h1>
+        <span className={cn(CHIP, TINT.red)}>
+          <span className={cn(LED, DOT.red, "motion-safe:animate-pulse")} aria-hidden="true" />
+          Trực tiếp ·{" "}
+          {new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+        </span>
+        <div className="tw-form ml-auto flex flex-wrap items-center gap-2">
+          {options.length > 1 && (
+            <select
+              aria-label="Phòng ban"
+              value={departmentId}
+              onChange={(event) => setDepartmentId(event.target.value)}
+            >
+              {options.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          )}
+          <button
+            type="button"
+            className={BTN_GHOST}
+            onClick={() =>
+              (document.fullscreenElement
+                ? document.exitFullscreen()
+                : board.current?.requestFullscreen()
+              )?.catch(() => undefined)
+            }
           >
-            {options.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        )}
-        <Button
-          variant="secondary"
-          icon="maximize"
-          onClick={() =>
-            (document.fullscreenElement
-              ? document.exitFullscreen()
-              : board.current?.requestFullscreen()
-            )?.catch(() => undefined)
-          }
-        >
-          Wallboard toàn màn hình
-        </Button>
+            <Icon name="maximize" size={15} />
+            Wallboard toàn màn hình
+          </button>
+        </div>
       </div>
       {!departmentId ? (
-        <p className="callcenter-panel desk-muted">Chưa có phòng ban nào để giám sát.</p>
+        <p className={cn(CARD, MUTED)}>Chưa có phòng ban nào để giám sát.</p>
       ) : (
         <>
-          <section className="cc-kpis" aria-label="Chỉ số trực tiếp">
+          <section
+            className="tw grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3 text-foreground"
+            aria-label="Chỉ số trực tiếp"
+          >
             {kpis.map((item) => (
-              <div key={item.label} className={`cc-kpi ${item.tone ? `tone-${item.tone}` : ""}`}>
-                <small>{item.label}</small>
-                <strong>{item.value}</strong>
-                {item.note && <span>{item.note}</span>}
+              <div key={item.label} className="grid gap-0.5 rounded-[10px] border bg-card p-3.5">
+                <small className="text-[12.5px] text-muted-foreground">{item.label}</small>
+                <strong
+                  className={cn(
+                    "text-[26px] leading-tight font-bold tabular-nums",
+                    item.tone && TEXT[item.tone],
+                  )}
+                >
+                  {item.value}
+                </strong>
+                {item.note && <span className="text-xs text-muted-foreground">{item.note}</span>}
               </div>
             ))}
           </section>
-          <div className="cc-wall__grid">
-            <section className="cc-rack" aria-label="Tổng đài viên">
-              <div className="cc-rack__head">
-                <h2>Tổng đài viên</h2>
-                <ul className="cc-legend" aria-label="Chú thích trạng thái">
+          <div className="grid min-w-0 items-start gap-4 min-[1100px]:grid-cols-[minmax(0,1fr)_340px]">
+            <section
+              className="tw grid min-w-0 gap-2.5 text-sm text-foreground"
+              aria-label="Tổng đài viên"
+            >
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                <h2 className={H2}>Tổng đài viên</h2>
+                <span className={MUTED}>
+                  {department} · {agents.length} người · {waiting.length} đang chờ
+                </span>
+                <ul
+                  className="ml-auto flex list-none flex-wrap gap-3 text-xs text-muted-foreground"
+                  aria-label="Chú thích trạng thái"
+                >
                   {LEGEND.map(([tone, label]) => (
-                    <li key={tone} className={`tone-${tone}`}>
-                      <span className="cc-led" aria-hidden="true" />
+                    <li key={tone} className="flex items-center gap-1.5">
+                      <span className={cn(LED, DOT[tone])} aria-hidden="true" />
                       {label}
                     </li>
                   ))}
                 </ul>
               </div>
-              <p className="cc-rack__group">
-                {department} · {agents.length} người · {waiting.length} đang chờ
-              </p>
               {!snapshot ? (
-                <p className="cc-rack__empty">Đang tải…</p>
+                <p className={cn(CARD, MUTED)}>Đang tải…</p>
               ) : !agents.length ? (
-                <p className="cc-rack__empty">Phòng ban chưa có tổng đài viên.</p>
+                <p className={cn(CARD, MUTED)}>Phòng ban chưa có tổng đài viên.</p>
               ) : (
-                <ul className="cc-units">
+                <ul className="grid list-none grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-2.5">
                   {agents.map((agent) => (
-                    <li key={agent.userId} className={`cc-unit tone-${STATE_TONE[agent.state]}`}>
-                      <span className="cc-led" aria-hidden="true" />
-                      <div className="cc-unit__who">
-                        <strong>{agent.displayName}</strong>
-                        <span>
-                          {agent.extension ?? "—"} · {STATE_LABEL[agent.state]}
+                    <li
+                      key={agent.userId}
+                      className={cn(
+                        "grid grid-cols-[minmax(0,1fr)] gap-2 rounded-[10px] border bg-card p-3",
+                        agent.state === "on_call" && "border-red-500/40",
+                        agent.state === "offline" && "opacity-70",
+                      )}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <UserAvatar name={agent.displayName} className="size-9" />
+                        <div className="min-w-0 flex-1">
+                          <strong className="block truncate font-semibold">
+                            {agent.displayName}
+                          </strong>
+                          <span className="block truncate text-xs text-muted-foreground">
+                            Máy lẻ {agent.extension ?? "—"}
+                          </span>
+                        </div>
+                        <span
+                          className={cn(LED, DOT[STATE_TONE[agent.state]])}
+                          aria-hidden="true"
+                        />
+                      </div>
+                      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span className="min-w-0 truncate">
+                          {STATE_LABEL[agent.state]}
                           {agent.reason ? ` · ${agent.reason}` : ""}
                         </span>
-                      </div>
-                      {agent.since && (
-                        <time className="cc-unit__time">{clock(seconds(agent.since, null))}</time>
-                      )}
+                        {agent.since && (
+                          <time className="ml-auto font-semibold text-foreground tabular-nums">
+                            {clock(seconds(agent.since, null))}
+                          </time>
+                        )}
+                      </p>
                       {agent.state === "on_call" && agent.callId && onMonitor && (
                         <div
-                          className="cc-unit__monitor"
+                          className="flex gap-[5px]"
                           role="group"
                           aria-label={`Giám sát cuộc gọi của ${agent.displayName}`}
                         >
@@ -1113,6 +1221,7 @@ function LiveBoard({
                             <button
                               key={item.mode}
                               type="button"
+                              className="h-7 flex-1 cursor-pointer rounded-md border text-xs font-medium hover:bg-secondary"
                               title={item.title}
                               onClick={() => onMonitor(agent.callId!, item.mode)}
                             >
@@ -1126,27 +1235,38 @@ function LiveBoard({
                 </ul>
               )}
             </section>
-            <section className="callcenter-panel cc-queue" aria-label="Hàng đợi">
-              <div className="callcenter-panel__head">
-                <h2 className="callcenter-panel__title">Hàng đợi</h2>
-                <span className={`cc-count ${queueTone ? `tone-${queueTone}` : ""}`}>
+            <section className={CARD} aria-label="Hàng đợi">
+              <div className="flex items-center gap-2">
+                <h2 className={H2}>Hàng đợi</h2>
+                <span className={cn(CHIP, TINT[queueTone || "neutral"], "ml-auto")}>
                   {waiting.length} đang chờ
                 </span>
               </div>
               {!waiting.length ? (
-                <p className="desk-muted">Không có cuộc gọi nào đang chờ.</p>
+                <p className={MUTED}>Không có cuộc gọi nào đang chờ.</p>
               ) : (
-                <ul className="cc-queue__list">
+                <ul className="list-none">
                   {waiting.map((call) => {
                     const waited = seconds(call.waitingSince, null);
                     return (
-                      <li key={call.callId} className={`tone-${waitTone(waited)}`}>
-                        <span className="cc-led" aria-hidden="true" />
-                        <div>
-                          <strong>{call.callerName ?? numberLabel(call.callerNumber)}</strong>
-                          {call.callerName && <span>{numberLabel(call.callerNumber)}</span>}
+                      <li
+                        key={call.callId}
+                        className="flex items-center gap-2.5 border-t py-[9px] first:border-t-0"
+                      >
+                        <span className={cn(LED, DOT[waitTone(waited)])} aria-hidden="true" />
+                        <div className="min-w-0 flex-1">
+                          <strong className="block truncate font-medium">
+                            {call.callerName ?? numberLabel(call.callerNumber)}
+                          </strong>
+                          {call.callerName && (
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {numberLabel(call.callerNumber)}
+                            </span>
+                          )}
                         </div>
-                        <time>{clock(waited)}</time>
+                        <time className={cn("font-semibold tabular-nums", TEXT[waitTone(waited)])}>
+                          {clock(waited)}
+                        </time>
                       </li>
                     );
                   })}
@@ -1183,9 +1303,9 @@ function VideoInviteButton({
   const { notify } = useApp();
   const [busy, setBusy] = useState(false);
   return (
-    <Button
-      variant="secondary"
-      icon="video"
+    <button
+      type="button"
+      className={BTN_GHOST}
       disabled={busy}
       onClick={() => {
         setBusy(true);
@@ -1209,8 +1329,9 @@ function VideoInviteButton({
           .finally(() => setBusy(false));
       }}
     >
+      <Icon name="video" size={15} />
       Mời họp video
-    </Button>
+    </button>
   );
 }
 
@@ -1218,27 +1339,26 @@ function VideoInviteButton({
 function TrainingRequired({ training }: { training: CcAgentProfile["training"] }) {
   const { navigate } = useApp();
   return (
-    <div className="desk-training" role="status">
-      <strong>
+    <div className={cn(CARD, TINT.amber, "border-amber-500/30")} role="status">
+      <strong className="flex items-center gap-2 font-semibold">
         <Icon name="book" size={16} /> Hoàn thành khóa đào tạo bắt buộc để bật “Sẵn sàng”
       </strong>
       {training.map((course) => (
-        <div key={course.courseId} className="desk-training__row">
-          <span>
+        <div key={course.courseId} className="flex flex-wrap items-center gap-3 text-foreground">
+          <span className="min-w-0 flex-1 truncate">
             {course.code} — {course.title}
           </span>
-          <span className="desk-training__bar" aria-hidden="true">
-            <span style={{ width: `${course.percent}%` }} />
+          <span className="h-1.5 w-32 overflow-hidden rounded-full bg-card" aria-hidden="true">
+            <span className="block h-full bg-primary" style={{ width: `${course.percent}%` }} />
           </span>
-          <span>{course.percent}%</span>
-          <Button
-            size="sm"
-            variant="secondary"
+          <span className="w-10 text-right tabular-nums">{course.percent}%</span>
+          <button
             type="button"
+            className={BTN_GHOST}
             onClick={() => navigate({ view: "elearning", query: course.courseId })}
           >
             Vào học
-          </Button>
+          </button>
         </div>
       ))}
     </div>
@@ -1364,27 +1484,29 @@ function CallHistory({
   const canCall = phone.status === "registered" && phone.phase === "none";
 
   return (
-    <div className="cc-history">
-      <div className="cc-pagehead">
-        <div>
-          <h1 className="cc-pagehead__title">Lịch sử cuộc gọi</h1>
-          <p className="cc-summary">
+    <div className="grid min-w-0 gap-4">
+      <div className="tw flex flex-wrap items-end gap-x-4 gap-y-2.5 text-sm text-foreground">
+        <div className="grid gap-0.5">
+          <h1 className="text-xl font-bold">Lịch sử cuộc gọi</h1>
+          <p className={MUTED}>
             {calls === null ? (
               "Đang tải…"
             ) : (
               <>
-                {scoped.length} cuộc · <b className="tone-green">{countOf("answered")} đã nghe</b> ·{" "}
-                <b className="tone-amber">{countOf("abandoned")} bỏ máy</b> ·{" "}
-                <b className="tone-red">{countOf("missed")} nhỡ</b> ·{" "}
-                <b className="tone-blue">{countOf("voicemail")} thư thoại</b>
+                {scoped.length} cuộc ·{" "}
+                <b className={cn("font-semibold", TEXT.green)}>{countOf("answered")} đã nghe</b> ·{" "}
+                <b className={cn("font-semibold", TEXT.amber)}>{countOf("abandoned")} bỏ máy</b> ·{" "}
+                <b className={cn("font-semibold", TEXT.red)}>{countOf("missed")} nhỡ</b> ·{" "}
+                <b className={cn("font-semibold", TEXT.blue)}>{countOf("voicemail")} thư thoại</b>
               </>
             )}
           </p>
         </div>
-        <label className="cc-search cc-search--wide">
+        <label className="ml-auto flex h-[34px] w-[320px] items-center gap-2 rounded-full bg-secondary px-3 text-muted-foreground max-md:ml-0 max-md:w-full">
           <Icon name="search" size={15} />
           <input
             type="search"
+            className="min-w-0 flex-1 bg-transparent text-[13px] text-foreground outline-none"
             aria-label="Tìm cuộc gọi"
             placeholder="Tìm người gọi, số, tổng đài viên, ghi chú…"
             value={query}
@@ -1393,39 +1515,46 @@ function CallHistory({
         </label>
       </div>
 
-      <div className="cc-chips" role="toolbar" aria-label="Bộ lọc cuộc gọi">
-        {PERIODS.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            className="cc-chip-btn"
-            aria-pressed={period === item.key}
-            onClick={() => setPeriod(item.key)}
-          >
-            {item.label}
-          </button>
-        ))}
-        <span className="cc-chips__sep" aria-hidden="true" />
+      <div
+        className="tw tw-form flex flex-wrap items-center gap-1.5 text-sm text-foreground"
+        role="toolbar"
+        aria-label="Bộ lọc cuộc gọi"
+      >
+        <div className="mr-1.5 flex rounded-[9px] bg-secondary p-[3px]">
+          {PERIODS.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              className={cn(
+                "cursor-pointer rounded-[7px] px-3 py-[5px] text-[13px] font-medium text-muted-foreground",
+                period === item.key && "bg-card font-semibold text-foreground shadow-sm",
+              )}
+              aria-pressed={period === item.key}
+              onClick={() => setPeriod(item.key)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
         {OUTCOME_FILTERS.map((key) => (
           <button
             key={key}
             type="button"
-            className="cc-chip-btn"
+            className={cn(PILL, "inline-flex items-center gap-1.5", outcome === key && PILL_ON)}
             aria-pressed={outcome === key}
             onClick={() => setOutcome(outcome === key ? "" : key)}
           >
             <span
-              className={`cc-led tone-${key === "open" ? "red" : OUTCOME_TONE[key]}`}
+              className={cn(LED, DOT[key === "open" ? "red" : OUTCOME_TONE[key]])}
               aria-hidden="true"
             />
             {key === "open" ? "Đang diễn ra" : OUTCOME_LABEL[key]}
-            <small>{countOf(key)}</small>
+            <small className="tabular-nums opacity-70">{countOf(key)}</small>
           </button>
         ))}
-        <span className="cc-chips__sep" aria-hidden="true" />
         <button
           type="button"
-          className="cc-chip-btn"
+          className={cn(PILL, "inline-flex items-center gap-1.5", recorded && PILL_ON)}
           aria-pressed={recorded}
           onClick={() => setRecorded(!recorded)}
         >
@@ -1434,7 +1563,7 @@ function CallHistory({
         </button>
         {departments.length > 1 && (
           <select
-            className="cc-select"
+            className="ml-1.5"
             aria-label="Lọc theo phòng ban"
             value={departmentId}
             onChange={(event) => setDepartmentId(event.target.value)}
@@ -1449,76 +1578,107 @@ function CallHistory({
         )}
       </div>
 
-      <div className={`cc-history__grid ${selected ? "has-drawer" : ""}`}>
-        <section className="cc-calls" aria-label="Danh sách cuộc gọi">
+      <div
+        className={cn(
+          "grid min-w-0 items-start gap-4",
+          selected && "min-[1100px]:grid-cols-[minmax(0,1fr)_360px]",
+        )}
+      >
+        <section className="tw min-w-0 text-sm text-foreground" aria-label="Danh sách cuộc gọi">
           {calls === null ? (
-            <p className="desk-muted cc-calls__empty">Đang tải cuộc gọi…</p>
+            <p className={cn(CARD, MUTED)}>Đang tải cuộc gọi…</p>
           ) : !shown.length ? (
-            <p className="desk-muted cc-calls__empty">
+            <p className={cn(CARD, MUTED)}>
               {calls.length ? "Không có cuộc gọi khớp bộ lọc." : "Chưa có cuộc gọi nào."}
             </p>
           ) : (
             groups.map((group) => (
-              <div key={group.label} className="cc-day">
-                <h3 className="cc-day__head">
+              <div key={group.label}>
+                <h3 className="flex gap-2 px-0.5 pt-3 pb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase first:pt-0">
                   <span>{group.label}</span>
-                  <span>{group.calls.length} cuộc</span>
+                  <span className="font-medium normal-case">· {group.calls.length} cuộc</span>
                 </h3>
-                <ul>
+                <ul className="list-none">
                   {group.calls.map((call) => {
                     const [arrow, way] = DIRECTION[call.direction];
                     const result = call.outcome ? OUTCOME_LABEL[call.outcome] : "Đang diễn ra";
+                    const active = call.id === selectedId;
                     return (
                       <li
                         key={call.id}
-                        className={`cc-row ${call.id === selectedId ? "is-selected" : ""}`}
+                        className={cn(
+                          "flex items-center gap-1 rounded-md border-b pr-1.5 hover:bg-secondary",
+                          active && "bg-[var(--tint-blue-bg)] hover:bg-[var(--tint-blue-bg)]",
+                        )}
                       >
                         <button
                           type="button"
-                          className="cc-row__main"
-                          aria-pressed={call.id === selectedId}
-                          onClick={() => setSelectedId(call.id === selectedId ? null : call.id)}
+                          className="grid min-w-0 flex-1 cursor-pointer grid-cols-[8px_44px_18px_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_56px] items-center gap-3 px-1.5 py-2.5 text-left max-md:grid-cols-[8px_44px_minmax(0,1fr)_56px]"
+                          aria-pressed={active}
+                          onClick={() => setSelectedId(active ? null : call.id)}
                         >
                           <span
-                            className={`cc-led tone-${call.outcome ? OUTCOME_TONE[call.outcome] : "red"}`}
+                            className={cn(
+                              LED,
+                              DOT[call.outcome ? (OUTCOME_TONE[call.outcome] ?? "neutral") : "red"],
+                            )}
                             role="img"
                             aria-label={result}
                             title={result}
                           />
-                          <time className="cc-row__time">
+                          <time className="text-muted-foreground tabular-nums">
                             {new Date(call.startedAt).toLocaleTimeString("vi-VN", {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
                           </time>
-                          <span className="cc-row__dir" role="img" aria-label={way} title={way}>
+                          <span
+                            className="text-center text-muted-foreground max-md:hidden"
+                            role="img"
+                            aria-label={way}
+                            title={way}
+                          >
                             {arrow}
                           </span>
-                          <span className={`cc-row__caller ${call.callerName ? "" : "is-number"}`}>
+                          <span
+                            className={cn(
+                              "truncate font-semibold",
+                              !call.callerName && "tabular-nums",
+                            )}
+                          >
                             {call.callerName ?? numberLabel(call.callerNumber)}
                           </span>
-                          <span className="cc-row__agent">
+                          <span className="truncate max-md:hidden">
                             {call.agentName ?? "—"}
-                            {call.departmentName && <small> · {call.departmentName}</small>}
+                            {call.departmentName && (
+                              <small className="text-muted-foreground">
+                                {" "}
+                                · {call.departmentName}
+                              </small>
+                            )}
                           </span>
-                          <span className="cc-row__cat">
+                          <span className="truncate text-muted-foreground max-md:hidden">
                             {labelOf(call.dispositionId) || call.notes || result}
                           </span>
-                          <span className="cc-row__dur">
+                          <span className="text-right tabular-nums">
                             {call.answeredAt ? clock(seconds(call.answeredAt, call.endedAt)) : "—"}
                           </span>
                         </button>
                         {call.hasRecording ? (
                           <button
                             type="button"
-                            className={`cc-round ${playing?.id === call.id ? "is-on" : ""}`}
+                            className={cn(
+                              ICON_BTN,
+                              "size-7 rounded-full",
+                              playing?.id === call.id && "bg-foreground text-background",
+                            )}
                             aria-label={`Nghe ghi âm cuộc gọi lúc ${new Date(call.startedAt).toLocaleString("vi-VN")}`}
                             onClick={() => play(call)}
                           >
                             <Icon name="play" size={12} />
                           </button>
                         ) : (
-                          <span />
+                          <span className="size-7 shrink-0" />
                         )}
                       </li>
                     );
@@ -1530,116 +1690,136 @@ function CallHistory({
         </section>
 
         {selected && (
-          <aside className="cc-drawer" aria-label="Chi tiết cuộc gọi">
-            <div className="cc-drawer__head">
-              <div className="cc-drawer__id">
+          <aside
+            className={cn(CARD, "gap-3 p-4 min-[1100px]:sticky min-[1100px]:top-2")}
+            aria-label="Chi tiết cuộc gọi"
+          >
+            <div className="flex items-start gap-2.5">
+              <UserAvatar name={selected.callerName ?? selected.callerNumber} className="size-10" />
+              <div className="grid min-w-0 flex-1 gap-1">
+                <h2 className="truncate text-base font-semibold">
+                  {selected.callerName ?? numberLabel(selected.callerNumber)}
+                </h2>
                 <span
-                  className={`cc-chip tone-${selected.outcome ? OUTCOME_TONE[selected.outcome] : "red"}`}
+                  className={cn(
+                    CHIP,
+                    "justify-self-start",
+                    TINT[selected.outcome ? (OUTCOME_TONE[selected.outcome] ?? "neutral") : "red"],
+                  )}
                 >
-                  <span className="cc-led" aria-hidden="true" />
                   {selected.outcome ? OUTCOME_LABEL[selected.outcome] : "Đang diễn ra"} ·{" "}
                   {DIRECTION[selected.direction][1]}
                 </span>
-                <h2>{selected.callerName ?? numberLabel(selected.callerNumber)}</h2>
-                <p>
-                  {[
-                    selected.callerName && numberLabel(selected.callerNumber),
-                    selected.agentName,
-                    selected.departmentName,
-                    new Date(selected.startedAt).toLocaleString("vi-VN"),
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </p>
               </div>
               <button
                 type="button"
-                className="cc-icon-btn"
+                className={ICON_BTN}
                 aria-label="Đóng chi tiết cuộc gọi"
                 onClick={() => setSelectedId(null)}
               >
                 <Icon name="x" size={16} />
               </button>
             </div>
-            <div className="cc-drawer__audio">
-              {playing?.id === selected.id ? (
-                <audio src={playing.url} controls autoPlay />
-              ) : selected.hasRecording ? (
-                <Button size="sm" variant="secondary" icon="play" onClick={() => play(selected)}>
-                  Nghe ghi âm
-                </Button>
-              ) : (
-                <span>Không có ghi âm</span>
+            <dl className="grid grid-cols-[120px_minmax(0,1fr)] gap-x-2.5 gap-y-1.5 text-[13.5px] [&_dd]:font-medium [&_dt]:text-muted-foreground">
+              {selected.callerName && (
+                <>
+                  <dt>Số gọi</dt>
+                  <dd>{numberLabel(selected.callerNumber)}</dd>
+                </>
               )}
-              <strong>
-                {selected.answeredAt ? clock(seconds(selected.answeredAt, selected.endedAt)) : "—"}
-              </strong>
-            </div>
-            <dl className="cc-drawer__facts">
-              <div>
-                <dt>Kết quả ghi nhận</dt>
-                <dd>{labelOf(selected.dispositionId) || "Chưa ghi nhận"}</dd>
-              </div>
-              <div>
-                <dt>Ghi chú</dt>
-                <dd className="cc-drawer__notes">{selected.notes || "Không có ghi chú."}</dd>
-              </div>
+              <dt>Thời gian</dt>
+              <dd>{new Date(selected.startedAt).toLocaleString("vi-VN")}</dd>
+              <dt>Tổng đài viên</dt>
+              <dd>
+                {selected.agentName ?? "—"}
+                {selected.departmentName && ` · ${selected.departmentName}`}
+              </dd>
               {selected.queuedAt && (
-                <div>
+                <>
                   <dt>Chờ trong hàng đợi</dt>
-                  <dd>
+                  <dd className="tabular-nums">
                     {clock(seconds(selected.queuedAt, selected.answeredAt ?? selected.endedAt))}
                   </dd>
-                </div>
+                </>
               )}
+              <dt>Đàm thoại</dt>
+              <dd className="tabular-nums">
+                {selected.answeredAt ? clock(seconds(selected.answeredAt, selected.endedAt)) : "—"}
+              </dd>
+              <dt>Kết quả ghi nhận</dt>
+              <dd>{labelOf(selected.dispositionId) || "Chưa ghi nhận"}</dd>
               {review && (
-                <div>
+                <>
                   <dt>Chất lượng</dt>
                   <dd>
-                    <Badge tone={qaTone(review.percent)}>{review.percent}%</Badge>
+                    <span className={cn(CHIP, TINT[qaTone(review.percent)])}>
+                      {review.percent}%
+                    </span>
                     {review.reviewerName && ` · ${review.reviewerName}`}
                   </dd>
-                </div>
+                </>
               )}
               {selected.transcriptStatus === "processing" && (
-                <div>
+                <>
                   <dt>Lời thoại</dt>
                   <dd>Đang chép lời…</dd>
-                </div>
+                </>
               )}
             </dl>
-            <div className="cc-drawer__actions">
+            <div className="flex items-center gap-2.5 rounded-lg bg-secondary px-3 py-2.5 text-[13px]">
+              {playing?.id === selected.id ? (
+                <audio src={playing.url} controls autoPlay className="h-9 w-full" />
+              ) : selected.hasRecording ? (
+                <button type="button" className={BTN_GHOST} onClick={() => play(selected)}>
+                  <Icon name="play" size={14} />
+                  Nghe ghi âm
+                </button>
+              ) : (
+                <span className="text-muted-foreground">Không có ghi âm</span>
+              )}
+            </div>
+            <div className="grid gap-1">
+              <h3 className={H2}>Ghi chú</h3>
+              <p className={cn(MUTED, "whitespace-pre-wrap")}>
+                {selected.notes || "Không có ghi chú."}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
               {dialable(selected.callerNumber) && (
-                <Button
-                  icon="phone"
+                <button
+                  type="button"
+                  className={BTN_PRIMARY}
                   disabled={!canCall}
                   title={
                     canCall ? `Gọi lại ${selected.callerNumber}` : "Máy lẻ chưa sẵn sàng để gọi"
                   }
                   onClick={() => phone.call(selected.callerNumber)}
                 >
+                  <Icon name="phone" size={14} />
                   Gọi lại
-                </Button>
+                </button>
               )}
               {selected.transcriptStatus === "ready" && (
-                <Button variant="secondary" icon="file" onClick={() => setReading(selected)}>
+                <button type="button" className={BTN_GHOST} onClick={() => setReading(selected)}>
+                  <Icon name="file" size={14} />
                   Lời thoại
-                </Button>
+                </button>
               )}
               {canScore(selected) && (
-                <Button variant="secondary" icon="star" onClick={() => setScoring(selected)}>
+                <button type="button" className={BTN_GHOST} onClick={() => setScoring(selected)}>
+                  <Icon name="star" size={14} />
                   {reviews.has(selected.id) ? "Chấm lại" : "Chấm điểm"}
-                </Button>
+                </button>
               )}
               {selected.hasRecording && selected.endedAt && supervises(selected) && (
-                <Button
-                  variant="secondary"
-                  icon="book"
-                  className="cc-drawer__lesson"
+                <button
+                  type="button"
+                  className={cn(BTN_GHOST, "w-full")}
                   onClick={() => setTeaching(selected)}
                 >
+                  <Icon name="book" size={14} />
                   Làm bài học từ cuộc gọi này
-                </Button>
+                </button>
               )}
             </div>
           </aside>

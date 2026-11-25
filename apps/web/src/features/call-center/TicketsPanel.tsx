@@ -7,8 +7,11 @@ import type {
   TicketStatus,
 } from "@doan/shared";
 import { useSocket } from "../../app/providers/SocketContext";
-import { Badge, Button, Field, FilterPills, Modal } from "../../shared/ui/Primitives";
+import { Modal } from "../../shared/ui/Primitives";
+import { Icon } from "../../shared/ui/Icon";
+import { cn } from "../../shared/lib/utils";
 import { voicemailUrl } from "./api";
+import { BTN_GHOST, BTN_PRIMARY, CHIP, FIELD, MUTED, PANEL, PILL, PILL_ON, TINT } from "./ui";
 
 type Api = <T>(path: string, method?: string, body?: object) => Promise<T>;
 type Detail = { ticket: CcTicket; events: CcTicketEvent[] };
@@ -20,7 +23,7 @@ export const TICKET_STATUS: Record<TicketStatus, string> = {
   resolved: "Đã giải quyết",
   closed: "Đã đóng",
 };
-const STATUS_TONE: Record<TicketStatus, "blue" | "violet" | "amber" | "green" | "neutral"> = {
+const STATUS_TONE: Record<TicketStatus, string> = {
   open: "blue",
   in_progress: "violet",
   waiting: "amber",
@@ -47,6 +50,13 @@ const FILTERS = [
   { key: "resolved", label: "Đã giải quyết" },
   { key: "all", label: "Tất cả" },
 ];
+const stamp = (iso: string) =>
+  new Date(iso).toLocaleString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+  });
 
 /** CC-8: follow-up tickets of the user's departments, with history and call-back from the softphone. */
 export function TicketsPanel({
@@ -64,6 +74,7 @@ export function TicketsPanel({
 }) {
   const { socket } = useSocket();
   const [filter, setFilter] = useState("active");
+  const [query, setQuery] = useState("");
   const [tickets, setTickets] = useState<CcTicket[] | null>(null);
   const [departments, setDepartments] = useState<CcDepartment[]>([]);
   const [selected, setSelected] = useState<Detail | null>(null);
@@ -97,57 +108,99 @@ export function TicketsPanel({
       setSelected(detail);
       load();
     }, fail);
+  const q = query.trim().toLowerCase();
+  const shown = tickets?.filter(
+    (ticket) =>
+      !q ||
+      [ticket.code, ticket.subject, ticket.callerName, ticket.callerNumber].some((value) =>
+        value?.toLowerCase().includes(q),
+      ),
+  );
 
   return (
-    <>
-      <div className="desk-toolbar">
-        <FilterPills options={FILTERS} activeKey={filter} onChange={setFilter} />
-        <Button
-          size="sm"
-          icon="plus"
+    <div className="tw tw-form grid min-w-0 gap-3.5 text-sm text-foreground">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Lọc phiếu">
+          {FILTERS.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              className={cn(PILL, filter === item.key && PILL_ON)}
+              aria-pressed={filter === item.key}
+              onClick={() => setFilter(item.key)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <label className="ml-auto flex h-[34px] w-64 items-center gap-2 rounded-full bg-secondary px-3 text-muted-foreground max-md:ml-0 max-md:w-full">
+          <Icon name="search" size={15} />
+          <input
+            type="search"
+            className="min-w-0 flex-1 bg-transparent text-[13px] text-foreground outline-none"
+            placeholder="Tìm mã, tiêu đề, số gọi…"
+            aria-label="Tìm phiếu"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+        <button
+          type="button"
+          className={BTN_PRIMARY}
           onClick={() => setCreating(true)}
           disabled={!departments.length}
         >
+          <Icon name="plus" size={15} />
           Tạo phiếu
-        </Button>
+        </button>
       </div>
-      <div className="callcenter-main-grid desk-ticket-grid">
-        <div className="callcenter-panel">
-          {tickets && !tickets.length && <p className="desk-muted">Không có phiếu nào.</p>}
-          {tickets?.map((ticket) => (
-            <button
-              key={ticket.id}
-              type="button"
-              className={`call-item-card desk-ticket ${selected?.ticket.id === ticket.id ? "is-active" : ""}`}
-              onClick={() => open(ticket)}
-            >
-              <div className="call-item-info">
-                <div className="call-item-caller">
-                  <span className="desk-muted">{ticket.code}</span>
-                  <span>{ticket.subject}</span>
-                </div>
-                <div className="call-item-meta">
-                  <span>{SOURCE[ticket.source]}</span>
-                  <span>·</span>
-                  <span>{ticket.departmentName}</span>
-                  {ticket.assigneeName && (
-                    <>
-                      <span>·</span>
-                      <span>{ticket.assigneeName}</span>
-                    </>
-                  )}
-                  <span>·</span>
-                  <span>{new Date(ticket.updatedAt).toLocaleString("vi-VN")}</span>
-                </div>
-              </div>
-              <div className="desk-agent-state">
-                <Badge tone={STATUS_TONE[ticket.status]}>{TICKET_STATUS[ticket.status]}</Badge>
-                {(ticket.priority === "high" || ticket.priority === "urgent") && (
-                  <Badge tone="red">{PRIORITY[ticket.priority]}</Badge>
+
+      <div className="grid min-w-0 items-start gap-4 min-[1100px]:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+        <div className={PANEL} role="list" aria-label="Phiếu yêu cầu">
+          {shown && !shown.length && (
+            <p className={cn(MUTED, "px-4 py-8 text-center")}>Không có phiếu nào.</p>
+          )}
+          {shown?.map((ticket) => {
+            const active = selected?.ticket.id === ticket.id;
+            return (
+              <button
+                key={ticket.id}
+                type="button"
+                role="listitem"
+                aria-current={active || undefined}
+                className={cn(
+                  "flex w-full cursor-pointer items-start gap-3 border-b px-4 py-3 text-left last:border-b-0 hover:bg-secondary",
+                  active && "bg-[var(--tint-blue-bg)] hover:bg-[var(--tint-blue-bg)]",
                 )}
-              </div>
-            </button>
-          ))}
+                onClick={() => open(ticket)}
+              >
+                <span className="pt-px font-mono text-xs text-muted-foreground">{ticket.code}</span>
+                <span className="min-w-0 flex-1">
+                  <b className="block truncate font-semibold">{ticket.subject}</b>
+                  <small className="block truncate text-xs text-muted-foreground">
+                    {[
+                      SOURCE[ticket.source],
+                      ticket.departmentName,
+                      ticket.assigneeName,
+                      stamp(ticket.updatedAt),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </small>
+                </span>
+                <span className="flex shrink-0 flex-wrap justify-end gap-1">
+                  <span className={cn(CHIP, "px-2 py-0.5", TINT[STATUS_TONE[ticket.status]])}>
+                    {TICKET_STATUS[ticket.status]}
+                  </span>
+                  {(ticket.priority === "high" || ticket.priority === "urgent") && (
+                    <span className={cn(CHIP, "px-2 py-0.5", TINT.red)}>
+                      {PRIORITY[ticket.priority]}
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
         </div>
         {selected ? (
           <TicketDetail
@@ -174,13 +227,13 @@ export function TicketsPanel({
             }}
           />
         ) : (
-          <div className="callcenter-panel desk-muted">Chọn một phiếu để xem chi tiết.</div>
+          <p className={cn(PANEL, MUTED, "p-8 text-center")}>Chọn một phiếu để xem chi tiết.</p>
         )}
       </div>
       {creating && (
         <Modal title="Tạo phiếu yêu cầu" eyebrow="Tổng đài" onClose={() => setCreating(false)}>
           <form
-            className="desk-form"
+            className="tw tw-form grid gap-3 text-sm"
             onSubmit={(event: FormEvent<HTMLFormElement>) => {
               event.preventDefault();
               const values = Object.fromEntries(new FormData(event.currentTarget)) as Record<
@@ -197,50 +250,53 @@ export function TicketsPanel({
               }, fail);
             }}
           >
-            <Field label="Phòng ban">
-              <select name="departmentId" aria-label="Phòng ban">
-                {departments.map((department) => (
-                  <option key={department.id} value={department.id}>
-                    {department.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Tiêu đề">
-              <input name="subject" aria-label="Tiêu đề" required maxLength={200} />
-            </Field>
-            <Field label="Số điện thoại liên hệ">
-              <input
-                name="callerNumber"
-                aria-label="Số điện thoại liên hệ"
-                inputMode="tel"
-                pattern="\+?[0-9]{3,15}"
-              />
-            </Field>
-            <Field label="Mức ưu tiên">
-              <select name="priority" aria-label="Mức ưu tiên" defaultValue="normal">
-                {Object.entries(PRIORITY).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Nội dung">
-              <textarea name="description" aria-label="Nội dung" rows={4} maxLength={8000} />
-            </Field>
-            <div className="desk-actions">
-              <Button variant="ghost" type="button" onClick={() => setCreating(false)}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label>
+                Phòng ban
+                <select name="departmentId">
+                  {departments.map((department) => (
+                    <option key={department.id} value={department.id}>
+                      {department.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Mức ưu tiên
+                <select name="priority" defaultValue="normal">
+                  {Object.entries(PRIORITY).map(([key, label]) => (
+                    <option key={key} value={key}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <label>
+              Tiêu đề
+              <input name="subject" required maxLength={200} />
+            </label>
+            <label>
+              Số điện thoại liên hệ
+              <input name="callerNumber" inputMode="tel" pattern="\+?[0-9]{3,15}" />
+            </label>
+            <label>
+              Nội dung
+              <textarea name="description" rows={4} maxLength={8000} />
+            </label>
+            <div className="flex justify-end gap-2 pt-1">
+              <button type="button" className={BTN_GHOST} onClick={() => setCreating(false)}>
                 Hủy
-              </Button>
-              <Button type="submit" icon="check">
+              </button>
+              <button type="submit" className={BTN_PRIMARY}>
+                <Icon name="check" size={15} />
                 Tạo phiếu
-              </Button>
+              </button>
             </div>
           </form>
         </Modal>
       )}
-    </>
+    </div>
   );
 }
 
@@ -276,30 +332,28 @@ function TicketDetail({
       : event.kind === "assign"
         ? `Phân công: ${event.body}`
         : event.kind === "callback"
-          ? `📞 ${event.body || "Gọi lại"}`
+          ? event.body || "Gọi lại"
           : event.body;
+  // An extension, or an outside number through the SIP trunk (needs the call-out permission, BR-20); web callers are answered in the ticket.
+  const callable = ticket.callerNumber && /^(1\d{3,4}|0[1-9]\d{8,9})$/.test(ticket.callerNumber);
 
   return (
-    <div className="callcenter-panel desk-form">
-      <div>
-        <div className="desk-muted">
-          {ticket.code} · {SOURCE[ticket.source]} · {ticket.departmentName}
-        </div>
-        <h2 className="desk-caller__name">{ticket.subject}</h2>
-        {ticket.callerNumber && (
-          <div className="desk-caller__meta">
-            <span>{ticket.callerName ?? "Người gọi"}</span>
-            <span>{ticket.callerNumber}</span>
-          </div>
-        )}
+    <section
+      className={cn(PANEL, "min-[1100px]:sticky min-[1100px]:top-2")}
+      aria-label={`Phiếu ${ticket.code}`}
+    >
+      <div className="grid gap-1 border-b px-4 py-3.5">
+        <small className="text-xs text-muted-foreground">
+          <span className="font-mono">{ticket.code}</span> · {SOURCE[ticket.source]} ·{" "}
+          {ticket.departmentName}
+        </small>
+        <h2 className="text-[17px] font-bold">{ticket.subject}</h2>
       </div>
-      {ticket.description && (
-        <p className="desk-notes desk-ticket__description">{ticket.description}</p>
-      )}
-      <div className="desk-admin__inline">
-        <Field label="Trạng thái">
+      <div className="grid gap-3 border-b px-4 py-3.5 sm:grid-cols-3">
+        <label>
+          Trạng thái
           <select
-            aria-label="Trạng thái"
+            className={FIELD}
             value={ticket.status}
             onChange={(event) => onChange({ status: event.target.value })}
           >
@@ -309,10 +363,11 @@ function TicketDetail({
               </option>
             ))}
           </select>
-        </Field>
-        <Field label="Ưu tiên">
+        </label>
+        <label>
+          Ưu tiên
           <select
-            aria-label="Ưu tiên"
+            className={FIELD}
             value={ticket.priority}
             onChange={(event) => onChange({ priority: event.target.value })}
           >
@@ -322,10 +377,11 @@ function TicketDetail({
               </option>
             ))}
           </select>
-        </Field>
-        <Field label="Người xử lý">
+        </label>
+        <label>
+          Người xử lý
           <select
-            aria-label="Người xử lý"
+            className={FIELD}
             value={ticket.assigneeId ?? ""}
             onChange={(event) => onChange({ assigneeId: event.target.value || null })}
           >
@@ -336,73 +392,104 @@ function TicketDetail({
               </option>
             ))}
           </select>
-        </Field>
+        </label>
       </div>
-      <div className="desk-actions desk-actions--start">
-        {/* An extension, or an outside number through the SIP trunk (needs the call-out permission, BR-20); web callers are answered in the ticket. */}
-        {ticket.callerNumber && /^(1\d{3,4}|0[1-9]\d{8,9})$/.test(ticket.callerNumber) && (
-          <Button
-            size="sm"
-            icon="phone"
-            onClick={onCallBack}
-            disabled={!canCall}
-            title={canCall ? undefined : "Cần đăng ký softphone trước"}
-          >
-            Gọi lại {ticket.callerNumber}
-          </Button>
-        )}
-        {ticket.voicemailId &&
-          (audio ? (
-            <audio src={audio} controls autoPlay />
-          ) : (
-            <Button
-              size="sm"
-              variant="ghost"
-              icon="play"
-              onClick={() => voicemailUrl(token, ticket.voicemailId!).then(setAudio, fail)}
-            >
-              Nghe thư thoại
-            </Button>
-          ))}
-      </div>
-      <ol className="desk-timeline">
-        <li>
-          <span className="desk-muted">{new Date(ticket.createdAt).toLocaleString("vi-VN")}</span>
-          <span>Tạo phiếu</span>
-        </li>
-        {events.map((event) => (
-          <li key={event.id}>
-            <span className="desk-muted">
-              {new Date(event.createdAt).toLocaleString("vi-VN")}
-              {event.actorName ? ` · ${event.actorName}` : " · Hệ thống"}
-            </span>
-            <span>{describe(event)}</span>
-          </li>
-        ))}
-      </ol>
-      <form
-        className="desk-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (!comment.trim()) return;
-          onEvent({ kind: "comment", body: comment.trim() });
-          setComment("");
-        }}
-      >
-        <textarea
-          rows={2}
-          maxLength={4000}
-          value={comment}
-          onChange={(event) => setComment(event.target.value)}
-          placeholder="Ghi chú xử lý…"
-          aria-label="Ghi chú xử lý"
-        />
-        <div className="desk-actions">
-          <Button size="sm" type="submit" icon="send" disabled={!comment.trim()}>
-            Thêm ghi chú
-          </Button>
+      {(ticket.callerNumber || ticket.description || ticket.voicemailId) && (
+        <div className="grid gap-2.5 border-b px-4 py-3.5">
+          {ticket.callerNumber && (
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="grid size-8 place-items-center rounded-lg bg-secondary text-muted-foreground">
+                <Icon name="phone" size={15} />
+              </span>
+              <span className="min-w-0">
+                <small className="block text-xs text-muted-foreground">Liên hệ</small>
+                <b className="font-semibold">
+                  {ticket.callerName ?? "Người gọi"} · {ticket.callerNumber}
+                </b>
+              </span>
+              {callable && (
+                <button
+                  type="button"
+                  className={cn(BTN_PRIMARY, "ml-auto")}
+                  onClick={onCallBack}
+                  disabled={!canCall}
+                  title={canCall ? undefined : "Cần đăng ký softphone trước"}
+                >
+                  <Icon name="phone" size={15} />
+                  Gọi lại {ticket.callerNumber}
+                </button>
+              )}
+            </div>
+          )}
+          {ticket.description && (
+            <p className="rounded-lg bg-secondary px-3 py-2.5 text-[13.5px] whitespace-pre-wrap">
+              {ticket.description}
+            </p>
+          )}
+          {ticket.voicemailId &&
+            (audio ? (
+              <audio src={audio} controls autoPlay className="w-full" />
+            ) : (
+              <button
+                type="button"
+                className={cn(BTN_GHOST, "w-max")}
+                onClick={() => voicemailUrl(token, ticket.voicemailId!).then(setAudio, fail)}
+              >
+                <Icon name="play" size={15} />
+                Nghe thư thoại
+              </button>
+            ))}
         </div>
-      </form>
-    </div>
+      )}
+      <div className="grid gap-3 px-4 py-3.5">
+        <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+          Diễn biến
+        </h3>
+        <ol className="grid list-none gap-3 border-l pl-4">
+          {[
+            { id: "created", at: ticket.createdAt, who: null, text: "Tạo phiếu" },
+            ...events.map((event) => ({
+              id: event.id,
+              at: event.createdAt,
+              who: event.actorName ?? "Hệ thống",
+              text: describe(event),
+            })),
+          ].map((item) => (
+            <li
+              key={item.id}
+              className="relative grid gap-0.5 before:absolute before:top-1.5 before:-left-[21px] before:size-2 before:rounded-full before:bg-border"
+            >
+              <small className="text-xs text-muted-foreground">
+                {stamp(item.at)}
+                {item.who && ` · ${item.who}`}
+              </small>
+              <span className="text-[13.5px]">{item.text}</span>
+            </li>
+          ))}
+        </ol>
+        <form
+          className="flex gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!comment.trim()) return;
+            onEvent({ kind: "comment", body: comment.trim() });
+            setComment("");
+          }}
+        >
+          <input
+            className="min-w-0 flex-1"
+            maxLength={4000}
+            value={comment}
+            onChange={(event) => setComment(event.target.value)}
+            placeholder="Ghi chú xử lý…"
+            aria-label="Ghi chú xử lý"
+          />
+          <button type="submit" className={BTN_PRIMARY} disabled={!comment.trim()}>
+            <Icon name="send" size={15} />
+            Gửi
+          </button>
+        </form>
+      </div>
+    </section>
   );
 }

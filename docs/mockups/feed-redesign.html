@@ -1,0 +1,1251 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bảng tin: bản A chi tiết</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap&subset=vietnamese"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --navy: #16357f; /* xanh logo TDTU */
+        --navy-deep: #0f2558;
+        --navy-soft: #e8edf9;
+        /* màu nhấn của giao diện: mặc định xanh lá của app, đổi được sang xanh logo */
+        --brand: #0b8f63;
+        --brand-soft: #e3f5ee;
+        --red: #c8102e; /* đỏ logo TDTU: chỉ dùng cho tin khẩn */
+        --green: #0b8f63; /* màu chính của app */
+        --amber: #b45309;
+        --ink: #1b2130;
+        --ink-2: #4a5468;
+        --ink-3: #6f7a90;
+        --line: #e1e6ee;
+        --canvas: #eef1f6;
+        --paper: #fff;
+        --lift: 0 1px 2px #1b213012, 0 10px 26px -20px #1b213050;
+      }
+      body.navy {
+        --brand: #16357f;
+        --brand-soft: #e8edf9;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--canvas);
+        color: var(--ink);
+        font: 15px/1.6 "Be Vietnam Pro", "Segoe UI", sans-serif;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+        cursor: pointer;
+      }
+      button:focus-visible {
+        outline: 2px solid var(--brand);
+        outline-offset: 2px;
+      }
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+      svg {
+        width: 15px;
+        height: 15px;
+        flex: none;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      /* ---------- thanh điều hướng của app ---------- */
+      .nav {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        height: 56px;
+        padding: 0 24px;
+        border-bottom: 1px solid var(--line);
+        background: var(--paper);
+        font-size: 14.5px;
+        font-weight: 500;
+      }
+      .nav strong {
+        margin-right: 22px;
+        font-size: 17px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      .nav strong em {
+        color: var(--red);
+        font-style: normal;
+      }
+      .nav a {
+        padding: 17px 10px;
+        color: var(--ink-2);
+        text-decoration: none;
+        white-space: nowrap;
+      }
+      .nav a.on {
+        color: var(--brand);
+        font-weight: 700;
+        box-shadow: inset 0 -3px var(--brand);
+      }
+      .nav .me {
+        margin-left: auto;
+      }
+      @media (max-width: 720px) {
+        .nav a:not(.on) {
+          display: none;
+        }
+      }
+
+      /* ---------- khung 3 cột ---------- */
+      .page {
+        display: grid;
+        grid-template-columns: 248px minmax(0, 640px) 304px;
+        justify-content: center;
+        gap: 28px;
+        padding: 24px 16px 96px;
+      }
+      .side {
+        position: sticky;
+        top: 80px;
+        align-self: start;
+        display: grid;
+        gap: 14px;
+      }
+      .panel {
+        padding: 16px;
+        border-radius: 16px;
+        background: var(--paper);
+      }
+      .panel h3 {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 10px;
+        font-size: 15px;
+      }
+      .pills {
+        display: none;
+      }
+      @media (max-width: 1260px) {
+        .page {
+          grid-template-columns: minmax(0, 640px) 304px;
+        }
+        .left {
+          display: none;
+        }
+        .pills {
+          display: flex;
+        }
+      }
+      @media (max-width: 1000px) {
+        .page {
+          grid-template-columns: minmax(0, 640px);
+        }
+        .right {
+          display: none;
+        }
+      }
+
+      /* màu theo danh mục */
+      .general {
+        --c: var(--green);
+        --c-soft: #e3f5ee;
+      }
+      .training {
+        --c: var(--navy);
+        --c-soft: var(--navy-soft);
+      }
+      .event {
+        --c: var(--amber);
+        --c-soft: #fdf1dc;
+      }
+      .urgent {
+        --c: var(--red);
+        --c-soft: #fbe7ea;
+      }
+      .all {
+        --c: var(--ink-3);
+      }
+      .mark {
+        display: grid;
+        place-items: center;
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
+        background: var(--c-soft, var(--brand-soft));
+        color: var(--c, var(--brand));
+        font-size: 14px;
+        font-weight: 800;
+        flex: none;
+      }
+      .mark.sm {
+        width: 30px;
+        height: 30px;
+        border-radius: 9px;
+        font-size: 11px;
+      }
+      .link {
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--brand);
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .link:hover {
+        text-decoration: underline;
+      }
+
+      /* ---------- cột trái ---------- */
+      .profile {
+        display: grid;
+        gap: 12px;
+        padding: 0;
+        overflow: hidden;
+      }
+      .profile-top {
+        height: 54px;
+        background:
+          radial-gradient(circle at 100% 0, #ffffff26 0 60px, transparent 61px),
+          radial-gradient(circle at 100% 0, #ffffff14 0 110px, transparent 111px), var(--brand);
+      }
+      .profile-body {
+        display: grid;
+        gap: 4px;
+        padding: 0 16px 16px;
+        line-height: 1.4;
+      }
+      .profile-body .mark {
+        margin-top: -34px;
+        border: 3px solid var(--paper);
+        width: 56px;
+        height: 56px;
+        font-size: 17px;
+      }
+      .profile-body b {
+        margin-top: 4px;
+        font-size: 16px;
+      }
+      .profile-body small {
+        color: var(--ink-3);
+        font-size: 13.5px;
+      }
+      .right-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        justify-self: start;
+        margin-top: 8px;
+        padding: 3px 10px;
+        border-radius: 99px;
+        background: var(--brand-soft);
+        color: var(--brand);
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .cats {
+        display: grid;
+        gap: 2px;
+      }
+      .cats button {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border: 0;
+        border-radius: 10px;
+        background: none;
+        text-align: left;
+        color: var(--ink-2);
+      }
+      .cats button:hover {
+        background: var(--canvas);
+      }
+      .cats button[aria-pressed="true"] {
+        background: var(--brand-soft);
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .cats i,
+      .pills i {
+        width: 9px;
+        height: 9px;
+        border-radius: 3px;
+        background: var(--c);
+      }
+      .cats small {
+        margin-left: auto;
+        color: var(--ink-3);
+        font-size: 13px;
+        font-weight: 400;
+      }
+      .cats u {
+        min-width: 20px;
+        padding: 0 6px;
+        border-radius: 99px;
+        background: var(--brand);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+      }
+      .pinned-item {
+        display: flex;
+        gap: 10px;
+        padding: 0;
+        border: 0;
+        background: none;
+        text-align: left;
+        font-size: 14px;
+        line-height: 1.4;
+      }
+      .pinned-item svg {
+        margin-top: 3px;
+        color: var(--green);
+      }
+      .pinned-item:hover {
+        color: var(--brand);
+      }
+
+      /* ---------- đầu feed ---------- */
+      .feed-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 4px 14px;
+        margin-bottom: 14px;
+      }
+      .feed-head h1 {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.035em;
+      }
+      .feed-head span {
+        color: var(--ink-3);
+        font-size: 14px;
+      }
+      .feed-head .link {
+        margin-left: auto;
+      }
+      .pills {
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 14px;
+      }
+      .pills button {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 6px 13px;
+        border: 1px solid var(--line);
+        border-radius: 99px;
+        background: var(--paper);
+        color: var(--ink-2);
+        font-size: 14px;
+      }
+      .pills button[aria-pressed="true"] {
+        border-color: var(--brand);
+        background: var(--brand);
+        color: #fff;
+      }
+      .pills small {
+        display: none;
+      }
+      .compose {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 8px;
+        padding: 14px 16px 12px;
+        border-radius: 18px;
+        background: var(--paper);
+        box-shadow: var(--lift);
+      }
+      .compose-top {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0;
+        border: 0;
+        background: none;
+        text-align: left;
+      }
+      .compose-top span:last-child {
+        flex: 1;
+        padding: 11px 18px;
+        border-radius: 99px;
+        background: var(--canvas);
+        color: var(--ink-3);
+      }
+      .compose-top:hover span:last-child {
+        background: #e3e8f0;
+      }
+      .compose-kinds {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding-top: 10px;
+        border-top: 1px solid var(--line);
+      }
+      .compose-kinds button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border: 0;
+        border-radius: 9px;
+        background: none;
+        color: var(--ink-2);
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .compose-kinds button:hover {
+        background: var(--canvas);
+      }
+      .compose-kinds svg {
+        color: var(--c);
+      }
+      .fresh {
+        position: sticky;
+        top: 68px;
+        z-index: 2;
+        display: flex;
+        justify-content: center;
+        height: 0;
+      }
+      .fresh button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 36px;
+        margin-top: 6px;
+        padding: 0 16px;
+        border: 0;
+        border-radius: 99px;
+        background: var(--brand);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+        box-shadow: 0 10px 24px -10px #1b213066;
+        animation: drop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+      }
+      @keyframes drop {
+        from {
+          transform: translateY(-14px);
+          opacity: 0;
+        }
+      }
+      .day {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 22px 0 12px;
+        color: var(--ink-3);
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .day::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--line);
+      }
+
+      /* ---------- thẻ bài đăng ---------- */
+      .post {
+        margin-bottom: 14px;
+        border-radius: 18px;
+        background: var(--paper);
+        box-shadow: var(--lift);
+        overflow: hidden;
+      }
+      .post.is-fresh {
+        animation: drop 0.4s ease-out;
+      }
+      .strip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 20px;
+        font-size: 13.5px;
+        font-weight: 500;
+      }
+      .strip.staff {
+        background: var(--navy-deep);
+        color: #fff;
+      }
+      .strip.pin {
+        background: var(--c-soft);
+        color: var(--c);
+      }
+      .strip.pin span {
+        margin-left: auto;
+        font-weight: 400;
+        opacity: 0.85;
+      }
+      .post-in {
+        display: grid;
+        gap: 12px;
+        padding: 18px 20px 6px;
+      }
+      .post.urgent .post-in {
+        box-shadow: inset 4px 0 var(--red);
+      }
+      .post-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .who {
+        flex: 1;
+        min-width: 0;
+        line-height: 1.35;
+      }
+      .who b {
+        display: block;
+        font-size: 15.5px;
+      }
+      .who small {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 3px 8px;
+        color: var(--ink-3);
+        font-size: 13.5px;
+      }
+      .who small span {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .who svg {
+        width: 12px;
+        height: 12px;
+      }
+      .cat {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 4px 12px;
+        border-radius: 99px;
+        background: var(--c-soft);
+        color: var(--c);
+        font-size: 13.5px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .cat i {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--c);
+      }
+      .urgent .cat i {
+        animation: pulse 1.6s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        50% {
+          box-shadow: 0 0 0 5px #c8102e30;
+        }
+      }
+      .post h2 {
+        font-size: 20px;
+        line-height: 1.35;
+        letter-spacing: -0.015em;
+      }
+      .post.unread h2::before {
+        content: "";
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        margin-right: 9px;
+        border-radius: 50%;
+        background: var(--brand);
+        vertical-align: 2px;
+      }
+      .due {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        border-radius: 12px;
+        background: var(--c-soft);
+        color: var(--c);
+        line-height: 1.35;
+      }
+      .due svg {
+        width: 20px;
+        height: 20px;
+      }
+      .due b {
+        display: block;
+        font-size: 15px;
+      }
+      .due small {
+        font-size: 13px;
+        opacity: 0.85;
+      }
+      .body {
+        color: var(--ink-2);
+        white-space: pre-line;
+        max-width: 66ch;
+      }
+      .full {
+        padding: 14px 16px;
+        border-radius: 12px;
+        background: #f6f8fb;
+        color: var(--ink);
+        white-space: pre-line;
+        animation: open 0.2s ease-out;
+      }
+      @keyframes open {
+        from {
+          opacity: 0;
+          transform: translateY(-4px);
+        }
+      }
+      .post-foot {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin: 0 -8px;
+        padding: 6px 0;
+        border-top: 1px solid var(--line);
+      }
+      .act {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 7px 10px;
+        border: 0;
+        border-radius: 9px;
+        background: none;
+        color: var(--ink-2);
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .act:hover {
+        background: var(--canvas);
+      }
+      .act.primary {
+        color: var(--c);
+      }
+      .act.done {
+        color: var(--ink-3);
+        font-weight: 500;
+        cursor: default;
+      }
+      .act.done:hover {
+        background: none;
+      }
+      .act.icon {
+        padding: 7px;
+      }
+      .act svg.turn {
+        transition: transform 0.18s;
+      }
+      .act[aria-expanded="true"] svg.turn {
+        transform: rotate(180deg);
+      }
+      .grow {
+        flex: 1;
+      }
+      .end {
+        padding: 28px 0 0;
+        color: var(--ink-3);
+        font-size: 14px;
+        text-align: center;
+      }
+
+      /* ---------- cột phải ---------- */
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 9px 0;
+        font-size: 14px;
+        line-height: 1.35;
+      }
+      .row + .row {
+        border-top: 1px solid var(--line);
+      }
+      .row small {
+        display: block;
+        color: var(--ink-3);
+        font-size: 13px;
+      }
+      .tile {
+        display: grid;
+        place-items: center;
+        width: 42px;
+        height: 46px;
+        border-radius: 10px;
+        background: var(--brand-soft);
+        color: var(--brand);
+        font-size: 11.5px;
+        line-height: 1;
+        flex: none;
+      }
+      .tile b {
+        font-size: 18px;
+        font-weight: 800;
+      }
+      .row.next .tile {
+        background: var(--brand);
+        color: #fff;
+      }
+      .join {
+        margin-left: auto;
+        padding: 6px 12px;
+        border: 0;
+        border-radius: 9px;
+        background: var(--brand);
+        color: #fff;
+        font-size: 13.5px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .quick {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .quick button {
+        padding: 10px 12px;
+        border: 0;
+        border-radius: 11px;
+        background: var(--canvas);
+        text-align: left;
+        font-size: 13.5px;
+        font-weight: 600;
+        line-height: 1.3;
+      }
+      .quick button:hover {
+        background: var(--brand-soft);
+      }
+      .quick small {
+        display: block;
+        color: var(--ink-3);
+        font-size: 12.5px;
+        font-weight: 400;
+      }
+      /* ---------- chi tiết thêm trong thẻ ---------- */
+      .cover {
+        display: grid;
+        place-items: end start;
+        height: 190px;
+        margin: 0 -20px;
+        padding: 14px 20px;
+        color: #fff;
+        font-size: 13.5px;
+        background:
+          radial-gradient(circle at 82% 30%, #ffffff30 0 70px, transparent 71px),
+          radial-gradient(circle at 82% 30%, #ffffff18 0 130px, transparent 131px),
+          linear-gradient(0deg, #00000059, transparent 55%), var(--c);
+      }
+      .files {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .file {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: var(--paper);
+        font-size: 14px;
+        line-height: 1.3;
+        text-align: left;
+      }
+      .file:hover {
+        border-color: var(--brand);
+      }
+      .file i {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: #fbe7ea;
+        color: var(--red);
+        font-size: 10.5px;
+        font-style: normal;
+        font-weight: 800;
+      }
+      .file small {
+        display: block;
+        color: var(--ink-3);
+        font-size: 12.5px;
+      }
+      .inline-more {
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--brand);
+        font-weight: 600;
+      }
+      .inline-more:hover {
+        text-decoration: underline;
+      }
+      .stats {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        color: var(--ink-3);
+        font-size: 13.5px;
+      }
+      .stats span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .post-foot .act {
+        flex: 1;
+        justify-content: center;
+      }
+      .act.on {
+        color: var(--brand);
+      }
+      .cmts {
+        display: grid;
+        gap: 12px;
+        padding: 12px 0 14px;
+        border-top: 1px solid var(--line);
+        animation: open 0.2s ease-out;
+      }
+      .cmt {
+        display: flex;
+        gap: 10px;
+      }
+      .cmt div {
+        padding: 8px 14px;
+        border-radius: 4px 16px 16px 16px;
+        background: var(--canvas);
+        font-size: 14.5px;
+        line-height: 1.45;
+      }
+      .cmt b {
+        display: block;
+        font-size: 13.5px;
+      }
+      .cmt b small {
+        margin-left: 6px;
+        color: var(--ink-3);
+        font-weight: 400;
+      }
+      .cmt-box {
+        flex: 1;
+        padding: 9px 16px;
+        border-radius: 99px;
+        background: var(--canvas);
+        color: var(--ink-3);
+        font-size: 14.5px;
+      }
+      /* ---------- cột bên ---------- */
+      .shortcuts {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        padding: 0 12px 14px;
+      }
+      .shortcuts button {
+        display: grid;
+        justify-items: center;
+        gap: 4px;
+        padding: 8px 0;
+        border: 0;
+        border-radius: 10px;
+        background: none;
+        color: var(--ink-2);
+        font-size: 12px;
+      }
+      .shortcuts button:hover {
+        background: var(--brand-soft);
+        color: var(--brand);
+      }
+      .shortcuts svg {
+        width: 19px;
+        height: 19px;
+      }
+      .cats hr {
+        width: 100%;
+        margin: 6px 0;
+        border: 0;
+        border-top: 1px solid var(--line);
+      }
+      .cats svg {
+        width: 13px;
+        height: 13px;
+        margin: 0 -2px;
+        color: var(--ink-3);
+      }
+      .dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 2px 12px;
+        align-items: center;
+        width: 100%;
+        padding: 9px 0;
+        border: 0;
+        background: none;
+        text-align: left;
+        font-size: 14px;
+        line-height: 1.35;
+      }
+      .dl + .dl {
+        border-top: 1px solid var(--line);
+      }
+      .dl b {
+        grid-row: span 2;
+        min-width: 58px;
+        padding: 6px 8px;
+        border-radius: 9px;
+        background: var(--c-soft);
+        color: var(--c);
+        font-size: 13px;
+        text-align: center;
+      }
+      .dl small {
+        color: var(--ink-3);
+        font-size: 13px;
+      }
+      .dl:hover span {
+        color: var(--brand);
+      }
+      .theme {
+        position: fixed;
+        left: 16px;
+        bottom: 16px;
+        z-index: 6;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 8px 6px 14px;
+        border-radius: 99px;
+        background: var(--ink);
+        color: #fff;
+        font-size: 13.5px;
+      }
+      .theme button {
+        padding: 4px 12px;
+        border: 0;
+        border-radius: 99px;
+        background: none;
+        color: #c5cbd8;
+      }
+      .theme button[aria-pressed="true"] {
+        background: #fff;
+        color: var(--ink);
+        font-weight: 600;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="nav">
+      <strong><em>TDT</em> T-WorkSpace</strong>
+      <a class="on" href="#">Trang chủ</a><a href="#">Tổng đài</a><a href="#">Tin nhắn</a>
+      <a href="#">Họp</a><a href="#">Khóa học</a><a href="#">Nhân sự</a>
+      <span class="mark sm me">NH</span>
+    </header>
+
+    <div class="page">
+      <aside class="side left">
+        <section class="panel profile">
+          <div class="profile-top"></div>
+          <div class="profile-body">
+            <span class="mark">NH</span>
+            <b>Nguyễn Thị Hà</b>
+            <small>Giáo vụ khoa, Khoa Công nghệ thông tin</small>
+            <span class="right-chip" id="horn"></span>
+          </div>
+          <div class="shortcuts" id="shortcuts"></div>
+        </section>
+        <section class="panel">
+          <h3>Danh mục</h3>
+          <div class="cats" id="cats"></div>
+        </section>
+        <section class="panel">
+          <h3>Đang ghim</h3>
+          <button class="pinned-item" data-jump="1" id="pinned"></button>
+        </section>
+      </aside>
+
+      <main>
+        <div class="feed-head">
+          <h1>Bảng tin nội bộ</h1>
+          <span id="count"></span>
+          <button class="link" id="readAll">Đánh dấu đã đọc hết</button>
+        </div>
+        <div class="pills" id="pills"></div>
+        <div id="feed"></div>
+      </main>
+
+      <aside class="side right">
+        <section class="panel">
+          <h3>Sắp đến hạn</h3>
+          <button class="dl urgent" data-jump="2">
+            <b>30/10</b><span>Cập nhật thông tin BHYT</span><small>Trạm Y tế, 17:00</small>
+          </button>
+          <button class="dl training" data-jump="4">
+            <b>31/10</b><span>Đăng ký môn học đợt bổ sung</span><small>Phòng Đại học</small>
+          </button>
+        </section>
+        <section class="panel">
+          <h3>Việc của bạn hôm nay</h3>
+          <div class="row">
+            <span class="mark sm training">KH</span>
+            <div>Chấm bài kiểm tra chương 3<small>Khóa Lập trình Web, 12 bài chờ chấm</small></div>
+          </div>
+          <div class="row">
+            <span class="mark sm general">TĐ</span>
+            <div>2 cuộc gọi nhỡ cần gọi lại<small>Tổng đài Khoa CNTT</small></div>
+          </div>
+        </section>
+        <section class="panel">
+          <h3>Lịch họp sắp tới <button class="link">Xem lịch</button></h3>
+          <div class="row next">
+            <span class="tile">T2<b>16</b></span>
+            <div>Họp giao ban khoa<small>08:00, 45 phút</small></div>
+            <button class="join">Tham gia</button>
+          </div>
+          <div class="row">
+            <span class="tile">T4<b>18</b></span>
+            <div>Hội đồng duyệt đề cương<small>14:00, 90 phút</small></div>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <div class="theme" role="group" aria-label="Tông màu">
+      Tông màu
+      <button data-theme="" aria-pressed="true">Xanh lá của app</button>
+      <button data-theme="navy" aria-pressed="false">Xanh logo TDTU</button>
+    </div>
+
+    <script>
+      const I = {
+        lock: '<svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+        globe: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
+        pin: '<svg viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3z"/></svg>',
+        down: '<svg class="turn" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>',
+        up: '<svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
+        edit: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
+        check: '<svg viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg>',
+        clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+        horn: '<svg viewBox="0 0 24 24"><path d="M3 10v4l11 5V5zM14 9a4 4 0 0 1 0 6M7 16v3a2 2 0 0 0 4 0"/></svg>',
+        eye: '<svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+        chat: '<svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>',
+        mark: '<svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>',
+        phone: '<svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>',
+        video: '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/></svg>',
+        book: '<svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h14v16H6a2 2 0 0 0-2 2zM4 21V5"/></svg>',
+        people: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></svg>',
+        dot: '<svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="4" fill="currentColor" stroke="none"/></svg>',
+      };
+      const CAT = { general: "Thông báo chung", training: "Đào tạo", event: "Sự kiện", urgent: "Khẩn" };
+      const POSTS = [
+        {
+          id: 1, cat: "general", pinned: true, by: "Phòng Công tác Sinh viên", role: "Tổ trưởng Quản lý Đào tạo",
+          ago: "2 giờ trước", day: "Hôm nay", unread: true, views: 1284, acks: 962,
+          files: [["Ke-hoach-SHCD-2026.pdf", "320 KB"], ["Lich-theo-khoa.pdf", "118 KB"]],
+          cmts: [
+            ["Trần Minh Khoa", "Sinh viên K24", "Buổi trực tuyến có điểm danh không ạ?"],
+            ["Phòng Công tác Sinh viên", "Người đăng", "Có em nhé, hệ thống ghi nhận khi em vào phòng họp trên cổng."],
+          ],
+          title: "Tuần lễ Sinh hoạt Công dân - Sinh viên đầu năm học 2026 - 2027",
+          sum: "Kế hoạch tổ chức Tuần lễ Sinh hoạt Công dân - Sinh viên dành cho toàn thể sinh viên các khóa, trực tiếp kết hợp trực tuyến qua Cổng nội bộ.",
+          full: "Căn cứ kế hoạch đào tạo và công tác sinh viên năm học 2026 - 2027, Trường thông báo kế hoạch như sau:\n\n1. Thời gian: từ ngày 15/10/2026 đến hết ngày 30/10/2026.\n2. Hình thức: báo cáo trực tiếp tại Hội trường 2A, kiểm tra trắc nghiệm trực tuyến trên cổng E-Learning.\n3. Yêu cầu: sinh viên tham gia đầy đủ theo thời khóa biểu của từng Khoa. Kết quả là điều kiện bắt buộc để đánh giá điểm rèn luyện học kỳ.",
+        },
+        {
+          id: 2, cat: "urgent", by: "Trạm Y tế TDTU", role: "Bác sĩ Trưởng Trạm", ago: "5 giờ trước", day: "Hôm nay", views: 842, acks: 310, cmts: [],
+          unread: true, due: ["Hạn chót 17:00, thứ Sáu 30/10/2026", "Sau hạn này thẻ BHYT có thể không được gia hạn"],
+          title: "Rà soát thông tin bảo hiểm y tế sinh viên đợt 1",
+          sum: "Sinh viên chưa nộp mã thẻ BHYT hoặc thông tin còn sai lệch cập nhật ngay trên Cổng nội bộ để đảm bảo quyền lợi khám chữa bệnh.",
+          full: "1. Truy cập mục Trang cá nhân trên Cổng nội bộ để kiểm tra mã số BHXH/BHYT.\n2. Nếu mã số chưa chính xác hoặc chưa được gia hạn, điền biểu mẫu điều chỉnh trực tuyến.\n3. Mọi thắc mắc liên hệ Trạm Y tế hoặc tổng đài nội bộ nhánh 105.",
+        },
+        {
+          id: 3, cat: "general", staff: true, mine: true, by: "Văn phòng Khoa CNTT", role: "Nguyễn Thị Hà, Giáo vụ khoa",
+          ago: "Hôm qua lúc 16:20", day: "Tuần này", scope: "Khoa CNTT", views: 23, acks: 19, cmts: [],
+          title: "Lịch họp giao ban cán bộ khoa tuần 12",
+          sum: "Họp giao ban thứ Hai 08:00 tại phòng C004. Cán bộ chuẩn bị báo cáo tuần và kế hoạch coi thi giữa kỳ.",
+          full: "Thành phần: Ban chủ nhiệm khoa, trưởng bộ môn, giáo vụ.\n\nNội dung: báo cáo tuần của từng bộ môn, phân công coi thi giữa kỳ, tiến độ biên soạn đề cương học phần mới.",
+        },
+        {
+          id: 4, cat: "training", by: "Phòng Đại học", role: "Ban Giáo vụ", ago: "3 ngày trước", day: "Tuần này", views: 2107, acks: 1480, acked: true,
+          cmts: [["Lê Thu Trang", "Sinh viên K23", "Đợt 1 có mở đăng ký môn tự chọn luôn không ạ?"]],
+          title: "Đăng ký môn học và thời khóa biểu Học kỳ 1 năm học 2026 - 2027",
+          sum: "Cổng đăng ký học phần mở từ ngày 25/10/2026. Sinh viên kiểm tra học phí và điều kiện tiên quyết trước đợt đăng ký.",
+          full: "Đợt 1 (năm cuối và Khóa 23): 08:00 ngày 25/10 đến 17:00 ngày 26/10.\nĐợt 2 (Khóa 24 và Khóa 25): 08:00 ngày 27/10 đến 17:00 ngày 28/10.\nĐợt 3 (bổ sung toàn trường): từ 29/10 đến hết 31/10.",
+        },
+        {
+          id: 5, cat: "event", by: "Phòng Quản lý Phát triển KH&CN", role: "Trưởng phòng QLKH", ago: "5 ngày trước",
+          day: "Tuần này", views: 655, acks: 204, cmts: [], cover: "Hội trường A, 08:30 ngày 18/11/2026", saved: true,
+          title: "Hội thảo Khoa học Quốc tế và Giải thưởng Nghiên cứu Trẻ TDTU 2026",
+          sum: "Chào mừng Ngày Nhà giáo Việt Nam 20/11, Trường tổ chức Hội thảo Khoa học Quốc tế tại Hội trường A, 08:30 ngày 18/11/2026.",
+          full: "Địa điểm: Hội trường A, trụ sở chính Tân Phong, Quận 7.\nChuyên đề: trí tuệ nhân tạo trong giáo dục đại học, truyền thông số và IoT, năng lượng tái tạo.\nSinh viên tham dự được cấp chứng nhận và cộng điểm rèn luyện.",
+        },
+      ];
+      // Tin "vừa đến" để xem thử nút báo có tin mới (app thật nhận qua socket).
+      const INCOMING = {
+        id: 6, cat: "training", by: "Khoa Công nghệ thông tin", role: "Trưởng khoa", ago: "Vừa xong", day: "Hôm nay",
+        unread: true, fresh: true, scope: "Khoa CNTT", views: 3, acks: 0, cmts: [],
+        title: "Điều chỉnh lịch thi giữa kỳ các môn cơ sở ngành",
+        sum: "Lịch thi giữa kỳ môn Cấu trúc dữ liệu và Hệ điều hành dời sang tuần 13. Sinh viên xem lịch mới trên Cổng nội bộ.",
+        full: "Cấu trúc dữ liệu và giải thuật: thứ Ba 24/11, ca 2, phòng máy A501 đến A504.\nHệ điều hành: thứ Năm 26/11, ca 3, phòng C201.",
+      };
+      const state = { filter: "all", open: new Set(), talk: new Set([1]), incoming: true };
+      const initials = (name) =>
+        name.replace(/[^\p{L} ]/gu, "").split(" ").filter(Boolean).slice(-2).map((w) => w[0].toUpperCase()).join("");
+
+      const num = (n) => n.toLocaleString("vi-VN");
+      const card = (p) => {
+        const open = state.open.has(p.id);
+        const talk = state.talk.has(p.id);
+        return `<article id="post-${p.id}" class="post ${p.cat} ${p.unread ? "unread" : ""} ${p.fresh ? "is-fresh" : ""}">
+          ${p.staff ? `<div class="strip staff">${I.lock} Nội bộ cán bộ, giảng viên. Sinh viên không thấy tin này.</div>` : ""}
+          ${p.pinned ? `<div class="strip pin">${I.pin} Tin ghim <span>Luôn ở đầu bảng tin</span></div>` : ""}
+          <div class="post-in">
+            <div class="post-head">
+              <span class="mark">${initials(p.by)}</span>
+              <div class="who">
+                <b>${p.by}</b>
+                <small>${p.role}<span>${p.ago}</span><span title="Ai xem được">${p.staff ? I.lock + "Cán bộ" : I.globe + (p.scope ?? "Toàn trường")}</span></small>
+              </div>
+              <span class="cat"><i></i>${CAT[p.cat]}</span>
+              ${p.mine ? `<button class="act icon" title="Sửa tin" aria-label="Sửa tin">${I.edit}</button>` : ""}
+            </div>
+            <h2>${p.title}</h2>
+            ${p.cover ? `<div class="cover">${p.cover}</div>` : ""}
+            ${p.due ? `<div class="due">${I.clock}<div><b>${p.due[0]}</b><small>${p.due[1]}</small></div></div>` : ""}
+            <p class="body">${p.sum} ${open ? "" : `<button class="inline-more" data-open="${p.id}">Xem thêm</button>`}</p>
+            ${open ? `<div class="full">${p.full}</div><div><button class="inline-more" data-open="${p.id}">Thu gọn</button></div>` : ""}
+            ${p.files ? `<div class="files">${p.files.map(([name, size]) => `<button class="file"><i>PDF</i><span>${name}<small>${size}</small></span></button>`).join("")}</div>` : ""}
+            <div class="stats">
+              <span>${I.eye} ${num(p.views)} lượt xem, ${num(p.acks)} người đã nắm</span>
+              ${p.cmts.length ? `<span>${p.cmts.length} bình luận</span>` : ""}
+            </div>
+            <div class="post-foot">
+              <button class="act ${p.acked ? "on" : ""}" data-ack="${p.id}" aria-pressed="${!!p.acked}">${I.check} ${p.acked ? "Đã nắm" : "Tôi đã nắm"}</button>
+              <button class="act" data-talk="${p.id}" aria-expanded="${talk}">${I.chat} Bình luận</button>
+              <button class="act ${p.saved ? "on" : ""}" data-save="${p.id}" aria-pressed="${!!p.saved}">${I.mark} ${p.saved ? "Đã lưu" : "Lưu"}</button>
+            </div>
+            ${
+              talk
+                ? `<div class="cmts">${p.cmts
+                    .map(([name, role, text]) => `<div class="cmt"><span class="mark sm">${initials(name)}</span><div><b>${name}<small>${role}</small></b>${text}</div></div>`)
+                    .join("")}<div class="cmt"><span class="mark sm">NH</span><span class="cmt-box">Viết câu hỏi hoặc bình luận…</span></div></div>`
+                : ""
+            }
+          </div>
+        </article>`;
+      };
+
+      function render() {
+        const posts = POSTS.filter((p) =>
+          state.filter === "all" ? true : state.filter === "saved" ? p.saved : p.cat === state.filter,
+        );
+        let last = "";
+        const unread = POSTS.filter((p) => p.unread).length;
+        document.getElementById("feed").innerHTML =
+          `<div class="compose">
+            <button class="compose-top"><span class="mark">NH</span><span>Hà ơi, khoa có thông báo gì mới?</span></button>
+            <div class="compose-kinds">${Object.entries(CAT)
+              .map(([key, label]) => `<button class="${key}">${I.dot}${label}</button>`)
+              .join("")}<button class="training">${I.lock}Nội bộ cán bộ</button></div>
+          </div>` +
+          (state.incoming ? `<div class="fresh"><button data-fresh>${I.up} 1 thông báo mới</button></div>` : "") +
+          posts
+            .map((p) => (p.day !== last ? `<div class="day">${(last = p.day)}</div>` : "") + card(p))
+            .join("") +
+          `<p class="end">${posts.length ? "Bạn đã xem hết thông báo." : "Chưa có thông báo nào trong mục này."}</p>`;
+        POSTS.forEach((p) => delete p.fresh);
+        document.getElementById("count").textContent =
+          `${POSTS.length} tin` + (unread ? `, ${unread} chưa đọc` : "");
+        document.getElementById("readAll").hidden = !unread;
+        const filters = [["all", "Tất cả"], ...Object.entries(CAT)]
+          .map(([key, label]) => {
+            const of = POSTS.filter((p) => key === "all" || p.cat === key);
+            const fresh = of.filter((p) => p.unread).length;
+            return `<button class="${key}" data-filter="${key}" aria-pressed="${state.filter === key}"><i></i>${label}<small>${of.length}</small>${fresh ? `<u>${fresh}</u>` : ""}</button>`;
+          })
+          .join("");
+        document.getElementById("cats").innerHTML =
+          filters +
+          `<hr /><button data-filter="saved" aria-pressed="${state.filter === "saved"}">${I.mark}Tin đã lưu<small>${POSTS.filter((p) => p.saved).length}</small></button>`;
+        document.getElementById("pills").innerHTML = filters.replace(/<u>.*?<\/u>/g, "");
+      }
+      document.getElementById("horn").innerHTML = `${I.horn} Được đăng thông báo`;
+      document.getElementById("shortcuts").innerHTML = [["phone", "Tổng đài"], ["video", "Họp"], ["book", "Khóa học"], ["people", "Nhân sự"]]
+        .map(([icon, label]) => `<button>${I[icon]}${label}</button>`)
+        .join("");
+      document.getElementById("pinned").innerHTML = `${I.pin}<span>${POSTS[0].title}</span>`;
+
+      document.addEventListener("click", (event) => {
+        const el = event.target.closest(
+          "[data-filter],[data-open],[data-ack],[data-save],[data-talk],[data-theme],[data-fresh],[data-jump],#readAll",
+        );
+        if (!el) return;
+        const d = el.dataset;
+        if (d.filter) state.filter = d.filter;
+        else if (d.open) {
+          const id = Number(d.open);
+          if (!state.open.delete(id)) state.open.add(id);
+          POSTS.find((p) => p.id === id).unread = false;
+        } else if (d.ack) {
+          const post = POSTS.find((p) => p.id === Number(d.ack));
+          post.acked = !post.acked;
+          post.acks += post.acked ? 1 : -1;
+          post.unread = false;
+        } else if (d.save) {
+          const post = POSTS.find((p) => p.id === Number(d.save));
+          post.saved = !post.saved;
+        } else if (d.talk) {
+          const id = Number(d.talk);
+          if (!state.talk.delete(id)) state.talk.add(id);
+        } else if ("theme" in d) {
+          document.body.className = d.theme;
+          document
+            .querySelectorAll("[data-theme]")
+            .forEach((b) => b.setAttribute("aria-pressed", String(b === el)));
+          return;
+        }
+        else if ("fresh" in d) {
+          state.incoming = false;
+          state.filter = "all";
+          POSTS.splice(1, 0, INCOMING);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        } else if (d.jump) {
+          state.filter = "all";
+          render();
+          return document.getElementById(`post-${d.jump}`).scrollIntoView({ behavior: "smooth", block: "center" });
+        } else POSTS.forEach((p) => (p.unread = false));
+        render();
+      });
+      render();
+    </script>
+  </body>
+</html>

@@ -3,6 +3,7 @@ import type { CcAgentProfile, WorkspaceItem } from "@doan/shared";
 import { callCenterApi } from "../../features/call-center/api";
 import { getWorkspacesApi } from "../../features/chat/api";
 import { academicApi, type AcademicProfile } from "../../features/admin/api";
+import { getAnnouncementsApi } from "../../features/announcements/api";
 
 /** Sidebar entries that only some users can use. */
 export type MenuAccess = {
@@ -10,6 +11,8 @@ export type MenuAccess = {
   workspaceAdmin: boolean;
   systemAdmin: boolean;
   unitReports: boolean;
+  /** Posts on the school board, or grants that right (system and unit admins). */
+  bulletin: boolean;
 };
 
 /**
@@ -26,7 +29,8 @@ export function useMenuAccess(accessToken: string | null): MenuAccess | null {
       callCenterApi<CcAgentProfile>(accessToken, "me").catch(() => null),
       getWorkspacesApi(accessToken).catch(() => [] as WorkspaceItem[]),
       academicApi<AcademicProfile>(accessToken, "me").catch(() => null),
-    ]).then(([callCenter, workspaces, academic]) => {
+      getAnnouncementsApi(accessToken).catch(() => null),
+    ]).then(([callCenter, workspaces, academic, board]) => {
       if (!alive) return;
       setAccess({
         callCenter: Boolean(
@@ -38,6 +42,10 @@ export function useMenuAccess(accessToken: string | null): MenuAccess | null {
         // Unit heads and unit admins read their unit's report; system admins read every unit's.
         unitReports: Boolean(
           academic && (academic.systemAdmin || Object.keys(academic.unitRoles).length),
+        ),
+        bulletin: Boolean(
+          board &&
+          (board.canPublish || board.role === "system_admin" || board.role === "unit_admin"),
         ),
       });
     });

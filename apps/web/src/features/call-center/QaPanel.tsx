@@ -9,19 +9,32 @@ import type {
 } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import { coursesApi } from "../elearning/courses-api";
-import { Badge, Button, Field, FilterPills, Modal } from "../../shared/ui/Primitives";
+import { Button, Modal } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
-import "./quality.css";
+import { UserAvatar } from "../../shared/ui/kit/user-avatar";
+import { cn } from "../../shared/lib/utils";
+import { BTN_PRIMARY, CHIP, MUTED, PANEL, PANEL_HEAD, PILL, PILL_ON, TINT } from "./ui";
 
 type Api = <T>(path: string, method?: string, body?: object) => Promise<T>;
-type Draft = { id: string | null; label: string; weight: number };
 
 export const qaTone = (percent: number, threshold = 70) =>
   percent >= 85 ? "green" : percent >= threshold ? "blue" : "red";
 
+/** The scorecard a department gets when it has none; the sheet is no longer edited in the app. */
+const DEFAULT_CRITERIA = [
+  { id: null, label: "Chào hỏi đúng mẫu", weight: 1 },
+  { id: null, label: "Xác minh thông tin người gọi", weight: 2 },
+  { id: null, label: "Giải quyết đúng yêu cầu", weight: 3 },
+  { id: null, label: "Thái độ lịch sự, rõ ràng", weight: 2 },
+  { id: null, label: "Kết thúc và ghi nhận cuộc gọi", weight: 1 },
+];
+const SHEET = "tw tw-form grid gap-3.5 text-sm text-foreground";
+const WARNING =
+  "rounded-lg bg-[var(--tint-amber-bg)] px-3 py-2 text-[13px] text-[var(--tint-amber-fg)]";
+
 /**
- * V7 / E2: scorecard per department and the reviews. Supervisors edit the sheet and see their
- * departments; an agent sees the reviews of their own calls.
+ * V7 / E2: scorecard per department and the reviews. Supervisors see their departments' sheet and
+ * reviews; an agent sees the reviews of their own calls.
  */
 export function QaPanel({
   me,
@@ -35,7 +48,7 @@ export function QaPanel({
   const supervised = me.departments.filter((department) => department.role === "supervisor");
   const [departments, setDepartments] = useState(supervised);
   const [departmentId, setDepartmentId] = useState(supervised[0]?.id ?? "");
-  const [criteria, setCriteria] = useState<Draft[]>([]);
+  const [criteria, setCriteria] = useState<CcQaCriterion[] | null>(null);
   const [reviews, setReviews] = useState<CcQaReview[] | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const manages = me.isAdmin || supervised.length > 0;
@@ -56,152 +69,154 @@ export function QaPanel({
   }, [api, departmentId, fail, manages]);
   useEffect(load, [load]);
 
-  const save = () =>
+  const useDefault = () =>
     api<CcQaCriterion[]>(`departments/${departmentId}/qa-criteria`, "POST", {
-      criteria: criteria.filter((item) => item.label.trim()),
+      criteria: DEFAULT_CRITERIA,
     }).then(setCriteria, fail);
   const average = reviews?.length
     ? Math.round(reviews.reduce((sum, review) => sum + review.percent, 0) / reviews.length)
     : null;
 
   return (
-    <div className="qa-panel">
+    <div className="tw grid min-w-0 gap-3.5 text-sm text-foreground">
       {manages && departments.length > 1 && (
-        <FilterPills
-          options={departments.map((item) => ({ key: item.id, label: item.name }))}
-          activeKey={departmentId}
-          onChange={setDepartmentId}
-        />
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Phòng ban">
+          {departments.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={cn(PILL, departmentId === item.id && PILL_ON)}
+              aria-pressed={departmentId === item.id}
+              onClick={() => setDepartmentId(item.id)}
+            >
+              {item.name}
+            </button>
+          ))}
+        </div>
       )}
-      <div className="qa-grid">
+      <div
+        className={cn(
+          "grid min-w-0 items-start gap-4",
+          manages && "min-[1100px]:grid-cols-[340px_minmax(0,1fr)]",
+        )}
+      >
         {manages && (
-          <section className="callcenter-panel">
-            <div className="callcenter-panel__head">
-              <h2 className="callcenter-panel__title">
-                <Icon name="clipboard" size={18} />
-                <span>Phiếu chấm điểm cuộc gọi</span>
-              </h2>
+          <section className={cn(PANEL, "min-[1100px]:sticky min-[1100px]:top-2")}>
+            <div className={PANEL_HEAD}>
+              <Icon name="clipboard" size={16} className="text-muted-foreground" />
+              <h2 className="text-[15px] font-semibold">Phiếu chấm điểm</h2>
             </div>
-            <p className="desk-muted">
+            <p className={cn(MUTED, "px-4 pt-3")}>
               Mỗi tiêu chí chấm 0–10 điểm, nhân trọng số. Điểm dưới ngưỡng của phòng ban sẽ tự gán
               khóa bồi dưỡng.
             </p>
-            <ol className="qa-criteria">
-              {criteria.map((item, index) => (
-                <li key={item.id ?? `new-${index}`}>
-                  <input
-                    aria-label={`Tiêu chí ${index + 1}`}
-                    value={item.label}
-                    maxLength={160}
-                    placeholder="Ví dụ: Chào hỏi đúng mẫu"
-                    onChange={(event) =>
-                      setCriteria(
-                        criteria.map((other, at) =>
-                          at === index ? { ...other, label: event.target.value } : other,
-                        ),
-                      )
-                    }
-                  />
-                  <label className="qa-weight">
-                    Trọng số
-                    <input
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={item.weight}
-                      onChange={(event) =>
-                        setCriteria(
-                          criteria.map((other, at) =>
-                            at === index
-                              ? { ...other, weight: Number(event.target.value) || 1 }
-                              : other,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    type="button"
-                    icon="x"
-                    aria-label={`Bỏ tiêu chí ${index + 1}`}
-                    onClick={() => setCriteria(criteria.filter((_, at) => at !== index))}
-                  />
-                </li>
-              ))}
-            </ol>
-            <div className="desk-actions">
-              <Button
-                size="sm"
-                variant="ghost"
-                type="button"
-                icon="plus"
-                disabled={criteria.length >= 20}
-                onClick={() => setCriteria([...criteria, { id: null, label: "", weight: 1 }])}
-              >
-                Thêm tiêu chí
-              </Button>
-              <Button
-                size="sm"
-                type="button"
-                icon="check"
-                disabled={!criteria.some((item) => item.label.trim())}
-                onClick={() => void save()}
-              >
-                Lưu phiếu chấm
-              </Button>
-            </div>
+            {criteria && !criteria.length ? (
+              <div className="grid gap-2.5 px-4 py-3.5">
+                <p className={WARNING}>Phòng ban chưa có phiếu chấm.</p>
+                <button type="button" className={cn(BTN_PRIMARY, "w-max")} onClick={useDefault}>
+                  <Icon name="check" size={15} />
+                  Dùng phiếu chấm mẫu
+                </button>
+              </div>
+            ) : (
+              <ol className="grid list-none grid-cols-[minmax(0,1fr)] gap-1 px-2.5 py-3">
+                {criteria?.map((item, index) => (
+                  <li
+                    key={item.id}
+                    className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-secondary"
+                  >
+                    <span className="grid size-6 shrink-0 place-items-center rounded-md bg-secondary text-xs font-semibold text-muted-foreground">
+                      {index + 1}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                    <span className={cn(CHIP, "px-2 py-0.5", TINT.neutral)}>×{item.weight}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
           </section>
         )}
-        <section className="callcenter-panel">
-          <div className="callcenter-panel__head">
-            <h2 className="callcenter-panel__title">
-              <Icon name="star" size={18} />
-              <span>{manages ? "Đánh giá gần đây" : "Đánh giá cuộc gọi của tôi"}</span>
+        <section className={PANEL}>
+          <div className={PANEL_HEAD}>
+            <Icon name="star" size={16} className="text-muted-foreground" />
+            <h2 className="text-[15px] font-semibold">
+              {manages ? "Đánh giá gần đây" : "Đánh giá cuộc gọi của tôi"}
             </h2>
-            {average !== null && <Badge tone={qaTone(average)}>Trung bình {average}%</Badge>}
+            {average !== null && (
+              <span className="ml-auto flex items-baseline gap-1.5">
+                <b className="text-2xl font-bold tabular-nums">{average}%</b>
+                <small className="text-xs text-muted-foreground">
+                  trung bình {reviews!.length} cuộc
+                </small>
+              </span>
+            )}
           </div>
           {!reviews?.length ? (
-            <p className="desk-muted">
+            <p className={cn(MUTED, "px-4 py-8 text-center")}>
               {manages
                 ? "Chưa có cuộc gọi nào được chấm. Chấm từ tab “Lịch sử cuộc gọi”."
                 : "Chưa có cuộc gọi nào của bạn được chấm."}
             </p>
           ) : (
-            reviews.map((review) => (
-              <div key={review.id} className="call-item-card qa-review">
-                <button
-                  type="button"
-                  className="qa-review__head"
-                  aria-expanded={open === review.id}
-                  onClick={() => setOpen(open === review.id ? null : review.id)}
-                >
-                  <span className="call-item-info">
-                    <span className="call-item-caller">{review.agentName}</span>
-                    <span className="call-item-meta">
-                      {new Date(review.callStartedAt).toLocaleString("vi-VN")} ·{" "}
-                      {review.callerNumber} · chấm bởi {review.reviewerName ?? "—"}
+            <ul className="list-none">
+              {reviews.map((review) => (
+                <li key={review.id} className="border-b last:border-b-0">
+                  <button
+                    type="button"
+                    className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left hover:bg-secondary"
+                    aria-expanded={open === review.id}
+                    onClick={() => setOpen(open === review.id ? null : review.id)}
+                  >
+                    <UserAvatar name={review.agentName} />
+                    <span className="min-w-0 flex-1">
+                      <b className="block truncate font-semibold">{review.agentName}</b>
+                      <small className="block truncate text-xs text-muted-foreground">
+                        {new Date(review.callStartedAt).toLocaleString("vi-VN")} ·{" "}
+                        {review.callerNumber} · chấm bởi {review.reviewerName ?? "—"}
+                      </small>
                     </span>
-                  </span>
-                  <Badge tone={qaTone(review.percent)}>{review.percent}%</Badge>
-                  {review.coachingAssigned && <Badge tone="amber">Đã gán bồi dưỡng</Badge>}
-                </button>
-                {open === review.id && (
-                  <div className="qa-review__body">
-                    <ul>
+                    {review.coachingAssigned && (
+                      <span className={cn(CHIP, "px-2 py-0.5", TINT.amber)}>Đã gán bồi dưỡng</span>
+                    )}
+                    <span className={cn(CHIP, "px-2 py-0.5", TINT[qaTone(review.percent)])}>
+                      {review.percent}%
+                    </span>
+                    <Icon
+                      name={open === review.id ? "chevron-up" : "chevron-down"}
+                      size={15}
+                      className="shrink-0 text-muted-foreground"
+                    />
+                  </button>
+                  {open === review.id && (
+                    <div className="grid gap-2 px-4 pb-3.5 pl-[60px]">
                       {review.items.map((item) => (
-                        <li key={item.id}>
-                          {item.label} <small>(×{item.weight})</small>:{" "}
-                          <strong>{item.score}/10</strong>
-                        </li>
+                        <div
+                          key={item.id}
+                          className="grid grid-cols-[minmax(0,1fr)_120px_44px] items-center gap-3 text-[13px]"
+                        >
+                          <span className="truncate">
+                            {item.label}{" "}
+                            <small className="text-muted-foreground">×{item.weight}</small>
+                          </span>
+                          <span className="h-1.5 overflow-hidden rounded-full bg-secondary">
+                            <span
+                              className="block h-full rounded-full bg-[#2f6bff]"
+                              style={{ width: `${item.score * 10}%` }}
+                            />
+                          </span>
+                          <b className="text-right font-semibold tabular-nums">{item.score}/10</b>
+                        </div>
                       ))}
-                    </ul>
-                    {review.comment && <p>{review.comment}</p>}
-                  </div>
-                )}
-              </div>
-            ))
+                      {review.comment && (
+                        <p className="rounded-lg bg-secondary px-3 py-2 text-[13px] italic">
+                          “{review.comment}”
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
           )}
         </section>
       </div>
@@ -274,17 +289,21 @@ export function QaReviewDialog({
       }
     >
       {!criteria ? (
-        <p className="desk-muted">Đang tải phiếu chấm…</p>
+        <p className={MUTED}>Đang tải phiếu chấm…</p>
       ) : !criteria.length ? (
-        <p className="desk-warning">
-          Phòng ban chưa có phiếu chấm. Tạo tiêu chí ở tab “Chất lượng”.
+        <p className={WARNING}>
+          Phòng ban chưa có phiếu chấm. Mở tab “Chất lượng” và bấm “Dùng phiếu chấm mẫu”.
         </p>
       ) : (
-        <div className="qa-sheet">
+        <div className={SHEET}>
           {criteria.map((item) => (
-            <label key={item.id} className="qa-score">
+            <label
+              key={item.id}
+              className="grid! grid-cols-[minmax(0,1fr)_minmax(120px,200px)_44px] items-center gap-3 text-foreground!"
+            >
               <span>
-                {item.label} <small>(trọng số {item.weight})</small>
+                {item.label}{" "}
+                <small className="text-muted-foreground">(trọng số {item.weight})</small>
               </span>
               <input
                 type="range"
@@ -296,17 +315,20 @@ export function QaReviewDialog({
                   setScores({ ...scores, [item.id]: Number(event.target.value) })
                 }
               />
-              <output>{scores[item.id] ?? 0}/10</output>
+              <output className="text-right font-semibold tabular-nums">
+                {scores[item.id] ?? 0}/10
+              </output>
             </label>
           ))}
-          <Field label="Nhận xét cho tổng đài viên">
+          <label>
+            Nhận xét cho tổng đài viên
             <textarea
               rows={3}
               maxLength={2000}
               value={comment}
               onChange={(event) => setComment(event.target.value)}
             />
-          </Field>
+          </label>
         </div>
       )}
     </Modal>
@@ -393,8 +415,9 @@ export function CallLessonDialog({
         </>
       }
     >
-      <div className="qa-sheet">
-        <Field label="Khóa học">
+      <div className={SHEET}>
+        <label>
+          Khóa học
           <select value={course?.id ?? ""} onChange={(event) => pick(event.target.value)}>
             <option value="">
               {courses
@@ -409,9 +432,10 @@ export function CallLessonDialog({
               </option>
             ))}
           </select>
-        </Field>
+        </label>
         {course && (
-          <Field label="Chương">
+          <label>
+            Chương
             <select value={chapterId} onChange={(event) => setChapterId(event.target.value)}>
               {!course.chapters.length && <option value="">Khóa học chưa có chương</option>}
               {course.chapters.map((chapter) => (
@@ -420,12 +444,13 @@ export function CallLessonDialog({
                 </option>
               ))}
             </select>
-          </Field>
+          </label>
         )}
-        <Field label="Tên bài học">
+        <label>
+          Tên bài học
           <input value={title} maxLength={160} onChange={(event) => setTitle(event.target.value)} />
-        </Field>
-        <label className="qa-check">
+        </label>
+        <label className="flex! items-start gap-2 text-foreground!">
           <input
             type="checkbox"
             checked={consent}
@@ -435,7 +460,7 @@ export function CallLessonDialog({
           13/2023).
         </label>
         {error && (
-          <p className="desk-warning" role="alert">
+          <p className={WARNING} role="alert">
             {error}
           </p>
         )}
@@ -477,13 +502,19 @@ export function CallTranscriptDialog({
     );
   return (
     <Modal title="Lời thoại cuộc gọi" eyebrow={call.title} onClose={onClose}>
-      <div className="qa-sheet">
+      <div className={SHEET}>
         {transcript?.aiSummary && (
-          <section className="call-ai-summary" aria-label="Tóm tắt bằng AI">
-            <strong>Tóm tắt (AI, cần kiểm tra lại)</strong>
+          <section
+            className="grid gap-2 rounded-lg bg-[var(--tint-violet-bg)] px-3.5 py-3"
+            aria-label="Tóm tắt bằng AI"
+          >
+            <strong className="flex items-center gap-1.5 text-[var(--tint-violet-fg)]">
+              <Icon name="sparkles" size={14} />
+              Tóm tắt (AI, cần kiểm tra lại)
+            </strong>
             <p>{transcript.aiSummary}</p>
             {transcript.aiDispositionId && (
-              <p className="desk-muted">
+              <p className={MUTED}>
                 Gợi ý mã kết quả: {labelOf(transcript.aiDispositionId) || "—"}
               </p>
             )}
@@ -500,21 +531,24 @@ export function CallTranscriptDialog({
           </section>
         )}
         {error ? (
-          <p className="desk-warning" role="alert">
+          <p className={WARNING} role="alert">
             {error}
           </p>
         ) : !transcript ? (
-          <p className="desk-muted">Đang tải…</p>
+          <p className={MUTED}>Đang tải…</p>
         ) : transcript.segments.length ? (
-          <ol className="call-transcript">
+          <ol className="grid max-h-[50vh] list-none gap-1.5 overflow-y-auto">
             {transcript.segments.map((segment, index) => (
-              <li key={index}>
-                <span className="desk-muted">{minuteSecond(segment.start)}</span> {segment.text}
+              <li key={index} className="grid grid-cols-[44px_minmax(0,1fr)] gap-2 text-[13.5px]">
+                <span className="font-mono text-xs text-muted-foreground">
+                  {minuteSecond(segment.start)}
+                </span>{" "}
+                {segment.text}
               </li>
             ))}
           </ol>
         ) : (
-          <p className="desk-muted">Không nhận dạng được lời nói trong ghi âm.</p>
+          <p className={MUTED}>Không nhận dạng được lời nói trong ghi âm.</p>
         )}
       </div>
     </Modal>

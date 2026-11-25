@@ -5,13 +5,19 @@ import { pool } from "../../../dist/api/infrastructure/database/db.js";
 import { CallCenterRepository } from "../../../dist/api/modules/callcenter/repository/callcenter-repository.js";
 import { VoipRepository } from "../../../dist/api/modules/callcenter/repository/voip-repository.js";
 import { CallCenterAdminService } from "../../../dist/api/modules/callcenter/service/admin-service.js";
+import { CallCenterAgentService } from "../../../dist/api/modules/callcenter/service/agent-service.js";
 
 // Extension-to-extension history against PostgreSQL: owners resolved by number, each side sees its own view.
 test(
   "Internal calls: saved with both owners, listed per user, kept out of hotline lists",
   { skip: process.env.RUN_DB_TESTS !== "1", timeout: 20000 },
   async () => {
-    const [adminId, anId, binhId] = [randomUUID(), randomUUID(), randomUUID()];
+    const [adminId, anId, binhId, guestId] = [
+      randomUUID(),
+      randomUUID(),
+      randomUUID(),
+      randomUUID(),
+    ];
     const repo = new CallCenterRepository();
     const voip = new VoipRepository();
     const admin = new CallCenterAdminService(
@@ -26,6 +32,7 @@ test(
         [adminId, "Admin"],
         [anId, "Nguyễn An"],
         [binhId, "Trần Bình"],
+        [guestId, "Khách"],
       ])
         await pool.query(
           `INSERT INTO users(id,email,password_hash,display_name) VALUES($1,$2,'x',$3)`,
@@ -54,6 +61,19 @@ test(
           `INSERT INTO cc_extensions(id,number,department_id,user_id,sip_secret) VALUES($1,$2,$3,$4,$5)`,
           [randomUUID(), number, departmentId, userId, "s".repeat(16)],
         );
+
+      // A personal extension is enough to dial from the directory; no extension, no directory.
+      const agents = new CallCenterAgentService(
+        repo,
+        admin,
+        () => null,
+        () => null,
+        "",
+      );
+      const directory = await agents.directory(anId);
+      assert.ok(directory.extensions.some((ext) => ext.number === binh));
+      assert.ok(!directory.extensions.some((ext) => ext.number === an), "not yourself");
+      await assert.rejects(agents.directory(guestId), { statusCode: 403 });
 
       const linkedId = `test-${randomUUID()}`;
       const first = randomUUID();
@@ -113,7 +133,9 @@ test(
         await pool.query(`DELETE FROM cc_departments WHERE unit_id=$1`, [departmentId]);
         await pool.query(`DELETE FROM academic_units WHERE id=$1`, [departmentId]);
       }
-      await pool.query(`DELETE FROM users WHERE id=ANY($1::uuid[])`, [[adminId, anId, binhId]]);
+      await pool.query(`DELETE FROM users WHERE id=ANY($1::uuid[])`, [
+        [adminId, anId, binhId, guestId],
+      ]);
       await pool.end();
     }
   },

@@ -5,19 +5,16 @@ export type ViewId =
   | "workspace"
   | "chat"
   | "meetings"
-  | "files"
   | "profile"
-  | "admin"
-  | "invitation"
   | "notifications"
+  | "bulletin"
   | "call-center"
   | "call-directory"
   | "call-monitoring"
   | "staff"
   | "elearning"
   | "access"
-  | "reports"
-  | "groups";
+  | "reports";
 
 export type PublicScreen = "landing" | "login" | "app";
 

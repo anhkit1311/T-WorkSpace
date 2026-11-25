@@ -132,7 +132,9 @@ export class CallCenterAgentService {
 
   /** Transfer targets: active departments and every active extension with its agent's live state. */
   async directory(userId: string): Promise<CcTransferDirectory> {
-    if (!(await this.admin.access(userId)).isMember()) throw forbidden();
+    // Staff with a personal extension dial from the same directory (DeskDialer, chat call button).
+    if (!(await this.admin.access(userId)).isMember() && !(await this.repo.ownExtension(userId)))
+      throw forbidden();
     const [departments, extensions, lamps] = await Promise.all([
       this.repo.departments(null),
       this.repo.extensions(null),
@@ -166,9 +168,10 @@ export class CallCenterAgentService {
   async monitor(userId: string, callKey: string, body: Body) {
     const acd = this.acd();
     if (!acd) throw offline();
-    const departmentId = acd.departmentOfCall(id(callKey));
-    if (!departmentId) throw notFound("Cuộc gọi đã kết thúc.");
-    if (!(await this.admin.access(userId)).supervises(departmentId)) throw forbidden();
+    const departments = acd.departmentsOfCall(id(callKey));
+    if (!departments.length) throw notFound("Cuộc gọi đã kết thúc.");
+    const access = await this.admin.access(userId);
+    if (!departments.some((department) => access.supervises(department))) throw forbidden();
     const extension = await this.repo.ownExtension(userId);
     if (!extension)
       throw new HttpError(409, "NO_EXTENSION", "Bạn cần một máy lẻ để giám sát cuộc gọi.");

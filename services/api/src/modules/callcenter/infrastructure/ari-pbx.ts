@@ -175,10 +175,13 @@ export class AriPbx implements Pbx {
   removeFromBridge = async (bridgeId: string, channelId: string) =>
     void (await this.request("POST", `/bridges/${bridgeId}/removeChannel?channel=${channelId}`));
 
-  async snoop(channelId: string, input: { whisper: boolean; callId: string }): Promise<string> {
+  async snoop(
+    channelId: string,
+    input: { whisper: "none" | "out" | "both"; callId: string },
+  ): Promise<string> {
     const params = new URLSearchParams({
       spy: "both",
-      whisper: input.whisper ? "out" : "none",
+      whisper: input.whisper,
       app: this.options.app,
       appArgs: `snoop,${input.callId}`,
     });

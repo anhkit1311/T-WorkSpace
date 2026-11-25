@@ -62,7 +62,7 @@ try {
     id,
   ]);
   await source.query(
-    `INSERT INTO channels(id,workspace_id,created_by,name,type) VALUES($1,$2,$3,'tong-quan','text')`,
+    `INSERT INTO channels(id,workspace_id,created_by,name,type) VALUES($1,$2,$3,'Tổng quan','text')`,
     [channel, workspace, id],
   );
   await source.query(

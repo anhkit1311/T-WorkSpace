@@ -3,6 +3,7 @@ import {
   Activity,
   ArrowDownUp,
   ArrowRight,
+  Reply,
   Bell,
   BookOpen,
   Bookmark,
@@ -99,6 +100,7 @@ export type IconName =
   | "activity"
   | "admin"
   | "arrow-right"
+  | "reply"
   | "arrow-up-down"
   | "bell"
   | "bell-off"
@@ -195,6 +197,7 @@ const icons = {
   activity: Activity,
   admin: ShieldCheck,
   "arrow-right": ArrowRight,
+  reply: Reply,
   "arrow-up-down": ArrowDownUp,
   bell: Bell,
   book: BookOpen,

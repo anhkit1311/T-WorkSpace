@@ -1,4 +1,5 @@
 import type { SVGProps } from "react";
+import { cn } from "../lib/utils";
 
 export interface TdtuLogoProps extends SVGProps<SVGSVGElement> {
   height?: number;
@@ -32,7 +33,7 @@ export function TdtuLogo({
       xmlns="http://www.w3.org/2000/svg"
       role="img"
       aria-label="TDTU"
-      className={`tdtu-logo ${className}`.trim()}
+      className={cn("text-[#002d62]", className)}
       {...props}
     >
       {/* T1 in Cobalt Blue */}

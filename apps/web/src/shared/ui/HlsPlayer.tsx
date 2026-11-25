@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Hls from "hls.js";
 import type { MediaTranscript } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
-import "./hls-player.css";
 
 const mmss = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
@@ -140,9 +139,10 @@ export function HlsPlayer({
   }, [src]);
 
   return (
-    <div className="hls-player">
+    <div>
       <video
         ref={video}
+        className="max-h-[480px] w-full rounded-lg bg-black"
         controls
         playsInline
         aria-label={label}
@@ -178,20 +178,24 @@ export function HlsPlayer({
       </video>
       {error && <p role="alert">{error}</p>}
       {transcript && (
-        <details className="hls-transcript">
-          <summary>Bản chép lời ({transcript.segments.length} đoạn)</summary>
+        <details className="tw mt-2.5 rounded-lg border bg-card text-sm text-foreground">
+          <summary className="cursor-pointer px-3 py-2 font-semibold">
+            Bản chép lời ({transcript.segments.length} đoạn)
+          </summary>
           <input
             type="search"
+            className="mx-3 mb-2 w-[calc(100%-24px)] rounded-md border bg-background px-2.5 py-1.5 text-sm outline-none focus:border-foreground"
             placeholder="Tìm trong lời nói…"
             aria-label="Tìm trong bản chép lời"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
-          <ol>
+          <ol className="m-0 max-h-[260px] list-none overflow-y-auto px-1 pb-2">
             {shown.map((item) => (
               <li key={item.start}>
                 <button
                   type="button"
+                  className="flex w-full cursor-pointer gap-2.5 rounded-md px-2 py-1 text-left hover:bg-secondary aria-[current=true]:bg-secondary"
                   aria-current={now >= item.start && now < item.end ? "true" : undefined}
                   onClick={() => {
                     if (!video.current) return;
@@ -199,11 +203,16 @@ export function HlsPlayer({
                     void video.current.play().catch(() => {});
                   }}
                 >
-                  <time>{mmss(item.start)}</time> {item.text}
+                  <time className="min-w-[42px] flex-none text-xs text-muted-foreground tabular-nums">
+                    {mmss(item.start)}
+                  </time>{" "}
+                  {item.text}
                 </button>
               </li>
             ))}
-            {!shown.length && <li className="hls-transcript__empty">Không có đoạn nào khớp.</li>}
+            {!shown.length && (
+              <li className="px-2 py-1 text-muted-foreground">Không có đoạn nào khớp.</li>
+            )}
           </ol>
         </details>
       )}

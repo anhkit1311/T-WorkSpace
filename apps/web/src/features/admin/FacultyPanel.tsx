@@ -1,10 +1,26 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { Button, ConfirmDialog, Modal } from "../../shared/ui/Primitives";
+import { Fragment, useCallback, useEffect, useState, type FormEvent } from "react";
+import { ConfirmDialog, Modal } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
+import { UserAvatar } from "../../shared/ui/kit/user-avatar";
+import { cn } from "../../shared/lib/utils";
 import { academicApi, rankLabel, type AcademicProfile, type DepartmentUnit } from "./api";
-import "./admin.css";
-
-type Run = <T>(label: string, action: () => Promise<T>) => Promise<T | undefined>;
+import { extensionRange } from "./AccountForm";
+import type { Run } from "./AccessPage";
+import {
+  BTN,
+  BTN_GHOST,
+  BTN_SM,
+  CARD,
+  CARD_HEAD,
+  CHIP,
+  CODE,
+  H3,
+  MUTED,
+  SEARCH,
+  TABLE,
+  TABLE_CARD,
+  TINT,
+} from "./ui";
 
 interface StaffRow {
   userId: string;
@@ -38,13 +54,18 @@ const DEFAULT_FORM: FormState = {
   code: "",
   idPrefix: "",
 };
+const KINDS = [
+  ["faculty", "Khối giảng dạy"],
+  ["office", "Khối hành chính"],
+] as const;
 
+/** "Khoa & Phòng ban": units on the left, the picked one's departments and accounts on the right. */
 export function FacultyPanel({ token, run, onUnitCreated }: Props) {
   const [departments, setDepartments] = useState<DepartmentUnit[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
-  // Modal create/edit
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<DepartmentUnit | null>(null);
   const [deleting, setDeleting] = useState<DepartmentUnit | null>(null);
@@ -146,124 +167,140 @@ export function FacultyPanel({ token, run, onUnitCreated }: Props) {
   };
 
   const selectedDept = departments.find((d) => d.id === selectedUnitId);
+  const q = query.trim().toLowerCase();
+  const shown = departments.filter(
+    (dept) => !q || [dept.name, dept.code, dept.idPrefix].some((v) => v?.toLowerCase().includes(q)),
+  );
 
   return (
-    <section className="dept-panel">
-      {/* 1. Header: Tiêu đề & Nút thêm */}
-      <div className="dept-header">
-        <h2 className="dept-title">Danh sách khoa / phòng ban</h2>
-        <button type="button" className="dept-add-btn" onClick={openCreateModal}>
-          <Icon name="plus" size={16} />
-          <span>Thêm khoa / phòng ban</span>
-        </button>
-      </div>
-
-      {/* 2. Bảng dữ liệu theo mẫu người dùng */}
-      <div className="dept-table-wrapper">
-        <table className="dept-table">
-          <thead>
-            <tr>
-              <th>Tên khoa / phòng ban</th>
-              <th>Mã số</th>
-              <th>Mã định danh</th>
-              <th>Khối</th>
-              <th>Số tài khoản</th>
-              <th style={{ textAlign: "right" }}>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr>
-                <td
-                  colSpan={6}
-                  style={{ textAlign: "center", padding: 24, color: "var(--text-muted)" }}
-                >
-                  Đang tải danh sách khoa và phòng ban…
-                </td>
-              </tr>
-            )}
-            {!loading && departments.length === 0 && (
-              <tr>
-                <td
-                  colSpan={6}
-                  style={{ textAlign: "center", padding: 24, color: "var(--text-muted)" }}
-                >
-                  Chưa có khoa hoặc phòng ban nào được tạo.
-                </td>
-              </tr>
-            )}
-            {!loading &&
-              departments.map((dept) => {
-                const isSelected = dept.id === selectedUnitId;
+    <section
+      className="grid min-w-0 items-start gap-4 min-[900px]:grid-cols-[320px_minmax(0,1fr)]"
+      aria-label="Khoa & Phòng ban"
+    >
+      <nav
+        className={cn(CARD, "grid min-w-0 gap-px p-1.5 min-[900px]:sticky min-[900px]:top-2")}
+        aria-label="Đơn vị"
+      >
+        <div className="flex items-center gap-2 px-1.5 pt-1.5 pb-2">
+          <b className="text-[15px]">Đơn vị</b>
+          <span className={CHIP}>{departments.length}</span>
+          <button type="button" className={cn(BTN, BTN_SM, "ml-auto")} onClick={openCreateModal}>
+            <Icon name="plus" size={15} />
+            Thêm
+          </button>
+        </div>
+        <label className={cn(SEARCH, "mx-1 mb-1")}>
+          <Icon name="search" size={15} />
+          <input
+            type="search"
+            placeholder="Tìm đơn vị…"
+            aria-label="Tìm đơn vị"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
+        {loading && !departments.length && (
+          <p className={cn(MUTED, "px-2 py-4")}>Đang tải danh sách khoa và phòng ban…</p>
+        )}
+        {!loading && !departments.length && (
+          <p className={cn(MUTED, "px-2 py-4")}>Chưa có khoa hoặc phòng ban nào được tạo.</p>
+        )}
+        {KINDS.map(([kind, label]) => {
+          const list = shown.filter((dept) => dept.kind === kind);
+          if (!list.length) return null;
+          return (
+            <Fragment key={kind}>
+              <p className="px-2 pt-3 pb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+                {label}
+              </p>
+              {list.map((dept) => {
+                const active = dept.id === selectedUnitId;
                 return (
-                  <tr
+                  <button
                     key={dept.id}
-                    className={isSelected ? "is-selected" : ""}
+                    type="button"
+                    className={cn(
+                      "flex w-full min-w-0 cursor-pointer items-center gap-2.5 rounded-lg px-2 py-[7px] text-left hover:bg-secondary",
+                      active && "bg-secondary",
+                    )}
+                    aria-current={active || undefined}
                     onClick={() => setSelectedUnitId(dept.id)}
-                    style={{ cursor: "pointer" }}
                   >
-                    <td>
-                      <strong>{dept.name}</strong>
-                    </td>
-                    <td>{dept.code || "–"}</td>
-                    <td>{dept.idPrefix || "–"}</td>
-                    <td>{dept.kind === "office" ? "Khối hành chính" : "Khối giảng dạy"}</td>
-                    <td>{dept.staffCount}</td>
-                    <td style={{ textAlign: "right" }} onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        className="dept-action-btn dept-action-edit"
-                        onClick={() => openEditModal(dept)}
+                    <span
+                      className={cn(
+                        "grid size-[30px] shrink-0 place-items-center rounded-[7px] bg-secondary font-mono text-xs font-semibold text-muted-foreground",
+                        active && "bg-foreground text-background",
+                      )}
+                    >
+                      {dept.idPrefix ?? "--"}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <b
+                        className={cn(
+                          "block truncate text-[13.5px]",
+                          active ? "font-semibold" : "font-medium",
+                        )}
                       >
-                        Sửa
-                      </button>
-                      <button
-                        type="button"
-                        className="dept-action-btn dept-action-delete"
-                        onClick={() => setDeleting(dept)}
-                      >
-                        Xóa
-                      </button>
-                    </td>
-                  </tr>
+                        {dept.name}
+                      </b>
+                      <small className="block truncate text-[11.5px] text-muted-foreground">
+                        {[dept.code, extensionRange(dept) && `máy lẻ ${extensionRange(dept)}`]
+                          .filter(Boolean)
+                          .join(" · ") || "Chưa có mã"}
+                      </small>
+                    </span>
+                    <small
+                      className={cn(
+                        "min-w-6 rounded-full bg-secondary px-[7px] text-center text-[11.5px] font-semibold text-muted-foreground tabular-nums",
+                        active && "bg-card",
+                      )}
+                    >
+                      {dept.staffCount}
+                    </small>
+                  </button>
                 );
               })}
-          </tbody>
-        </table>
-      </div>
+            </Fragment>
+          );
+        })}
+      </nav>
 
-      {/* 3. Chi tiết nhân sự / giảng viên của đơn vị đang chọn */}
-      {selectedDept && (
-        <div style={{ marginTop: 28 }}>
-          <StaffCard key={selectedDept.id} unit={selectedDept} token={token} run={run} />
-        </div>
+      {selectedDept ? (
+        <UnitDetail
+          key={selectedDept.id}
+          unit={selectedDept}
+          token={token}
+          run={run}
+          onEdit={() => openEditModal(selectedDept)}
+          onDelete={() => setDeleting(selectedDept)}
+        />
+      ) : (
+        <p className={cn(CARD, MUTED, "p-6 text-center")}>
+          Chọn một đơn vị để xem bộ môn và tài khoản.
+        </p>
       )}
 
-      {/* 4. Modal Thêm / Sửa khoa & phòng ban */}
       {modalOpen && (
         <Modal
           title={editingDept ? "Cập nhật khoa / phòng ban" : "Thêm khoa / phòng ban"}
           eyebrow="Quản lý cơ cấu tổ chức"
           onClose={() => setModalOpen(false)}
         >
-          <form className="dept-modal-form" onSubmit={handleSubmit}>
-            <div className="dept-form-group">
-              <label htmlFor="dept-name">Tên khoa / phòng ban *</label>
+          <form className="tw tw-form grid gap-3.5 text-sm" onSubmit={handleSubmit}>
+            <label>
+              Tên khoa / phòng ban *
               <input
-                id="dept-name"
                 type="text"
                 required
                 placeholder="VD: Khoa Công nghệ thông tin hoặc Phòng Đào tạo"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
-            </div>
-
-            <div className="dept-form-row">
-              <div className="dept-form-group">
-                <label htmlFor="dept-kind">Khối đơn vị *</label>
+            </label>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label>
+                Khối đơn vị *
                 <select
-                  id="dept-kind"
                   value={formData.kind}
                   onChange={(e) =>
                     setFormData({ ...formData, kind: e.target.value as "office" | "faculty" })
@@ -272,23 +309,19 @@ export function FacultyPanel({ token, run, onUnitCreated }: Props) {
                   <option value="office">Khối hành chính (Phòng ban/Trung tâm)</option>
                   <option value="faculty">Khối giảng dạy (Khoa/Bộ môn)</option>
                 </select>
-              </div>
-
-              <div className="dept-form-group">
-                <label htmlFor="dept-code">Mã số (Viết tắt/Tiền tố)</label>
+              </label>
+              <label>
+                Mã số (Viết tắt/Tiền tố)
                 <input
-                  id="dept-code"
                   type="text"
                   placeholder="VD: 001 hoặc CNTT (để trống = –)"
                   value={formData.code}
                   onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                 />
-              </div>
-
-              <div className="dept-form-group">
-                <label htmlFor="dept-id-prefix">Mã định danh (2 số, đầu mã SV/GV/CB)</label>
+              </label>
+              <label>
+                Mã định danh (2 số, đầu mã SV/GV/CB)
                 <input
-                  id="dept-id-prefix"
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]{2}"
@@ -303,16 +336,15 @@ export function FacultyPanel({ token, run, onUnitCreated }: Props) {
                     setFormData({ ...formData, idPrefix: e.target.value.replace(/[^0-9]/g, "") })
                   }
                 />
-              </div>
+              </label>
             </div>
-
-            <div className="dept-modal-footer">
-              <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>
+            <div className="flex justify-end gap-2 pt-1">
+              <button type="button" className={BTN_GHOST} onClick={() => setModalOpen(false)}>
                 Huỷ
-              </Button>
-              <Button type="submit" disabled={submitting}>
+              </button>
+              <button type="submit" className={BTN} disabled={submitting}>
                 {submitting ? "Đang xử lý…" : editingDept ? "Lưu thay đổi" : "Tạo đơn vị"}
-              </Button>
+              </button>
             </div>
           </form>
         </Modal>
@@ -330,11 +362,24 @@ export function FacultyPanel({ token, run, onUnitCreated }: Props) {
   );
 }
 
-function StaffCard({ unit, token, run }: { unit: DepartmentUnit; token: string; run: Run }) {
+function UnitDetail({
+  unit,
+  token,
+  run,
+  onEdit,
+  onDelete,
+}: {
+  unit: DepartmentUnit;
+  token: string;
+  run: Run;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   const [revision, setRevision] = useState(0);
   const [staff, setStaff] = useState<StaffRow[]>([]);
   const [departments, setDepartments] = useState<{ id: string; code: string; name: string }[]>([]);
   const [department, setDepartment] = useState({ code: "", name: "" });
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     void academicApi<{
@@ -348,175 +393,219 @@ function StaffCard({ unit, token, run }: { unit: DepartmentUnit; token: string; 
       .catch(() => undefined);
   }, [token, unit.id, revision]);
 
+  const range = extensionRange(unit);
+  const q = query.trim().toLowerCase();
+  const shown = staff.filter(
+    (s) => !q || [s.displayName, s.email, s.staffCode].some((v) => v.toLowerCase().includes(q)),
+  );
+  const facts: [string, string | number][] = [
+    ["Tài khoản", staff.length],
+    ["Đang hoạt động", staff.filter((s) => s.active).length],
+    ["Bộ môn", unit.kind === "faculty" ? departments.length : "—"],
+    ["Máy lẻ", range ?? "—"],
+  ];
+
   return (
-    <div className="staff-panel-card">
-      <div className="staff-panel-header">
-        <div className="staff-panel-title-group">
-          <div className="staff-panel-title-row">
-            <h3 className="staff-panel-title">Tài khoản của {unit.name}</h3>
-            <span className="staff-count-badge">{staff.length}</span>
-          </div>
-          <p className="staff-panel-sub">Sinh viên, giảng viên và cán bộ thuộc đơn vị, kèm mã số</p>
-        </div>
-        <div className="staff-panel-meta">
-          <span className="dept-badge-unit">
-            {unit.kind === "office" ? "Khối hành chính" : "Khối giảng dạy"}
+    <div className="grid min-w-0 gap-3.5">
+      <section className={CARD} aria-label={unit.name}>
+        <div className="flex flex-wrap items-start gap-3.5 p-4">
+          <span className="grid size-[46px] shrink-0 place-items-center rounded-[11px] bg-foreground font-mono text-base font-bold text-background">
+            {unit.idPrefix ?? "--"}
           </span>
-        </div>
-      </div>
-
-      <div className="staff-table-wrapper">
-        <table className="staff-table">
-          <thead>
-            <tr>
-              <th>Mã số</th>
-              <th>Họ tên & Email</th>
-              <th>Học vị / Chức vụ</th>
-              <th>Bộ môn</th>
-              <th>Trạng thái</th>
-            </tr>
-          </thead>
-          <tbody>
-            {staff.length === 0 ? (
-              <tr>
-                <td colSpan={5}>
-                  <div className="staff-empty-state">
-                    <div className="staff-empty-icon">
-                      <Icon name="users" size={26} />
-                    </div>
-                    <p className="staff-empty-title">Chưa có tài khoản nào thuộc đơn vị này</p>
-                    <p className="staff-empty-desc">
-                      Tạo hoặc chuyển tài khoản vào đơn vị ở tab "Tạo tài khoản": hệ thống tự cấp mã
-                      số theo mã định danh của đơn vị.
-                    </p>
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              staff.map((s) => (
-                <tr key={s.userId}>
-                  <td>
-                    <strong style={{ fontSize: 13, color: "#1e293b" }}>{s.staffCode}</strong>
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 600, color: "#0f172a" }}>{s.displayName}</div>
-                    <small style={{ color: "#64748b", fontSize: 12 }}>{s.email}</small>
-                  </td>
-                  <td>
-                    <span
-                      style={{
-                        display: "inline-block",
-                        padding: "2px 8px",
-                        borderRadius: 4,
-                        background: "#f1f5f9",
-                        fontSize: 12.5,
-                        fontWeight: 500,
-                        color: "#334155",
-                      }}
-                    >
-                      {s.rank ? rankLabel[s.rank] || s.rank : "—"}
-                    </span>
-                  </td>
-                  <td>{s.departmentCode ?? "—"}</td>
-                  <td>
-                    {s.active ? (
-                      <span className="dept-badge-created">
-                        <span className="dept-dot" style={{ backgroundColor: "#10B981" }} />
-                        Đang hoạt động
-                      </span>
-                    ) : (
-                      <span className="dept-badge-uncreated">
-                        <span className="dept-dot" style={{ backgroundColor: "#9CA3AF" }} />
-                        Ngừng hoạt động
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="staff-forms-grid">
-        {unit.kind === "faculty" && (
-          <form
-            className="staff-form-card"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              if (
-                await run("Đã tạo bộ môn", () =>
-                  academicApi(token, `units/${unit.id}/departments`, "POST", department),
-                )
-              ) {
-                setDepartment({ code: "", name: "" });
-                setRevision((n) => n + 1);
-              }
-            }}
-          >
-            <div className="staff-form-head">
-              <div
-                className="staff-form-head-icon"
-                style={{ background: "#f0fdf4", color: "#16a34a" }}
-              >
-                <Icon name="building" size={18} />
-              </div>
-              <div>
-                <h4>Bộ môn trực thuộc ({departments.length})</h4>
-                <span style={{ fontSize: 12, color: "#64748b" }}>Các tổ / bộ môn của khoa</span>
-              </div>
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold">{unit.name}</h2>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <span className={cn(CHIP, TINT.blue)}>
+                {unit.kind === "office" ? "Khối hành chính" : "Khối giảng dạy"}
+              </span>
+              {unit.code && <span className={CHIP}>Mã {unit.code}</span>}
+              <span className={CHIP}>Mã định danh {unit.idPrefix ?? "chưa đặt"}</span>
             </div>
-
-            <div className="staff-form-body">
-              {departments.length > 0 && (
-                <ul className="staff-dept-list">
-                  {departments.map((d) => (
-                    <li key={d.id} className="staff-dept-pill">
-                      <strong>{d.code}</strong> · {d.name}
-                    </li>
-                  ))}
-                </ul>
+          </div>
+          <div className="ml-auto flex gap-2">
+            <button type="button" className={cn(BTN_GHOST, BTN_SM)} onClick={onEdit}>
+              <Icon name="edit" size={14} />
+              Sửa
+            </button>
+            <button
+              type="button"
+              className={cn(BTN_GHOST, BTN_SM, "text-destructive")}
+              onClick={onDelete}
+            >
+              <Icon name="trash" size={14} />
+              Xoá
+            </button>
+          </div>
+        </div>
+        <dl className="grid grid-cols-2 border-t min-[1150px]:grid-cols-4">
+          {facts.map(([label, value], index) => (
+            <div
+              key={label}
+              className={cn(
+                "grid gap-0.5 px-4 py-3",
+                index % 2 && "border-l",
+                index > 1 && "border-t min-[1150px]:border-t-0",
+                index === 2 && "min-[1150px]:border-l",
               )}
+            >
+              <dt className="text-xs text-muted-foreground">{label}</dt>
+              <dd className="text-lg font-bold tabular-nums">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
 
-              <div className="staff-form-row">
-                <div className="staff-form-group">
-                  <label className="staff-field-label">
-                    Mã bộ môn <span className="req">*</span>
-                  </label>
-                  <input
-                    className="staff-input"
-                    placeholder="VD: HTTT, KHMT"
-                    value={department.code}
-                    onChange={(e) =>
-                      setDepartment({ ...department, code: e.target.value.toUpperCase() })
-                    }
-                    required
-                    aria-label="Mã bộ môn"
-                  />
-                </div>
-                <div className="staff-form-group">
-                  <label className="staff-field-label">
-                    Tên bộ môn <span className="req">*</span>
-                  </label>
-                  <input
-                    className="staff-input"
-                    placeholder="VD: Hệ thống thông tin"
-                    value={department.name}
-                    onChange={(e) => setDepartment({ ...department, name: e.target.value })}
-                    required
-                    aria-label="Tên bộ môn"
-                  />
-                </div>
-              </div>
-
-              <button type="submit" className="staff-submit-btn is-secondary">
-                <Icon name="plus" size={16} />
+      {unit.kind === "faculty" && (
+        <section className={CARD} aria-label="Bộ môn trực thuộc">
+          <div className={CARD_HEAD}>
+            <h3 className={H3}>Bộ môn trực thuộc</h3>
+            <span className={CHIP}>{departments.length}</span>
+          </div>
+          <div className="grid gap-2.5 px-4 py-3.5">
+            {departments.length > 0 && (
+              <ul className="flex list-none flex-wrap gap-1.5">
+                {departments.map((d) => (
+                  <li
+                    key={d.id}
+                    className="inline-flex items-center gap-1.5 rounded-[7px] border px-2.5 py-1 text-[13px]"
+                  >
+                    <b className="font-mono text-xs font-semibold text-muted-foreground">
+                      {d.code}
+                    </b>
+                    {d.name}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <form
+              className="tw-form grid gap-2 md:grid-cols-[140px_minmax(0,1fr)_auto]"
+              onSubmit={async (event) => {
+                event.preventDefault();
+                if (
+                  await run("Đã tạo bộ môn", () =>
+                    academicApi(token, `units/${unit.id}/departments`, "POST", department),
+                  )
+                ) {
+                  setDepartment({ code: "", name: "" });
+                  setRevision((n) => n + 1);
+                }
+              }}
+            >
+              <input
+                placeholder="Mã, VD: HTTT"
+                value={department.code}
+                onChange={(e) =>
+                  setDepartment({ ...department, code: e.target.value.toUpperCase() })
+                }
+                required
+                aria-label="Mã bộ môn"
+              />
+              <input
+                placeholder="Tên bộ môn, VD: Hệ thống thông tin"
+                value={department.name}
+                onChange={(e) => setDepartment({ ...department, name: e.target.value })}
+                required
+                aria-label="Tên bộ môn"
+              />
+              <button type="submit" className={BTN_GHOST}>
+                <Icon name="plus" size={15} />
                 Thêm bộ môn
               </button>
-            </div>
-          </form>
-        )}
-      </div>
+            </form>
+          </div>
+        </section>
+      )}
+
+      <section className={TABLE_CARD} aria-label={`Tài khoản của ${unit.name}`}>
+        <div className={CARD_HEAD}>
+          <h3 className={H3}>Tài khoản thuộc đơn vị</h3>
+          <span className={CHIP}>{staff.length}</span>
+          <label className={cn(SEARCH, "ml-auto w-60 max-md:ml-0 max-md:w-full")}>
+            <Icon name="search" size={15} />
+            <input
+              type="search"
+              placeholder="Tìm trong đơn vị…"
+              aria-label="Tìm tài khoản trong đơn vị"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </label>
+        </div>
+        <div className="overflow-x-auto">
+          <table className={TABLE}>
+            <thead>
+              <tr>
+                <th scope="col">Mã số</th>
+                <th scope="col">Họ tên</th>
+                <th scope="col" className="max-md:hidden">
+                  Học vị
+                </th>
+                <th scope="col" className="max-md:hidden">
+                  Bộ môn
+                </th>
+                <th scope="col">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody>
+              {!shown.length && (
+                <tr>
+                  <td colSpan={5} className={cn(MUTED, "px-4 py-8 text-center")}>
+                    {staff.length
+                      ? "Không có tài khoản khớp."
+                      : 'Chưa có tài khoản nào thuộc đơn vị này. Tạo hoặc chuyển tài khoản vào ở tab "Tạo tài khoản": hệ thống tự cấp mã số theo mã định danh của đơn vị.'}
+                  </td>
+                </tr>
+              )}
+              {shown.map((s) => (
+                <tr key={s.userId}>
+                  <td>
+                    <code className={CODE}>{s.staffCode}</code>
+                  </td>
+                  <td className="max-w-0 min-w-[200px]">
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      <UserAvatar name={s.displayName} />
+                      <span className="min-w-0">
+                        <b className="block truncate font-semibold">{s.displayName}</b>
+                        <small className="block truncate text-xs text-muted-foreground">
+                          {s.email}
+                        </small>
+                      </span>
+                    </span>
+                  </td>
+                  <td className="max-md:hidden">
+                    {s.rank ? (
+                      <span
+                        className={cn(
+                          "rounded-[5px] px-[7px] py-px text-[11.5px] font-semibold",
+                          s.rank === "ths" || s.rank === "cn"
+                            ? "bg-secondary text-muted-foreground"
+                            : TINT.blue,
+                        )}
+                      >
+                        {rankLabel[s.rank] || s.rank}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className="max-md:hidden">{s.departmentCode ?? "—"}</td>
+                  <td>
+                    <span className={cn(CHIP, s.active && TINT.green)}>
+                      <span
+                        className={cn(
+                          "size-2 rounded-full",
+                          s.active ? "bg-emerald-500" : "bg-border",
+                        )}
+                      />
+                      {s.active ? "Đang hoạt động" : "Ngừng"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

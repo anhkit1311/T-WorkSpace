@@ -9,6 +9,8 @@ export const SPRING = {
   snappy: { type: "spring", stiffness: 520, damping: 38, mass: 0.7 },
   gentle: { type: "spring", stiffness: 260, damping: 30, mass: 0.9 },
   bouncy: { type: "spring", stiffness: 420, damping: 24, mass: 0.7 },
+  /** Opening overlays: settles in ~0.4s with a small overshoot. */
+  pop: { type: "spring", stiffness: 380, damping: 26, mass: 0.8 },
 } as const;
 
 export const DURATION = {
@@ -26,17 +28,20 @@ export const DURATION = {
   scene: 1.1,
 } as const;
 
-export function getMotionPreset(_reduced = false) {
-  void _reduced;
+/** `lite`: the device could not hold 50fps, so entering and leaving elements skip the blur. */
+export function getMotionPreset(lite = false) {
+  const blur = (px: number) => (lite ? "blur(0px)" : `blur(${px}px)`);
   return {
     reduced: false,
+    lite,
+    blur,
     duration: (seconds: number) => seconds,
     gesture: { whileHover: { y: -1 }, whileTap: { scale: 0.97 }, transition: SPRING.snappy },
     panel: {
-      initial: { opacity: 0, x: 24 },
-      animate: { opacity: 1, x: 0 },
-      exit: { opacity: 0, x: 16, transition: { duration: DURATION.panelExit } },
-      transition: { duration: DURATION.panel, ease: EASE.out },
+      initial: { opacity: 0, x: 40, filter: blur(8) },
+      animate: { opacity: 1, x: 0, filter: blur(0) },
+      exit: { opacity: 0, x: 24, filter: blur(6), transition: { duration: DURATION.panelExit } },
+      transition: { duration: 0.38, ease: EASE.out },
     },
     view: {
       initial: { opacity: 0, y: 8 },

@@ -58,8 +58,11 @@ export interface Pbx {
   bridge(channelIds: string[]): Promise<string>;
   addToBridge(bridgeId: string, channelIds: string[]): Promise<void>;
   removeFromBridge(bridgeId: string, channelId: string): Promise<void>;
-  /** CC-11: a snoop channel on `channelId` (spy both ways; whisper "out" is heard by that channel's phone). */
-  snoop(channelId: string, input: { whisper: boolean; callId: string }): Promise<string>;
+  /** CC-11: a snoop channel on `channelId` (spy both ways; whisper "out" is heard by that channel's phone, "both" by both sides). */
+  snoop(
+    channelId: string,
+    input: { whisper: "none" | "out" | "both"; callId: string },
+  ): Promise<string>;
   destroyBridge(bridgeId: string): Promise<void>;
   /** M1: a channel that streams the bridge audio as G.711 RTP to `host` ("ip:port") and plays what comes back. */
   externalMedia(host: string): Promise<{ channelId: string; address: string; port: number }>;

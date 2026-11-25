@@ -8,12 +8,14 @@ import type {
 } from "@doan/shared";
 import { useApp } from "../../app/providers/AppContext";
 import { useSocket } from "../../app/providers/SocketContext";
-import { Badge, Button, Field, Modal } from "../../shared/ui/Primitives";
+import { Button, Modal } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
+import { cn } from "../../shared/lib/utils";
 import { ApiError } from "../auth/api";
 import { callCenterApi } from "./api";
 import { useSoftphone } from "./useSoftphone";
-import "./contact-center.css";
+import { BTN_GHOST, BTN_PRIMARY, CHIP, DOT, LED, MUTED, PANEL, PANEL_HEAD, TINT } from "./ui";
+import { SEG, SEG_BTN } from "../admin/ui";
 
 const STATUS: Record<
   TicketStatus,
@@ -25,6 +27,10 @@ const STATUS: Record<
   resolved: { label: "Đã giải quyết", tone: "green" },
   closed: { label: "Đã đóng", tone: "neutral" },
 };
+
+const WARNING =
+  "rounded-lg bg-[var(--tint-amber-bg)] px-3 py-2 text-[13px] text-[var(--tint-amber-fg)]";
+const SM = "h-[30px]! px-2.5 text-[12.5px]";
 
 const clock = (seconds: number) =>
   `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
@@ -75,60 +81,79 @@ export function ContactCenter() {
   const openDepartments = departments?.filter((department) => department.open).length ?? 0;
 
   return (
-    <div className="contact-center">
-      <section className="contact-departments" aria-labelledby="contact-departments-title">
-        <div className="contact-departments__head">
+    <div className="tw grid min-w-0 gap-4 text-sm text-foreground">
+      <section className="grid gap-3" aria-labelledby="contact-departments-title">
+        <div className="flex flex-wrap items-end gap-3">
           <div>
-            <p className="contact-eyebrow">Phòng ban nhận cuộc gọi</p>
-            <h2 id="contact-departments-title">Bạn cần liên hệ ai?</h2>
+            <p className="text-xs font-semibold text-muted-foreground">Phòng ban nhận cuộc gọi</p>
+            <h2 id="contact-departments-title" className="text-xl font-bold tracking-tight">
+              Bạn cần liên hệ ai?
+            </h2>
           </div>
           {departments && departments.length > 0 && (
-            <span className="contact-chip">
-              <i className="contact-led" aria-hidden="true" />
+            <span className={cn(CHIP, TINT.green, "ml-auto")}>
+              <i className={cn(LED, DOT.green)} aria-hidden="true" />
               {openDepartments} / {departments.length} đang mở
             </span>
           )}
         </div>
         {error && (
-          <p role="alert" className="desk-warning">
+          <p role="alert" className={WARNING}>
             {error}
           </p>
         )}
         {departments === null ? (
-          <p className="contact-departments__note">Đang tải danh sách phòng ban…</p>
+          <p className={MUTED}>Đang tải danh sách phòng ban…</p>
         ) : !departments.length ? (
-          <p className="contact-departments__note">Chưa có phòng ban nào nhận cuộc gọi.</p>
+          <p className={MUTED}>Chưa có phòng ban nào nhận cuộc gọi.</p>
         ) : (
-          <ul className="contact-grid">
+          <ul className="grid list-none gap-3 lg:grid-cols-2 min-[1300px]:grid-cols-4">
             {departments.map((department) => (
               <li
                 key={department.id}
-                className={`contact-card ${department.open ? "" : "is-closed"}`}
+                className="grid min-w-0 content-between gap-3 rounded-[10px] border bg-card p-3.5"
               >
-                <div className="contact-card__head">
-                  <strong>{department.name}</strong>
-                  <i className="contact-led" aria-hidden="true" />
+                <div className="flex items-start gap-2.5">
+                  <span
+                    className={cn(
+                      "grid size-9 shrink-0 place-items-center rounded-lg",
+                      TINT[department.open ? "blue" : "neutral"],
+                    )}
+                  >
+                    <Icon name="building" size={17} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <strong className="block truncate font-semibold">{department.name}</strong>
+                    <small className="block text-xs text-muted-foreground">
+                      {department.open ? "Đang trong giờ làm việc" : "Ngoài giờ"}
+                      {department.hotline && ` · Hotline ${department.hotline}`}
+                    </small>
+                  </span>
+                  <i
+                    className={cn(LED, "mt-1.5", DOT[department.open ? "green" : "neutral"])}
+                    aria-hidden="true"
+                  />
                 </div>
-                <span className="contact-card__status">
-                  {department.open ? "Đang trong giờ làm việc" : "Ngoài giờ"}
-                  {department.hotline && ` · Hotline ${department.hotline}`}
-                </span>
-                <div className="contact-card__actions">
-                  <Button
-                    size="sm"
-                    icon="phone"
-                    variant={department.open ? "primary" : "secondary"}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className={cn(department.open ? BTN_PRIMARY : BTN_GHOST, SM)}
                     onClick={() => setCalling(department)}
                   >
+                    <Icon name="phone" size={14} />
                     {department.open ? "Gọi ngay" : "Để lại lời nhắn"}
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={() => setWriting(department)}>
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(BTN_GHOST, SM)}
+                    onClick={() => setWriting(department)}
+                  >
                     Gửi yêu cầu
-                  </Button>
+                  </button>
                 </div>
               </li>
             ))}
-            <li className="contact-card contact-card--info">
+            <li className="grid content-center rounded-[10px] border border-dashed p-3.5 text-[13px] text-muted-foreground">
               Gọi bằng micro của máy tính. Ngoài giờ làm việc, cuộc gọi chuyển vào hộp thư thoại và
               tạo phiếu hỗ trợ cho bạn.
             </li>
@@ -136,71 +161,84 @@ export function ContactCenter() {
         )}
       </section>
 
-      <section className="callcenter-panel contact-tickets" aria-labelledby="contact-tickets-title">
-        <div className="callcenter-panel__head">
-          <h2 id="contact-tickets-title" className="callcenter-panel__title">
+      <section className={PANEL} aria-labelledby="contact-tickets-title">
+        <div className={PANEL_HEAD}>
+          <h2 id="contact-tickets-title" className="text-[15px] font-semibold">
             Phiếu hỗ trợ của tôi
           </h2>
-          {waiting > 0 && <Badge tone="amber">{waiting} chờ bạn phản hồi</Badge>}
-        </div>
-        {tickets === null ? (
-          <p className="desk-muted">Đang tải…</p>
-        ) : !tickets.length ? (
-          <p className="desk-muted">Bạn chưa gửi yêu cầu nào.</p>
-        ) : (
-          <>
-            <div className="contact-filter" role="group" aria-label="Lọc phiếu">
-              <button type="button" aria-pressed={!showDone} onClick={() => setShowDone(false)}>
-                Đang mở <small>{openCount}</small>
+          {waiting > 0 && (
+            <span className={cn(CHIP, "px-2 py-0.5", TINT.amber)}>{waiting} chờ bạn phản hồi</span>
+          )}
+          {!!tickets?.length && (
+            <div className={cn(SEG, "ml-auto")} role="group" aria-label="Lọc phiếu">
+              <button
+                type="button"
+                className={SEG_BTN}
+                aria-pressed={!showDone}
+                onClick={() => setShowDone(false)}
+              >
+                Đang mở <small className="text-muted-foreground">{openCount}</small>
               </button>
-              <button type="button" aria-pressed={showDone} onClick={() => setShowDone(true)}>
-                Đã xong <small>{doneCount}</small>
+              <button
+                type="button"
+                className={SEG_BTN}
+                aria-pressed={showDone}
+                onClick={() => setShowDone(true)}
+              >
+                Đã xong <small className="text-muted-foreground">{doneCount}</small>
               </button>
             </div>
-            {!shown.length ? (
-              <p className="desk-muted">
-                {showDone ? "Chưa có phiếu nào đã xong." : "Không có phiếu nào đang mở."}
-              </p>
-            ) : (
-              <ul className="contact-tickets__list" aria-label="Phiếu hỗ trợ của tôi">
-                {shown.map((ticket) => (
-                  <li
-                    key={ticket.id}
-                    className={`tone-${STATUS[ticket.status].tone} ${ticket.status === "waiting" ? "is-waiting" : ""}`}
-                  >
-                    <button
-                      type="button"
-                      className="contact-ticket"
-                      onClick={() => setOpenTicket(ticket.id)}
-                    >
-                      <i className="contact-step" aria-hidden="true" />
-                      <span className="desk-recent__who">
-                        <strong>{ticket.subject}</strong>
-                        <span>
-                          {ticket.code} · {ticket.departmentName} · cập nhật{" "}
-                          {new Date(ticket.updatedAt).toLocaleString("vi-VN", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            day: "2-digit",
-                            month: "2-digit",
-                          })}
-                        </span>
-                      </span>
-                      {ticket.status === "waiting" ? (
-                        <span className="contact-reply">Phản hồi</span>
-                      ) : (
-                        <Badge tone={STATUS[ticket.status].tone}>
-                          {STATUS[ticket.status].label}
-                        </Badge>
-                      )}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
+          )}
+        </div>
+        {tickets === null ? (
+          <p className={cn(MUTED, "px-4 py-6 text-center")}>Đang tải…</p>
+        ) : !tickets.length ? (
+          <p className={cn(MUTED, "px-4 py-6 text-center")}>Bạn chưa gửi yêu cầu nào.</p>
+        ) : !shown.length ? (
+          <p className={cn(MUTED, "px-4 py-6 text-center")}>
+            {showDone ? "Chưa có phiếu nào đã xong." : "Không có phiếu nào đang mở."}
+          </p>
+        ) : (
+          <ul className="list-none" aria-label="Phiếu hỗ trợ của tôi">
+            {shown.map((ticket) => (
+              <li key={ticket.id} className="border-b last:border-b-0">
+                <button
+                  type="button"
+                  className={cn(
+                    "flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left hover:bg-secondary",
+                    ticket.status === "waiting" && "bg-[var(--tint-amber-bg)]/40",
+                  )}
+                  onClick={() => setOpenTicket(ticket.id)}
+                >
+                  <i
+                    className={cn(LED, DOT[STATUS[ticket.status].tone] ?? DOT.blue)}
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <strong className="block truncate font-semibold">{ticket.subject}</strong>
+                    <small className="block truncate text-xs text-muted-foreground">
+                      {ticket.code} · {ticket.departmentName} · cập nhật{" "}
+                      {new Date(ticket.updatedAt).toLocaleString("vi-VN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        day: "2-digit",
+                        month: "2-digit",
+                      })}
+                    </small>
+                  </span>
+                  {ticket.status === "waiting" ? (
+                    <span className={cn(BTN_PRIMARY, SM)}>Phản hồi</span>
+                  ) : (
+                    <span className={cn(CHIP, "px-2 py-0.5", TINT[STATUS[ticket.status].tone])}>
+                      {STATUS[ticket.status].label}
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
-        <p className="contact-tickets__foot">
+        <p className="border-t bg-background px-4 py-2.5 text-xs text-muted-foreground">
           Yêu cầu từ cuộc gọi nhỡ, thư thoại hay nút “Cần hỗ trợ” trong khóa học cũng hiện ở đây.
         </p>
       </section>
@@ -278,8 +316,9 @@ function RequestDialog({
         </>
       }
     >
-      <div className="desk-form">
-        <Field label="Tiêu đề">
+      <div className="tw tw-form grid gap-3 text-sm text-foreground">
+        <label>
+          Tiêu đề
           <input
             value={subject}
             maxLength={200}
@@ -287,8 +326,9 @@ function RequestDialog({
             placeholder="Ví dụ: Xin xác nhận sinh viên"
             autoFocus
           />
-        </Field>
-        <Field label="Nội dung">
+        </label>
+        <label>
+          Nội dung
           <textarea
             rows={5}
             maxLength={8000}
@@ -296,9 +336,9 @@ function RequestDialog({
             onChange={(event) => setDescription(event.target.value)}
             placeholder="Mô tả yêu cầu, mã số sinh viên, thời gian thuận tiện để gọi lại…"
           />
-        </Field>
+        </label>
         {error && (
-          <p role="alert" className="desk-warning">
+          <p role="alert" className={WARNING}>
             {error}
           </p>
         )}
@@ -365,42 +405,48 @@ function TicketDialog({
       onClose={onClose}
     >
       {!ticket ? (
-        <p className="desk-muted">{error || "Đang tải…"}</p>
+        <p className={MUTED}>{error || "Đang tải…"}</p>
       ) : (
-        <div className="contact-thread">
-          <div className="contact-thread__meta">
-            <Badge tone={STATUS[ticket.status].tone}>{STATUS[ticket.status].label}</Badge>
+        <div className="tw tw-form grid gap-3.5 text-sm text-foreground">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={cn(CHIP, "px-2 py-0.5", TINT[STATUS[ticket.status].tone])}>
+              {STATUS[ticket.status].label}
+            </span>
             {ticket.assigneeName && (
-              <span className="desk-muted">Người xử lý: {ticket.assigneeName}</span>
+              <span className={MUTED}>Người xử lý: {ticket.assigneeName}</span>
             )}
           </div>
-          {ticket.description && <p className="desk-notes">{ticket.description}</p>}
-          <ol className="contact-thread__events">
+          {ticket.description && (
+            <p className="rounded-lg bg-secondary px-3 py-2.5 whitespace-pre-wrap">
+              {ticket.description}
+            </p>
+          )}
+          <ol className="grid max-h-[40vh] list-none gap-2.5 overflow-y-auto border-l-2 pl-3.5">
             {data!.events.map((event) => (
-              <li key={event.id} className={event.kind === "status" ? "is-status" : ""}>
-                <span className="desk-muted">
+              <li key={event.id} className="grid gap-0.5">
+                <span className="text-xs text-muted-foreground">
                   {new Date(event.createdAt).toLocaleString("vi-VN")} ·{" "}
                   {event.actorName ?? "Hệ thống"}
                 </span>
                 {event.kind === "status" ? (
-                  <span>
+                  <span className="text-[13px] text-muted-foreground">
                     Trạng thái: {event.fromStatus ? STATUS[event.fromStatus].label : "—"} →{" "}
                     {event.toStatus ? STATUS[event.toStatus].label : "—"}
                   </span>
                 ) : (
-                  <p>{event.body}</p>
+                  <p className="whitespace-pre-wrap">{event.body}</p>
                 )}
               </li>
             ))}
           </ol>
           {done ? (
-            <div className="contact-rating">
-              <span>
+            <div className="flex flex-wrap items-center gap-3 rounded-lg bg-secondary px-3 py-2.5">
+              <span className="font-medium">
                 {ticket.satisfaction
                   ? "Cảm ơn bạn đã đánh giá:"
                   : "Bạn hài lòng với cách giải quyết?"}
               </span>
-              <div role="radiogroup" aria-label="Mức hài lòng">
+              <div role="radiogroup" aria-label="Mức hài lòng" className="flex gap-0.5">
                 {[1, 2, 3, 4, 5].map((score) => (
                   <button
                     key={score}
@@ -408,7 +454,12 @@ function TicketDialog({
                     role="radio"
                     aria-checked={ticket.satisfaction === score}
                     aria-label={`${score} sao`}
-                    className={(ticket.satisfaction ?? 0) >= score ? "is-on" : ""}
+                    className={cn(
+                      "grid size-8 cursor-pointer place-items-center rounded-md hover:bg-card disabled:cursor-not-allowed",
+                      (ticket.satisfaction ?? 0) >= score
+                        ? "text-amber-500 [&_svg]:fill-current"
+                        : "text-muted-foreground",
+                    )}
                     disabled={busy}
                     onClick={() => act("rating", { score })}
                   >
@@ -419,10 +470,9 @@ function TicketDialog({
             </div>
           ) : null}
           {ticket.status !== "closed" && (
-            <div className="desk-form">
-              <Field
-                label={ticket.status === "waiting" ? "Phòng ban đang chờ bạn phản hồi" : "Trả lời"}
-              >
+            <div className="grid gap-2">
+              <label>
+                {ticket.status === "waiting" ? "Phòng ban đang chờ bạn phản hồi" : "Trả lời"}
                 <textarea
                   rows={3}
                   maxLength={4000}
@@ -430,20 +480,20 @@ function TicketDialog({
                   onChange={(event) => setReply(event.target.value)}
                   placeholder="Bổ sung thông tin cho phòng ban…"
                 />
-              </Field>
-              <div className="desk-actions">
-                <Button
-                  disabled={busy || !reply.trim()}
-                  icon="send"
-                  onClick={() => act("replies", { body: reply.trim() })}
-                >
-                  Gửi trả lời
-                </Button>
-              </div>
+              </label>
+              <button
+                type="button"
+                className={cn(BTN_PRIMARY, "justify-self-end")}
+                disabled={busy || !reply.trim()}
+                onClick={() => act("replies", { body: reply.trim() })}
+              >
+                <Icon name="send" size={15} />
+                Gửi trả lời
+              </button>
             </div>
           )}
           {error && (
-            <p role="alert" className="desk-warning">
+            <p role="alert" className={WARNING}>
               {error}
             </p>
           )}
@@ -555,15 +605,21 @@ export function WebCallDialog({
       }
     >
       <div
-        className={`web-call ${phase === "active" ? "is-active" : ""}`}
+        className="tw grid justify-items-center gap-2.5 py-3 text-center text-sm text-foreground"
         role="status"
         aria-live="polite"
       >
-        <span className="web-call__icon">
+        <span
+          className={cn(
+            "grid size-16 place-items-center rounded-full",
+            TINT[error ? "red" : phase === "active" ? "green" : "blue"],
+            phase !== "active" && !error && !ended && "animate-pulse",
+          )}
+        >
           <Icon name="headset" size={28} />
         </span>
-        <strong>{label}</strong>
-        <p className="desk-muted">
+        <strong className="text-base font-semibold">{label}</strong>
+        <p className={cn(MUTED, "max-w-[360px]")}>
           {error ||
             (phase === "active"
               ? "Nếu đang nghe nhạc chờ, bạn đang trong hàng đợi — tổng đài viên sẽ nhận máy sớm nhất. Ngoài giờ làm việc, hãy để lại lời nhắn sau tiếng bíp."

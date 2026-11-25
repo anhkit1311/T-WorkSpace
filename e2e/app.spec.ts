@@ -34,8 +34,12 @@ async function signedIn(browser: Browser, user: User) {
   if (sessions.has(user.id)) {
     await page.goto("/app/overview");
     // A refresh that rotated the token after the state was saved (e.g. a call rejoining as the test ended) ends the session.
-    await page.locator('.app-shell, input[type="password"]:visible').first().waitFor();
-    if (!(await page.locator(".app-shell").count())) await signIn(page, user);
+    await page
+      .locator('nav[aria-label="Menu chức năng chính"], input[type="password"]:visible')
+      .first()
+      .waitFor();
+    if (!(await page.getByRole("navigation", { name: "Menu chức năng chính" }).count()))
+      await signIn(page, user);
   } else await signIn(page, user);
   return page;
 }
@@ -72,20 +76,24 @@ test("chỉ quản trị hệ thống thấy trang Quản trị và sức khoẻ
   const { users } = fixtures();
   const member = await signedIn(browser, users.alice);
   await expect(member.getByText("Trang chủ").first()).toBeVisible();
-  await expect(member.getByRole("button", { name: "Quản lý" })).toHaveCount(0);
+  // Alice owns a group, so "Quản lý" holds her board link, never the system admin page.
+  await expect(member.getByRole("link", { name: "Quản trị hệ thống" })).toHaveCount(0);
 
-  // Administration lives in the "Quản lý" menu of the top bar.
+  // Administration lives in the "Quản lý" group of the sidebar.
   const admin = await signedIn(browser, users.admin);
-  await admin.getByRole("button", { name: "Quản lý" }).click();
-  await admin.getByRole("menuitem", { name: "Quản trị hệ thống" }).click();
+  await admin
+    .getByRole("group", { name: "Quản lý" })
+    .getByRole("link", { name: "Quản trị hệ thống" })
+    .click();
   await expect(admin).toHaveURL(/\/app\/access/);
-  const tabs = admin.getByRole("navigation", { name: "Phân hệ quản trị" });
-  await expect(admin.getByRole("heading", { name: "Danh sách khoa / phòng ban" })).toBeVisible();
-  await tabs.getByRole("button", { name: "Phân quyền" }).click();
-  await expect(admin.getByRole("heading", { name: "Phân quyền" })).toBeVisible();
-  await tabs.getByRole("button", { name: "Sức khỏe hệ thống" }).click();
-  await expect(admin.getByRole("heading", { name: "Sức khỏe hệ thống" })).toBeVisible();
-  await expect(admin.locator(".admin-health-card")).toHaveCount(5);
+  const tabs = admin.getByRole("tablist", { name: "Phân hệ quản trị" });
+  await expect(admin.getByRole("navigation", { name: "Đơn vị" })).toBeVisible();
+  await tabs.getByRole("tab", { name: "Phân quyền" }).click();
+  await expect(admin.getByRole("region", { name: "Phân quyền" })).toBeVisible();
+  await tabs.getByRole("tab", { name: "Sức khỏe hệ thống" }).click();
+  await expect(
+    admin.getByRole("region", { name: "Sức khỏe hệ thống" }).getByRole("article"),
+  ).toHaveCount(5);
 });
 
 test("hai người vào cùng phòng họp thấy video của nhau và tự vào lại sau khi mất mạng", async ({
@@ -124,34 +132,24 @@ test("menu theo chức năng", async ({ browser }) => {
   const menu = page.getByRole("navigation", { name: "Menu chức năng chính" });
   // A menu link's name ends with its unread badge, if any.
   const item = (name: string) => menu.getByRole("link", { name: new RegExp(`^${name}( \\d+)?$`) });
-  for (const name of ["Trang chủ", "Tổng đài", "Tin nhắn", "Họp", "Khóa học", "Nhân sự"])
+  for (const name of [
+    "Trang chủ",
+    "Tổng đài",
+    "Tin nhắn",
+    "Họp",
+    "Khóa học",
+    "Thông báo",
+    "Nhân sự",
+  ])
     await expect(item(name).first()).toBeVisible();
-  for (const name of ["Quản trị hệ thống", "Quản lý thông báo", "Báo cáo đơn vị"])
+  // Alice owns a group and may post to its board, so "Quản lý bảng tin" is hers too.
+  for (const name of ["Quản trị hệ thống", "Báo cáo đơn vị"])
     await expect(item(name)).toHaveCount(0);
-  // Groups left the menu; an old link still opens the group list.
-  await page.goto("/app/groups");
-  const group = page
-    .locator("main")
-    .getByRole("listitem")
-    .filter({ hasText: /^E2E \d+/ });
-  await expect(group).toBeVisible();
-  await expect(group.getByRole("button", { name: "Quản lý" })).toBeVisible();
 });
 
 test("tài khoản chưa có nhóm thấy hướng dẫn tạo nhóm", async ({ browser }) => {
   const page = await signedIn(browser, fixtures().users.carol);
-  await page.goto("/app/groups");
-  await expect(
-    page.locator("main").getByRole("button", { name: "Tạo nhóm" }).first(),
-  ).toBeVisible();
-  await expect(
-    page.locator("main").getByRole("button", { name: "Nhập mã mời" }).first(),
-  ).toBeVisible();
   await page.goto("/app/chat");
-  await expect(
-    page.locator("main").getByRole("button", { name: "Tạo nhóm" }).first(),
-  ).toBeVisible();
-  await page.goto("/app/files");
   await expect(
     page.locator("main").getByRole("button", { name: "Tạo nhóm" }).first(),
   ).toBeVisible();
@@ -167,41 +165,16 @@ test("Tin nhắn liệt kê nhóm như một đoạn chat và gửi được tin
   await page.goto("/app/chat");
   const nav = page.getByRole("navigation", { name: "Hội thoại" });
   await expect(nav.getByRole("button", { name: /E2E \d+/ })).toBeVisible();
-  await expect(nav.getByText("#tong-quan")).toHaveCount(0);
+  await expect(nav.getByText("#Tổng quan")).toHaveCount(0);
   await nav.getByRole("button", { name: /E2E \d+/ }).click();
   const text = `xin chào e2e ${Date.now()}`;
   await page.locator("#chat-message").fill(text);
   await page.locator("#chat-message").press("Enter");
-  await expect(page.locator(".message-row__text").getByText(text)).toBeVisible();
+  await expect(page.locator("[data-message-text]").getByText(text)).toBeVisible();
   // An old group link lands on the same page, in that group's channel.
   await page.goto(`/app/workspace?workspace=${workspaceId}`);
   await expect(page).toHaveURL(/\/app\/chat\?workspace=/);
-  await expect(page.locator(".message-row__text").getByText(text)).toBeVisible();
-});
-
-test("Tài liệu: tải tệp lên nhóm rồi tìm thấy", async ({ browser }) => {
-  const page = await signedIn(browser, fixtures().users.alice);
-  await page.goto("/app/files");
-  await page.getByRole("button", { name: "Tải lên" }).click();
-  const dialog = page.getByRole("dialog");
-  const group =
-    (await dialog
-      .getByLabel("Nhóm")
-      .locator("option")
-      .filter({ hasText: /^E2E \d+$/ })
-      .first()
-      .textContent()) ?? "";
-  await dialog.getByLabel("Nhóm").selectOption({ label: group });
-  const name = `e2e-tai-lieu-${Date.now()}.txt`;
-  await dialog
-    .getByLabel("Tệp")
-    .setInputFiles({ name, mimeType: "text/plain", buffer: Buffer.from("tài liệu e2e") });
-  await dialog.getByRole("button", { name: "Tải lên" }).click();
-  await expect(dialog).toHaveCount(0);
-  await page.getByLabel("Tìm tệp").fill("tai-lieu");
-  const row = page.getByRole("listitem").filter({ hasText: name });
-  await expect(row).toBeVisible();
-  await expect(row.getByText(group, { exact: true })).toBeVisible();
+  await expect(page.locator("[data-message-text]").getByText(text)).toBeVisible();
 });
 
 test("Họp: lên lịch rồi thấy trên lịch tuần, vào được phòng", async ({ browser }) => {
@@ -222,10 +195,12 @@ test("Họp: lên lịch rồi thấy trên lịch tuần, vào được phòng"
   await dialog.getByLabel("Tên cuộc họp").fill(title);
   await dialog.getByRole("button", { name: "Tạo lịch họp" }).click();
   await expect(dialog).toHaveCount(0);
-  // The agenda lists it (created an hour from now); "Vào họp" opens the device check.
-  const row = page.locator(".mt-ev").filter({ hasText: title });
+  // The list shows it (created an hour from now); its detail pane has "Vào phòng họp",
+  // which opens the device check.
+  const row = page.locator("[data-meeting-row]").filter({ hasText: title });
   const enter = async () => {
-    await row.getByRole("button", { name: "Vào họp" }).click();
+    await row.click();
+    await page.getByRole("button", { name: "Vào phòng họp", exact: true }).click();
     await page.locator("main").getByRole("button", { name: "Vào phòng" }).last().click();
     await expect.poll(() => playingVideos(page), { timeout: 30_000 }).toBeGreaterThanOrEqual(1);
   };

@@ -19,12 +19,39 @@ import { MeetingControls, useMeetingControl } from "./MeetingControls";
 import { MeetingOutcomesPanel } from "./MeetingOutcomesPanel";
 import { PreJoinScreen, type PreJoinChoice } from "./PreJoinScreen";
 import { useSocket } from "../../app/providers/SocketContext";
-import { Avatar, Button, IconButton, ConfirmDialog } from "../../shared/ui/Primitives";
+import { Button, ConfirmDialog, STATE_CARD } from "../../shared/ui/Primitives";
+import { UserAvatar } from "../../shared/ui/kit/user-avatar";
+import { cn } from "../../shared/lib/utils";
 import { AnimatePresence } from "motion/react";
 import { meetingShortcut } from "../../shared/lib/interaction";
 import { Icon, type IconName } from "../../shared/ui/Icon";
-import "./meeting-ui.css";
-import "./meeting-panels.css";
+
+// The room is dark in both themes, so its chrome uses fixed zinc tones instead of the theme tokens.
+const ROOM_ICON =
+  "grid size-9 shrink-0 cursor-pointer place-items-center rounded-md border-0 bg-transparent p-0 text-zinc-300 transition-colors hover:bg-[#27272a] hover:text-white disabled:cursor-default disabled:opacity-50";
+const ROOM_ICON_ON = "bg-[#27272a] text-white";
+const ROOM_BTN =
+  "inline-flex h-[30px] shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-[#27272a] px-2.5 text-xs font-medium text-zinc-100 transition-colors hover:bg-[#27272a] disabled:cursor-default disabled:opacity-50";
+const TILE_BADGE =
+  "inline-flex h-[22px] items-center gap-1 rounded-full px-2 text-[11px] font-bold tracking-wider uppercase";
+const SHARED_SCREEN =
+  "tw relative mx-auto aspect-video max-h-[45vh] overflow-hidden rounded-xl border border-[#27272a] bg-black";
+const SHARED_LABEL =
+  "absolute top-4 left-4 rounded-full bg-black/75 px-3.5 py-1.5 text-xs font-semibold text-white backdrop-blur";
+const PANEL_HEADING =
+  "m-0 px-1.5 pt-2 pb-1 text-xs leading-4 font-semibold tracking-wider text-zinc-400 uppercase";
+const PERSON = "flex items-center gap-2.5 rounded-md p-1.5 text-[13.5px]";
+const DOCK_BTN =
+  "relative grid h-11 min-w-11 shrink-0 cursor-pointer place-items-center rounded-xl border-0 bg-[#1c1c1f] p-0 text-zinc-100 transition-colors hover:bg-[#2a2a2e] disabled:opacity-50";
+const DOCK_ON = "bg-[#dbe6ff] text-[#12295e] hover:bg-[#dbe6ff]";
+const DOCK_OFF = "bg-[#3a1616] text-[#ff8a8a]";
+const DOCK_SPLIT = "flex h-11 shrink-0 items-center rounded-xl bg-[#1c1c1f] text-zinc-100";
+const DOCK_SPLIT_MAIN =
+  "grid h-11 w-10 cursor-pointer place-items-center rounded-l-xl hover:bg-white/10 disabled:cursor-default disabled:opacity-50";
+const DOCK_CHEVRON =
+  "grid h-11 w-6 cursor-pointer place-items-center rounded-r-xl border-0 bg-transparent p-0 text-inherit hover:bg-white/10";
+const DOCK_BADGE =
+  "absolute -top-1 -right-1 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#2f6bff] px-1 text-[11px] font-semibold text-white";
 
 type Room = {
   id: string;
@@ -64,7 +91,7 @@ function Video({ stream }: { stream: MediaStream | null }) {
       if (ref.current) ref.current.srcObject = null;
     };
   }, [stream]);
-  return <video ref={ref} autoPlay playsInline muted className="rtc-video-element" />;
+  return <video ref={ref} autoPlay playsInline muted className="size-full object-cover" />;
 }
 
 function Audio({
@@ -201,7 +228,7 @@ function DialInBadge({ accessToken, roomId }: { accessToken: string; roomId: str
   const code = `${dialIn.code.slice(0, 3)} ${dialIn.code.slice(3)}`;
   return (
     <span
-      className="meeting-topbar__meta"
+      className="tw inline-flex h-[34px] items-center gap-[7px] rounded-lg border border-zinc-800 px-3 text-xs font-semibold whitespace-nowrap text-zinc-300 max-[1280px]:hidden"
       title={`Từ máy lẻ: gọi ${dialIn.number}, nhập mã ${dialIn.code} rồi nhấn #`}
     >
       <Icon name="phone" size={14} /> Gọi {dialIn.number} · mã {code}
@@ -247,7 +274,7 @@ function PopoverMenu({
     };
   }, [open]);
   return (
-    <div className="meeting-menu" ref={ref}>
+    <div className="relative" ref={ref}>
       <button
         type="button"
         className={buttonClass}
@@ -260,10 +287,23 @@ function PopoverMenu({
         <Icon name={icon} size={iconSize} />
       </button>
       {open && (
-        <div className={`meeting-menu__list is-${placement}`} role="menu" aria-label={label}>
+        <div
+          className={cn(
+            "tw motion-pop absolute z-[120] flex min-w-[220px] flex-col rounded-xl border border-zinc-800 bg-[#111113] p-1.5 text-zinc-100 shadow-[0_16px_32px_-12px_rgba(0,0,0,.8)]",
+            placement === "up"
+              ? "bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2"
+              : "top-[calc(100%+6px)] right-0",
+          )}
+          role="menu"
+          aria-label={label}
+        >
           {items.map((item, index) =>
             "heading" in item ? (
-              <div key={index} className="meeting-menu__heading" role="presentation">
+              <div
+                key={index}
+                className="px-2.5 pt-2 pb-1 text-[11px] font-semibold tracking-[.08em] text-zinc-500 uppercase"
+                role="presentation"
+              >
                 {item.heading}
               </div>
             ) : (
@@ -272,15 +312,20 @@ function PopoverMenu({
                 type="button"
                 role={item.checked === undefined ? "menuitem" : "menuitemradio"}
                 aria-checked={item.checked}
-                className={`meeting-menu__item ${item.danger ? "is-danger" : ""}`}
+                className={cn(
+                  "flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13.5px]",
+                  item.danger
+                    ? "text-red-400 hover:bg-red-400/15"
+                    : "text-zinc-300 hover:bg-zinc-800 hover:text-white",
+                )}
                 onClick={() => {
                   setOpen(false);
                   item.onSelect();
                 }}
               >
                 {item.icon && <Icon name={item.icon} size={16} />}
-                <span>{item.label}</span>
-                {item.checked && <Icon name="check" size={14} className="meeting-menu__check" />}
+                <span className="flex-1">{item.label}</span>
+                {item.checked && <Icon name="check" size={14} className="text-green-400" />}
               </button>
             ),
           )}
@@ -303,6 +348,7 @@ function ParticipantTile({
   dominant = false,
   onPin,
   isMainSpotlight = false,
+  strip = false,
 }: {
   isLocal: boolean;
   displayName: string;
@@ -317,6 +363,8 @@ function ParticipantTile({
   dominant?: boolean;
   onPin?: () => void;
   isMainSpotlight?: boolean;
+  /** A small tile in the filmstrip beside the spotlight. */
+  strip?: boolean;
 }) {
   const analysed = useAudioActivity(stream, hasAudio && speaking === undefined);
   const isSpeaking = speaking ?? analysed;
@@ -333,14 +381,37 @@ function ParticipantTile({
 
   return (
     <article
-      className={`video-tile ${isSpeaking ? "is-speaking" : ""} ${dominant ? "is-dominant" : ""} ${pinned ? "is-pinned" : ""} ${isMainSpotlight ? "is-main-spotlight" : ""}`}
+      className={cn(
+        "tw group/tile relative overflow-hidden border border-[#27272a] bg-[#1c1c1f] transition-shadow",
+        strip
+          ? "pointer-events-auto h-[76px] w-[132px] flex-none rounded-lg shadow-[0_8px_20px_-10px_rgba(0,0,0,0.8)]"
+          : "aspect-video rounded-xl",
+        // The spotlight tile is as large as the stage allows while staying 16:9.
+        isMainSpotlight &&
+          "h-[min(calc(84vw*9/16),calc(100vh-165px))] max-h-[min(540px,100%)] w-[min(84vw,calc((100vh-165px)*16/9))] max-w-[min(960px,100%)]",
+        isSpeaking &&
+          "border-emerald-500 shadow-[0_0_0_1px_#10b981,0_0_22px_-2px_rgba(16,185,129,0.65)]",
+      )}
+      data-dominant={dominant || undefined}
     >
       {hasVideo && stream ? (
         <Video stream={stream} />
       ) : (
-        <div className="participant-visual">
-          <div className="jitsi-avatar-ring">
-            <div className="jitsi-avatar-circle" title={displayName}>
+        <div className="flex size-full items-center justify-center">
+          <div
+            className={cn(
+              "inline-flex rounded-full border-2 border-transparent transition-colors",
+              strip ? "p-0.5" : "p-[3px]",
+              isSpeaking && "border-emerald-500",
+            )}
+          >
+            <div
+              className={cn(
+                "grid place-items-center rounded-full bg-[#2f3a55] font-bold text-[#cfdcff] select-none",
+                strip ? "size-[34px] text-sm" : "size-[76px] text-[26px]",
+              )}
+              title={displayName}
+            >
               <span>{initials}</span>
             </div>
           </div>
@@ -349,7 +420,11 @@ function ParticipantTile({
       {onPin && (
         <button
           type="button"
-          className="meeting-pin"
+          className={cn(
+            "absolute z-[3] grid size-[30px] cursor-pointer place-items-center rounded-full border border-white/15 transition-opacity group-hover/tile:opacity-100 focus-visible:opacity-100",
+            strip ? "top-1 right-1 size-6" : "top-2.5 right-2.5",
+            pinned ? "bg-white text-black opacity-100" : "bg-black/60 text-white opacity-0",
+          )}
           onClick={onPin}
           aria-label={pinned ? `Bỏ ghim ${displayName}` : `Ghim ${displayName}`}
           title={pinned ? "Bỏ ghim" : "Ghim người tham gia"}
@@ -358,37 +433,62 @@ function ParticipantTile({
         </button>
       )}
       {(raisedHand || host) && (
-        <span className="tile-badges">
+        <span
+          className={cn("absolute z-[3] flex gap-1.5", strip ? "top-1 left-1" : "top-2.5 left-2.5")}
+        >
           {raisedHand && (
             <span
-              className="participant-hand"
+              className={cn(TILE_BADGE, "bg-amber-500 text-[#3b2504]")}
               role="img"
               aria-label="Đang giơ tay"
               title="Đang giơ tay"
             >
-              <Icon name="hand" size={13} /> Giơ tay
+              <Icon name="hand" size={13} /> {!strip && "Giơ tay"}
             </span>
           )}
-          {host && <span className="participant-role">Chủ trì</span>}
+          {host && !strip && (
+            <span className={cn(TILE_BADGE, "bg-black/60 text-emerald-300 backdrop-blur")}>
+              Chủ trì
+            </span>
+          )}
         </span>
       )}
-      <div className="participant-label">
+      <div
+        className={cn(
+          "absolute z-[3] inline-flex items-center gap-1.5 rounded-full bg-black/60 font-semibold text-white backdrop-blur",
+          strip
+            ? "bottom-1 left-1 h-5 max-w-[calc(100%-8px)] px-[7px] text-[11px]"
+            : "bottom-2.5 left-2.5 h-6 max-w-[calc(100%-20px)] px-2.5 text-xs",
+        )}
+      >
         {!hasAudio && (
           <Icon
             name="mic-off"
             size={13}
-            className="participant-label__muted"
+            className="shrink-0 text-red-400"
             aria-label="Micro đang tắt"
           />
         )}
-        <span>
+        <span className="truncate">
           {displayName} {isLocal ? "(bạn)" : ""}
         </span>
         {isSpeaking && (
-          <span className="speaking-indicator" title="Đang nói" aria-label="Đang nói">
-            <span className="speaking-bar" />
-            <span className="speaking-bar" />
-            <span className="speaking-bar" />
+          <span
+            className="inline-flex shrink-0 items-center gap-0.5"
+            title="Đang nói"
+            aria-label="Đang nói"
+          >
+            {["h-[9px]", "h-3.5 [animation-delay:0.18s]", "h-2 [animation-delay:0.36s]"].map(
+              (bar) => (
+                <span
+                  key={bar}
+                  className={cn(
+                    "w-[3px] rounded-sm bg-emerald-500 motion-safe:animate-[speaking-pulse_0.6s_ease-in-out_infinite_alternate]",
+                    bar,
+                  )}
+                />
+              ),
+            )}
           </span>
         )}
       </div>
@@ -507,7 +607,8 @@ export function MeetingPage() {
     const list = callListRef.current;
     if (sidePanel === "chat") {
       setCallUnread(0);
-      if (list && followCallChat.current) list.scrollTop = list.scrollHeight;
+      if (list && followCallChat.current)
+        list.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
     }
   }, [callMessages, sidePanel]);
   const control = useMeetingControl(meeting.inCall ? meeting.roomId : "");
@@ -1054,6 +1155,7 @@ export function MeetingPage() {
         dominant={meeting.activeSpeakerId === tile.id && meeting.remotePeers.length > 1}
         onPin={() => togglePin(tile.id)}
         isMainSpotlight={main}
+        strip={staged && !main}
       />
     ) : (
       <ParticipantTile
@@ -1069,14 +1171,18 @@ export function MeetingPage() {
         dominant={meeting.activeSpeakerId === "local" && meeting.remotePeers.length > 1}
         onPin={() => togglePin("local")}
         isMainSpotlight={main}
+        strip={staged && !main}
       />
     );
 
   return (
-    <div className="meetings-page">
+    <div className="box-border w-full p-(--page-pad)">
       {/* Global Error Notice */}
       {error && (
-        <div role="alert" className="inline-alert inline-alert--spaced">
+        <div
+          role="alert"
+          className="tw mb-4 rounded-[10px] border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13.5px] text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+        >
           {error}
         </div>
       )}
@@ -1091,9 +1197,15 @@ export function MeetingPage() {
             />
           )}
           {meeting.interruptedRoomId && (
-            <div className="meeting-return-notice" role="status">
-              Kết nối cuộc họp đã bị ngắt. Hệ thống đang tự vào lại khi mạng ổn định; nếu không
-              được, chọn “Vào phòng”.
+            <div
+              className="tw mb-4 flex items-start gap-2.5 rounded-[10px] border border-amber-200 bg-amber-50 px-3.5 py-3 text-[13.5px] text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300"
+              role="status"
+            >
+              <Icon name="warning" size={16} className="mt-0.5 shrink-0" />
+              <span>
+                <b className="block font-semibold">Kết nối cuộc họp bị ngắt</b>
+                Hệ thống đang tự vào lại khi mạng ổn định; nếu không được, chọn “Vào phòng”.
+              </span>
             </div>
           )}
           {route.channelId ? (
@@ -1109,11 +1221,11 @@ export function MeetingPage() {
                 onBack={() => navigate({ view: "meetings", workspaceId: route.workspaceId })}
               />
             ) : loading ? (
-              <p role="status" className="loading-note">
+              <p role="status" className="tw py-6 text-center text-sm text-muted-foreground!">
                 Đang mở phòng họp…
               </p>
             ) : (
-              <section className="state-card" role="alert">
+              <section className={STATE_CARD} role="alert">
                 <h3>Không thể mở phòng họp</h3>
                 <p>Phòng họp không tồn tại hoặc bạn không có quyền truy cập liên kết này.</p>
                 <Button
@@ -1131,144 +1243,164 @@ export function MeetingPage() {
         </div>
       ) : (
         /* In-call room: full screen over the app, like Meet or Teams. */
-        <div className="meeting-room-active" role="region" aria-label="Phòng họp">
+        <div
+          className="dark fixed inset-0 z-(--z-overlay) flex flex-col gap-3 overflow-hidden bg-[#09090b] px-4 pt-3 pb-[88px] text-zinc-100 [color-scheme:dark] max-md:px-2 max-md:pt-2 max-md:pb-[84px]"
+          role="region"
+          aria-label="Phòng họp"
+        >
           {!isConnected && (
-            <div className="meeting-reconnecting-overlay" role="alert">
-              <span className="network-reconnect-dot" />
+            <div
+              className="tw absolute top-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-red-600/90 px-4.5 py-2 text-[13px] font-semibold text-white shadow-lg backdrop-blur"
+              role="alert"
+            >
+              <span className="size-2 rounded-full bg-white motion-safe:animate-pulse" />
               <span>Đang gián đoạn kết nối máy chủ · Hệ thống đang tự động khôi phục…</span>
             </div>
           )}
 
-          <header className="meeting-topbar">
-            <div className="jitsi-topbar-left">
-              <h2 className="jitsi-topbar-title">{roomName}</h2>
-              <span className="jitsi-topbar-subtitle">
-                {participantCount} người trong phòng{meetingState?.locked ? " · đã khóa" : ""}
+          <header className="tw relative z-30 flex min-h-[46px] min-w-0 shrink-0 items-center gap-2.5 text-zinc-100">
+            <h2 className="m-0 truncate text-[15px] leading-5 font-semibold tracking-normal text-zinc-100">
+              {roomName}
+            </h2>
+            {meetingState?.startedAt ? (
+              <MeetingClock
+                since={meetingState.startedAt}
+                className="shrink-0 text-[13px] text-zinc-400 tabular-nums"
+              />
+            ) : (
+              <span className="shrink-0 text-[13px] text-zinc-400 tabular-nums">00:00</span>
+            )}
+            {recording && (
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#3a1616] px-2.5 py-0.5 text-xs font-semibold text-[#ff8a8a]">
+                <span className="size-[7px] rounded-full bg-red-500 motion-safe:animate-pulse" />
+                Đang ghi hình
               </span>
-            </div>
-
-            <div className="jitsi-topbar-center">
-              <div className="jitsi-topbar-chip">
-                {recording && (
-                  <span className="meeting-rec">
-                    <span className="mt-led tone-red is-pulse" /> REC
-                  </span>
-                )}
-                {meetingState?.startedAt ? (
-                  <MeetingClock since={meetingState.startedAt} />
-                ) : (
-                  <span className="meeting-topbar__clock">00:00</span>
-                )}
-                <span className="meeting-chip-divider" aria-hidden="true" />
-                <button
-                  type="button"
-                  className={`meeting-chip-notes ${sidePanel === "notes" ? "is-active" : ""}`}
-                  aria-pressed={sidePanel === "notes"}
-                  title="Biên bản, ghi hình và việc cần làm"
-                  onClick={() => setSidePanel(sidePanel === "notes" ? "none" : "notes")}
-                >
-                  <Icon name="sparkles" size={13} /> Biên bản
-                </button>
-                <button
-                  type="button"
-                  className="jitsi-chip-shield"
-                  title={meetingState?.locked ? "Phòng đã khóa" : "Bảo mật phòng"}
-                  onClick={() => {
-                    if (control.canManage && meetingState) {
-                      void control.action("lock", undefined, !meetingState.locked);
-                    } else {
-                      notify(
-                        "Bảo mật phòng",
-                        meetingState?.locked
-                          ? "Phòng đang được khóa."
-                          : "Phòng đang hoạt động an toàn.",
-                        "info",
-                      );
-                    }
-                  }}
-                  aria-label="Bảo mật phòng"
-                >
-                  <Icon name={meetingState?.locked ? "lock" : "shield"} size={13} />
-                </button>
-              </div>
-            </div>
-
-            <div className="jitsi-topbar-right">
-              {accessToken && <DialInBadge accessToken={accessToken} roomId={meeting.roomId} />}
-              <button
-                type="button"
-                className="jitsi-topbar-btn"
-                title="Thêm người tham gia / Sao chép liên kết"
-                onClick={handleCopyInviteLink}
-                aria-label="Thêm người tham gia"
-              >
-                <Icon name="user-plus" size={17} />
-              </button>
-              <button
-                type="button"
-                className={`jitsi-topbar-btn ${layout === "grid" ? "is-active" : ""}`}
-                title="Bật/tắt chế độ xem lưới"
-                onClick={() => setLayout(layout === "grid" ? "spotlight" : "grid")}
-                aria-label="Chế độ xem lưới"
-              >
-                <Icon name="grid-2x2" size={17} />
-              </button>
-              <button
-                type="button"
-                className="jitsi-topbar-btn"
-                title="Toàn màn hình"
-                onClick={toggleFullScreen}
-                aria-label="Toàn màn hình"
-              >
-                <Icon name="maximize" size={17} />
-              </button>
-              <button
-                type="button"
-                className={`jitsi-topbar-btn is-network is-${tone}`}
-                title={networkLabel}
-                onClick={() => setSidePanel(sidePanel === "network" ? "none" : "network")}
-                aria-label={`Chất lượng mạng: ${networkLabel}`}
-              >
-                <Icon name={isConnected ? "wifi" : "warning"} size={15} />
-                {isConnected && meeting.qos?.rtt != null && <span>{meeting.qos.rtt} ms</span>}
-              </button>
-              <button
-                type="button"
-                className="jitsi-topbar-btn"
-                title="Thu nhỏ: làm việc khác, cuộc họp vẫn tiếp tục"
-                aria-label="Thu nhỏ cuộc họp"
-                onClick={() => navigate({ view: "overview" })}
-              >
-                <Icon name="minus" size={16} />
-              </button>
-            </div>
+            )}
+            <span className="truncate text-[13px] text-zinc-400 max-md:hidden">
+              {participantCount} người trong phòng{meetingState?.locked ? " · đã khóa" : ""}
+            </span>
+            <span className="flex-1" />
+            {accessToken && <DialInBadge accessToken={accessToken} roomId={meeting.roomId} />}
+            <button
+              type="button"
+              className={ROOM_ICON}
+              title={meetingState?.locked ? "Phòng đã khóa" : "Bảo mật phòng"}
+              aria-label="Bảo mật phòng"
+              onClick={() => {
+                if (control.canManage && meetingState) {
+                  void control.action("lock", undefined, !meetingState.locked);
+                } else {
+                  notify(
+                    "Bảo mật phòng",
+                    meetingState?.locked
+                      ? "Phòng đang được khóa."
+                      : "Phòng đang hoạt động an toàn.",
+                    "info",
+                  );
+                }
+              }}
+            >
+              <Icon name={meetingState?.locked ? "lock" : "shield"} size={17} />
+            </button>
+            <button
+              type="button"
+              className={ROOM_ICON}
+              title="Thêm người tham gia / Sao chép liên kết"
+              aria-label="Thêm người tham gia"
+              onClick={handleCopyInviteLink}
+            >
+              <Icon name="user-plus" size={17} />
+            </button>
+            <button
+              type="button"
+              className={cn(ROOM_ICON, layout === "grid" && ROOM_ICON_ON)}
+              title="Bật/tắt chế độ xem lưới"
+              aria-label="Chế độ xem lưới"
+              aria-pressed={layout === "grid"}
+              onClick={() => setLayout(layout === "grid" ? "spotlight" : "grid")}
+            >
+              <Icon name="grid-2x2" size={17} />
+            </button>
+            <button
+              type="button"
+              className={ROOM_ICON}
+              title="Toàn màn hình"
+              aria-label="Toàn màn hình"
+              onClick={toggleFullScreen}
+            >
+              <Icon name="maximize" size={17} />
+            </button>
+            <button
+              type="button"
+              className={cn(
+                ROOM_ICON,
+                "w-auto gap-1.5 px-2 text-xs tabular-nums",
+                !isConnected
+                  ? "text-red-400"
+                  : tone === "good"
+                    ? "text-emerald-400"
+                    : "text-amber-400",
+                sidePanel === "network" && ROOM_ICON_ON,
+              )}
+              title={networkLabel}
+              aria-label={`Chất lượng mạng: ${networkLabel}`}
+              onClick={() => setSidePanel(sidePanel === "network" ? "none" : "network")}
+            >
+              <Icon name={isConnected ? "wifi" : "warning"} size={15} />
+              {isConnected && meeting.qos?.rtt != null && <span>{meeting.qos.rtt} ms</span>}
+            </button>
+            <button
+              type="button"
+              className={ROOM_ICON}
+              title="Thu nhỏ: làm việc khác, cuộc họp vẫn tiếp tục"
+              aria-label="Thu nhỏ cuộc họp"
+              onClick={() => navigate({ view: "overview" })}
+            >
+              <Icon name="minus" size={16} />
+            </button>
           </header>
 
           {control.error && (
-            <p className="meeting-controls-alert" role="alert">
+            <p
+              className="tw shrink-0 rounded-md bg-[#3a1616] px-3 py-2 text-[13px] text-[#ff8a8a]"
+              role="alert"
+            >
               {control.error}
             </p>
           )}
           {meeting.localScreenStream && (
-            <div className="shared-screen">
+            <div className={SHARED_SCREEN}>
               <Video stream={meeting.localScreenStream} />
-              <span>Bạn đang chia sẻ màn hình</span>
+              <span className={SHARED_LABEL}>Bạn đang chia sẻ màn hình</span>
             </div>
           )}
           {meeting.remotePeers
             .filter((peer) => peer.screenStream)
             .map((peer) => (
-              <div className="shared-screen" key={`screen-${peer.socketId}`}>
+              <div className={SHARED_SCREEN} key={`screen-${peer.socketId}`}>
                 <Video stream={peer.screenStream} />
-                <span>{peer.displayName} đang chia sẻ màn hình</span>
+                <span className={SHARED_LABEL}>{peer.displayName} đang chia sẻ màn hình</span>
               </div>
             ))}
 
-          <div className={`meeting-stage-layout ${sidePanel !== "none" ? "has-panel" : ""}`}>
+          <div
+            className={cn(
+              "relative grid min-h-0 flex-1 gap-3 overflow-hidden",
+              sidePanel !== "none"
+                ? "grid-cols-[minmax(0,1fr)_344px]"
+                : "grid-cols-[minmax(0,1fr)]",
+            )}
+          >
             {/* Dynamic video grid: best-fit columns, paging, demand-driven SFU layers */}
             <div
               ref={gridRef}
-              className={`meeting-video-grid ${staged ? "is-spotlight" : ""} ${meeting.localScreenStream || meeting.remotePeers.some((peer) => peer.screenStream) ? "has-share" : ""}`}
+              className={cn(
+                "relative size-full min-w-0",
+                staged
+                  ? "flex items-center justify-center overflow-hidden"
+                  : // gap-2.5 is GRID_GAP: bestGridLayout sizes the tiles around it.
+                    "grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] content-center justify-center gap-2.5",
+              )}
               style={
                 layout === "grid" && gridLayout.tileWidth > 0
                   ? {
@@ -1278,10 +1410,12 @@ export function MeetingPage() {
               }
             >
               {staged && spotlightTile && (
-                <div className="meeting-spotlight-main">{renderTile(spotlightTile, true)}</div>
+                <div className="relative z-[1] flex size-full items-center justify-center">
+                  {renderTile(spotlightTile, true)}
+                </div>
               )}
               {staged ? (
-                <div className="meeting-filmstrip">
+                <div className="pointer-events-none absolute top-3 right-3 z-[15] flex max-h-[calc(100%-24px)] flex-col gap-2 overflow-y-auto">
                   {pagedTiles.items.map((tile) => renderTile(tile))}
                 </div>
               ) : (
@@ -1289,9 +1423,16 @@ export function MeetingPage() {
               )}
             </div>
             {pagedTiles.pageCount > 1 && (
-              <nav className="meeting-grid-pager" aria-label="Trang người tham gia">
+              <nav
+                className="tw flex items-center justify-center gap-3 text-[13px] text-zinc-300"
+                aria-label="Trang người tham gia"
+              >
                 <button
                   type="button"
+                  className={cn(
+                    ROOM_ICON,
+                    "size-8 rounded-full border border-solid border-[#27272a]",
+                  )}
                   aria-label="Trang trước"
                   disabled={pagedTiles.page === 0}
                   onClick={() => setGridPage(pagedTiles.page - 1)}
@@ -1303,6 +1444,10 @@ export function MeetingPage() {
                 </span>
                 <button
                   type="button"
+                  className={cn(
+                    ROOM_ICON,
+                    "size-8 rounded-full border border-solid border-[#27272a]",
+                  )}
                   aria-label="Trang sau"
                   disabled={pagedTiles.page >= pagedTiles.pageCount - 1}
                   onClick={() => setGridPage(pagedTiles.page + 1)}
@@ -1318,67 +1463,82 @@ export function MeetingPage() {
             ))}
 
             {sidePanel !== "none" && (
-              <aside className="meeting-side-panel" aria-label={sidePanelTitle}>
-                <div className="meeting-side-panel-head">
-                  <div className="meeting-panel-tabs" role="group" aria-label="Bảng phụ">
+              <aside
+                className="tw z-[25] flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-zinc-800 bg-[#111113] text-zinc-100 max-md:fixed max-md:inset-[62px_8px_84px] max-md:z-[3]"
+                aria-label={sidePanelTitle}
+              >
+                <div className="tw flex shrink-0 items-center gap-1 border-b p-2">
+                  <div className="flex min-w-0 flex-1 gap-1" role="group" aria-label="Bảng phụ">
                     {panelTabs.map(([id, label, count]) => (
                       <button
                         key={id}
                         type="button"
-                        className={sidePanel === id ? "is-active" : ""}
+                        className={cn(
+                          "flex-1 cursor-pointer rounded-md px-1.5 py-1.5 text-[13px] font-medium whitespace-nowrap",
+                          sidePanel === id
+                            ? "bg-[#27272a] text-zinc-100"
+                            : "text-zinc-400 hover:text-zinc-100",
+                        )}
                         aria-pressed={sidePanel === id}
                         onClick={() => setSidePanel(id)}
                       >
                         {label}
-                        {count ? <small>{count}</small> : null}
+                        {count ? (
+                          <small className="ml-1 text-xs text-zinc-400">{count}</small>
+                        ) : null}
                       </button>
                     ))}
                   </div>
-                  <IconButton icon="x" label="Đóng bảng phụ" onClick={() => setSidePanel("none")} />
+                  <button
+                    type="button"
+                    className={ROOM_ICON}
+                    aria-label="Đóng bảng phụ"
+                    title="Đóng bảng phụ"
+                    onClick={() => setSidePanel("none")}
+                  >
+                    <Icon name="x" size={16} />
+                  </button>
                 </div>
-                {sidePanel === "network" && <p className="meeting-panel-title">{sidePanelTitle}</p>}
 
                 {sidePanel === "notes" ? (
                   meetingState?.id ? (
-                    <MeetingOutcomesPanel sessionId={meetingState.id} live />
+                    // The room is dark whatever the app theme, so the panel takes the dark tokens.
+                    <div className="dark min-h-0 flex-1 overflow-y-auto p-3">
+                      <MeetingOutcomesPanel sessionId={meetingState.id} live />
+                    </div>
                   ) : (
-                    <p className="meeting-outcomes-empty">Đang tải phiên họp…</p>
+                    <p className="tw p-3 text-[13px] text-zinc-400">Đang tải phiên họp…</p>
                   )
                 ) : sidePanel === "network" ? (
-                  <div className="meeting-network-panel">
-                    <dl className="meeting-network-stats">
-                      <div>
-                        <dt>Độ trễ (RTT)</dt>
-                        <dd>{meeting.qos?.rtt ?? "—"} ms</dd>
-                      </div>
-                      <div>
-                        <dt>Băng thông</dt>
-                        <dd>{meeting.qos?.bitrate ?? "—"} kbps</dd>
-                      </div>
-                      <div>
-                        <dt>Mất gói</dt>
-                        <dd>{meeting.qos?.packetLoss ?? "—"}%</dd>
-                      </div>
-                      <div>
-                        <dt>Jitter</dt>
-                        <dd>{meeting.qos?.jitter ?? "—"} ms</dd>
-                      </div>
-                      <div>
-                        <dt>Kết nối</dt>
-                        <dd>{meeting.qos?.transportPath?.toUpperCase() ?? "—"}</dd>
-                      </div>
-                      <div>
-                        <dt>Âm bị che</dt>
-                        <dd>{meeting.qos?.audioConcealed?.toFixed(1) ?? "—"}%</dd>
-                      </div>
+                  <div className="tw grid min-h-0 content-start gap-3 overflow-y-auto p-3 text-[13px] text-zinc-100">
+                    <b className="text-sm font-semibold">{sidePanelTitle}</b>
+                    <dl className="grid grid-cols-2 gap-2">
+                      {(
+                        [
+                          ["Độ trễ (RTT)", `${meeting.qos?.rtt ?? "—"} ms`],
+                          ["Băng thông", `${meeting.qos?.bitrate ?? "—"} kbps`],
+                          ["Mất gói", `${meeting.qos?.packetLoss ?? "—"}%`],
+                          ["Jitter", `${meeting.qos?.jitter ?? "—"} ms`],
+                          ["Kết nối", meeting.qos?.transportPath?.toUpperCase() ?? "—"],
+                          ["Âm bị che", `${meeting.qos?.audioConcealed?.toFixed(1) ?? "—"}%`],
+                        ] as const
+                      ).map(([label, value]) => (
+                        <div key={label} className="rounded-lg bg-[#1c1c1f] px-2.5 py-2">
+                          <dt className="text-xs text-zinc-400">{label}</dt>
+                          <dd className="font-semibold tabular-nums">{value}</dd>
+                        </div>
+                      ))}
                     </dl>
-                    <p className="meeting-network-cap">
+                    <span className="text-zinc-400">
                       Chất lượng nhận:{" "}
-                      <strong>{NETWORK_CAP_LABEL[String(meeting.networkCap)]}</strong>
-                    </p>
-                    <label className="meeting-policy-select">
+                      <strong className="font-semibold text-zinc-100">
+                        {NETWORK_CAP_LABEL[String(meeting.networkCap)]}
+                      </strong>
+                    </span>
+                    <label className="grid gap-1 text-xs text-zinc-400">
                       Chọn luồng video
                       <select
+                        className="h-[34px] rounded-md border bg-[#1c1c1f] px-2 text-[13px] text-zinc-100"
                         value={layerPolicy}
                         onChange={(event) => changeLayerPolicy(event.target.value as LayerPolicy)}
                         title="Chính sách chọn lớp simulcast cho các ô video"
@@ -1388,10 +1548,10 @@ export function MeetingPage() {
                         <option value="speaker">Theo người nói</option>
                       </select>
                     </label>
-                    <div className="meeting-network-actions">
-                      <Button
-                        size="sm"
-                        variant="secondary"
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        className={ROOM_BTN}
                         disabled={!meeting.qosHistory.length}
                         onClick={() => {
                           meeting.exportQosCsv();
@@ -1399,10 +1559,10 @@ export function MeetingPage() {
                         }}
                       >
                         Xuất CSV
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                      </button>
+                      <button
+                        type="button"
+                        className={ROOM_BTN}
                         disabled={!meeting.qosHistory.length}
                         onClick={() => {
                           meeting.exportQosJson();
@@ -1410,57 +1570,56 @@ export function MeetingPage() {
                         }}
                       >
                         Xuất JSON
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 ) : sidePanel === "people" ? (
-                  <div className="meeting-people">
+                  <div className="tw grid min-h-0 flex-1 content-start gap-0.5 overflow-y-auto p-2 text-zinc-100">
                     {keepsRegister && (
-                      <div className="meeting-attendance-bar">
-                        <span>{participantCount} người trong phòng</span>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          icon="download"
+                      <div className="flex items-center gap-2 px-1.5 pb-1 text-xs text-zinc-400">
+                        <span className="flex-1">{participantCount} người trong phòng</span>
+                        <button
+                          type="button"
+                          className={ROOM_BTN}
                           disabled={exportingAttendance}
                           onClick={() => void handleExportAttendanceCsv()}
                           title="Giờ vào, giờ rời và thời gian có mặt của từng người (mở được bằng Excel)"
                         >
+                          <Icon name="download" size={14} />
                           {exportingAttendance ? "Đang xuất…" : "Xuất điểm danh"}
-                        </Button>
+                        </button>
                       </div>
                     )}
                     {control.canManage && waitingPeople.length > 0 && (
-                      <section className="meeting-people__group">
-                        <h3>Đang chờ vào ({waitingPeople.length})</h3>
+                      <section className="grid gap-0.5">
+                        <h3 className={PANEL_HEADING}>Đang chờ vào ({waitingPeople.length})</h3>
                         {waitingPeople.map((person) => (
-                          <div key={person.userId} className="meeting-person-row">
-                            <Avatar name={person.displayName} size="sm" />
-                            <div className="meeting-person-info">
-                              <span className="meeting-person-name">{person.displayName}</span>
-                            </div>
-                            <Button
-                              size="sm"
+                          <div key={person.userId} className={PERSON}>
+                            <UserAvatar name={person.displayName} className="size-7 text-[11px]" />
+                            <span className="min-w-0 flex-1 truncate">{person.displayName}</span>
+                            <button
+                              type="button"
+                              className={cn(ROOM_BTN, "bg-zinc-50 text-zinc-900 hover:bg-zinc-200")}
                               disabled={control.busy}
                               onClick={() => void control.action("admit", person.userId)}
                             >
                               Cho vào
-                            </Button>
+                            </button>
                           </div>
                         ))}
                       </section>
                     )}
-                    <section className="meeting-people__group">
-                      <h3>Trong cuộc họp ({participantCount})</h3>
+                    <section className="grid gap-0.5">
+                      <h3 className={PANEL_HEADING}>Trong cuộc họp ({participantCount})</h3>
                       {roster.map((person) => (
-                        <div key={person.userId} className="meeting-person-row">
-                          <Avatar name={person.displayName} size="sm" />
-                          <div className="meeting-person-info">
-                            <span className="meeting-person-name">
+                        <div key={person.userId} className={PERSON}>
+                          <UserAvatar name={person.displayName} className="size-7 text-[11px]" />
+                          <span className="grid min-w-0 flex-1">
+                            <span className="truncate">
                               {person.displayName}
                               {person.isMe ? " (bạn)" : ""}
                             </span>
-                            <span className="meeting-person-mssv">
+                            <small className="truncate text-xs text-zinc-400">
                               {person.role === "host"
                                 ? "Chủ trì"
                                 : person.role === "cohost"
@@ -1468,28 +1627,29 @@ export function MeetingPage() {
                                   : "Thành viên"}
                               {studentIdOf(person.displayName) &&
                                 ` · MSSV ${studentIdOf(person.displayName)}`}
-                            </span>
-                          </div>
+                            </small>
+                          </span>
                           {person.raisedHand && (
                             <Icon
                               name="hand"
                               size={16}
-                              className="meeting-person-hand"
+                              className="shrink-0 text-amber-400"
                               aria-label="Đang giơ tay"
                             />
                           )}
                           <Icon
                             name={person.micOn ? "mic" : "mic-off"}
                             size={16}
-                            className={
-                              person.micOn ? "meeting-person-mic" : "meeting-person-mic is-off"
-                            }
+                            className={cn(
+                              "shrink-0",
+                              person.micOn ? "text-zinc-400" : "text-[#ff8a8a]",
+                            )}
                             aria-label={person.micOn ? "Micro đang bật" : "Micro đang tắt"}
                           />
                           <PopoverMenu
                             label={`Tùy chọn cho ${person.displayName}`}
                             icon="more"
-                            buttonClass="meeting-person-more"
+                            buttonClass={cn(ROOM_ICON, "size-7")}
                             placement="down"
                             items={personMenu(person)}
                           />
@@ -1501,7 +1661,7 @@ export function MeetingPage() {
                   <>
                     <div
                       ref={callListRef}
-                      className="meeting-chat-list"
+                      className="tw grid min-h-0 flex-1 content-start gap-2.5 overflow-y-auto p-3 text-[13.5px] text-zinc-100"
                       role="log"
                       aria-label="Tin nhắn cuộc họp"
                       onScroll={(event) => {
@@ -1512,25 +1672,32 @@ export function MeetingPage() {
                     >
                       {callMessages.length ? (
                         callMessages.map((item) => (
-                          <p key={item.id}>
-                            <strong>{item.authorName}</strong>
-                            <span>{item.content}</span>
+                          <p key={item.id} className="m-0 grid justify-items-start gap-0.5">
+                            <strong className="text-xs font-semibold text-zinc-400">
+                              {item.authorName}
+                            </strong>
+                            <span className="rounded-[10px] bg-[#1c1c1f] px-2.5 py-1.5 break-words whitespace-pre-wrap">
+                              {item.content}
+                            </span>
                           </p>
                         ))
                       ) : (
-                        <p>Chưa có tin nhắn. Bắt đầu trao đổi cùng mọi người.</p>
+                        <p className="m-0 text-zinc-400">
+                          Chưa có tin nhắn. Bắt đầu trao đổi cùng mọi người.
+                        </p>
                       )}
                     </div>
                     {callChatError && (
-                      <p className="meeting-chat-error" role="alert">
+                      <p className="tw px-3 pb-1 text-xs text-[#ff8a8a]" role="alert">
                         {callChatError}
                       </p>
                     )}
                     <form
-                      className="meeting-chat-compose"
+                      className="tw flex shrink-0 gap-1.5 border-t p-2"
                       onSubmit={(event) => void sendCallChat(event)}
                     >
                       <input
+                        className="h-[34px] min-w-0 flex-1 rounded-full bg-[#1c1c1f] px-3 text-[13px] text-zinc-100 placeholder:text-zinc-500"
                         value={callDraft}
                         onChange={(event) => setCallDraft(event.target.value)}
                         maxLength={4000}
@@ -1539,6 +1706,7 @@ export function MeetingPage() {
                       />
                       <button
                         type="submit"
+                        className={ROOM_ICON}
                         disabled={!callDraft.trim() || !isConnected}
                         aria-label="Gửi tin nhắn cuộc họp"
                       >
@@ -1551,16 +1719,17 @@ export function MeetingPage() {
             )}
           </div>
 
-          {/* Floating Admin Toast (Bottom-Left) */}
+          {/* One-off note for hosts, bottom left above the dock */}
           {!adminToastDismissed && control.canManage && (
-            <div className="jitsi-toast-notification" role="status">
-              <div className="jitsi-toast-icon">
-                <Icon name="info" size={16} />
-              </div>
-              <span className="jitsi-toast-message">Quyền quản trị viên đã được cấp!</span>
+            <div
+              className="tw absolute bottom-[140px] left-4 z-50 inline-flex items-center gap-2.5 rounded-xl border border-[#27272a] bg-[#111113] py-2 pr-2 pl-3.5 text-[13px] text-zinc-100 shadow-lg max-md:bottom-[148px]"
+              role="status"
+            >
+              <Icon name="info" size={16} className="text-[#6b95ff]" />
+              <span>Quyền quản trị viên đã được cấp!</span>
               <button
                 type="button"
-                className="jitsi-toast-close"
+                className={cn(ROOM_ICON, "size-7")}
                 onClick={() => setAdminToastDismissed(true)}
                 aria-label="Đóng thông báo"
               >
@@ -1569,13 +1738,16 @@ export function MeetingPage() {
             </div>
           )}
 
-          {/* Jitsi Meet Control bar: Centered Floating Rounded Dock */}
-          <div className="jitsi-bottom-dock" role="toolbar" aria-label="Điều khiển cuộc họp">
-            {/* 1. Mic button with chevron */}
-            <div className={`jitsi-dock-split ${!meeting.mic ? "is-muted" : ""}`}>
+          {/* Control dock: floats centred over the bottom of the stage */}
+          <div
+            className="tw fixed bottom-4 left-1/2 z-[var(--z-dropdown)] flex max-w-[calc(100vw-16px)] -translate-x-1/2 items-center gap-2 rounded-2xl border border-[#27272a] bg-[#111113] p-2 shadow-[0_16px_32px_-16px_rgba(0,0,0,0.7)] max-md:bottom-2.5 max-md:justify-start max-md:overflow-x-auto"
+            role="toolbar"
+            aria-label="Điều khiển cuộc họp"
+          >
+            <div className={cn(DOCK_SPLIT, !meeting.mic && DOCK_OFF)}>
               <button
                 type="button"
-                className="jitsi-dock-btn"
+                className={DOCK_SPLIT_MAIN}
                 aria-label={meeting.mic ? "Tắt micro" : "Bật micro"}
                 aria-pressed={meeting.mic}
                 onClick={() => void meeting.toggleMic()}
@@ -1583,22 +1755,20 @@ export function MeetingPage() {
               >
                 <Icon name={meeting.mic ? "mic" : "mic-off"} size={18} />
               </button>
-              <div className="jitsi-dock-divider" />
               <PopoverMenu
                 label="Chọn micro"
                 icon="chevron-up"
                 iconSize={13}
-                buttonClass="jitsi-dock-chevron"
+                buttonClass={DOCK_CHEVRON}
                 placement="up"
                 items={audioMenuItems}
               />
             </div>
 
-            {/* 2. Camera button with chevron */}
-            <div className={`jitsi-dock-split ${!meeting.camera ? "is-muted" : ""}`}>
+            <div className={cn(DOCK_SPLIT, !meeting.camera && DOCK_OFF)}>
               <button
                 type="button"
-                className="jitsi-dock-btn"
+                className={DOCK_SPLIT_MAIN}
                 aria-label={meeting.camera ? "Tắt camera" : "Bật camera"}
                 aria-pressed={meeting.camera}
                 onClick={() => void meeting.toggleCamera()}
@@ -1606,21 +1776,19 @@ export function MeetingPage() {
               >
                 <Icon name={meeting.camera ? "camera" : "camera-off"} size={18} />
               </button>
-              <div className="jitsi-dock-divider" />
               <PopoverMenu
                 label="Chọn camera"
                 icon="chevron-up"
                 iconSize={13}
-                buttonClass="jitsi-dock-chevron"
+                buttonClass={DOCK_CHEVRON}
                 placement="up"
                 items={videoMenuItems}
               />
             </div>
 
-            {/* 3. Screen share */}
             <button
               type="button"
-              className={`jitsi-dock-btn ${meeting.sharing ? "is-active" : ""}`}
+              className={cn(DOCK_BTN, meeting.sharing && DOCK_ON)}
               aria-label={meeting.sharing ? "Dừng chia sẻ màn hình" : "Chia sẻ màn hình"}
               aria-pressed={meeting.sharing}
               onClick={() => void meeting.toggleScreenShare()}
@@ -1629,24 +1797,10 @@ export function MeetingPage() {
               <Icon name="monitor" size={18} />
             </button>
 
-            {/* 4. Chat */}
-            <button
-              type="button"
-              className={`jitsi-dock-btn ${sidePanel === "chat" ? "is-active" : ""}`}
-              aria-label="Chat cuộc họp"
-              aria-pressed={sidePanel === "chat"}
-              title="Chat cuộc họp (C)"
-              onClick={() => setSidePanel(sidePanel === "chat" ? "none" : "chat")}
-            >
-              <Icon name="message" size={18} />
-              {callUnread > 0 && <span className="jitsi-dock-badge">{callUnread}</span>}
-            </button>
-
-            {/* 5. Raise Hand with reactions chevron */}
-            <div className={`jitsi-dock-split ${control.me?.raisedHand ? "is-hand-raised" : ""}`}>
+            <div className={cn(DOCK_SPLIT, control.me?.raisedHand && DOCK_ON)}>
               <button
                 type="button"
-                className="jitsi-dock-btn"
+                className={DOCK_SPLIT_MAIN}
                 aria-label={control.me?.raisedHand ? "Hạ tay" : "Giơ tay"}
                 aria-pressed={Boolean(control.me?.raisedHand)}
                 aria-keyshortcuts="H"
@@ -1658,12 +1812,11 @@ export function MeetingPage() {
               >
                 <Icon name="hand" size={18} />
               </button>
-              <div className="jitsi-dock-divider" />
               <PopoverMenu
                 label="Biểu cảm"
                 icon="chevron-up"
                 iconSize={13}
-                buttonClass="jitsi-dock-chevron"
+                buttonClass={DOCK_CHEVRON}
                 placement="up"
                 items={[
                   {
@@ -1686,23 +1839,35 @@ export function MeetingPage() {
               />
             </div>
 
-            {/* 6. Participants */}
+            <span className="mx-1 h-6 w-px shrink-0 bg-[#27272a]" aria-hidden="true" />
+
             <button
               type="button"
-              className={`jitsi-dock-btn ${sidePanel === "people" ? "is-active" : ""}`}
+              className={cn(DOCK_BTN, sidePanel === "chat" && DOCK_ON)}
+              aria-label="Chat cuộc họp"
+              aria-pressed={sidePanel === "chat"}
+              title="Chat cuộc họp (C)"
+              onClick={() => setSidePanel(sidePanel === "chat" ? "none" : "chat")}
+            >
+              <Icon name="message" size={18} />
+              {callUnread > 0 && <span className={DOCK_BADGE}>{callUnread}</span>}
+            </button>
+
+            <button
+              type="button"
+              className={cn(DOCK_BTN, sidePanel === "people" && DOCK_ON)}
               aria-label="Mọi người"
               aria-pressed={sidePanel === "people"}
               title="Mọi người trong phòng"
               onClick={() => setSidePanel(sidePanel === "people" ? "none" : "people")}
             >
               <Icon name="users" size={18} />
-              <span className="jitsi-dock-badge">{participantCount}</span>
+              <span className={DOCK_BADGE}>{participantCount}</span>
             </button>
 
-            {/* 7. Minutes, recording and tasks (layout and invite live in the top bar) */}
             <button
               type="button"
-              className={`jitsi-dock-btn ${sidePanel === "notes" ? "is-active" : ""}`}
+              className={cn(DOCK_BTN, sidePanel === "notes" && DOCK_ON)}
               aria-label="Biên bản cuộc họp"
               aria-pressed={sidePanel === "notes"}
               title="Biên bản, ghi hình và việc cần làm"
@@ -1711,38 +1876,40 @@ export function MeetingPage() {
               <Icon name="file" size={18} />
             </button>
 
-            {/* 8. More actions */}
             <PopoverMenu
               label="Tùy chọn khác"
               icon="more-horizontal"
-              buttonClass="jitsi-dock-btn"
+              buttonClass={DOCK_BTN}
               placement="up"
               items={moreMenu}
             />
 
-            <span className="jitsi-dock-sep" aria-hidden="true" />
-            {/* 9. End / Leave call button */}
+            <span className="mx-1 h-6 w-px shrink-0 bg-[#27272a]" aria-hidden="true" />
             <button
               type="button"
-              className="jitsi-dock-btn is-leave"
+              className="flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-xl bg-red-500 px-4 text-[13px] font-semibold text-white transition-colors hover:bg-red-600"
               aria-label="Rời khỏi phòng họp"
               onClick={requestLeave}
               title="Rời khỏi phòng họp"
             >
               <Icon name="phone-off" size={18} />
-              <span>Rời phòng</span>
+              <span className="max-md:hidden">Rời phòng</span>
             </button>
           </div>
           {control.canManage && waitingPeople.length > 0 && (
-            <div className="meeting-waiting-chip" role="status">
-              <span className="mt-led tone-amber is-pulse" />
-              <span>
-                <b>{waitingPeople[0].displayName}</b>
+            <div
+              className="tw fixed bottom-6 left-4 z-[var(--z-dropdown)] flex h-10 max-w-[calc(100vw-32px)] items-center gap-2.5 rounded-full border border-[#5b4515] bg-[#2a2418] pr-1.5 pl-3 text-[13px] text-amber-200 max-md:bottom-[92px]"
+              role="status"
+            >
+              <span className="size-2 shrink-0 rounded-full bg-amber-400 motion-safe:animate-pulse" />
+              <span className="truncate">
+                <b className="font-semibold text-white">{waitingPeople[0].displayName}</b>
                 {waitingPeople.length > 1 ? ` và ${waitingPeople.length - 1} người khác` : ""} đang
                 chờ vào
               </span>
               <button
                 type="button"
+                className="h-7 shrink-0 cursor-pointer rounded-full bg-amber-500 px-3 text-xs font-bold text-[#3b2504] disabled:cursor-default disabled:opacity-60"
                 disabled={control.busy}
                 onClick={() => void control.action("admit", waitingPeople[0].userId)}
               >
@@ -1750,7 +1917,10 @@ export function MeetingPage() {
               </button>
             </div>
           )}
-          <span className="meeting-shortcuts" aria-hidden="true">
+          <span
+            className="tw fixed right-5 bottom-[34px] z-[99] text-[11px] tracking-widest text-zinc-600 uppercase max-lg:hidden"
+            aria-hidden="true"
+          >
             Phím tắt · M · V · S · C · H
           </span>
           {control.confirmDialog}

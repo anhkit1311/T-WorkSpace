@@ -10,19 +10,25 @@ Tổng thời gian khoảng 25–30 phút. Tên nút trong tài liệu này lấ
 - [ ] `npm run demo:seed` → **ghi lại mã chứng nhận** in ra cuối lệnh
 - [ ] `npm run dev` → mở http://localhost:5173
 - [ ] Kiểm `TRANSCRIBE_URL` và `SUMMARY_URL` có chạy không. Nếu không chạy, chỉ demo phần chép lời/tóm tắt có sẵn từ seed và nói rõ đó là dữ liệu mẫu
-- [ ] Tạo máy lẻ loại **Trình duyệt (WebRTC)** cho tài khoản quản trị (Tổng đài → Cấu hình). Không có máy lẻ thì giám sát viên không nghe lén được cuộc gọi
-- [ ] Gọi thử hotline 02871067388 từ điện thoại thật
+- [ ] Tài khoản quản trị có máy lẻ loại **Trình duyệt (WebRTC)** (hiện là 15203). Không có máy lẻ thì giám sát viên không nghe lén được cuộc gọi
+- [ ] Gọi ra thử một lần: tạo phiếu có số di động của bạn → **Gọi lại** → điện thoại đổ chuông
+- [ ] Chuẩn bị **tai nghe**: ba trình duyệt chạy trên cùng một máy sẽ dùng chung micro và loa, không có tai nghe thì dễ bị hú
+- [ ] **Từ giờ đến lúc demo không khởi động lại container Asterisk và modem.** Mỗi lần khởi động lại, cổng NAT của trunk sẽ đổi và phải cấu hình lại `ASTERISK_TRUNK_PUBLIC_PORT`
+
+> **Chiều gọi vào hotline chưa chạy** (11/11): gọi 02871067388 thì chuyên viên ảo của Pitel bắt máy, cuộc gọi không tới Asterisk. Pitel phải định tuyến số này về máy nhánh 119. Vì vậy mọi cuộc gọi vào trong buổi demo đều **gọi từ trình duyệt** (sinh viên → Tổng đài → Gọi ngay). Cuộc gọi này đi qua đúng ACD, hàng đợi, ghi âm và giám sát như cuộc gọi hotline, chỉ bỏ qua IVR. Số Pitel dùng để demo **gọi ra**.
 
 ### Thiết bị và tài khoản
 
-| Vị trí                   | Trình duyệt / thiết bị | Tài khoản                                     | Vai trò                                       |
-| ------------------------ | ---------------------- | --------------------------------------------- | --------------------------------------------- |
-| Máy A                    | Chrome                 | `gv.ha@demo.tworkspace.test`                  | Tổng đài viên Phòng Tuyển sinh, đã xong CC-201 |
-| Máy B                    | Edge / ẩn danh         | `admin@tdtu.edu.vn`                           | Quản trị hệ thống, giám sát tổng đài          |
-| Đổi tài khoản trên máy B | Edge                   | `truongkhoa@…`, `sv01@…`, `gv.lan@…`          | Lãnh đạo khoa, sinh viên, giảng viên          |
-| Điện thoại               | SIM thật               | —                                             | Người gọi bên ngoài                           |
+Một laptop chạy ba phiên trình duyệt riêng (nếu có laptop thứ hai thì cho Máy C chạy trên đó):
 
-Mật khẩu là `SEED_ACADEMIC_PASSWORD` trong `.env`. Hotline có IVR: **phím 1** vào Phòng Tuyển sinh (máy lẻ 15201–15299, có tổng đài viên), **phím 2** vào Phòng Đại học.
+| Vị trí     | Trình duyệt / thiết bị | Tài khoản                            | Vai trò                                                  |
+| ---------- | ---------------------- | ------------------------------------ | -------------------------------------------------------- |
+| Máy A      | Chrome                 | `gv.ha@demo.tworkspace.test`         | Tổng đài viên Phòng Tuyển sinh, đã xong CC-201           |
+| Máy B      | Edge                   | `admin@tdtu.edu.vn`                  | Quản trị hệ thống, giám sát tổng đài (máy lẻ 15203)       |
+| Máy C      | Chrome **ẩn danh**     | `sv01@…` (đổi sang `gv.lan@…`, `truongkhoa@…` khi cần) | Người gọi vào (sinh viên), giảng viên, lãnh đạo khoa |
+| Điện thoại | SIM thật               | —                                    | Người **nhận** cuộc gọi ra                               |
+
+Mật khẩu là `SEED_ACADEMIC_PASSWORD` trong `.env`. Phòng Tuyển sinh có máy lẻ 15201–15299 và có tổng đài viên.
 
 ---
 
@@ -43,34 +49,37 @@ Ba ý cần nói:
 | Bước | Thao tác                                                                                                     | Kết quả mong đợi                                                                                   |
 | ---- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
 | 1    | Máy B (admin): **Tổng đài → Cấu hình** → Phòng Tuyển sinh → "Khóa bắt buộc trước khi trực" chọn **CC-201** | Hiện "Đã cập nhật khóa bắt buộc."                                                                  |
-| 2    | Máy B đổi sang `gv.lan` → Tổng đài → Bàn làm việc → bấm **Sẵn sàng**                                        | Bị chặn: "Hoàn thành khóa CC-201 — … trước khi nhận cuộc gọi."                                      |
+| 2    | Máy C đăng nhập `gv.lan` → Tổng đài → Bàn làm việc → bấm **Sẵn sàng**                                       | Bị chặn: "Hoàn thành khóa CC-201 — … trước khi nhận cuộc gọi."                                      |
 | 3    | Máy A (`gv.ha`, đã hoàn thành CC-201) → bấm **Sẵn sàng**                                                    | Trạng thái chuyển xanh "Sẵn sàng"                                                                  |
-| 4    | Máy B đổi lại admin. Chỉ ra ô "Khóa bồi dưỡng khi điểm QA dưới …"                                            | Giải thích: tổng đài viên bị chấm QA thấp sẽ tự động được ghi danh vào khóa bồi dưỡng              |
+| 4    | Máy B (admin): chỉ ra ô "Khóa bồi dưỡng khi điểm QA dưới …". Sau đó đặt "Khóa bắt buộc" về **Không yêu cầu** | Giải thích: tổng đài viên bị chấm QA thấp sẽ tự động được ghi danh vào khóa bồi dưỡng. Bỏ khóa bắt buộc để các tài khoản khác không bị chặn ở phần sau |
+| 5    | Máy B bấm **Tạm nghỉ** ở trạng thái trực (góc trên bên phải)                                                  | Admin cũng là tổng đài viên. Phải ở trạng thái Tạm nghỉ mới được giám sát (mục 2.3)                    |
+| 6    | Máy C đăng xuất `gv.lan` → đăng nhập `sv01`                                                                  |                                                                                                    |
 
 > Câu nói: "E-learning dùng để đào tạo tổng đài viên. Chưa học xong khóa bắt buộc thì không được nhận cuộc gọi."
 
-### 2.2 Cuộc gọi thật vào hotline: IVR, ACD, softphone
+### 2.2 Cuộc gọi vào: sinh viên gọi phòng ban từ trình duyệt, ACD, softphone
 
-> **Tình trạng 11/11:** gọi vào 02871067388 thì "chuyên viên ảo" trên tổng đài Pitel bắt máy, bấm 119 cũng không chuyển, và không có INVITE nào tới Asterisk. Gọi ra qua trunk vẫn chạy. Nếu Pitel chưa định tuyến số này về máy nhánh 119 trước buổi demo, thay bước 1–2 bằng: Máy B đăng nhập `sv01` → mở một bài học → **Cần hỗ trợ** → **Gọi ngay từ trình duyệt**. Cuộc gọi vẫn qua ACD, nên 2.3 và 2.4 làm y như vậy. Khi thầy hỏi thì nói thật: đầu số đã đăng ký và gọi ra được, chiều gọi vào đang chờ nhà mạng định tuyến.
+| Bước | Thao tác                                                                                          | Kết quả mong đợi                                                                                    |
+| ---- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 1    | Máy C (`sv01`) → menu **Tổng đài**                                                                | Trang "Liên hệ và hỗ trợ: gọi từ trình duyệt, không cần máy lẻ". Sinh viên không có máy lẻ vẫn gọi được |
+| 2    | Chọn **Phòng Tuyển sinh** → **Gọi ngay** → cho phép micro                                          | Máy C hiện "Đang gọi…". Máy A đổ chuông (trạng thái "Đang đổ chuông")                              |
+| 3    | Chỉ ra **Hồ sơ người gọi** trên Máy A                                                             | Hiện tên và MSSV của sv01, vì người gọi đã đăng nhập nên hệ thống biết là ai (không chỉ có số điện thoại) |
+| 4    | Máy A nghe máy                                                                                    | "Đang đàm thoại", hai bên nói chuyện được, cuộc gọi bắt đầu được ghi âm                            |
+| 5    | Bấm **Giữ máy** rồi **Tiếp tục**, bấm **Tắt micro / Bật micro**                                    | Máy C nghe nhạc chờ                                                                                 |
+| 6    | Trong lúc gọi, gõ **Ghi chú**                                                                     |                                                                                                     |
 
-| Bước | Thao tác                                                       | Kết quả mong đợi                                                                         |
-| ---- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| 1    | Điện thoại gọi **02871067388**                                  | Nghe lời chào IVR                                                                        |
-| 2    | Bấm **1**                                                       | Máy A đổ chuông (trạng thái "Đang đổ chuông"), **Hồ sơ người gọi** hiện số và lịch sử cũ |
-| 3    | Máy A nghe máy                                                 | "Đang đàm thoại", hai bên nói chuyện được                                                |
-| 4    | Bấm **Giữ máy** rồi **Tiếp tục**, bấm **Tắt micro / Bật micro** | Điện thoại nghe nhạc chờ                                                                 |
-| 5    | Trong lúc gọi, gõ **Ghi chú**                                  |                                                                                          |
+> Câu nói: "Hotline 02871067388 đã đăng ký với nhà mạng và gọi ra được (mục 2.5). Chiều gọi vào đang chờ Pitel định tuyến về tổng đài của em. Cuộc gọi từ trình duyệt đi qua cùng một ACD, chỉ không qua IVR."
 
 ### 2.3 Giám sát: nghe lén, nhắc bài, tham gia
 
-Làm ngay khi cuộc gọi ở 2.2 vẫn đang diễn ra.
+Làm ngay khi cuộc gọi ở 2.2 vẫn đang diễn ra. Mỗi lần giám sát chỉ chọn được một chế độ. Muốn đổi chế độ thì gác máy giám sát rồi bấm nút khác.
 
-| Bước | Thao tác                                                     | Kết quả mong đợi                                     |
-| ---- | ------------------------------------------------------------ | ---------------------------------------------------- |
-| 1    | Máy B (admin): **Tổng đài → Giám sát**                       | Thấy wallboard: tổng đài viên, trạng thái, hàng đợi, chỉ số trực tiếp |
-| 2    | Ở cuộc gọi của gv.ha bấm **Nghe**                            | Máy lẻ của admin đổ chuông, admin nghe cả hai bên    |
-| 3    | Chuyển sang **Nhắc**                                         | Chỉ gv.ha nghe thấy admin, người gọi không nghe     |
-| 4    | Chuyển sang **Tham gia**                                     | Cuộc gọi thành ba bên                                |
+| Bước | Thao tác                                                                 | Kết quả mong đợi                                                        |
+| ---- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| 1    | Máy B (admin, đang **Tạm nghỉ**): **Tổng đài → Giám sát**                 | Thấy ô gv.ha màu đỏ "Đang đàm thoại", có các nút **Nghe / Nhắc / Tham gia** |
+| 2    | Bấm **Nghe** → softphone của admin đổ chuông → nghe máy                   | Admin nghe cả hai bên, hai bên không nghe thấy admin                    |
+| 3    | Admin gác máy giám sát → bấm **Nhắc** → nghe máy                          | Chỉ gv.ha nghe thấy admin nhắc bài, sv01 không nghe                     |
+| 4    | Admin gác máy → bấm **Tham gia** → nghe máy                               | Thành cuộc gọi ba bên                                                   |
 
 ### 2.4 Kết thúc cuộc gọi, ghi nhận, phiếu
 
@@ -80,18 +89,19 @@ Làm ngay khi cuộc gọi ở 2.2 vẫn đang diễn ra.
 | 2    | Chọn **Kết quả cuộc gọi**, ví dụ "Tư vấn thông tin", và gõ **Ghi chú sau cuộc gọi** |                                                          |
 | 3    | Bấm **Tạo phiếu**, chọn mức ưu tiên và người xử lý                           | Phiếu xuất hiện ở tab **Phiếu yêu cầu**, nguồn "Từ cuộc gọi" |
 
-### 2.5 Hẹn gọi lại khi đang chờ (BR, migration 056)
+### 2.5 Hàng đợi, cuộc gọi nhỡ và gọi ra qua số Pitel
 
-| Bước | Thao tác                                                       | Kết quả mong đợi                                                                       |
-| ---- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| 1    | Máy A bấm **Tạm nghỉ**, chọn lý do                             |                                                                                        |
-| 2    | Điện thoại gọi hotline → bấm 1                                 | Phải chờ trong hàng đợi, nghe hướng dẫn bấm `*`                                        |
-| 3    | Bấm `*`                                                         | Cuộc gọi kết thúc. Tab Phiếu yêu cầu có phiếu "Khách hẹn gọi lại" ưu tiên cao            |
-| 4    | Mở phiếu → bấm **Gọi lại**                                     | Gọi ra số di động qua trunk. Đây cũng là phần demo **gọi ra ngoài**                    |
+| Bước | Thao tác                                                                                               | Kết quả mong đợi                                                                                      |
+| ---- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| 1    | Máy A bấm **Tạm nghỉ**, chọn lý do                                                                     | Phòng Tuyển sinh không còn ai Sẵn sàng                                                                 |
+| 2    | Máy C (`sv01`) gọi lại Phòng Tuyển sinh                                                                | Máy B, màn Giám sát: "Đang chờ 1", "Chờ lâu nhất" đếm giây, mục **Hàng đợi** có tên sv01               |
+| 3    | Máy C gác máy khi đang chờ                                                                             | Tab **Phiếu yêu cầu** có phiếu nguồn "Cuộc gọi nhỡ" (kiểm tra kỹ bước này khi chạy thử)                |
+| 4    | Tab **Phiếu yêu cầu** → **Tạo phiếu yêu cầu**, ô **Số điện thoại liên hệ** điền số di động thật của bạn → **Tạo phiếu** |                                                                              |
+| 5    | Mở phiếu vừa tạo → bấm **Gọi lại 09…**                                                                 | Gọi ra qua trunk Pitel, điện thoại thật đổ chuông → nghe máy                                           |
+| 6    | Máy B, màn Giám sát                                                                                    | Ô gv.ha hiện "Đang đàm thoại · Gọi ra 09…"                                                             |
+| 7    | Máy B bấm **Tham gia** → nghe máy                                                                      | Cuộc gọi ba bên với **điện thoại thật bên ngoài**: chứng minh trunk, gọi ra và giám sát cùng hoạt động |
 
-> Nhấn mạnh: cuộc gọi hẹn lại không bị tính là bỏ máy trong KPI.
-
-> **Nếu hotline chưa nhận cuộc gọi vào:** người gọi từ trình duyệt không được đề nghị bấm `*` (vì không có số để gọi lại), nên bỏ bước 1–3 và chỉ giải thích tính năng này. Vẫn demo được **gọi ra ngoài**: ở 2.4 tạo phiếu với **Số điện thoại liên hệ** là số di động thật của bạn → mở phiếu → **Gọi lại**. Lúc đó màn Giám sát hiện "Đang đàm thoại · Gọi ra …", nhưng không có các nút Nghe/Nhắc/Tham gia (các nút này chỉ có với cuộc gọi đi qua ACD).
+> Giải thích thêm (không demo): khi gọi vào hotline mà phải chờ, người gọi bằng số điện thoại thật được đề nghị bấm `*` để hẹn gọi lại. Hệ thống tạo phiếu "Khách hẹn gọi lại" ưu tiên cao, và cuộc gọi đó không bị tính là bỏ máy trong KPI. Tính năng này đã có test tự động. Hôm nay chưa demo được vì chiều gọi vào hotline chưa thông, còn người gọi từ trình duyệt không có số để gọi lại nên không được đề nghị.
 
 ### 2.6 Lịch sử, ghi âm, AI, chấm chất lượng
 
@@ -115,7 +125,7 @@ Làm ngay khi cuộc gọi ở 2.2 vẫn đang diễn ra.
 | ---- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
 | 1    | Máy A đổi sang `giaovu` → menu **Họp**                                                                                   | Lịch tuần: xanh lá là đang diễn ra, xanh dương sắp tới, xám đã qua. Có 5 lịch họp mẫu của nhóm "Giáo vụ Khoa CNTT" |
 | 2    | Tạo **Lịch họp** mới: tên, giờ bắt đầu, "Người được mời" → **Mời cả đơn vị** hoặc chọn vài người. Trong **Cấu hình phòng** bật **Phòng chờ**, **tự động ghi hình**, **Tắt mic khi vào** | |
-| 3    | Máy B (`gv.lan`)                                                                                                         | Hiện toast mời họp và chuông thông báo có nút "Xem"                    |
+| 3    | Máy C (`gv.lan`)                                                                                                         | Hiện toast mời họp và chuông thông báo có nút "Xem"                    |
 | 4    | Ở cột chi tiết, bấm **Tải lịch .ics**                                                                                    | Tải được file mở bằng Outlook/Google Calendar                          |
 
 ### 3.2 Vào phòng, điều hành
@@ -123,11 +133,11 @@ Làm ngay khi cuộc gọi ở 2.2 vẫn đang diễn ra.
 | Bước | Thao tác                                                                                     | Kết quả mong đợi                                           |
 | ---- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | 1    | Máy A: **Vào** → màn **Kiểm tra trước khi vào**                                               | Xem trước camera, thanh đo micro, chọn Micro / Camera / Loa |
-| 2    | Máy B (người ngoài danh sách mời) xin vào                                                     | Máy B thấy "Chủ trì sẽ duyệt". Máy A thấy **Phòng chờ** → cho vào |
+| 2    | Máy C (người ngoài danh sách mời) xin vào                                                     | Máy C thấy "Chủ trì sẽ duyệt". Máy A thấy **Phòng chờ** → cho vào |
 | 3    | Chia sẻ màn hình, đổi **Chế độ xem** (lưới / tiêu điểm / người nói), ghim một người          |                                                            |
-| 4    | Máy B giơ tay. Máy A tắt micro máy B, đặt máy B làm đồng chủ trì, khóa phòng (**Bảo mật phòng**) | Có biểu tượng "Đang giơ tay", có toast thông báo          |
+| 4    | Máy C giơ tay. Máy A tắt micro máy C, đặt máy C làm đồng chủ trì, khóa phòng (**Bảo mật phòng**) | Có biểu tượng "Đang giơ tay", có toast thông báo          |
 | 5    | Mở bảng **Kết nối**                                                                          | Độ trễ (RTT), Băng thông, Mất gói, Jitter                  |
-| 6    | **Tắt Wi-Fi máy B khoảng 5 giây rồi bật lại**                                                 | Máy B tự vào lại phòng, không cần bấm gì                  |
+| 6    | **Tắt Wi-Fi máy C khoảng 5 giây rồi bật lại**. Chỉ làm được khi Máy C là laptop thứ hai kết nối qua IP LAN; nếu cả ba phiên chạy trên một máy (localhost) thì tắt Wi-Fi không cắt kết nối, nên bỏ bước này và chỉ giải thích (đã có test e2e) | Máy C tự vào lại phòng, không cần bấm gì                  |
 | 7    | Mở **Chat cuộc họp** (phím C), gửi một tin                                                   |                                                            |
 
 ### 3.3 Sau cuộc họp
@@ -156,7 +166,7 @@ Làm ngay khi cuộc gọi ở 2.2 vẫn đang diễn ra.
 
 | Bước | Thao tác                                                                                     | Kết quả mong đợi                                                   |
 | ---- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 1    | Máy B (`sv01`) → Khóa học → ghi danh                                                          | Khóa "cần duyệt" thì hiện "Đang chờ giảng viên duyệt"              |
+| 1    | Máy C (`sv01`) → Khóa học → ghi danh                                                          | Khóa "cần duyệt" thì hiện "Đang chờ giảng viên duyệt"              |
 | 2    | Mở bài video, tua đến cuối                                                                    | Không được tính hoàn thành, phải xem đủ 90%. Mở lại thì phát tiếp chỗ đang xem |
 | 3    | Làm bài "Kiểm tra tình huống"                                                                 | Câu hỏi ngẫu nhiên, đồng hồ đếm giờ trên máy chủ, chấm tự động     |
 | 4    | Mở trình duyệt thường (không đăng nhập) vào `/verify/<mã>`                                    | Trang "Chứng nhận hoàn thành khóa học" của gv.ha                    |
@@ -168,7 +178,7 @@ Làm ngay khi cuộc gọi ở 2.2 vẫn đang diễn ra.
 | Bước | Thao tác                                                                                     | Kết quả mong đợi                                         |
 | ---- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | 1    | Máy A (`gv.ha`) bấm **Sẵn sàng** ở Tổng đài                                                   |                                                          |
-| 2    | Máy B (`sv01`) đang xem bài học → bấm **Cần hỗ trợ** → **Gọi ngay từ trình duyệt**            | Máy A đổ chuông, cuộc gọi đi qua ACD như cuộc gọi thường |
+| 2    | Máy C (`sv01`) đang xem bài học → bấm **Cần hỗ trợ** → **Gọi ngay từ trình duyệt**            | Máy A đổ chuông, cuộc gọi đi qua ACD như cuộc gọi thường. Cuộc gọi tới đơn vị phụ trách khóa học: nếu đơn vị đó chưa có tổng đài viên thì Máy A không đổ chuông, khi chạy thử phải kiểm tra |
 | 3    | Máy A trong cuộc gọi bấm **Mời họp video**                                                    | "Đã mời người gọi vào họp video". sv01 nhận lời mời, phòng họp mở ở tab mới |
 | 4    | (Hoặc) sv01 bấm **Gửi yêu cầu hỗ trợ** → xem ở **Tổng đài → Hỗ trợ của tôi**                  | Phiếu sang phòng ban; khi xử lý xong sv01 đánh giá mức hài lòng |
 
@@ -193,15 +203,19 @@ Mở `docs/benchmarks/README.md`: SIPp tới 200 cuộc gọi đồng thời, MO
 
 ## Nói trước những phần chưa xong
 
+- Hotline đã đăng ký và gọi ra được, nhưng **chiều gọi vào chưa thông**: Pitel đang cho chuyên viên ảo của họ bắt máy, cần họ định tuyến số về máy nhánh 119. Máy đang chạy sau NAT nhà mạng (chưa có VPS), nên trunk đang dùng cấu hình tạm.
 - Chưa đo Wireshark/SIPp với trunk thật. Chưa thử RTP qua nhiều mạng với TURN thật. Chưa triển khai VPS production.
 - E-learning chưa có bài tự luận chấm tay. Họp chưa có làm mờ/thay nền.
-- Dữ liệu seed là dữ liệu mẫu: bản ghi hình là ảnh thử của FFmpeg, ghi âm là lời nhắc của Asterisk, chép lời và tóm tắt là văn bản soạn sẵn. Phần ghi hình/chép lời trực tiếp trong buổi (mục 3.4) mới là dữ liệu thật.
+- Dữ liệu seed là dữ liệu mẫu: bản ghi hình là ảnh thử của FFmpeg, ghi âm là lời nhắc của Asterisk, chép lời và tóm tắt là văn bản soạn sẵn. Phần ghi hình/chép lời trực tiếp trong buổi (mục 3.3) mới là dữ liệu thật.
 
 ## Phương án dự phòng
 
-| Sự cố                          | Cách xử lý                                                                                   |
-| ------------------------------ | -------------------------------------------------------------------------------------------- |
-| Trunk Pitel không vào được     | Dùng Zoiper máy lẻ 1001 gọi 9000, hoặc dùng luồng **Cần hỗ trợ → Gọi ngay từ trình duyệt** (4.3). ACD xử lý giống hệt |
-| Không có máy lẻ cho admin      | Bỏ 2.3, chỉ cho xem wallboard                                                                |
+| Sự cố                                           | Cách xử lý                                                                                                   |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Pitel định tuyến xong trước buổi demo           | Ở 2.2 gọi thật vào 02871067388 → nghe IVR → bấm 1. Ở 2.5 có thể demo thêm bấm `*` để hẹn gọi lại            |
+| Gọi ra không được (trunk Unregistered)          | `docker exec infra-asterisk-1 asterisk -rx "pjsip show registrations"`. Nếu cổng NAT đổi, sửa `ASTERISK_TRUNK_PUBLIC_PORT` rồi chạy `core restart now` (không khởi động lại container). Không kịp sửa thì bỏ bước 5–7 ở 2.5 |
+| Gọi từ trình duyệt không đổ chuông Máy A        | Kiểm tra gv.ha đang Sẵn sàng và softphone đã đăng ký (Bàn làm việc). Dự phòng: Zoiper máy lẻ 1001 gọi 9000    |
+| Giám sát báo "Hãy chuyển sang Tạm nghỉ"         | Admin bấm Tạm nghỉ rồi bấm lại                                                                               |
+| Không có máy lẻ cho admin                       | Bỏ 2.3 và bước 7 ở 2.5, chỉ cho xem wallboard                                                                |
 | AI/Whisper không chạy          | Chỉ dùng cuộc gọi và cuộc họp có sẵn từ seed, nói rõ đó là dữ liệu mẫu                       |
 | Mạng phòng báo cáo chặn UDP    | Chạy cả hai trình duyệt trên cùng một máy (localhost)                                         |

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import type { CcAgentProfile, CcCallOffer, CcTransferDirectory } from "@doan/shared";
 import { Button } from "../../shared/ui/Primitives";
 import { Icon } from "../../shared/ui/Icon";
+import { cn } from "../../shared/lib/utils";
+import { CARD, FIELD, H2, TINT } from "./ui";
 
 type Api = <T>(path: string, method?: string, body?: object) => Promise<T>;
 
@@ -49,14 +51,20 @@ export function TransferPanel({
   const transfer = offer.transfer;
   if (transfer)
     return (
-      <div className="desk-transfer" role="status">
+      <div
+        className={cn(
+          "tw flex flex-wrap items-center gap-2.5 rounded-[10px] px-3.5 py-3 text-sm",
+          TINT.blue,
+        )}
+        role="status"
+      >
         <Icon name="phone-call" size={16} />
-        <span>
+        <span className="min-w-0 flex-1 font-medium">
           {transfer.answered
             ? `Máy lẻ ${transfer.target} đã nghe máy — khách đang chờ.`
             : `Đang gọi máy lẻ ${transfer.target}…`}
         </span>
-        <div className="desk-actions">
+        <div className="flex flex-wrap gap-2">
           <Button
             size="sm"
             variant="ghost"
@@ -79,15 +87,18 @@ export function TransferPanel({
 
   if (!open)
     return (
-      <Button size="sm" variant="secondary" icon="share" onClick={() => setOpen(true)}>
-        Chuyển máy
-      </Button>
+      <div>
+        <Button size="sm" variant="ghost" icon="share" onClick={() => setOpen(true)}>
+          Chuyển máy
+        </Button>
+      </div>
     );
 
   const [kind, value] = target.split(":");
   return (
     <form
-      className="desk-transfer"
+      className={cn(CARD, "tw-form")}
+      aria-label="Chuyển cuộc gọi"
       onSubmit={(event) => {
         event.preventDefault();
         if (!value) return;
@@ -97,7 +108,9 @@ export function TransferPanel({
         );
       }}
     >
+      <h2 className={H2}>Chuyển cuộc gọi</h2>
       <select
+        className={FIELD}
         aria-label="Chuyển đến"
         value={target}
         onChange={(event) => setTarget(event.target.value)}
@@ -123,7 +136,7 @@ export function TransferPanel({
         </optgroup>
       </select>
       {kind === "ext" && (
-        <label className="desk-check">
+        <label className="flex! items-center gap-2 text-[13px]! text-foreground!">
           <input
             type="checkbox"
             checked={attended}
@@ -132,7 +145,7 @@ export function TransferPanel({
           Hỏi ý người nhận trước khi chuyển
         </label>
       )}
-      <div className="desk-actions">
+      <div className="flex flex-wrap justify-end gap-2">
         <Button size="sm" variant="ghost" type="button" onClick={() => setOpen(false)}>
           Hủy
         </Button>

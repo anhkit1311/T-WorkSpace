@@ -58,6 +58,11 @@ test(
         `INSERT INTO course_enrollments(course_id,user_id,source,completed_at) VALUES($1,$2,'self',now())`,
         [courseId, learner],
       );
+      // Enrolled before the range, finished inside it: not part of this range's cohort (was 200%).
+      await pool.query(
+        `INSERT INTO course_enrollments(course_id,user_id,source,enrolled_at,completed_at) VALUES($1,$2,'self',now()-interval '60 days',now())`,
+        [courseId, officer],
+      );
 
       const report = await unitReport(head, new URLSearchParams());
       assert.deepEqual(
