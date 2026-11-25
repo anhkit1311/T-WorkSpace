@@ -298,6 +298,11 @@ export function AppShell() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const avatarButtonRef = useRef<HTMLButtonElement>(null);
+  // Every page shares one scroll container: a new page would open at the last page's offset.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [activeView]);
 
   const [collapsedPref, setCollapsedPref] = useState(readCollapsed);
   const collapsed = collapsedPref;
@@ -687,7 +692,10 @@ export function AppShell() {
             "relative flex min-h-0 flex-1 overflow-hidden max-md:pb-[calc(60px+env(safe-area-inset-bottom,0px))]",
           )}
         >
-          <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-background">
+          <div
+            ref={scrollRef}
+            className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-background"
+          >
             {connectionStatus !== "connected" && (
               <div
                 className="tw relative z-[45] flex items-center justify-center gap-2.5 border-b border-amber-500/25 bg-amber-500/10 px-4 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-400"

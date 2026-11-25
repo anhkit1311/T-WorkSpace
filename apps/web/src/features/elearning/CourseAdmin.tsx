@@ -88,6 +88,7 @@ export function CourseLearners({ course }: { course: CourseDetail }) {
           {target === "emails" ? (
             <textarea
               rows={2}
+              className="min-w-60!"
               value={emails}
               onChange={(event) => setEmails(event.target.value)}
               placeholder="Mỗi email một dòng hoặc cách nhau bởi dấu phẩy"
@@ -176,7 +177,7 @@ export function CourseLearners({ course }: { course: CourseDetail }) {
                 <th scope="col">Học viên</th>
                 <th scope="col">Hoàn thành</th>
                 {quizzes.map((quiz) => (
-                  <th key={quiz.id} scope="col">
+                  <th key={quiz.id} scope="col" className="min-w-32">
                     {quiz.title}
                   </th>
                 ))}

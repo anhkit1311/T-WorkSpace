@@ -369,7 +369,7 @@ export function UnitReportsPage() {
                 <tbody>
                   {rows.map((row) => (
                     <tr key={row.unitId} className="border-t first:border-t-0 hover:bg-secondary">
-                      <th scope="row" className="px-[9px] py-2.5 text-left font-semibold">
+                      <th scope="row" className="min-w-44 px-[9px] py-2.5 text-left font-semibold">
                         {row.name}
                         <small className="block font-mono text-[11.5px] font-normal text-muted-foreground">
                           {row.code}

@@ -142,7 +142,11 @@ export function CourseView({ courseId, onBack }: { courseId: string; onBack: () 
       <div className="min-w-0">
         <div className="tw flex min-h-[49px] flex-wrap items-center gap-x-1 gap-y-2 border-b px-5 max-md:px-3">
           {tabs.length > 0 && (
-            <div className="flex" role="tablist" aria-label="Quản lý khóa học">
+            <div
+              className="flex max-w-full overflow-x-auto overflow-y-hidden"
+              role="tablist"
+              aria-label="Quản lý khóa học"
+            >
               {tabs.map(([id, label]) => (
                 <button
                   key={id}
