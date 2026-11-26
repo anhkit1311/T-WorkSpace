@@ -123,7 +123,7 @@ export async function sendOtpEmail({ to, otp, displayName }: SendOtpEmailOptions
       });
 
       if (res.ok) {
-        console.log(`[EMAIL SERVICE] Đã gửi OTP thành công qua Resend API tới ${to}`);
+        console.log(`[EMAIL SERVICE] Đã gửi OTP qua Resend API`);
         return;
       }
       console.warn(`[EMAIL SERVICE] Resend failed with status ${res.status}`);
@@ -143,7 +143,7 @@ export async function sendOtpEmail({ to, otp, displayName }: SendOtpEmailOptions
         text: textBody,
         html: htmlBody,
       });
-      console.log(`[EMAIL SERVICE] Đã gửi OTP thành công qua SMTP tới ${to}`);
+      console.log(`[EMAIL SERVICE] Đã gửi OTP qua SMTP`);
       return;
     } catch (err) {
       console.warn("[EMAIL SERVICE] Lỗi gửi qua SMTP:", err);

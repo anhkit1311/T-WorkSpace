@@ -178,50 +178,6 @@ add(
   "q (2–100), workspace, channel, author, from, to, file, before; 30 results",
 );
 add(
-  "/api/channels/{channelId}/tasks",
-  ["get", "post"],
-  "Tasks",
-  "Filtered board / idempotent create",
-  {
-    type: "object",
-    required: ["title", "clientTaskId"],
-    properties: {
-      title: { type: "string", minLength: 1, maxLength: 160 },
-      description: { type: "string", maxLength: 8000 },
-      clientTaskId: uuid,
-      assigneeId: uuid,
-      sourceMessageId: uuid,
-    },
-  },
-);
-add(
-  "/api/tasks/{taskId}",
-  ["get", "patch"],
-  "Tasks",
-  "Detail / mutation; TASK_CONFLICT requires reload",
-  {
-    type: "object",
-    required: ["version"],
-    properties: {
-      version: { type: "integer", minimum: 1 },
-      title: text,
-      status: { enum: ["todo", "doing", "done"] },
-      priority: { enum: ["low", "normal", "high", "urgent"] },
-      beforeTaskId: uuid,
-      action: {
-        enum: [
-          "checklist-add",
-          "checklist-toggle",
-          "checklist-remove",
-          "comment",
-          "attachment-add",
-          "attachment-remove",
-        ],
-      },
-    },
-  },
-);
-add(
   "/api/channels/{channelId}/media-location",
   ["get"],
   "Meetings",

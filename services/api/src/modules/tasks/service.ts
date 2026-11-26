@@ -1,13 +1,12 @@
 import { randomUUID, createHash } from "node:crypto";
 import type { PoolClient } from "pg";
-import type { TaskBoardItem, TaskItem, TaskDetail } from "@doan/shared";
+import type { TaskItem, TaskDetail } from "@doan/shared";
 import { query, withTransaction } from "../../infrastructure/database/db.js";
 import { HttpError } from "../../shared/http/http-error.js";
-import { requireChannelAccess, validateId } from "../workspaces/service.js";
+import { validateId } from "../workspaces/service.js";
 
 const projection = `SELECT t.id,t.channel_id AS "channelId",t.title,t.description,t.status,t.priority,t.due_at AS "dueAt",t.assignee_id AS "assigneeId",u.display_name AS "assigneeName",t.source_message_id AS "sourceMessageId",t.meeting_session_id AS "meetingSessionId",t.position::float8 AS position,t.version,t.archived_at AS "archivedAt",t.updated_at AS "updatedAt",(SELECT count(*)::integer FROM task_checklist WHERE task_id=t.id) AS "checklistTotal",(SELECT count(*)::integer FROM task_checklist WHERE task_id=t.id AND done) AS "checklistDone" FROM tasks t LEFT JOIN users u ON u.id=t.assignee_id JOIN channel_access access ON access.channel_id=t.channel_id AND access.user_id=$1`;
-const statuses = ["todo", "doing", "done"],
-  priorities = ["low", "normal", "high", "urgent"];
+const priorities = ["low", "normal", "high", "urgent"];
 function text(value: unknown, max: number, required = false) {
   if (typeof value !== "string" || value.trim().length > max || (required && !value.trim()))
     throw new HttpError(400, "INVALID_TASK", "Nội dung nhiệm vụ không hợp lệ.");
@@ -67,52 +66,7 @@ async function log(
   );
 }
 
-export async function listTasks(userId: string, channelId: string, params = new URLSearchParams()) {
-  await requireChannelAccess(userId, channelId);
-  const status = params.get("status"),
-    priority = params.get("priority"),
-    assigned = params.get("assignee"),
-    deadline = params.get("deadline");
-  if (status) choice(status, statuses);
-  if (priority) choice(priority, priorities);
-  if (assigned) validateId(assigned);
-  if (deadline && !["overdue", "upcoming", "none"].includes(deadline))
-    throw new HttpError(400, "INVALID_FILTER", "Bộ lọc hạn không hợp lệ.");
-  const rows = await query<TaskItem>(
-    `${projection} WHERE t.channel_id=$2 AND ($3::text IS NULL OR t.status=$3) AND ($4::text IS NULL OR t.priority=$4) AND ($5::uuid IS NULL OR t.assignee_id=$5) AND (($6::boolean AND t.archived_at IS NOT NULL) OR (NOT $6::boolean AND t.archived_at IS NULL)) AND ($7::text IS NULL OR ($7='overdue' AND t.due_at<now() AND t.status<>'done') OR ($7='upcoming' AND t.due_at>=now() AND t.due_at<now()+interval '7 days') OR ($7='none' AND t.due_at IS NULL)) ORDER BY t.status,t.position,t.id LIMIT 501`,
-    [userId, channelId, status, priority, assigned, params.get("archived") === "true", deadline],
-  );
-  return { tasks: rows.rows.slice(0, 500), truncated: rows.rows.length > 500 };
-}
-/** "Công việc": tasks in every channel the user can see, assigned to them unless assignee=all. */
-export async function listAllTasks(userId: string, params = new URLSearchParams()) {
-  const assignee = params.get("assignee") ?? "me",
-    workspace = params.get("workspace"),
-    status = params.get("status"),
-    priority = params.get("priority"),
-    deadline = params.get("deadline");
-  if (assignee !== "me" && assignee !== "all")
-    throw new HttpError(400, "INVALID_FILTER", "Bộ lọc người phụ trách không hợp lệ.");
-  if (workspace) validateId(workspace);
-  if (status) choice(status, statuses);
-  if (priority) choice(priority, priorities);
-  if (deadline && !["overdue", "upcoming", "none"].includes(deadline))
-    throw new HttpError(400, "INVALID_FILTER", "Bộ lọc hạn không hợp lệ.");
-  const rows = await query<TaskBoardItem>(
-    `${projection.replace(" FROM tasks t", `,w.id AS "workspaceId",w.name AS "workspaceName",c.name AS "channelName",(w.archived_at IS NOT NULL) AS "workspaceArchived" FROM tasks t JOIN channels c ON c.id=t.channel_id JOIN workspaces w ON w.id=c.workspace_id`)} WHERE ($2::uuid IS NULL OR w.id=$2) AND (NOT $3::boolean OR t.assignee_id=$1) AND ($4::text IS NULL OR t.status=$4) AND ($5::text IS NULL OR t.priority=$5) AND (($6::boolean AND t.archived_at IS NOT NULL) OR (NOT $6::boolean AND t.archived_at IS NULL)) AND ($7::text IS NULL OR ($7='overdue' AND t.due_at<now() AND t.status<>'done') OR ($7='upcoming' AND t.due_at>=now() AND t.due_at<now()+interval '7 days') OR ($7='none' AND t.due_at IS NULL)) ORDER BY t.status,t.due_at NULLS LAST,t.updated_at DESC,t.id LIMIT 501`,
-    [
-      userId,
-      workspace,
-      assignee === "me",
-      status,
-      priority,
-      params.get("archived") === "true",
-      deadline,
-    ],
-  );
-  return { tasks: rows.rows.slice(0, 500), truncated: rows.rows.length > 500 };
-}
-export async function getTask(userId: string, taskId: string): Promise<TaskDetail> {
+async function getTask(userId: string, taskId: string): Promise<TaskDetail> {
   validateId(taskId);
   const task = await query<TaskItem>(`${projection} WHERE t.id=$2`, [userId, taskId]);
   if (!task.rowCount)
@@ -225,134 +179,6 @@ export async function createTask(
       ...(links.meetingSessionId ? { meetingSessionId: links.meetingSessionId } : {}),
     });
     return id;
-  });
-  return getTask(userId, taskId);
-}
-export async function mutateTask(userId: string, taskId: string, body: Record<string, unknown>) {
-  const target = await getTask(userId, taskId);
-  if (!Number.isInteger(body.version) || Number(body.version) < 1)
-    throw new HttpError(400, "INVALID_VERSION", "Cần phiên bản nhiệm vụ hiện tại.");
-  await withTransaction(async (client) => {
-    await boardLock(client, userId, target.channelId);
-    const locked = await client.query(`SELECT * FROM tasks WHERE id=$1 FOR UPDATE`, [taskId]);
-    const current = locked.rows[0];
-    if (!current) throw new HttpError(404, "TASK_NOT_FOUND", "Nhiệm vụ đã bị xóa.");
-    if (current.version !== body.version)
-      throw new HttpError(
-        409,
-        "TASK_CONFLICT",
-        "Nhiệm vụ đã được người khác cập nhật. Tải lại để xem phiên bản mới.",
-      );
-    if (current.archived_at && body.archived !== false)
-      throw new HttpError(409, "ARCHIVED", "Khôi phục nhiệm vụ trước khi chỉnh sửa.");
-    const action = body.action ?? "update";
-    if (action === "comment")
-      await client.query(
-        `INSERT INTO task_comments(id,task_id,author_id,content) VALUES($1,$2,$3,$4)`,
-        [randomUUID(), taskId, userId, text(body.content, 4000, true)],
-      );
-    else if (action === "checklist-add") {
-      if (
-        (await client.query(`SELECT 1 FROM task_checklist WHERE task_id=$1`, [taskId])).rowCount! >=
-        100
-      )
-        throw new HttpError(400, "CHECKLIST_LIMIT", "Tối đa 100 mục.");
-      await client.query(
-        `INSERT INTO task_checklist(id,task_id,label,position) VALUES($1,$2,$3,(SELECT COALESCE(max(position),0)+1 FROM task_checklist WHERE task_id=$2))`,
-        [randomUUID(), taskId, text(body.label, 200, true)],
-      );
-    } else if (action === "checklist-toggle" || action === "checklist-remove") {
-      validateId(body.itemId);
-      const result =
-        action === "checklist-remove"
-          ? await client.query(`DELETE FROM task_checklist WHERE id=$1 AND task_id=$2`, [
-              body.itemId,
-              taskId,
-            ])
-          : await client.query(
-              `UPDATE task_checklist SET done=NOT done WHERE id=$1 AND task_id=$2`,
-              [body.itemId, taskId],
-            );
-      if (!result.rowCount)
-        throw new HttpError(404, "ITEM_NOT_FOUND", "Mục checklist không tồn tại.");
-    } else if (action === "attachment-add" || action === "attachment-remove") {
-      validateId(body.attachmentId);
-      if (action === "attachment-add") {
-        const file = await client.query(
-          `SELECT 1 FROM message_attachments WHERE id=$1 AND channel_id=$2 AND uploader_id=$3`,
-          [body.attachmentId, target.channelId, userId],
-        );
-        if (!file.rowCount)
-          throw new HttpError(400, "INVALID_ATTACHMENT", "Tệp phải được bạn tải trong cùng kênh.");
-        await client.query(
-          `INSERT INTO task_attachments(task_id,attachment_id,attached_by) VALUES($1,$2,$3) ON CONFLICT DO NOTHING`,
-          [taskId, body.attachmentId, userId],
-        );
-      } else
-        await client.query(`DELETE FROM task_attachments WHERE task_id=$1 AND attachment_id=$2`, [
-          taskId,
-          body.attachmentId,
-        ]);
-    } else if (action === "update") {
-      const title = body.title === undefined ? current.title : text(body.title, 160, true),
-        description =
-          body.description === undefined ? current.description : text(body.description, 8000),
-        status = body.status === undefined ? current.status : choice(body.status, statuses),
-        priority =
-          body.priority === undefined ? current.priority : choice(body.priority, priorities),
-        dueAt = body.dueAt === undefined ? current.due_at : due(body.dueAt),
-        assigned =
-          body.assigneeId === undefined
-            ? current.assignee_id
-            : await assignee(client, target.channelId, body.assigneeId);
-      if (body.archived !== undefined && typeof body.archived !== "boolean")
-        throw new HttpError(400, "INVALID_TASK", "Lưu trữ phải là boolean.");
-      let position = current.position;
-      if (status !== current.status || body.beforeTaskId !== undefined) {
-        const rows = await client.query<{ id: string }>(
-          `SELECT id FROM tasks WHERE channel_id=$1 AND status=$2 AND archived_at IS NULL AND id<>$3 ORDER BY position,id FOR UPDATE`,
-          [target.channelId, status, taskId],
-        );
-        const ids = rows.rows.map((row) => row.id);
-        let index = ids.length;
-        if (body.beforeTaskId) {
-          validateId(body.beforeTaskId);
-          index = ids.indexOf(body.beforeTaskId as string);
-          if (index < 0) throw new HttpError(400, "INVALID_ORDER", "Mốc sắp xếp không thuộc cột.");
-        }
-        ids.splice(index, 0, taskId);
-        for (let i = 0; i < ids.length; i++) {
-          if (ids[i] === taskId) position = (i + 1) * 1024;
-          else
-            await client.query(`UPDATE tasks SET position=$2 WHERE id=$1`, [
-              ids[i],
-              (i + 1) * 1024,
-            ]);
-        }
-      }
-      await client.query(
-        `UPDATE tasks SET title=$2,description=$3,status=$4,priority=$5,due_at=$6,assignee_id=$7,position=$8,archived_at=CASE WHEN $9::boolean=true THEN COALESCE(archived_at,now()) WHEN $9::boolean=false THEN NULL ELSE archived_at END WHERE id=$1`,
-        [
-          taskId,
-          title,
-          description,
-          status,
-          priority,
-          dueAt,
-          assigned,
-          position,
-          body.archived ?? null,
-        ],
-      );
-    } else throw new HttpError(400, "INVALID_ACTION", "Thao tác nhiệm vụ không hợp lệ.");
-    await client.query(`UPDATE tasks SET version=version+1,updated_at=now() WHERE id=$1`, [taskId]);
-    await log(client, taskId, userId, String(action), {
-      fields: Object.keys(body).filter(
-        (key) => !["version", "content", "description", "title"].includes(key),
-      ),
-      previousStatus: current.status,
-      status: body.status ?? current.status,
-    });
   });
   return getTask(userId, taskId);
 }

@@ -2,7 +2,6 @@ import {
   useEffect,
   useId,
   useRef,
-  useState,
   useLayoutEffect,
   Children,
   cloneElement,
@@ -14,7 +13,6 @@ import {
 import { motion, AnimatePresence, useIsPresent } from "motion/react";
 import { useApp } from "../../app/providers/AppContext";
 import { Icon, type IconName } from "./Icon";
-import { initialsOf } from "./kit/user-avatar";
 import { isSelectPickerEvent } from "../lib/select-picker";
 import { toastDuration } from "../lib/interaction";
 import "./interaction.css";
@@ -244,57 +242,6 @@ export function IconButton({
       </button>
       {tooltip.tooltip}
     </>
-  );
-}
-
-export function Avatar({
-  name,
-  size = "md",
-  status,
-  image,
-}: {
-  name: string;
-  size?: "xs" | "sm" | "md" | "lg";
-  status?: "online" | "away" | "busy";
-  image?: string;
-}) {
-  const initials = initialsOf(name);
-  // Remote avatars (e.g. expired Google URLs) fall back to initials instead of a broken image.
-  const [failedImage, setFailedImage] = useState<string | null>(null);
-  const showImage = Boolean(image) && failedImage !== image;
-  return (
-    <span
-      className={cn(
-        "relative inline-grid shrink-0 place-items-center overflow-visible rounded-full bg-[var(--tint-blue-bg)] font-semibold text-[var(--tint-blue-fg)] [&_img]:size-full [&_img]:rounded-full [&_img]:object-cover",
-        {
-          xs: "size-6 text-[10px]",
-          sm: "size-8 text-xs",
-          md: "size-9 text-[13px]",
-          lg: "size-12 text-base",
-        }[size],
-      )}
-      aria-label={name}
-      title={name}
-    >
-      {showImage ? (
-        <img
-          src={image}
-          alt=""
-          referrerPolicy="no-referrer"
-          onError={() => setFailedImage(image ?? null)}
-        />
-      ) : (
-        <span>{initials}</span>
-      )}
-      {status && (
-        <i
-          className={cn(
-            "absolute right-0 bottom-0 size-2.5 rounded-full ring-2 ring-card",
-            { online: "bg-emerald-500", away: "bg-amber-500", busy: "bg-red-500" }[status],
-          )}
-        />
-      )}
-    </span>
   );
 }
 

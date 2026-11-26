@@ -22,13 +22,13 @@ Kiến trúc modular monolith: React/TypeScript + Node.js/Socket.IO + PostgreSQL
 - Điều hành: phòng chờ, cho vào, mời ra, khóa phòng, tắt micro người khác, giơ tay, đồng chủ trì, chuyển chủ trì, kết thúc phiên.
 - Ổn định: tự vào lại phòng khi mất mạng (rớt socket hoặc lỗi ICE), khởi động lại ICE, tạm dừng nhận video khi tab bị ẩn.
 - Chất lượng mạng (QoS): RTT, băng thông, mất gói, jitter, tự hạ chất lượng khi mạng yếu; xuất CSV/JSON.
-- Biên bản: chương trình họp, ghi chú chung (phát hiện sửa trùng), việc cần làm đưa sang Kanban, gửi tóm tắt vào kênh nhóm.
+- Biên bản: chương trình họp, ghi chú chung (phát hiện sửa trùng), việc cần làm (giao người, hạn), gửi tóm tắt vào kênh nhóm.
 - Lời mời và nhắc họp (NV-MT1): tạo, sửa, hủy lịch họp gửi thông báo (toast realtime) và email cho thành viên phòng; 15 phút trước giờ họp hệ thống nhắc một lần, đổi giờ bắt đầu thì nhắc lại (`048_meeting_reminders`). Lời mời và lời nhắc cũng vào chuông thông báo, bấm "Xem" mở thẳng phòng họp (`051_system_notifications`).
 - Mời theo danh sách: lịch họp có thể chỉ mời một số người, cả một nhóm/lớp khác hoặc cả một đơn vị (tối đa 500 người); người ngoài nhóm được thêm vào nhóm của phòng. Cấu hình phòng theo lịch: bật phòng chờ (người được mời vào thẳng, người khác chờ duyệt), tự ghi hình khi chủ trì vào, tắt micro khi vào lần đầu (`052_meeting_room_settings`).
 - Điểm danh từ máy chủ: giờ vào, giờ rời, thời gian có mặt (gộp nhiều tab/kết nối lại), xuất CSV có MSSV; chỉ chủ trì và đồng chủ trì xem.
 - Ghi hình phía máy chủ (FFmpeg, không giải mã khi đang họp), xem lại và chia sẻ bản ghi. Cần container FFmpeg: `docker compose -f infra/docker-compose.yml --profile recording up -d ffmpeg` và `FFMPEG_COMMAND="docker exec -i -w /work tws-ffmpeg ffmpeg"`.
 - Chép lời bản ghi (Whisper hoặc faster-whisper qua `TRANSCRIBE_URL`); chưa đặt biến này thì nút chép lời không chạy.
-- Tóm tắt bằng AI (`055_ai_summaries`): khi chép lời xong, bản chép lời được gửi tới `SUMMARY_URL` (endpoint `/v1/chat/completions` dạng OpenAI, ví dụ Ollama tự host để dữ liệu không rời trường; mô hình `SUMMARY_MODEL`). Bản ghi họp có đoạn tóm tắt và danh sách việc cần làm, chủ trì bấm "Thêm vào việc cần làm" để đưa từng việc sang Kanban. Chỉ gửi văn bản chép lời, không gửi âm thanh; kết quả chỉ là gợi ý, người dùng vẫn tự viết biên bản.
+- Tóm tắt bằng AI (`055_ai_summaries`): khi chép lời xong, bản chép lời được gửi tới `SUMMARY_URL` (endpoint `/v1/chat/completions` dạng OpenAI, ví dụ Ollama tự host để dữ liệu không rời trường; mô hình `SUMMARY_MODEL`). Bản ghi họp có đoạn tóm tắt và danh sách việc cần làm, chủ trì bấm "Thêm vào việc cần làm" để đưa từng việc vào danh sách việc của cuộc họp. Chỉ gửi văn bản chép lời, không gửi âm thanh; kết quả chỉ là gợi ý, người dùng vẫn tự viết biên bản.
 - Chưa có: làm mờ/thay nền; chưa kiểm RTP qua nhiều mạng với TURN thật. Gọi vào phòng họp từ máy lẻ (dial-in) đi qua Asterisk nên tạm dừng cùng tổng đài.
 
 ### E-learning
@@ -50,13 +50,13 @@ Báo cáo đơn vị (menu "Báo cáo đơn vị", cho quản trị hệ thống
 
 Nhật ký truy cập (dùng chung): mỗi lượt nghe ghi âm cuộc gọi, tin nhắn thoại hoặc mở bản ghi cuộc họp được ghi lại (`050_media_access_log`); quản trị hệ thống xem ở Quản trị hệ thống → "Nhật ký hoạt động", gộp cùng thay đổi nhóm và tổ chức. Ghi âm và bản ghi họp chỉ phát qua link ký HMAC gắn với người xem và hết hạn (ghi âm 60 giây, playlist 5 phút); quản trị hệ thống không tự nghe ghi âm hay đọc ticket của phòng ban mình không có vai trò. Điểm danh, tiến độ khóa học và báo cáo cuộc gọi xuất được `.xlsx` (dòng tiêu đề in đậm) hoặc `.csv`; ô văn bản trong `.xlsx` là chuỗi thuần, CSV chặn công thức Excel (ô bắt đầu bằng `= + - @`).
 
-Menu đi theo chức năng, không theo nhóm: "Tin nhắn", "Họp", "Công việc", "Tài liệu" gom dữ liệu của mọi nhóm bạn tham gia (nhóm chỉ là bộ lọc); "Nhóm của tôi" để tạo nhóm, nhập mã mời, xem thành viên, rời nhóm và vào trang quản lý. Link cũ `/app/workspace?...` tự chuyển sang trang tương ứng.
+Menu đi theo chức năng, không theo nhóm, chia ba khối: Làm việc (Trang chủ, Tin nhắn, Họp, Khóa học, Thông báo), Tổng đài, và Quản lý (Danh sách nhân sự, Báo cáo đơn vị, Quản lý bảng tin, Quản trị hệ thống); mỗi người chỉ thấy mục mình có quyền. "Tin nhắn" và "Họp" gom dữ liệu của mọi nhóm bạn tham gia (nhóm chỉ là bộ lọc). Link cũ `/app/workspace?...` tự chuyển sang trang tương ứng.
 
-Chat nhóm giữ làm kênh trao đổi nội bộ: ảnh/file/voice, reaction, thread/mention, ghim, tìm kiếm, gửi lại không trùng. Trang "Tin nhắn" giống Messenger: mỗi nhóm là một đoạn chat, xếp chung với trò chuyện 1-1 (`026_direct_messages`) theo tin mới nhất, tin nhắn dạng bong bóng, đầu đoạn chat nhóm có nút "Họp ngay". "Tạo nhóm" chọn từ 2 người trở lên, tên nhóm không bắt buộc (mặc định ghép tên thành viên), người được chọn vào nhóm ngay. Nhóm mới chỉ có một kênh chat; kênh phụ của nhóm cũ được ẩn, dữ liệu vẫn giữ. "Tài liệu" tìm tệp theo tên ở mọi nhóm và tải tệp lên một kênh.
+Chat nhóm giữ làm kênh trao đổi nội bộ: ảnh/file/voice, reaction, thread/mention, ghim, tìm kiếm, gửi lại không trùng. Trang "Tin nhắn" giống Messenger: mỗi nhóm là một đoạn chat, xếp chung với trò chuyện 1-1 (`026_direct_messages`) theo tin mới nhất, tin nhắn dạng bong bóng, đầu đoạn chat nhóm có nút "Họp ngay". "Tạo nhóm" chọn từ 2 người trở lên, tên nhóm không bắt buộc (mặc định ghép tên thành viên), người được chọn vào nhóm ngay. Nhóm mới chỉ có một kênh chat; kênh phụ của nhóm cũ được ẩn, dữ liệu vẫn giữ. Bảng thông tin của đoạn chat liệt kê tệp đã gửi trong đoạn chat đó.
 
 Nền tảng chung: đăng nhập email + mật khẩu (OTP qua email), hồ sơ, presence, lưu file DB/S3, metrics, migration có khóa.
 
-"Công việc" là một bảng Kanban cho việc ở mọi nhóm (mặc định việc giao cho tôi; lọc theo nhóm, sắp hết hạn, trạng thái, ưu tiên); mỗi thẻ ghi tên nhóm và kênh, việc cần làm từ biên bản họp cũng vào đây. Phân hệ quản lý đồ án tốt nghiệp đã được gỡ; chỉ còn khoa, bộ môn, giảng viên và phân quyền (trang "Quản trị hệ thống"). Các bảng `thesis_*` đã được xóa (`054_drop_thesis_tables`); hồ sơ người gọi lấy MSSV từ mã người dùng.
+Việc cần làm được tạo ngay trong phòng họp và hiện ở phần kết quả cuộc họp (trang Kanban "Công việc" đã được gỡ). Phân hệ quản lý đồ án tốt nghiệp đã được gỡ; chỉ còn khoa, bộ môn, giảng viên và phân quyền (trang "Quản trị hệ thống"). Các bảng `thesis_*` đã được xóa (`054_drop_thesis_tables`); hồ sơ người gọi lấy MSSV từ mã người dùng.
 
 ## Chạy local
 
@@ -109,7 +109,7 @@ npm run test:e2e
 npm run build
 ```
 
-`test:e2e` (Playwright, dùng Chrome đã cài) chạy trên `npm run dev` và DB local: đăng nhập, trang Quản trị hệ thống, hai người họp video với camera giả và tự vào lại phòng sau khi mất mạng, mở trang Khóa học và Tổng đài, menu theo chức năng, tài khoản chưa có nhóm, gửi tin trong kênh, tải tệp từ "Tài liệu", lên lịch rồi vào phòng từ danh sách lịch họp. Tài khoản test tạo trong `e2e/global-setup.mjs` và bị xoá khi chạy xong.
+`test:e2e` (Playwright, dùng Chrome đã cài) chạy trên `npm run dev` và DB local: đăng nhập, trang Quản trị hệ thống, hai người họp video với camera giả và tự vào lại phòng sau khi mất mạng, mở trang Khóa học và Tổng đài, menu theo chức năng, tài khoản chưa có nhóm, gửi tin trong kênh, lên lịch rồi vào phòng từ danh sách lịch họp. Tài khoản test tạo trong `e2e/global-setup.mjs` và bị xoá khi chạy xong.
 
 `npm test` chạy unit test của web và API; các test cần PostgreSQL chỉ chạy khi đặt `RUN_DB_TESTS=1` (gồm luồng e-learning đầy đủ, phiên họp, biên bản, ghi hình, QoS). `test:sfu` chạy riêng các test có PostgreSQL và mediasoup. Kiểm signaling/worker không chứng minh RTP đa mạng.
 

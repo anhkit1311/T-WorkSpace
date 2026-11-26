@@ -88,6 +88,7 @@ export function CourseLearners({ course }: { course: CourseDetail }) {
           {target === "emails" ? (
             <textarea
               rows={2}
+              // `!`: the .tw-row rule's :is(input:not(...)) outranks a plain class; 240px wraps it on phones.
               className="min-w-60!"
               value={emails}
               onChange={(event) => setEmails(event.target.value)}

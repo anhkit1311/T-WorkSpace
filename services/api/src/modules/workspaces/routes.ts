@@ -64,16 +64,6 @@ export async function workspaceRoutes({
     );
     return;
   }
-  const workspaceFilesMatch = pathname.match(/^\/api\/workspaces\/([^/]+)\/files$/);
-  if (request.method === "GET" && workspaceFilesMatch) {
-    const userId = await getAuthUserId(request);
-    const workspaceId = workspaceFilesMatch[1];
-    const before = params.get("before") ?? undefined;
-    const limit = Number(params.get("limit")) || 24;
-    response.setHeader("Cache-Control", "no-store");
-    sendJson(response, 200, await listWorkspaceFiles(userId, workspaceId, before, limit, false));
-    return;
-  }
   const governance = pathname.match(
     /^\/api\/workspaces\/([^/]+)\/(administration|settings|leave|transfer|roles|channels\/manage|channels\/order|channel-members|invitations)(?:\/([^/]+))?$/,
   );

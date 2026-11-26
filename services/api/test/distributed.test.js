@@ -95,14 +95,6 @@ test(
         ).rows[0].count,
         2,
       );
-      const taskChanged = once(sockets[1], "task_changed");
-      const taskResponse = await fetch(`${addresses[0]}/api/channels/${channel.id}/tasks`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${tokens[0]}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ title: "Cluster task", clientTaskId: randomUUID() }),
-      });
-      assert.equal(taskResponse.status, 201);
-      await taskChanged;
       const voice = (await getWorkspaceChannels(users[0], workspace.id)).find(
         (c) => c.type === "video",
       );

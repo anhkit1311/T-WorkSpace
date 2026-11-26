@@ -8,12 +8,10 @@ import {
   getWorkspaceChannels,
   saveMessage,
 } from "../../../dist/api/modules/workspaces/service.js";
-import { updateWorkspace } from "../../../dist/api/modules/workspaces/governance.js";
-import { createTask, listAllTasks } from "../../../dist/api/modules/tasks/service.js";
 import { listWorkspaceFiles } from "../../../dist/api/modules/workspaces/home.js";
 import { listMeetingCalendar } from "../../../dist/api/modules/meetings/calendar.js";
 
-// Pages that gather every group (Tin nhắn, Công việc, Tài liệu, Họp): owner is in A and B, member only in A.
+// Pages that gather every group (Tin nhắn, Tài liệu, Họp): owner is in A and B, member only in A.
 const skip = process.env.RUN_DB_TESTS !== "1";
 const owner = randomUUID(),
   member = randomUUID(),
@@ -44,54 +42,6 @@ after(async () => {
   await pool.query(`DELETE FROM users WHERE id=ANY($1::uuid[])`, [[owner, member, outsider]]);
   await pool.end();
 });
-
-test(
-  "Cross-group: tasks of every group, mine by default, outsiders see none",
-  { skip },
-  async () => {
-    const add = (channelId, title, assigneeId) =>
-      createTask(owner, channelId, {
-        title,
-        description: "",
-        clientTaskId: randomUUID(),
-        assigneeId,
-      });
-    await add(groups.aText.id, "A cho chủ", owner);
-    await add(groups.bText.id, "B cho chủ", owner);
-    await add(groups.aText.id, "A cho thành viên", member);
-    const list = (user, query = "") =>
-      listAllTasks(user, new URLSearchParams(query)).then((result) => result.tasks);
-
-    const mine = await list(owner);
-    assert.equal(mine.length, 2);
-    assert.ok(mine.every((task) => task.assigneeId === owner));
-    const fromB = mine.find((task) => task.title === "B cho chủ");
-    assert.equal(fromB.workspaceName, "Cross B");
-    assert.equal(fromB.workspaceId, groups.b.id);
-    assert.equal(fromB.channelName, groups.bText.name);
-    assert.equal(fromB.workspaceArchived, false);
-
-    assert.equal((await list(owner, "assignee=all")).length, 3);
-    assert.deepEqual(
-      (await list(owner, `assignee=all&workspace=${groups.b.id}`)).map((task) => task.title),
-      ["B cho chủ"],
-    );
-    assert.deepEqual((await list(member, "assignee=all")).map((task) => task.title).sort(), [
-      "A cho chủ",
-      "A cho thành viên",
-    ]);
-    assert.equal((await list(outsider, "assignee=all")).length, 0);
-    await assert.rejects(list(owner, "assignee=someone"), {
-      statusCode: 400,
-      code: "INVALID_FILTER",
-    });
-
-    await updateWorkspace(owner, groups.b.id, { archived: true });
-    const archived = (await list(owner)).find((task) => task.title === "B cho chủ");
-    assert.equal(archived?.workspaceArchived, true);
-    await updateWorkspace(owner, groups.b.id, { archived: false });
-  },
-);
 
 test("Cross-group: files of every group, filtered by group and name", { skip }, async () => {
   const send = async (channelId, fileName) => {

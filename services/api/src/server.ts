@@ -10,7 +10,6 @@ import {
   setCorsHeaders,
   webOrigin,
 } from "./shared/http/utils.js";
-import { taskRoutes } from "./modules/tasks/routes.js";
 import { conversationRoutes } from "./modules/chat/routes.js";
 import { workspaceRoutes } from "./modules/workspaces/routes.js";
 import { authRoutes } from "./modules/auth/routes.js";
@@ -358,7 +357,6 @@ async function handleRequest(
 
   const context = { request, response, io, pathname, params };
   for (const route of [
-    taskRoutes,
     conversationRoutes,
     workspaceRoutes,
     authRoutes,
